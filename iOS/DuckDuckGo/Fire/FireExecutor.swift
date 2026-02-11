@@ -377,7 +377,9 @@ class FireExecutor: FireExecuting {
         dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnURLCacheDuration, startTime: startTime)
         dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnURLCacheHasResidue) {
             let cache = URLSession.shared.configuration.urlCache
-            return (cache?.currentDiskUsage ?? 0) > 0 || (cache?.currentMemoryUsage ?? 0) > 0
+            // The API does not clean cache stored on the disk reliably
+            // Only checking memory usage here to avoid false positive
+            return cache?.currentMemoryUsage ?? 0 > 0
         }
 
         let pixel = TimedPixel(.forgetAllDataCleared)
@@ -484,11 +486,11 @@ class FireExecutor: FireExecuting {
         let startTime = CACurrentMediaTime()
         switch request.scope {
         case .tab(let viewModel):
-            await burnTabAIHistory(tabViewModel: viewModel)
+            await burnTabAIHistory(tabViewModel: viewModel, startTime: startTime, scopeDescription: request.scope.description)
         case .all:
             await burnAllAIHistory(trigger: request.trigger)
+            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnAIChatHistoryDuration, startTime: startTime, scope: request.scope.description)
         }
-        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnAIChatHistoryDuration, startTime: startTime, scope: request.scope.description)
     }
     
     private func burnAllAIHistory(trigger: FireRequest.Trigger) async {
@@ -509,9 +511,10 @@ class FireExecutor: FireExecuting {
         }
     }
     
-    private func burnTabAIHistory(tabViewModel: TabViewModel) async {
+    private func burnTabAIHistory(tabViewModel: TabViewModel, startTime: CFTimeInterval, scopeDescription: String) async {
         if let chatID = await tabViewModel.currentAIChatId {
             await deleteChat(chatID: chatID)
+            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnAIChatHistoryDuration, startTime: startTime, scope: scopeDescription)
         } else {
             Logger.aiChat.debug("No chatID found for tab, skipping single chat deletion")
         }

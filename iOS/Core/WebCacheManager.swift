@@ -71,7 +71,6 @@ private enum ClearingStep: String {
     case clearDataForSafelyRemovableDataTypes = "clear_data_for_safely_removable_data_types"
     case clearFireproofableDataForNonFireproofedDomains = "clear_fireproofable_data_for_non_fireproofed_domains"
     case clearCookiesForNonFireproofedDomains = "clear_cookies_for_non_fireproofed_domains"
-    case removeObservationsData = "remove_observations_data"
 }
 
 public class WebCacheManager: WebsiteDataManaging {
@@ -281,13 +280,11 @@ extension WebCacheManager {
             let domainsBeforeRemoval = Set(recordsBeforeRemoval.map { $0.displayName })
             await dataStore.removeData(ofTypes: Self.safelyRemovableWebsiteDataTypes, modifiedSince: Date.distantPast)
 
-            Task {
-                let recordsAfterRemoval = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
-                let domainsAfterRemoval = Set(recordsAfterRemoval.map { $0.displayName })
-                let residueDomains = domainsBeforeRemoval.intersection(domainsAfterRemoval)
-                if !residueDomains.isEmpty {
-                    clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
-                }
+            let recordsAfterRemoval = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
+            let domainsAfterRemoval = Set(recordsAfterRemoval.map { $0.displayName })
+            let residueDomains = domainsBeforeRemoval.intersection(domainsAfterRemoval).filter { domain in !domain.contains("duckduckgo.com") }
+            if !residueDomains.isEmpty {
+                clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
             }
         case .limited(let dataRecords, _):
             let allRecords = await dataStore.dataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes())
@@ -297,13 +294,11 @@ extension WebCacheManager {
             let domainsToRemove = Set(removableRecords.map { $0.displayName })
             await dataStore.removeData(ofTypes: Self.safelyRemovableWebsiteDataTypes, for: removableRecords)
 
-            Task {
-                let remainingRecords = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
-                let domainsAfterRemoval = Set(remainingRecords.map { $0.displayName })
-                let residueDomains = domainsToRemove.intersection(domainsAfterRemoval)
-                if !residueDomains.isEmpty {
-                    clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
-                }
+            let remainingRecords = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
+            let domainsAfterRemoval = Set(remainingRecords.map { $0.displayName })
+            let residueDomains = domainsToRemove.intersection(domainsAfterRemoval).filter { domain in !domain.contains("duckduckgo.com") }
+            if !residueDomains.isEmpty {
+                clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
             }
         }
     }
@@ -320,16 +315,14 @@ extension WebCacheManager {
 
         let fireproofableTypesExceptCookies = Self.fireproofableDataTypesExceptCookies
         await dataStore.removeData(ofTypes: fireproofableTypesExceptCookies, for: removableRecords)
-        
-        Task {
-            let remainingRecords = await dataStore.dataRecords(ofTypes: fireproofableTypesExceptCookies)
-            let hasResidue = remainingRecords.contains { record in
-                let fireproofed = fireproofing.isAllowed(fireproofDomain: record.displayName)
-                return !fireproofed && scope.dataRecordsEvaluator(record.displayName)
-            }
-            if hasResidue {
-                clearingReporter?.onResidue(ClearingStep.clearFireproofableDataForNonFireproofedDomains.rawValue, scope.description)
-            }
+
+        let remainingRecords = await dataStore.dataRecords(ofTypes: fireproofableTypesExceptCookies)
+        let hasResidue = remainingRecords.contains { record in
+            let fireproofed = fireproofing.isAllowed(fireproofDomain: record.displayName)
+            return !fireproofed && scope.dataRecordsEvaluator(record.displayName)
+        }
+        if hasResidue {
+            clearingReporter?.onResidue(ClearingStep.clearFireproofableDataForNonFireproofedDomains.rawValue, scope.description)
         }
     }
 
@@ -346,16 +339,14 @@ extension WebCacheManager {
         for cookie in cookiesToRemove {
             await cookieStore.deleteCookie(cookie)
         }
-        
-        Task {
-            let remainingCookies = await cookieStore.allCookies()
-            let hasResidue = remainingCookies.contains { cookie in
-                let fireproofed = fireproofing.isAllowed(cookieDomain: cookie.domain)
-                return !fireproofed && scope.cookiesEvaluator(cookie)
-            }
-            if hasResidue {
-                clearingReporter?.onResidue(ClearingStep.clearCookiesForNonFireproofedDomains.rawValue, scope.description)
-            }
+
+        let remainingCookies = await cookieStore.allCookies()
+        let hasResidue = remainingCookies.contains { cookie in
+            let fireproofed = fireproofing.isAllowed(cookieDomain: cookie.domain)
+            return !fireproofed && scope.cookiesEvaluator(cookie)
+        }
+        if hasResidue {
+            clearingReporter?.onResidue(ClearingStep.clearCookiesForNonFireproofedDomains.rawValue, scope.description)
         }
     }
 
