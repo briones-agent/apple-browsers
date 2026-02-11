@@ -282,7 +282,9 @@ extension WebCacheManager {
 
             let recordsAfterRemoval = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
             let domainsAfterRemoval = Set(recordsAfterRemoval.map { $0.displayName })
-            let residueDomains = domainsBeforeRemoval.intersection(domainsAfterRemoval).filter { domain in !domain.contains("duckduckgo.com") }
+            let residueDomains = domainsBeforeRemoval.intersection(domainsAfterRemoval).filter { domain in
+                !Self.shouldExcludeFromResidueCheck(domain: domain)
+            }
             if !residueDomains.isEmpty {
                 clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
             }
@@ -296,7 +298,9 @@ extension WebCacheManager {
 
             let remainingRecords = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
             let domainsAfterRemoval = Set(remainingRecords.map { $0.displayName })
-            let residueDomains = domainsToRemove.intersection(domainsAfterRemoval).filter { domain in !domain.contains("duckduckgo.com") }
+            let residueDomains = domainsToRemove.intersection(domainsAfterRemoval).filter { domain in
+                !Self.shouldExcludeFromResidueCheck(domain: domain)
+            }
             if !residueDomains.isEmpty {
                 clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
             }
@@ -350,4 +354,20 @@ extension WebCacheManager {
         }
     }
 
+}
+
+// MARK: - Instrumentation Helper
+
+private  extension WebCacheManager {
+
+    static let duckduckgoDomain = "duckduckgo.com"
+    static let duckAiDomain = "duck.ai"
+
+    static let domainsExcludedFromResidueCheck = [duckduckgoDomain, duckAiDomain]
+
+    static func shouldExcludeFromResidueCheck(domain: String) -> Bool {
+        return domainsExcludedFromResidueCheck.contains { excluded in
+            domain == excluded || domain.hasSuffix(".\(excluded)")
+        }
+    }
 }
