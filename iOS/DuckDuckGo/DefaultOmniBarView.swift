@@ -691,16 +691,27 @@ final class DefaultOmniBarView: UIView, OmniBarView {
         textAreaBottomPaddingConstraint?.constant = -(isUsingSmallTopSpacing ? Metrics.textAreaBottomPaddingAdjustedSpacing : Metrics.textAreaVerticalPaddingRegularSpacing)
     }
 
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if super.point(inside: point, with: event) {
+            return true
+        }
+        if isSearchAreaExpanded {
+            let convertedPoint = searchAreaContainerView.convert(point, from: self)
+            return searchAreaContainerView.bounds.contains(convertedPoint)
+        }
+        return false
+    }
+
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = super.hitTest(point, with: event) {
             return result
         }
 
-        // When expanded, check if the touch falls within the overflowed search area
+        // When expanded, consume all touches in the overflowed search area
         if isSearchAreaExpanded {
             let convertedPoint = searchAreaContainerView.convert(point, from: self)
             if searchAreaContainerView.bounds.contains(convertedPoint) {
-                return searchAreaContainerView.hitTest(convertedPoint, with: event)
+                return searchAreaContainerView.hitTest(convertedPoint, with: event) ?? duckAITextView
             }
         }
 
@@ -978,18 +989,23 @@ extension DefaultOmniBarView {
     }
 
     private func applyExpansionConstraints() {
-        let expanded = isSearchAreaExpanded
-
-        // Allow the inner stack to overflow below its parent when expanded
-        searchStackBottomEqualConstraint?.isActive = !expanded
-        searchStackBottomGTEConstraint?.isActive = expanded
-
-        // Set target height
-        expandedHeightConstraint?.isActive = expanded
-
-        // Pin content to top when expanded, center when collapsed
-        searchAreaCenterYConstraint?.isActive = !expanded
-        searchAreaTopPinConstraint?.isActive = expanded
+        if isSearchAreaExpanded {
+            // Deactivate collapsed constraints first to avoid conflicts
+            searchStackBottomEqualConstraint?.isActive = false
+            searchAreaCenterYConstraint?.isActive = false
+            // Then activate expanded constraints
+            searchStackBottomGTEConstraint?.isActive = true
+            expandedHeightConstraint?.isActive = true
+            searchAreaTopPinConstraint?.isActive = true
+        } else {
+            // Deactivate expanded constraints first to avoid conflicts
+            expandedHeightConstraint?.isActive = false
+            searchAreaTopPinConstraint?.isActive = false
+            searchStackBottomGTEConstraint?.isActive = false
+            // Then activate collapsed constraints
+            searchStackBottomEqualConstraint?.isActive = true
+            searchAreaCenterYConstraint?.isActive = true
+        }
     }
 
     private func applyExpansionClipping() {
