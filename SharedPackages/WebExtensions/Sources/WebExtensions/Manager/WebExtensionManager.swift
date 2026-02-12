@@ -42,6 +42,12 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
     /// Optional internal site handler for platform-specific URL handling.
     public private(set) var internalSiteHandler: (any WebExtensionInternalSiteHandling)?
 
+    /// Message router for handling native messages from extensions.
+    public let messageRouter: WebExtensionMessageRouting
+
+    /// Provider for creating extension-specific message handlers.
+    public private(set) var handlerProvider: WebExtensionHandlerProviding?
+
     /// Pixel firing for analytics.
     private let pixelFiring: WebExtensionPixelFiring
 
@@ -63,7 +69,9 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
                 eventsListener: WebExtensionEventsListening = WebExtensionEventsListener(),
                 lifecycleDelegate: WebExtensionLifecycleDelegate? = nil,
                 internalSiteHandler: (any WebExtensionInternalSiteHandling)? = nil,
-                pixelFiring: WebExtensionPixelFiring = NoOpWebExtensionPixelFiring()) {
+                pixelFiring: WebExtensionPixelFiring = NoOpWebExtensionPixelFiring(),
+                messageRouter: WebExtensionMessageRouting? = nil,
+                handlerProvider: WebExtensionHandlerProviding? = nil) {
         let controllerConfiguration = WKWebExtensionController.Configuration.default()
         controllerConfiguration.webViewConfiguration.applicationNameForUserAgent = configuration.applicationNameForUserAgent
         self.controller = WKWebExtensionController(configuration: controllerConfiguration)
@@ -76,6 +84,8 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         self.lifecycleDelegate = lifecycleDelegate
         self.internalSiteHandler = internalSiteHandler
         self.pixelFiring = pixelFiring
+        self.messageRouter = messageRouter ?? WebExtensionMessageRouter()
+        self.handlerProvider = handlerProvider
 
         super.init()
 
@@ -121,6 +131,9 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
             )
 
             installationStore.add(installedExtension)
+
+            registerHandlersForExtension(identifier: identifier, context: loadResult.context)
+
             Logger.webExtensions.info("✅ Successfully installed extension \(installedExtension.filename) (\(identifier))")
             pixelFiring.fire(.installed)
         } catch {
@@ -137,6 +150,8 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         Logger.webExtensions.debug("🔄 Uninstalling extension '\(identifier)'")
 
         installationStore.remove(uniqueIdentifier: identifier)
+
+        unregisterHandlers(for: identifier)
 
         do {
             try loader.unloadExtension(identifier: identifier, from: controller)
@@ -210,8 +225,9 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         var successCount = 0
         for (installedExtension, result) in zip(extensions, results) {
             switch result {
-            case .success:
+            case .success(let loadResult):
                 Logger.webExtensions.debug("✅ Loaded extension \(installedExtension.filename) (\(installedExtension.uniqueIdentifier))")
+                registerHandlersForExtension(identifier: installedExtension.uniqueIdentifier, context: loadResult.context)
                 successCount += 1
             case .failure(let failure):
                 Logger.webExtensions.error("❌ Failed to load web extension \(installedExtension.filename) (\(installedExtension.uniqueIdentifier)): \(failure.localizedDescription)")

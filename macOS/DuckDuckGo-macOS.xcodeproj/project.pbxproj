@@ -154,10 +154,10 @@
 		1D8C2FF12B70F751005E4BBD /* MockTabSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D8C2FEF2B70F751005E4BBD /* MockTabSnapshotStore.swift */; };
 		1D9297BF2C1B062900A38521 /* ApplicationUpdateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9297BE2C1B062900A38521 /* ApplicationUpdateDetector.swift */; };
 		1D9297C02C1B062900A38521 /* ApplicationUpdateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9297BE2C1B062900A38521 /* ApplicationUpdateDetector.swift */; };
-		1D94E7A02F33AA2E008315A2 /* MacOSWebExtensionPixelFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94E79F2F33AA28008315A2 /* MacOSWebExtensionPixelFiring.swift */; };
-		1D94E7A12F33AA2E008315A2 /* MacOSWebExtensionPixelFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94E79F2F33AA28008315A2 /* MacOSWebExtensionPixelFiring.swift */; };
 		1D94E7992F333CA1008315A2 /* AIChatOmnibarToolButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94E7982F333CA1008315A2 /* AIChatOmnibarToolButton.swift */; };
 		1D94E79A2F333CA1008315A2 /* AIChatOmnibarToolButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94E7982F333CA1008315A2 /* AIChatOmnibarToolButton.swift */; };
+		1D94E7A02F33AA2E008315A2 /* MacOSWebExtensionPixelFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94E79F2F33AA28008315A2 /* MacOSWebExtensionPixelFiring.swift */; };
+		1D94E7A12F33AA2E008315A2 /* MacOSWebExtensionPixelFiring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94E79F2F33AA28008315A2 /* MacOSWebExtensionPixelFiring.swift */; };
 		1D99CDDB2D929EC900656A84 /* PinnedTabsPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D99CDDA2D929EBE00656A84 /* PinnedTabsPixel.swift */; };
 		1D99CDDC2D929EC900656A84 /* PinnedTabsPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D99CDDA2D929EBE00656A84 /* PinnedTabsPixel.swift */; };
 		1D9A37672BD8EA8800EBC58D /* DockPositionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9A37662BD8EA8800EBC58D /* DockPositionProvider.swift */; };
@@ -312,6 +312,8 @@
 		1EC7115A2D035BC30009EB5C /* NetworkProtectionLocalizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 1EC711572D035BC30009EB5C /* NetworkProtectionLocalizable.xcstrings */; };
 		1ED910D52B63BFB300936947 /* IdentityTheftRestorationPagesUserScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED910D42B63BFB300936947 /* IdentityTheftRestorationPagesUserScript.swift */; };
 		1ED910D62B63BFB300936947 /* IdentityTheftRestorationPagesUserScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED910D42B63BFB300936947 /* IdentityTheftRestorationPagesUserScript.swift */; };
+		1EEBF90F2F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEBF90E2F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift */; };
+		1EEBF9102F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEBF90E2F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift */; };
 		1EFA1A072C7C7F0E0099F508 /* SubscriptionPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F188267F2BBEB58100D9AC4F /* SubscriptionPixel.swift */; };
 		1EFA1A082C7C7F0F0099F508 /* SubscriptionPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F188267F2BBEB58100D9AC4F /* SubscriptionPixel.swift */; };
 		278B71841877414792BD56ED /* UpdateWideEventDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 888299B4789D4E01A1C9E456 /* UpdateWideEventDataTests.swift */; };
@@ -4547,8 +4549,8 @@
 		1D8C2FEC2B70F5D0005E4BBD /* MockViewSnapshotRenderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MockViewSnapshotRenderer.swift; sourceTree = "<group>"; };
 		1D8C2FEF2B70F751005E4BBD /* MockTabSnapshotStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MockTabSnapshotStore.swift; sourceTree = "<group>"; };
 		1D9297BE2C1B062900A38521 /* ApplicationUpdateDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationUpdateDetector.swift; sourceTree = "<group>"; };
-		1D94E79F2F33AA28008315A2 /* MacOSWebExtensionPixelFiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSWebExtensionPixelFiring.swift; sourceTree = "<group>"; };
 		1D94E7982F333CA1008315A2 /* AIChatOmnibarToolButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatOmnibarToolButton.swift; sourceTree = "<group>"; };
+		1D94E79F2F33AA28008315A2 /* MacOSWebExtensionPixelFiring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSWebExtensionPixelFiring.swift; sourceTree = "<group>"; };
 		1D99CDDA2D929EBE00656A84 /* PinnedTabsPixel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedTabsPixel.swift; sourceTree = "<group>"; };
 		1D9A37662BD8EA8800EBC58D /* DockPositionProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockPositionProvider.swift; sourceTree = "<group>"; };
 		1D9A4E592B43213B00F449E2 /* TabSnapshotExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSnapshotExtension.swift; sourceTree = "<group>"; };
@@ -4632,6 +4634,7 @@
 		1EC711542D03421B0009EB5C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		1EC711572D035BC30009EB5C /* NetworkProtectionLocalizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = NetworkProtectionLocalizable.xcstrings; sourceTree = "<group>"; };
 		1ED910D42B63BFB300936947 /* IdentityTheftRestorationPagesUserScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentityTheftRestorationPagesUserScript.swift; sourceTree = "<group>"; };
+		1EEBF90E2F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WebExtensionHandlerProvider+macOS.swift"; sourceTree = "<group>"; };
 		31031EB62CC94C6C00684340 /* AIChatRemoteSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatRemoteSettingsTests.swift; sourceTree = "<group>"; };
 		310E79BE294A19A8007C49E8 /* FireproofingReferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireproofingReferenceTests.swift; sourceTree = "<group>"; };
 		310E83F62ED79B1E006F80D2 /* KeyboardShortcutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutView.swift; sourceTree = "<group>"; };
@@ -7049,6 +7052,7 @@
 				1D3A2B652D2D230000F06679 /* WebExtensionInternalSiteHandler.swift */,
 				1D3A2B622D2D225B00F06679 /* WebExtensionInternalSiteNavigationDelegate.swift */,
 				1EC320922F23F12A00A38D09 /* WebExtensionManager+macOS.swift */,
+				1EEBF90E2F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift */,
 				7BE33DCC2DC12C0300A96502 /* WebExtensionNavigationBarUpdater.swift */,
 				1EC320932F23F12A00A38D09 /* WebExtensionWindowTabProvider+macOS.swift */,
 			);
@@ -14311,6 +14315,7 @@
 				3765CAB02E4B70DC00A26678 /* PageContextTabExtension.swift in Sources */,
 				EEC4A65E2B277E8D00F7C0AA /* NetworkProtectionVPNCountryLabelsModel.swift in Sources */,
 				1DDD3EC52B84F96B004CBF2B /* CookiePopupProtectionPreferences.swift in Sources */,
+				1EEBF9102F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift in Sources */,
 				379858112D730EDA008773F6 /* HistoryViewDeleteDialogModel.swift in Sources */,
 				3706FAE0293F65D500E42796 /* BookmarkSidebarTreeController.swift in Sources */,
 				1DF7989A2DBA2A23003148F3 /* AboutPanel.swift in Sources */,
@@ -16618,6 +16623,7 @@
 				AA5FA69A275F91C700DCE9C9 /* Favicon.swift in Sources */,
 				AABEE69A24A902A90043105B /* SuggestionContainerViewModel.swift in Sources */,
 				37F8ABD32CE3EE5B00CB0294 /* FeatureFlagOverridesMenu.swift in Sources */,
+				1EEBF90F2F3E16DD00DF90F3 /* WebExtensionHandlerProvider+macOS.swift in Sources */,
 				CC8E71242F0FE421008C8070 /* NewTabPageNextStepsCardsProviderFacade.swift in Sources */,
 				4B85A48028821CC500FC4C39 /* NSPasteboardItemExtension.swift in Sources */,
 				37CD54CA27F2FDD100F1F7B9 /* AutofillPreferencesModel.swift in Sources */,
