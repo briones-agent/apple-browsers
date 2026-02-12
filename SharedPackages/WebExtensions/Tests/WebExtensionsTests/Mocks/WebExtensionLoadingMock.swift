@@ -47,17 +47,27 @@ final class WebExtensionLoadingMock: WebExtensionLoading {
         }
 
         let result: WebExtensionLoadResult
+        let context: WKWebExtensionContext
+
         if let mockLoadResult = mockLoadResult {
             result = mockLoadResult
+            let testExtensionURL = try createTestWebExtension()
+            let mockExtension = try await WKWebExtension(resourceBaseURL: testExtensionURL)
+            context = await WKWebExtensionContext(for: mockExtension)
         } else {
             let testExtensionURL = try createTestWebExtension()
             let mockExtension = try await WKWebExtension(resourceBaseURL: testExtensionURL)
-            let mockContext = await WKWebExtensionContext(for: mockExtension)
-            result = WebExtensionLoadResult(context: mockContext, identifier: identifier)
+            context = await WKWebExtensionContext(for: mockExtension)
+            result = WebExtensionLoadResult(
+                identifier: identifier,
+                filename: testExtensionURL.lastPathComponent,
+                displayName: mockExtension.displayName,
+                version: mockExtension.version
+            )
         }
 
         // Notify delegate before returning (simulating the real loader's behavior)
-        delegate?.webExtensionLoader(self, willLoad: result.context, identifier: identifier)
+        delegate?.webExtensionLoader(self, willLoad: context, identifier: identifier)
 
         return result
     }

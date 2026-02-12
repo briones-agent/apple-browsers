@@ -83,7 +83,9 @@ final class WebExtensionLoaderDelegateTests: XCTestCase {
         let result = try await loader.loadWebExtension(identifier: identifier, into: controller)
 
         XCTAssertEqual(result.identifier, identifier)
-        XCTAssertNotNil(result.context)
+        XCTAssertFalse(result.filename.isEmpty)
+        XCTAssertEqual(result.displayName, "Test Extension")
+        XCTAssertEqual(result.version, "1.0.0")
     }
 
     // MARK: - Test Helpers

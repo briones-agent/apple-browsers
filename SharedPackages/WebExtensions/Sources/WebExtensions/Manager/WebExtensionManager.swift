@@ -126,9 +126,9 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
 
             let installedExtension = await InstalledWebExtension(
                 uniqueIdentifier: identifier,
-                filename: sourceURL.lastPathComponent,
-                name: loadResult.context.webExtension.displayName,
-                version: loadResult.context.webExtension.version
+                filename: loadResult.filename,
+                name: loadResult.displayName,
+                version: loadResult.version
             )
 
             installationStore.add(installedExtension)

@@ -29,8 +29,8 @@ public protocol WebExtensionLoadingDelegate: AnyObject {
     ///   - context: The extension context that will be loaded
     ///   - identifier: The unique identifier for the extension
     func webExtensionLoader(_ loader: WebExtensionLoading,
-                           willLoad context: WKWebExtensionContext,
-                           identifier: String)
+                            willLoad context: WKWebExtensionContext,
+                            identifier: String)
 }
 
 @available(macOS 15.4, iOS 18.4, *)
@@ -73,7 +73,12 @@ public final class WebExtensionLoader: WebExtensionLoading {
 
         try controller.load(context)
 
-        return WebExtensionLoadResult(context: context, identifier: identifier)
+        return WebExtensionLoadResult(
+            identifier: identifier,
+            filename: extensionURL.lastPathComponent,
+            displayName: webExtension.displayName,
+            version: webExtension.version
+        )
     }
 
     public func loadWebExtensions(identifiers: [String], into controller: WKWebExtensionController) async -> [Result<WebExtensionLoadResult, Error>] {
