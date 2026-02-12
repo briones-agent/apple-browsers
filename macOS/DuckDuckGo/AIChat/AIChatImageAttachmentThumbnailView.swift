@@ -95,9 +95,6 @@ final class AIChatImageAttachmentThumbnailView: NSView {
         addSubview(imageContainerView)
         addSubview(removeButton)
 
-        removeButton.target = self
-        removeButton.action = #selector(removeClicked)
-
         NSLayoutConstraint.activate([
             imageContainerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             imageContainerView.bottomAnchor.constraint(equalTo: bottomAnchor),
@@ -124,32 +121,26 @@ final class AIChatImageAttachmentThumbnailView: NSView {
     // MARK: - Hit Testing & Mouse Events
 
     override func hitTest(_ point: NSPoint) -> NSView? {
+        // Always return self to capture all mouse events.
+        // NSButton cannot be returned here because MouseBlockingBackgroundView
+        // manually forwards events, which conflicts with NSButton's modal tracking.
         guard !isHidden, frame.contains(point) else { return nil }
-        // Convert point from superview coordinates to local coordinates
-        let localPoint = convert(point, from: superview)
-        // Route hits on the remove button to the NSButton so it receives the click
-        if removeButton.frame.contains(localPoint) {
-            return removeButton
-        }
-        // All other hits go to self for thumbnail click handling
         return self
     }
 
     override func mouseUp(with event: NSEvent) {
         let locationInView = convert(event.locationInWindow, from: nil)
-        if bounds.contains(locationInView) {
+        guard bounds.contains(locationInView) else { return }
+
+        if removeButton.frame.contains(locationInView) {
+            onRemove?(attachmentId)
+        } else {
             onThumbnailClicked?(attachmentId)
         }
     }
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
-    }
-
-    // MARK: - Actions
-
-    @objc private func removeClicked() {
-        onRemove?(attachmentId)
     }
 
     // MARK: - Image
