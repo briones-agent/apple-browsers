@@ -108,11 +108,11 @@ class DefaultTabPreviewsSource: TabPreviewsSource {
                 do {
                     try FileManager.default.removeItem(at: previewUrl)
                 } catch {
-                    dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnTabsError(error))
+                    dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearTabsError(error))
                 }
             }
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnTabsError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearTabsError(error))
         }
     }
     

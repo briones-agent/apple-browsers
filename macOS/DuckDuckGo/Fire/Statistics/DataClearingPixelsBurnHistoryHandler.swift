@@ -19,20 +19,30 @@
 import History
 import Foundation
 
-struct DataClearingPixelsBurnHistoryHandler: DataClearingPixelsHandling {
+struct DataClearingPixelsClearHistoryHandler: DataClearingPixelsHandling {
     private let dataClearingPixelsReporter: DataClearingPixelsReporter
 
-    init(_ dataClearingPixelsReporter: DataClearingPixelsReporter = DataClearingPixelsReporter()) {
+    init(_ dataClearingPixelsReporter: DataClearingPixelsReporter = .init()) {
         self.dataClearingPixelsReporter = dataClearingPixelsReporter
     }
 
     func fireErrorPixel(_ error: Error) {
-        dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnHistoryError(error))
+        dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearHistoryError(error))
+    }
+}
+
+struct DataClearingPixelsClearVisitsHandler: DataClearingPixelsHandling {
+    private let dataClearingPixelsReporter: DataClearingPixelsReporter
+
+    init(_ dataClearingPixelsReporter: DataClearingPixelsReporter = .init()) {
+        self.dataClearingPixelsReporter = dataClearingPixelsReporter
     }
 
     func fireDurationPixel(_ startTime: CFTimeInterval) {
-        // BurnVisits is one step inside burnHistory
-        // Firing burnVisits pixel instead of burnHistory pixel to get a more granular measurement
-        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnVisitsDuration, startTime: startTime)
+        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearVisitsDuration, startTime: startTime)
+    }
+    
+    func fireErrorPixel(_ error: Error) {
+        dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearVisitsError(error))
     }
 }

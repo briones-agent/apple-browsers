@@ -432,7 +432,7 @@ final class DownloadListCoordinator {
                 try fm.removeItem(at: url)
             })
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnDownloadsError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearDownloadsError(error))
             Logger.fileDownload.error("🦀 coordinator: failed to remove temp file: \(error)")
         }
 
@@ -440,7 +440,7 @@ final class DownloadListCoordinator {
         do {
             guard let presenter = filePresenters[item.identifier]?.destination,
                   (try? presenter.url?.resourceValues(forKeys: [.fileSizeKey]).fileSize) == 0 else {
-                dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnDownloadsError(DestinationFileNotEmpty()))
+                dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearDownloadsError(DestinationFileNotEmpty()))
                 throw DestinationFileNotEmpty()
             }
             try presenter.coordinateWrite(with: .forDeleting, using: { url in
@@ -450,7 +450,7 @@ final class DownloadListCoordinator {
         } catch is DestinationFileNotEmpty {
             // don‘t delete non-empty destination file
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnDownloadsError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearDownloadsError(error))
             Logger.fileDownload.error("🦀 coordinator: failed to remove destination file: \(error)")
         }
     }
@@ -559,10 +559,6 @@ final class DownloadListCoordinator {
             itemsToRemove.insert(id)
             remove(downloadWithIdentifier: id)
         }
-
-        dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnDownloadsHasResidue) {
-            itemsToRemove.contains { self.items[$0] != nil }
-        }
     }
 
     @MainActor
@@ -589,10 +585,6 @@ final class DownloadListCoordinator {
                 itemsToRemove.insert(id)
                 remove(downloadWithIdentifier: id)
             }
-        }
-
-        dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnDownloadsHasResidue) {
-            itemsToRemove.contains { self.items[$0] != nil }
         }
     }
 

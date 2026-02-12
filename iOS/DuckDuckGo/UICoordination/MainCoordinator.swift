@@ -257,12 +257,16 @@ final class MainCoordinator {
 
     private static func makeHistoryManager(tabsModel: TabsModel) throws -> HistoryManaging {
         let provider = AppDependencyProvider.shared
+        let dataClearingPixelsReporter = DataClearingPixelsReporter()
+        let dataClearingPixelsHandlers = DataClearingPixelsHandlers(
+            tabsHandler: DataClearingClearTabsPixelsHandler(dataClearingPixelsReporter),
+            historyHandler: DataClearingClearHistoryPixelsHandler(dataClearingPixelsReporter)
+        )
         switch HistoryManager.make(isAutocompleteEnabledByUser: provider.appSettings.autocomplete,
                                    isRecentlyVisitedSitesEnabledByUser: provider.appSettings.recentlyVisitedSites,
                                    openTabIDsProvider: { tabsModel.tabs.map { $0.uid } },
                                    tld: provider.storageCache.tld,
-                                   burnTabsPixelsHandler: DataClearingBurnTabsPixelsHandler(),
-                                   burnHistoryPixelsHandler: DataClearingBurnHistoryPixelsHandler()) {
+                                   dataClearingPixelsHandlers: dataClearingPixelsHandlers) {
         case .failure(let error):
             throw TerminationError.historyDatabase(error)
         case .success(let historyManager):
@@ -297,16 +301,9 @@ final class MainCoordinator {
 
     private static func makeWebsiteDataManager(fireproofing: Fireproofing,
                                                dataStoreIDManager: DataStoreIDManaging = DataStoreIDManager.shared) -> WebsiteDataManaging {
-        let dataClearingPixelsReporter = DataClearingPixelsReporter()
-        let webCacheClearingReporter = WebCacheClearingReporter(
-            onResidue: { step, scope in
-                dataClearingPixelsReporter.fireResiduePixel(DataClearingPixels.burnWebsiteDataHasResidue(step: step, scope: scope))
-            }
-        )
         return WebCacheManager(cookieStorage: MigratableCookieStorage(),
                         fireproofing: fireproofing,
-                        dataStoreIDManager: dataStoreIDManager,
-                        clearingReporter: webCacheClearingReporter)
+                        dataStoreIDManager: dataStoreIDManager)
     }
 
     // MARK: - Public API

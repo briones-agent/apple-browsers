@@ -31,36 +31,30 @@ enum DataClearingPixels {
 
     // Per-Action Quality Metrics
 
-    case burnWebCacheError(Error)
-    case burnWebCacheDuration(Int)
-    case burnWebCacheHasResidue(steps: String)
+    case clearWebCacheError(Error)
+    case clearWebCacheDuration(Int)
 
-    case burnHistoryError(Error)
-    case burnHistoryDuration(entity: String, duration: Int)
+    case clearHistoryError(Error)
+    case clearHistoryDuration(entity: String, duration: Int)
 
-    case burnChatHistoryError(Error)
-    case burnChatHistoryDuration(Int)
+    case clearChatHistoryError(Error)
+    case clearChatHistoryDuration(Int)
 
-    case burnVisitedLinksDuration(Int)
+    case clearVisitedLinksDuration(Int)
 
-    case burnVisitsError(Error)
-    case burnVisitsDuration(Int)
-    case burnVisitsHasResidue
+    case clearVisitsError(Error)
+    case clearVisitsDuration(Int)
 
-    case burnLastSessionStateError(Error)
-    case burnLastSessionStateDuration(Int)
-    case burnLastSessionStateHasResidue
+    case clearLastSessionStateError(Error)
+    case clearLastSessionStateDuration(Int)
 
-    case burnTabsError(Error)
-    case burnTabsDuration(entity: String, duration: Int)
-    case burnTabsHasResidue(entity: String)
+    case clearTabsError(Error)
+    case clearTabsDuration(entity: String, duration: Int)
 
-    case burnDownloadsError(Error)
-    case burnDownloadsDuration(Int)
-    case burnDownloadsHasResidue
+    case clearDownloadsError(Error)
+    case clearDownloadsDuration(Int)
 
-    case burnRecentlyClosedDuration(Int)
-    case burnRecentlyClosedHasResidue
+    case clearRecentlyClosedDuration(Int)
 }
 
 // MARK: - PixelKitEvent Protocol
@@ -74,58 +68,46 @@ extension DataClearingPixels: PixelKitEvent {
         case .retriggerIn20s:
             return "m_mac_fire_retrigger_in_20s"
 
-        case .burnWebCacheError:
-            return "m_mac_fire_burn_web_cache_error"
-        case .burnWebCacheDuration:
-            return "m_mac_fire_burn_web_cache_duration"
-        case .burnWebCacheHasResidue:
-            return "m_mac_fire_burn_web_cache_has_residue"
+        case .clearWebCacheError:
+            return "m_mac_data_clearing_clear_web_cache_error"
+        case .clearWebCacheDuration:
+            return "m_mac_data_clearing_clear_web_cache_duration"
 
-        case .burnHistoryError:
-            return "m_mac_fire_burn_history_error"
-        case .burnHistoryDuration:
-            return "m_mac_fire_burn_history_duration"
+        case .clearHistoryError:
+            return "m_mac_data_clearing_clear_history_error"
+        case .clearHistoryDuration:
+            return "m_mac_data_clearing_clear_history_duration"
 
-        case .burnChatHistoryError:
-            return "m_mac_fire_burn_chat_history_error"
-        case .burnChatHistoryDuration:
-            return "m_mac_fire_burn_chat_history_duration"
+        case .clearChatHistoryError:
+            return "m_mac_data_clearing_clear_chat_history_error"
+        case .clearChatHistoryDuration:
+            return "m_mac_data_clearing_clear_chat_history_duration"
 
-        case .burnVisitedLinksDuration:
-            return "m_mac_fire_burn_visited_links_duration"
+        case .clearVisitedLinksDuration:
+            return "m_mac_data_clearing_clear_visited_links_duration"
 
-        case .burnVisitsError:
-            return "m_mac_fire_burn_visits_error"
-        case .burnVisitsDuration:
-            return "m_mac_fire_burn_visits_duration"
-        case .burnVisitsHasResidue:
-            return "m_mac_fire_burn_visits_has_residue"
+        case .clearVisitsError:
+            return "m_mac_data_clearing_clear_visits_error"
+        case .clearVisitsDuration:
+            return "m_mac_data_clearing_clear_visits_duration"
 
-        case .burnLastSessionStateError:
-            return "m_mac_fire_burn_last_session_state_error"
-        case .burnLastSessionStateDuration:
-            return "m_mac_fire_burn_last_session_state_duration"
-        case .burnLastSessionStateHasResidue:
-            return "m_mac_fire_burn_last_session_state_has_residue"
+        case .clearLastSessionStateError:
+            return "m_mac_data_clearing_clear_last_session_state_error"
+        case .clearLastSessionStateDuration:
+            return "m_mac_data_clearing_clear_last_session_state_duration"
 
-        case .burnTabsError:
-            return "m_mac_fire_burn_tabs_error"
-        case .burnTabsDuration:
-            return "m_mac_fire_burn_tabs_duration"
-        case .burnTabsHasResidue:
-            return "m_mac_fire_burn_tabs_has_residue"
+        case .clearTabsError:
+            return "m_mac_data_clearing_clear_tabs_error"
+        case .clearTabsDuration:
+            return "m_mac_data_clearing_clear_tabs_duration"
 
-        case .burnDownloadsError:
-            return "m_mac_fire_burn_downloads_error"
-        case .burnDownloadsDuration:
-            return "m_mac_fire_burn_downloads_duration"
-        case .burnDownloadsHasResidue:
-            return "m_mac_fire_burn_downloads_has_residue"
+        case .clearDownloadsError:
+            return "m_mac_data_clearing_clear_downloads_error"
+        case .clearDownloadsDuration:
+            return "m_mac_data_clearing_clear_downloads_duration"
 
-        case .burnRecentlyClosedDuration:
-            return "m_mac_fire_burn_recently_closed_duration"
-        case .burnRecentlyClosedHasResidue:
-            return "m_mac_fire_burn_recently_closed_has_residue"
+        case .clearRecentlyClosedDuration:
+            return "m_mac_data_clearing_clear_recently_closed_duration"
         }
     }
 
@@ -140,43 +122,35 @@ extension DataClearingPixels: PixelKitEvent {
                 "autoClear": autoClear
             ]
 
-        case .burnWebCacheDuration(let duration),
-             .burnChatHistoryDuration(let duration),
-             .burnDownloadsDuration(let duration),
-             .burnRecentlyClosedDuration(let duration),
-             .burnVisitedLinksDuration(let duration),
-             .burnVisitsDuration(let duration),
-             .burnLastSessionStateDuration(let duration):
+        case .clearWebCacheDuration(let duration),
+             .clearChatHistoryDuration(let duration),
+             .clearDownloadsDuration(let duration),
+             .clearRecentlyClosedDuration(let duration),
+             .clearVisitedLinksDuration(let duration),
+             .clearVisitsDuration(let duration),
+             .clearLastSessionStateDuration(let duration):
             return ["duration": String(duration)]
 
-        case .burnTabsHasResidue(let entity):
-            return ["entity": entity]
-
-        case .burnHistoryDuration(let entity, let duration),
-             .burnTabsDuration(let entity, let duration):
+        case .clearHistoryDuration(let entity, let duration),
+             .clearTabsDuration(let entity, let duration):
             return ["entity": entity, "duration": String(duration)]
 
-        case .burnWebCacheHasResidue(let steps):
-            return ["step": steps]
-
         case .retriggerIn20s,
-             .burnWebCacheError, .burnHistoryError, .burnChatHistoryError,
-             .burnVisitsError, .burnLastSessionStateError, .burnTabsError, .burnDownloadsError,
-             .burnVisitsHasResidue, .burnLastSessionStateHasResidue,
-             .burnDownloadsHasResidue, .burnRecentlyClosedHasResidue:
+             .clearWebCacheError, .clearHistoryError, .clearChatHistoryError,
+             .clearVisitsError, .clearLastSessionStateError, .clearTabsError, .clearDownloadsError:
             return nil
         }
     }
 
     var error: NSError? {
         switch self {
-        case .burnWebCacheError(let error),
-             .burnHistoryError(let error),
-             .burnChatHistoryError(let error),
-             .burnVisitsError(let error),
-             .burnLastSessionStateError(let error),
-             .burnTabsError(let error),
-             .burnDownloadsError(let error):
+        case .clearWebCacheError(let error),
+             .clearHistoryError(let error),
+             .clearChatHistoryError(let error),
+             .clearVisitsError(let error),
+             .clearLastSessionStateError(let error),
+             .clearTabsError(let error),
+             .clearDownloadsError(let error):
             return error as NSError
         default:
             return nil

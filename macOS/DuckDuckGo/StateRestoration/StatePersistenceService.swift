@@ -90,23 +90,19 @@ final class StatePersistenceService {
         do {
             try fileStore.removeOrThrow(fileAtURL: location)
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnLastSessionStateError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearLastSessionStateError(error))
         }
 
         do {
             try fileStore.removeOrThrow(fileAtURL: .persistenceLocation(for: self.lastLoadedStateFileName))
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnLastSessionStateError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearLastSessionStateError(error))
         }
 
         do {
             try fileStore.removeOrThrow(fileAtURL: .persistenceLocation(for: self.oldStateFileName))
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnLastSessionStateError(error))
-        }
-
-        dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnLastSessionStateHasResidue) {
-            check(at: location, fileStore: fileStore)
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearLastSessionStateError(error))
         }
     }
 

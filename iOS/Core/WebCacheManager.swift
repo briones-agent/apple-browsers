@@ -54,25 +54,6 @@ public protocol WebsiteDataManaging {
 
 }
 
-public struct WebCacheClearingReporter {
-
-    public typealias ClearingStepRawValue = String
-    public typealias ScopeRawValue = String
-
-    public var onResidue: (ClearingStepRawValue, ScopeRawValue?) -> Void
-
-    public init(onResidue: @escaping (ClearingStepRawValue, ScopeRawValue?) -> Void) {
-        self.onResidue = onResidue
-    }
-}
-
-private enum ClearingStep: String {
-
-    case clearDataForSafelyRemovableDataTypes = "clear_data_for_safely_removable_data_types"
-    case clearFireproofableDataForNonFireproofedDomains = "clear_fireproofable_data_for_non_fireproofed_domains"
-    case clearCookiesForNonFireproofedDomains = "clear_cookies_for_non_fireproofed_domains"
-}
-
 public class WebCacheManager: WebsiteDataManaging {
     
     private typealias DataRecordInScopeEvaluator = (String) -> Bool
@@ -148,20 +129,17 @@ public class WebCacheManager: WebsiteDataManaging {
     let dataStoreIDManager: DataStoreIDManaging
     let dataStoreCleaner: WebsiteDataStoreCleaning
     let observationsCleaner: ObservationsDataCleaning
-    private let clearingReporter: WebCacheClearingReporter?
 
     public init(cookieStorage: MigratableCookieStorage,
                 fireproofing: Fireproofing,
                 dataStoreIDManager: DataStoreIDManaging,
                 dataStoreCleaner: WebsiteDataStoreCleaning = DefaultWebsiteDataStoreCleaner(),
-                observationsCleaner: ObservationsDataCleaning = DefaultObservationsDataCleaner(),
-                clearingReporter: WebCacheClearingReporter? = nil) {
+                observationsCleaner: ObservationsDataCleaning = DefaultObservationsDataCleaner()) {
         self.cookieStorage = cookieStorage
         self.fireproofing = fireproofing
         self.dataStoreIDManager = dataStoreIDManager
         self.dataStoreCleaner = dataStoreCleaner
         self.observationsCleaner = observationsCleaner
-        self.clearingReporter = clearingReporter
     }
 
     /// The previous version saved cookies externally to the data so we can move them between containers.  We now use
@@ -276,34 +254,13 @@ extension WebCacheManager {
                                                       scope: Scope) async {
         switch scope {
         case .all:
-            let recordsBeforeRemoval = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
-            let domainsBeforeRemoval = Set(recordsBeforeRemoval.map { $0.displayName })
             await dataStore.removeData(ofTypes: Self.safelyRemovableWebsiteDataTypes, modifiedSince: Date.distantPast)
-
-            let recordsAfterRemoval = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
-            let domainsAfterRemoval = Set(recordsAfterRemoval.map { $0.displayName })
-            let residueDomains = domainsBeforeRemoval.intersection(domainsAfterRemoval).filter { domain in
-                !Self.shouldExcludeFromResidueCheck(domain: domain)
-            }
-            if !residueDomains.isEmpty {
-                clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
-            }
         case .limited(let dataRecords, _):
             let allRecords = await dataStore.dataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes())
             let removableRecords = allRecords.filter { record in
                 dataRecords(record.displayName)
             }
-            let domainsToRemove = Set(removableRecords.map { $0.displayName })
             await dataStore.removeData(ofTypes: Self.safelyRemovableWebsiteDataTypes, for: removableRecords)
-
-            let remainingRecords = await dataStore.dataRecords(ofTypes: Self.safelyRemovableWebsiteDataTypes)
-            let domainsAfterRemoval = Set(remainingRecords.map { $0.displayName })
-            let residueDomains = domainsToRemove.intersection(domainsAfterRemoval).filter { domain in
-                !Self.shouldExcludeFromResidueCheck(domain: domain)
-            }
-            if !residueDomains.isEmpty {
-                clearingReporter?.onResidue(ClearingStep.clearDataForSafelyRemovableDataTypes.rawValue, scope.description)
-            }
         }
     }
 
@@ -319,15 +276,6 @@ extension WebCacheManager {
 
         let fireproofableTypesExceptCookies = Self.fireproofableDataTypesExceptCookies
         await dataStore.removeData(ofTypes: fireproofableTypesExceptCookies, for: removableRecords)
-
-        let remainingRecords = await dataStore.dataRecords(ofTypes: fireproofableTypesExceptCookies)
-        let hasResidue = remainingRecords.contains { record in
-            let fireproofed = fireproofing.isAllowed(fireproofDomain: record.displayName)
-            return !fireproofed && scope.dataRecordsEvaluator(record.displayName)
-        }
-        if hasResidue {
-            clearingReporter?.onResidue(ClearingStep.clearFireproofableDataForNonFireproofedDomains.rawValue, scope.description)
-        }
     }
 
     @MainActor
@@ -343,31 +291,6 @@ extension WebCacheManager {
         for cookie in cookiesToRemove {
             await cookieStore.deleteCookie(cookie)
         }
-
-        let remainingCookies = await cookieStore.allCookies()
-        let hasResidue = remainingCookies.contains { cookie in
-            let fireproofed = fireproofing.isAllowed(cookieDomain: cookie.domain)
-            return !fireproofed && scope.cookiesEvaluator(cookie)
-        }
-        if hasResidue {
-            clearingReporter?.onResidue(ClearingStep.clearCookiesForNonFireproofedDomains.rawValue, scope.description)
-        }
     }
 
-}
-
-// MARK: - Instrumentation Helper
-
-private  extension WebCacheManager {
-
-    static let duckduckgoDomain = "duckduckgo.com"
-    static let duckAiDomain = "duck.ai"
-
-    static let domainsExcludedFromResidueCheck = [duckduckgoDomain, duckAiDomain]
-
-    static func shouldExcludeFromResidueCheck(domain: String) -> Bool {
-        return domainsExcludedFromResidueCheck.contains { excluded in
-            domain == excluded || domain.hasSuffix(".\(excluded)")
-        }
-    }
 }

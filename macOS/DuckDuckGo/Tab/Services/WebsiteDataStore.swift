@@ -72,7 +72,7 @@ internal class WebCacheManager {
 
         await self.removeResourceLoadStatisticsDatabase()
 
-        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnWebCacheDuration, startTime: startTime)
+        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearWebCacheDuration, startTime: startTime)
     }
 
     private func clearFileCache() async {
@@ -84,7 +84,7 @@ internal class WebCacheManager {
         do {
             try fm.createDirectory(at: tmpDir, withIntermediateDirectories: false, attributes: nil)
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
             Logger.general.error("Could not create temporary directory: \(error.localizedDescription)")
             return
         }
@@ -96,15 +96,8 @@ internal class WebCacheManager {
             do {
                 try fm.moveItem(at: cachesDir.appendingPathComponent(name), to: tmpDir.appendingPathComponent(name))
             } catch {
-                dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+                dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
             }
-        }
-
-        dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnWebCacheHasResidue(steps: ClearSteps.clearFileCache.rawValue)) {
-            let currentContents = try? FileManager.default.contentsOfDirectory(atPath: cachesDir.path)
-            return currentContents?.contains { name in
-                ["WebKit", "fsCachedData"].contains(name) || name.hasPrefix("Cache.")
-            } ?? false
         }
 
         do {
@@ -112,7 +105,7 @@ internal class WebCacheManager {
                                     withIntermediateDirectories: false,
                                     attributes: nil)
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
         }
 
         Process("/bin/rm", "-rf", tmpDir.path).launch()
@@ -131,7 +124,7 @@ internal class WebCacheManager {
         do {
             try fm.createDirectory(at: tmpDir, withIntermediateDirectories: false, attributes: nil)
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
             Logger.general.error("Could not create temporary directory: \(error.localizedDescription)")
             return
         }
@@ -139,12 +132,7 @@ internal class WebCacheManager {
         do {
             try fm.moveItem(at: libraryURL, to: tmpDir.appendingPathComponent("1"))
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
-        }
-
-        dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnWebCacheHasResidue(steps: ClearSteps.clearDeviceHashSalts.rawValue)) {
-            guard let content = try? FileManager.default.contentsOfDirectory(atPath: libraryURL.path) else { return false }
-            return !content.isEmpty
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
         }
 
         do {
@@ -152,7 +140,7 @@ internal class WebCacheManager {
                                     withIntermediateDirectories: false,
                                     attributes: nil)
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
         }
 
         Process("/bin/rm", "-rf", tmpDir.path).launch()
@@ -167,9 +155,6 @@ internal class WebCacheManager {
 
         Task {
             let records = await websiteDataStore.dataRecords(ofTypes: safelyRemovableTypes)
-            dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnWebCacheHasResidue(steps: ClearSteps.clearSafelyRemovableDataTypes.rawValue)) {
-                return !records.isEmpty
-            }
         }
     }
 
@@ -185,15 +170,6 @@ internal class WebCacheManager {
         let removedDisplayNames = Set(removableRecords.map { $0.displayName })
 
         await websiteDataStore.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypesExceptCookies, for: removableRecords)
-
-        Task {
-            let remainingRecords = await websiteDataStore.dataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypesExceptCookies)
-            dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnWebCacheHasResidue(steps: ClearSteps.clearLocalStorageAndIndexedDBForNonFireproofDomains.rawValue)) {
-                remainingRecords.contains { record in
-                    removedDisplayNames.contains(record.displayName)
-                }
-            }
-        }
     }
 
     @MainActor
@@ -219,13 +195,6 @@ internal class WebCacheManager {
         for cookie in cookiesToRemove {
             Logger.fire.debug("Deleting cookie for \(cookie.domain) named \(cookie.name)")
             await cookieStore.deleteCookie(cookie)
-        }
-
-        Task {
-            let postClearingCookieCount = await cookieStore.allCookies().count
-            dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnWebCacheHasResidue(steps: ClearSteps.clearCookies.rawValue)) {
-                postClearingCookieCount != beforeClearingCookieCount - cookiesToRemove.count
-            }
         }
     }
 
@@ -259,7 +228,7 @@ internal class WebCacheManager {
         do {
             try await pool.vacuum()
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
         }
 
         // For an unknown reason, domains may be still present in the database binary when running `strings` over it, despite SQL queries returning an
@@ -279,7 +248,7 @@ internal class WebCacheManager {
                 }
             }
         } catch {
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnWebCacheError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearWebCacheError(error))
             Logger.fire.error("Failed to clear observations database: \(error.localizedDescription)")
         }
     }

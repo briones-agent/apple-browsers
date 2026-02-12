@@ -132,47 +132,13 @@ final class DataClearingPixelsReporterTests: XCTestCase {
         let testError = NSError(domain: "test", code: 123)
 
         // When
-        sut.fireErrorPixel(.burnWebCacheError(testError))
+        sut.fireErrorPixel(.clearWebCacheError(testError))
 
         // Then
         mockPixelFiring.expectedFireCalls = [
-            .init(pixel: DataClearingPixels.burnWebCacheError(testError), frequency: .dailyAndStandard)
+            .init(pixel: DataClearingPixels.clearWebCacheError(testError), frequency: .dailyAndStandard)
         ]
         mockPixelFiring.verifyExpectations(file: #file, line: #line)
-    }
-
-    // MARK: - fireResiduePixel Tests
-
-    func testWhenFireResiduePixelCalledThenPixelIsFired() {
-        // When
-        sut.fireResiduePixel(.burnVisitsHasResidue)
-
-        // Then
-        mockPixelFiring.expectedFireCalls = [
-            .init(pixel: DataClearingPixels.burnVisitsHasResidue, frequency: .standard)
-        ]
-        mockPixelFiring.verifyExpectations(file: #file, line: #line)
-    }
-
-    // MARK: - fireResiduePixelIfNeeded Tests
-
-    func testWhenResidueCheckReturnsTrueThenPixelIsFired() {
-        // When
-        sut.fireResiduePixelIfNeeded(.burnVisitsHasResidue) { true }
-
-        // Then
-        mockPixelFiring.expectedFireCalls = [
-            .init(pixel: DataClearingPixels.burnVisitsHasResidue, frequency: .standard)
-        ]
-        mockPixelFiring.verifyExpectations(file: #file, line: #line)
-    }
-
-    func testWhenResidueCheckReturnsFalseThenNoPixelIsFired() {
-        // When
-        sut.fireResiduePixelIfNeeded(.burnVisitsHasResidue) { false }
-
-        // Then
-        XCTAssertTrue(mockPixelFiring.actualFireCalls.isEmpty)
     }
 
     // MARK: - fireDurationPixel Tests
@@ -183,14 +149,14 @@ final class DataClearingPixelsReporterTests: XCTestCase {
         currentTime += 1.5 // 1.5 seconds = 1500ms
 
         // When
-        sut.fireDurationPixel(DataClearingPixels.burnWebCacheDuration, startTime: startTime)
+        sut.fireDurationPixel(DataClearingPixels.clearWebCacheDuration, startTime: startTime)
 
         // Then
         XCTAssertEqual(mockPixelFiring.actualFireCalls.count, 1)
         XCTAssertEqual(mockPixelFiring.actualFireCalls.first?.frequency, .standard)
 
         // Verify duration parameter is correct (1500ms)
-        if case .burnWebCacheDuration(let duration) = mockPixelFiring.actualFireCalls.first?.pixel as? DataClearingPixels {
+        if case .clearWebCacheDuration(let duration) = mockPixelFiring.actualFireCalls.first?.pixel as? DataClearingPixels {
             XCTAssertEqual(duration, 1500)
         } else {
             XCTFail("Expected burnWebCacheDuration pixel")
@@ -203,12 +169,12 @@ final class DataClearingPixelsReporterTests: XCTestCase {
         currentTime += 2 // 2 seconds = 2000ms
 
         // When
-        sut.fireDurationPixel(DataClearingPixels.burnHistoryDuration, startTime: startTime, entity: "history")
+        sut.fireDurationPixel(DataClearingPixels.clearHistoryDuration, startTime: startTime, entity: "history")
 
         // Then
         XCTAssertEqual(mockPixelFiring.actualFireCalls.count, 1)
 
-        if case .burnHistoryDuration(let entity, let duration) = mockPixelFiring.actualFireCalls.first?.pixel as? DataClearingPixels {
+        if case .clearHistoryDuration(let entity, let duration) = mockPixelFiring.actualFireCalls.first?.pixel as? DataClearingPixels {
             XCTAssertEqual(entity, "history")
             XCTAssertEqual(duration, 2000)
         } else {
@@ -226,8 +192,7 @@ final class DataClearingPixelsReporterTests: XCTestCase {
         // When - should not crash
         sut.fireRetriggerPixelIfNeeded()
         sut.fireRetriggerPixelIfNeeded()
-        sut.fireErrorPixel(.burnWebCacheError(NSError(domain: "test", code: 1)))
-        sut.fireResiduePixel(.burnLastSessionStateHasResidue)
+        sut.fireErrorPixel(.clearWebCacheError(NSError(domain: "test", code: 1)))
 
         // Then - no crash
     }

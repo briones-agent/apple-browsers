@@ -49,7 +49,7 @@
         "parameters": ["appVersion", "pixelSource"]
     },
 
-    "m_fire_burn_tabs_duration": {
+    "m_data_clearing_clear_tabs_duration": {
         "description": "Fired to report the duration of tabs clearing",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
@@ -71,24 +71,7 @@
         ]
     },
 
-    "m_fire_burn_tabs_has_residue": {
-        "description": "Fired when residual tab data is detected after clearing",
-        "owners": ["hanyutang-sandra"],
-        "triggers": ["other"],
-        "suffixes": ["platform", "form_factor"],
-        "parameters": [
-            "appVersion",
-            "pixelSource",
-            {
-                "key": "scope",
-                "type": "string",
-                "description": "The scope of tabs being cleared",
-                "enum": ["tab", "all"]
-            }
-        ]
-    },
-
-    "m_fire_burn_tabs_error": {
+    "m_data_clearing_clear_tabs_error": {
         "description": "Fired when an error occurs while clearing tabs",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
@@ -96,7 +79,7 @@
         "parameters": ["appVersion", "pixelSource", "errorDomain", "errorCode"]
     },
 
-    "m_fire_burn_url_cache_duration": {
+    "m_data_clearing_clear_url_cache_duration": {
         "description": "Fired to report the duration of URL cache clearing",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
@@ -112,38 +95,7 @@
         ]
     },
 
-    "m_fire_burn_url_cache_has_residue": {
-        "description": "Fired when residual URL cache data is detected after clearing",
-        "owners": ["hanyutang-sandra"],
-        "triggers": ["other"],
-        "suffixes": ["platform", "form_factor"],
-        "parameters": ["appVersion", "pixelSource"]
-    },
-
-    "m_fire_burn_website_data_has_residue": {
-        "description": "Fired when residual website data is detected after clearing",
-        "owners": ["hanyutang-sandra"],
-        "triggers": ["other"],
-        "suffixes": ["platform", "form_factor"],
-        "parameters": [
-            "appVersion",
-            "pixelSource",
-            {
-                "key": "step",
-                "type": "string",
-                "description": "The clearing step where residue was detected",
-                "examples": ["cookies", "local_storage", "cache", "service_workers"]
-            },
-            {
-                "key": "scope",
-                "type": "string",
-                "description": "The scope of tabs being cleared",
-                "enum": ["limited", "all"]
-            }
-        ]
-    },
-
-    "m_fire_burn_history_duration": {
+    "m_data_clearing_clear_history_duration": {
         "description": "Fired to report the duration of history clearing",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
@@ -165,7 +117,7 @@
         ]
     },
 
-    "m_fire_burn_history_error": {
+    "m_data_clearing_clear_history_error": {
         "description": "Fired when an error occurs while clearing browsing history",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
@@ -173,7 +125,7 @@
         "parameters": ["appVersion", "pixelSource", "errorDomain", "errorCode"]
     },
 
-    "m_fire_burn_ai_chat_history_duration": {
+    "m_data_clearing_clear_ai_chat_history_duration": {
         "description": "Fired to report the duration of AI chat history clearing",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
@@ -195,7 +147,7 @@
         ]
     },
 
-    "m_fire_burn_ai_chat_history_error": {
+    "m_data_clearing_clear_ai_chat_history_error": {
         "description": "Fired when an error occurs while clearing AI chat history",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],

@@ -30,28 +30,22 @@ enum DataClearingPixels {
 
     // MARK: - Tab Manager
 
-    case burnTabsDuration(duration: Int, scope: String)
-    case burnTabsHasResidue(scope: String)
-    case burnTabsError(Error)
+    case clearTabsDuration(duration: Int, scope: String)
+    case clearTabsError(Error)
 
     // MARK: - URL Cache
 
-    case burnURLCacheDuration(Int)
-    case burnURLCacheHasResidue
-
-    // MARK: - Website Data
-
-    case burnWebsiteDataHasResidue(step: String, scope: String?)
+    case clearURLCacheDuration(Int)
 
     // MARK: - History
 
-    case burnHistoryDuration(duration: Int, scope: String)
-    case burnHistoryError(Error)
+    case clearHistoryDuration(duration: Int, scope: String)
+    case clearHistoryError(Error)
 
     // MARK: - AI Chat History
 
-    case burnAIChatHistoryDuration(duration: Int, scope: String)
-    case burnAIChatHistoryError(Error)
+    case clearAIChatHistoryDuration(duration: Int, scope: String)
+    case clearAIChatHistoryError(Error)
 }
 
 // MARK: - PixelKitEvent Protocol
@@ -67,30 +61,23 @@ extension DataClearingPixels: PixelKitEvent {
         case .userActionBeforeCompletion:
             return "m_fire_user_action_before_completion"
 
-        case .burnTabsDuration:
-            return "m_fire_burn_tabs_duration"
-        case .burnTabsHasResidue:
-            return "m_fire_burn_tabs_has_residue"
-        case .burnTabsError:
-            return "m_fire_burn_tabs_error"
+        case .clearTabsDuration:
+            return "m_data_clearing_clear_tabs_duration"
+        case .clearTabsError:
+            return "m_data_clearing_clear_tabs_error"
 
-        case .burnURLCacheDuration:
-            return "m_fire_burn_url_cache_duration"
-        case .burnURLCacheHasResidue:
-            return "m_fire_burn_url_cache_has_residue"
+        case .clearURLCacheDuration:
+            return "m_data_clearing_clear_url_cache_duration"
 
-        case .burnWebsiteDataHasResidue:
-            return "m_fire_burn_website_data_has_residue"
+        case .clearHistoryDuration:
+            return "m_data_clearing_clear_history_duration"
+        case .clearHistoryError:
+            return "m_data_clearing_clear_history_error"
 
-        case .burnHistoryDuration:
-            return "m_fire_burn_history_duration"
-        case .burnHistoryError:
-            return "m_fire_burn_history_error"
-
-        case .burnAIChatHistoryDuration:
-            return "m_fire_burn_ai_chat_history_duration"
-        case .burnAIChatHistoryError:
-            return "m_fire_burn_ai_chat_history_error"
+        case .clearAIChatHistoryDuration:
+            return "m_data_clearing_clear_ai_chat_history_duration"
+        case .clearAIChatHistoryError:
+            return "m_data_clearing_clear_ai_chat_history_error"
         }
     }
 
@@ -105,36 +92,25 @@ extension DataClearingPixels: PixelKitEvent {
                 "source": source
             ]
 
-        case .burnURLCacheDuration(let duration):
+        case .clearURLCacheDuration(let duration):
             return ["duration": String(duration)]
             
-        case .burnTabsDuration(let duration, let scope),
-             .burnHistoryDuration(let duration, let scope),
-             .burnAIChatHistoryDuration(let duration, let scope):
+        case .clearTabsDuration(let duration, let scope),
+             .clearHistoryDuration(let duration, let scope),
+             .clearAIChatHistoryDuration(let duration, let scope):
             return ["duration": String(duration), "scope": scope]
-
-        case .burnWebsiteDataHasResidue(let step, let scope):
-            var params = ["step": step]
-            if let scope {
-                params["scope"] = scope
-            }
-            return params
-            
-        case .burnTabsHasResidue(let scope):
-            return ["scope": scope]
             
         case .retriggerIn20s, .userActionBeforeCompletion,
-             .burnURLCacheHasResidue,
-             .burnTabsError, .burnHistoryError, .burnAIChatHistoryError:
+             .clearTabsError, .clearHistoryError, .clearAIChatHistoryError:
             return nil
         }
     }
 
     var error: NSError? {
         switch self {
-        case .burnTabsError(let error),
-             .burnHistoryError(let error),
-             .burnAIChatHistoryError(let error):
+        case .clearTabsError(let error),
+             .clearHistoryError(let error),
+             .clearAIChatHistoryError(let error):
             return error as NSError
         default:
             return nil

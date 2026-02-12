@@ -312,10 +312,7 @@ class FireExecutor: FireExecuting {
             let startTime = CACurrentMediaTime()
             tabManager.prepareCurrentTabForDataClearing()
             tabManager.removeAll()
-            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnTabsDuration, startTime: startTime, scope: scope.description)
-            dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnTabsHasResidue(scope: scope.description)) {
-                tabManager.count > 1
-            }
+            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearTabsDuration, startTime: startTime, scope: scope.description)
             Favicons.shared.clearCache(.tabs)
         case .tab(let viewModel):
             guard let domains else {
@@ -333,10 +330,7 @@ class FireExecutor: FireExecuting {
             // didFinishBurning(fireRequest:) manually clears data after burn is complete
             // Close the tab and append a new empty tab, reusing existing one if exists
             tabManager.closeTabAndNavigateToHomepage(viewModel.tab, clearTabHistory: false)
-            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnTabsDuration, startTime: startTime, scope: scope.description)
-            dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnTabsHasResidue(scope: scope.description)) {
-                tabManager.controller(for: viewModel.tab) != nil
-            }
+            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearTabsDuration, startTime: startTime, scope: scope.description)
 
             Favicons.shared.removeTabFavicons(forDomains: domains)
         }
@@ -374,13 +368,7 @@ class FireExecutor: FireExecuting {
     private func burnAllData() async {
         let startTime = CACurrentMediaTime()
         URLSession.shared.configuration.urlCache?.removeAllCachedResponses()
-        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnURLCacheDuration, startTime: startTime)
-        dataClearingPixelsReporter.fireResiduePixelIfNeeded(DataClearingPixels.burnURLCacheHasResidue) {
-            let cache = URLSession.shared.configuration.urlCache
-            // The API does not clean cache stored on the disk reliably
-            // Only checking memory usage here to avoid false positive
-            return cache?.currentMemoryUsage ?? 0 > 0
-        }
+        dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearURLCacheDuration, startTime: startTime)
 
         let pixel = TimedPixel(.forgetAllDataCleared)
         
@@ -489,7 +477,7 @@ class FireExecutor: FireExecuting {
             await burnTabAIHistory(tabViewModel: viewModel, startTime: startTime, scopeDescription: request.scope.description)
         case .all:
             await burnAllAIHistory(trigger: request.trigger)
-            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnAIChatHistoryDuration, startTime: startTime, scope: request.scope.description)
+            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearAIChatHistoryDuration, startTime: startTime, scope: request.scope.description)
         }
     }
     
@@ -503,7 +491,7 @@ class FireExecutor: FireExecuting {
         case .failure(let error):
             Logger.aiChat.debug("Failed to clear Duck.ai chat history: \(error.localizedDescription)")
             DailyPixel.fireDailyAndCount(pixel: .aiChatHistoryDeleteFailed)
-            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnAIChatHistoryError(error))
+            dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearAIChatHistoryError(error))
 
             if let userScriptError = error as? UserScriptError {
                 userScriptError.fireLoadJSFailedPixelIfNeeded()
@@ -514,7 +502,7 @@ class FireExecutor: FireExecuting {
     private func burnTabAIHistory(tabViewModel: TabViewModel, startTime: CFTimeInterval, scopeDescription: String) async {
         if let chatID = await tabViewModel.currentAIChatId {
             await deleteChat(chatID: chatID)
-            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.burnAIChatHistoryDuration, startTime: startTime, scope: scopeDescription)
+            dataClearingPixelsReporter.fireDurationPixel(DataClearingPixels.clearAIChatHistoryDuration, startTime: startTime, scope: scopeDescription)
         } else {
             Logger.aiChat.debug("No chatID found for tab, skipping single chat deletion")
         }

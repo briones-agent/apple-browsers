@@ -39,6 +39,16 @@ public protocol HistoryManaging {
     @MainActor func removeBrowsingHistory(tabID: String) async
 }
 
+public struct DataClearingPixelsHandlers {
+    let tabsHandler: DataClearingPixelsHandling?
+    let historyHandler: DataClearingPixelsHandling?
+    
+    public init(tabsHandler: DataClearingPixelsHandling? = nil, historyHandler: DataClearingPixelsHandling? = nil) {
+        self.tabsHandler = tabsHandler
+        self.historyHandler = historyHandler
+    }
+}
+
 public class HistoryManager: HistoryManaging {
 
     let dbCoordinator: HistoryCoordinating
@@ -51,8 +61,9 @@ public class HistoryManager: HistoryManaging {
         }
         return dbCoordinator
     }
-    private let burnTabsPixelsHandler: DataClearingPixelsHandling?
-    private let burnHistoryPixelsHandler: DataClearingPixelsHandling?
+    
+    // Pixels
+    private let dataClearingPixelsHandlers: DataClearingPixelsHandlers?
 
     public let isAutocompleteEnabledByUser: () -> Bool
     public let isRecentlyVisitedSitesEnabledByUser: () -> Bool
@@ -72,8 +83,7 @@ public class HistoryManager: HistoryManaging {
          tabHistoryCoordinator: TabHistoryCoordinating,
          isAutocompleteEnabledByUser: @autoclosure @escaping () -> Bool,
          isRecentlyVisitedSitesEnabledByUser: @autoclosure @escaping () -> Bool,
-         burnTabsPixelsHandler: DataClearingPixelsHandling? = nil,
-         burnHistoryPixelsHandler: DataClearingPixelsHandling? = nil,
+         dataClearingPixelsHandlers: DataClearingPixelsHandlers? = nil
     ) {
 
         self.dbCoordinator = dbCoordinator
@@ -81,8 +91,7 @@ public class HistoryManager: HistoryManaging {
         self.tabHistoryCoordinator = tabHistoryCoordinator
         self.isAutocompleteEnabledByUser = isAutocompleteEnabledByUser
         self.isRecentlyVisitedSitesEnabledByUser = isRecentlyVisitedSitesEnabledByUser
-        self.burnTabsPixelsHandler = burnTabsPixelsHandler
-        self.burnHistoryPixelsHandler = burnHistoryPixelsHandler
+        self.dataClearingPixelsHandlers = dataClearingPixelsHandlers
     }
     
     @MainActor
@@ -98,7 +107,7 @@ public class HistoryManager: HistoryManaging {
                 continuation.resume()
             }
         }
-        burnHistoryPixelsHandler?.fireDurationPixel(startTime, scope: HistoryClearingScope.all.rawValue)
+        dataClearingPixelsHandlers?.historyHandler?.fireDurationPixel(startTime, scope: HistoryClearingScope.all.rawValue)
     }
 
     @MainActor
@@ -146,7 +155,7 @@ public class HistoryManager: HistoryManaging {
         do {
             try await tabHistoryCoordinator.removeVisits(for: tabIDs)
         } catch {
-            burnTabsPixelsHandler?.fireErrorPixel(error)
+            dataClearingPixelsHandlers?.historyHandler?.fireErrorPixel(error)
             Logger.history.error("Failed to remove tab history: \(error.localizedDescription)")
         }
     }
@@ -160,9 +169,9 @@ public class HistoryManager: HistoryManaging {
         do {
             let startTime = CACurrentMediaTime()
             try await dbCoordinator.burnVisits(for: tabID)
-            burnHistoryPixelsHandler?.fireDurationPixel(startTime, scope: HistoryClearingScope.tab.rawValue)
+            dataClearingPixelsHandlers?.historyHandler?.fireDurationPixel(startTime, scope: HistoryClearingScope.tab.rawValue)
         } catch {
-            burnHistoryPixelsHandler?.fireErrorPixel(error)
+            dataClearingPixelsHandlers?.historyHandler?.fireErrorPixel(error)
             Logger.history.error("Failed to remove global history for tab: \(error.localizedDescription)")
         }
     }
@@ -183,7 +192,7 @@ class NullHistoryCoordinator: HistoryCoordinating {
         $historyDictionary
     }
     
-    var dataClearingPixelsHandler: (any DataClearingPixelsHandling)?
+    var dataClearingHistoryPixelsHandlers: DataClearingHistoryPixelsHandlers?
 
     func addVisit(of url: URL, at date: Date, tabID: String?) -> History.Visit? {
         return nil
@@ -330,8 +339,7 @@ extension HistoryManager {
                             isRecentlyVisitedSitesEnabledByUser: @autoclosure @escaping () -> Bool,
                             openTabIDsProvider: @escaping () -> [String],
                             tld: TLD,
-                            burnTabsPixelsHandler: DataClearingPixelsHandling? = nil,
-                            burnHistoryPixelsHandler: DataClearingPixelsHandling? = nil) -> Result<HistoryManager, Error> {
+                            dataClearingPixelsHandlers: DataClearingPixelsHandlers? = nil) -> Result<HistoryManager, Error> {
 
         let database = HistoryDatabase.make()
         var loadError: Error?
@@ -345,7 +353,9 @@ extension HistoryManager {
 
         let context = database.makeContext(concurrencyType: .privateQueueConcurrencyType)
         let dbCoordinator = HistoryCoordinator(historyStoring: HistoryStore(context: context, eventMapper: HistoryStoreEventMapper()))
-        dbCoordinator.dataClearingPixelsHandler = burnHistoryPixelsHandler
+        dbCoordinator.dataClearingHistoryPixelsHandlers = DataClearingHistoryPixelsHandlers(
+            historyHandler: dataClearingPixelsHandlers?.historyHandler
+        )
         let tabHistoryStore = TabHistoryStore(context: context, eventMapper: HistoryStoreEventMapper())
         let tabHistoryCoordinator = TabHistoryCoordinator(tabHistoryStoring: tabHistoryStore,
                                                           openTabIDsProvider: openTabIDsProvider)
@@ -354,8 +364,7 @@ extension HistoryManager {
                                             tabHistoryCoordinator: tabHistoryCoordinator,
                                             isAutocompleteEnabledByUser: isAutocompleteEnabledByUser(),
                                             isRecentlyVisitedSitesEnabledByUser: isRecentlyVisitedSitesEnabledByUser(),
-                                            burnTabsPixelsHandler: burnTabsPixelsHandler,
-                                            burnHistoryPixelsHandler: burnHistoryPixelsHandler)
+                                            dataClearingPixelsHandlers: dataClearingPixelsHandlers)
 
         MainActor.assumeMainThread {
             dbCoordinator.loadHistory(onCleanFinished: {

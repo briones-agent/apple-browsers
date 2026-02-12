@@ -141,7 +141,7 @@ final class TabInteractionStateDiskSource: TabInteractionStateSource, TabInterac
             do {
                 try fileManager.removeItem(at: url)
             } catch {
-                dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.burnTabsError(error))
+                dataClearingPixelsReporter.fireErrorPixel(DataClearingPixels.clearTabsError(error))
             }
         }
     }
