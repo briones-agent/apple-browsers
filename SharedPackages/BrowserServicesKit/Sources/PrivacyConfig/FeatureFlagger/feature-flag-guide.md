@@ -73,22 +73,25 @@ public var source: FeatureFlagSource {
 
 ### `supportsLocalOverriding: Bool`
 
-Controls whether internal users can toggle the flag in the debug menu:
+Controls whether internal users can toggle the flag in the debug menu. Most flags list themselves in the `true` group explicitly; flags that should not be overridden (e.g., production pixels/metrics or security-critical paths) go in the `false` group:
 
 ```swift
 public var supportsLocalOverriding: Bool {
     switch self {
     case .scamSiteProtection,
          .maliciousSiteProtection,
-         .paidAIChat:
-        true
-    default:
-        false
+         .paidAIChat,
+         // ... most flags return true ...
+         .webExtensions:
+        return true
+    case .sync,
+         .autofillCredentialInjecting,
+         // ... flags that should not be overridden ...
+         .crashReportOptInStatusResetting:
+        return false
     }
 }
 ```
-
-Most flags should support local overriding. Exceptions include flags for production pixels/metrics or security-critical paths where toggling could break functionality.
 
 ### `cohortType: (any FeatureFlagCohortDescribing.Type)?`
 
