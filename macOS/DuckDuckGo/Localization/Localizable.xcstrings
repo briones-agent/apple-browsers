@@ -2492,6 +2492,18 @@
         }
       }
     },
+    "aichat.remove-attachment-button.accessibility" : {
+      "comment" : "Accessibility label for the remove attachment button on image thumbnails in AI chat",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remove attachment"
+          }
+        }
+      }
+    },
     "aichat.search-privately.tooltip" : {
       "comment" : "Tooltip for the search the web segment in the toggle control",
       "extractionState" : "extracted_with_value",

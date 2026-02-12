@@ -19,6 +19,7 @@
 import Cocoa
 import QuartzCore
 import Combine
+import UniformTypeIdentifiers
 import DesignResourcesKitIcons
 import AIChat
 import PixelKit
@@ -57,6 +58,10 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         static let toolButtonBottomInset: CGFloat = 8
         static let modelPickerTrailingSpacing: CGFloat = 6
         static let modelPickerHeight: CGFloat = 28
+        static let attachmentsLeadingInset: CGFloat = 13
+        static let attachmentsBottomSpacing: CGFloat = 4
+        static let attachmentsRowHeight: CGFloat = AIChatImageAttachmentThumbnailView.totalHeight
+        static let maxAttachments: Int = 3
         static let suggestionsBottomPadding: CGFloat = 4
     }
 
@@ -69,6 +74,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     private let searchToggleButton = AIChatOmnibarToolButton()
     private let imageUploadButton = AIChatOmnibarToolButton()
     private let modelPickerButton = AIChatModelPickerButton()
+    private let attachmentsContainerView = AIChatImageAttachmentsContainerView()
 
     /// Suggestions view - always in hierarchy, height is 0 when no suggestions
     private let suggestionsView = AIChatSuggestionsView()
@@ -79,6 +85,9 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// Model picker trailing constraints - toggled based on submit button visibility
     private var modelPickerToSubmitConstraint: NSLayoutConstraint?
     private var modelPickerToContainerConstraint: NSLayoutConstraint?
+
+    /// Attachments container height constraint - 0 when empty
+    private var attachmentsHeightConstraint: NSLayoutConstraint?
 
     let themeManager: ThemeManaging
     let omnibarController: AIChatOmnibarController
@@ -98,6 +107,15 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// Callback when the passthrough height needs to be recalculated (e.g., when tools visibility changes)
     var onPassthroughHeightNeedsUpdate: (() -> Void)?
 
+    /// Extra height needed beyond text and suggestions for dynamic content like attachments.
+    /// This must be added to the container height calculation by the parent.
+    var additionalContentHeight: CGFloat {
+        if omnibarController.isOmnibarToolsEnabled && !attachmentsContainerView.attachments.isEmpty {
+            return Constants.attachmentsRowHeight + Constants.attachmentsBottomSpacing
+        }
+        return 0
+    }
+
     /// Calculates the total height that should be passthrough for the text container view.
     /// This includes the suggestions area and the tool buttons area (when enabled).
     var totalPassthroughHeight: CGFloat {
@@ -109,6 +127,11 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         if omnibarController.isOmnibarToolsEnabled {
             // Add tool buttons area: button size + spacing above suggestions
             height += Constants.toolButtonSize + Constants.toolButtonBottomInset
+
+            // Add attachments area when there are attachments
+            if !attachmentsContainerView.attachments.isEmpty {
+                height += Constants.attachmentsRowHeight + Constants.attachmentsBottomSpacing
+            }
         }
         return height
     }
@@ -192,8 +215,12 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     private func updateToolButtonsVisibility(isEnabled: Bool) {
         customizeButton.isHidden = !isEnabled
         searchToggleButton.isHidden = !isEnabled
-        imageUploadButton.isHidden = !isEnabled
+        imageUploadButton.isHidden = !isEnabled || attachmentsContainerView.isFull
         modelPickerButton.isHidden = !isEnabled
+        attachmentsContainerView.isHidden = !isEnabled
+        if !isEnabled {
+            attachmentsHeightConstraint?.constant = 0
+        }
         // Notify that passthrough height needs recalculation since tools area changed
         onPassthroughHeightNeedsUpdate?()
     }
@@ -277,6 +304,15 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         modelPickerButton.setAccessibilityLabel(UserText.aiChatModelPickerButtonTooltip)
         containerView.addSubview(modelPickerButton)
 
+        attachmentsContainerView.translatesAutoresizingMaskIntoConstraints = false
+        attachmentsContainerView.onAttachmentsChanged = { [weak self] in
+            self?.updateAttachmentsLayout()
+        }
+        attachmentsContainerView.onThumbnailClicked = { [weak self] id in
+            self?.revealAttachmentInFinder(id: id)
+        }
+        containerView.addSubview(attachmentsContainerView)
+
         NSLayoutConstraint.activate([
             backgroundView.topAnchor.constraint(equalTo: view.topAnchor),
             backgroundView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -312,7 +348,14 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             imageUploadButton.leadingAnchor.constraint(equalTo: searchToggleButton.trailingAnchor, constant: Constants.toolButtonSpacing),
             imageUploadButton.widthAnchor.constraint(equalToConstant: Constants.toolButtonSize),
             imageUploadButton.heightAnchor.constraint(equalToConstant: Constants.toolButtonSize),
+
+            attachmentsContainerView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.attachmentsLeadingInset),
+            attachmentsContainerView.bottomAnchor.constraint(equalTo: customizeButton.topAnchor),
         ])
+
+        // Attachments container height: 0 when empty, expands when attachments are added
+        attachmentsHeightConstraint = attachmentsContainerView.heightAnchor.constraint(equalToConstant: 0)
+        attachmentsHeightConstraint?.isActive = true
 
         // Model picker trailing: next to submit button when visible, or near container edge when hidden
         modelPickerToSubmitConstraint = modelPickerButton.trailingAnchor.constraint(equalTo: submitButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing)
@@ -440,7 +483,42 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     }
 
     @objc private func imageUploadButtonClicked() {
-        // Implement image upload action
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = [.image]
+
+        guard let window = view.window else { return }
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .OK else { return }
+            let remaining = Constants.maxAttachments - self.attachmentsContainerView.attachments.count
+            for url in panel.urls.prefix(remaining) {
+                guard let image = NSImage(contentsOf: url) else { continue }
+                let attachment = AIChatImageAttachment(image: image, fileName: url.lastPathComponent, fileURL: url)
+                self.attachmentsContainerView.addAttachment(attachment)
+            }
+        }
+    }
+
+    private func updateAttachmentsLayout() {
+        let hasAttachments = !attachmentsContainerView.attachments.isEmpty
+        attachmentsHeightConstraint?.constant = hasAttachments
+            ? Constants.attachmentsRowHeight + Constants.attachmentsBottomSpacing
+            : 0
+
+        // Hide the upload button when at max attachments
+        if omnibarController.isOmnibarToolsEnabled {
+            imageUploadButton.isHidden = attachmentsContainerView.isFull
+        }
+
+        onPassthroughHeightNeedsUpdate?()
+    }
+
+    private func revealAttachmentInFinder(id: UUID) {
+        guard let attachment = attachmentsContainerView.attachments.first(where: { $0.id == id }),
+              let fileURL = attachment.fileURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
     }
 
     @objc private func modelPickerButtonClicked() {
