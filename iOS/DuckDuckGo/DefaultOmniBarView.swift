@@ -660,32 +660,44 @@ final class DefaultOmniBarView: UIView, OmniBarView {
     }
 
     private func updateSearchAreaExpansion(animated: Bool) {
-        let applyChanges = {
-            if self.isSearchAreaExpanded {
-                // Swap bottom == to >= so inner stack can overflow below alignment view
-                self.searchStackBottomEqualConstraint?.isActive = false
-                self.searchStackBottomGTEConstraint?.isActive = true
-                self.expandedHeightConstraint?.isActive = true
-                self.searchAreaCenterYConstraint?.isActive = false
-                self.searchAreaTopPinConstraint?.isActive = true
-            } else {
-                self.expandedHeightConstraint?.isActive = false
-                self.searchStackBottomGTEConstraint?.isActive = false
-                self.searchStackBottomEqualConstraint?.isActive = true
-                self.searchAreaTopPinConstraint?.isActive = false
-                self.searchAreaCenterYConstraint?.isActive = true
-            }
-            self.updateClippingForExpansion()
-            self.layoutIfNeeded()
-        }
-
         if animated {
             layoutIfNeeded()
+
+            if isSearchAreaExpanded {
+                // Disable clipping BEFORE expanding so overflow is visible during growth
+                updateClippingForExpansion()
+            }
+
+            applyExpansionConstraints()
+
             UIView.animate(withDuration: 0.25, delay: 0, options: .curveEaseInOut) {
-                applyChanges()
+                self.layoutIfNeeded()
+            } completion: { _ in
+                if !self.isSearchAreaExpanded {
+                    // Restore clipping AFTER collapse animation finishes
+                    self.updateClippingForExpansion()
+                }
             }
         } else {
-            applyChanges()
+            applyExpansionConstraints()
+            updateClippingForExpansion()
+            layoutIfNeeded()
+        }
+    }
+
+    private func applyExpansionConstraints() {
+        if isSearchAreaExpanded {
+            searchStackBottomEqualConstraint?.isActive = false
+            searchStackBottomGTEConstraint?.isActive = true
+            expandedHeightConstraint?.isActive = true
+            searchAreaCenterYConstraint?.isActive = false
+            searchAreaTopPinConstraint?.isActive = true
+        } else {
+            expandedHeightConstraint?.isActive = false
+            searchStackBottomGTEConstraint?.isActive = false
+            searchStackBottomEqualConstraint?.isActive = true
+            searchAreaTopPinConstraint?.isActive = false
+            searchAreaCenterYConstraint?.isActive = true
         }
     }
 
