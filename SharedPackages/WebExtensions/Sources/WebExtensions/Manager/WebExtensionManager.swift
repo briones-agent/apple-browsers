@@ -124,7 +124,7 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         do {
             let loadResult = try await loader.loadWebExtension(identifier: identifier, into: controller)
 
-            let installedExtension = await InstalledWebExtension(
+            let installedExtension = InstalledWebExtension(
                 uniqueIdentifier: identifier,
                 filename: loadResult.filename,
                 name: loadResult.displayName,

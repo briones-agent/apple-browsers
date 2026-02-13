@@ -26,25 +26,12 @@ final class WebExtensionHandlerProvider: WebExtensionHandlerProviding {
 
     init() {}
 
-    func makeHandlers(for extensionIdentifier: String, context: WKWebExtensionContext) -> [WebExtensionMessageHandler] {
-        let extensionName = context.webExtension.displayName
-
-        // TODO: Replace with actual extension names and handlers
-        switch extensionName {
-        case "Example Extension":
-            return makeExampleHandlers()
+    func makeHandlers(for context: WKWebExtensionContext) -> [WebExtensionMessageHandler] {
+        switch context.duckDuckGoExtensionType {
+        case .ddgInternalExtension:
+            return [ExampleMessageHandler()]
         default:
-            return []
+            return [ExampleMessageHandler()]
         }
-    }
-
-    private func makeExampleHandlers() -> [WebExtensionMessageHandler] {
-        // TODO: Create real handlers here based on your feature requirements
-        // Example:
-        // return [
-        //     ContentBlockingMessageHandler(service: dependencies.contentBlockingService),
-        //     PrivacyStatsMessageHandler(service: dependencies.privacyStatsService)
-        // ]
-        return []
     }
 }

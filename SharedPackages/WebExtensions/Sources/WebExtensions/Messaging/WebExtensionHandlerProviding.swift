@@ -25,9 +25,7 @@ import WebKit
 public protocol WebExtensionHandlerProviding {
 
     /// Create handlers for a specific extension
-    /// - Parameters:
-    ///   - extensionIdentifier: The unique identifier of the extension
-    ///   - context: The extension context
+    /// - Parameter context: The extension context
     /// - Returns: Array of handlers to register for this extension
-    func makeHandlers(for extensionIdentifier: String, context: WKWebExtensionContext) -> [WebExtensionMessageHandler]
+    func makeHandlers(for context: WKWebExtensionContext) -> [WebExtensionMessageHandler]
 }

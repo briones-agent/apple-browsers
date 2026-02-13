@@ -19,12 +19,10 @@
 import Foundation
 import os.log
 
-/// Example message handler demonstrating the pattern for handling web extension messages.
-/// This handler can be used as a template for creating feature-specific handlers.
 @available(macOS 15.4, iOS 18.4, *)
 public final class ExampleMessageHandler: WebExtensionMessageHandler {
 
-    public var handledFeatureName: String { "example" }
+    public var handledFeatureName: String { "autoconsent" }
 
     public init() {}
 
@@ -32,24 +30,19 @@ public final class ExampleMessageHandler: WebExtensionMessageHandler {
         Logger.webExtensions.debug("📝 ExampleMessageHandler received method: \(message.method)")
 
         switch message.method {
-        case "ping":
-            return handlePing(message)
-        case "echo":
-            return handleEcho(message)
+        case "extensionLog":
+            return handleExtensionLog(message.params)
         default:
             return .failure(WebExtensionMessageHandlerError.unknownMethod(message.method))
         }
     }
 
-    private func handlePing(_ message: WebExtensionMessage) -> WebExtensionMessageResult {
-        return .success(["response": "pong"])
-    }
-
-    private func handleEcho(_ message: WebExtensionMessage) -> WebExtensionMessageResult {
-        guard let text = message.params?["text"] as? String else {
-            return .failure(WebExtensionMessageHandlerError.missingParameter("text"))
+    private func handleExtensionLog(_ params: [String: Any]?) -> WebExtensionMessageResult {
+        guard let message = params?["message"] as? String else {
+            return .failure(WebExtensionMessageHandlerError.missingParameter("message"))
         }
+        Logger.webExtensions.debug("[LOG]: \(message)")
 
-        return .success(["echo": text])
+        return .success(["response": "ok"])
     }
 }

@@ -65,7 +65,7 @@ public final class WebExtensionMessageRouter: WebExtensionMessageRouting {
             return .noHandler
         }
 
-        Logger.webExtensions.debug("📨 Routing message from extension '\(extensionIdentifier)' to handler: \(message.featureName).\(message.method)")
+        Logger.webExtensions.debug("📩 Routing message from extension '\(extensionIdentifier)' to handler: \(message.featureName).\(message.method)")
 
         return await handler.handleMessage(message)
     }

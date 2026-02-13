@@ -30,7 +30,7 @@ final class WebExtensionHandlerProvider: WebExtensionHandlerProviding {
         self.mainViewController = mainViewController
     }
 
-    func makeHandlers(for extensionIdentifier: String, context: WKWebExtensionContext) -> [WebExtensionMessageHandler] {
+    func makeHandlers(for context: WKWebExtensionContext) -> [WebExtensionMessageHandler] {
         let extensionName = context.webExtension.displayName
 
         // TODO: Replace with actual extension names and handlers

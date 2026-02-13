@@ -153,9 +153,9 @@ final class TestHandlerProvider: WebExtensionHandlerProviding {
     var lastIdentifier: String?
     var lastContext: WKWebExtensionContext?
 
-    func makeHandlers(for extensionIdentifier: String, context: WKWebExtensionContext) -> [WebExtensionMessageHandler] {
+    func makeHandlers(for context: WKWebExtensionContext) -> [WebExtensionMessageHandler] {
         makeHandlersCalled = true
-        lastIdentifier = extensionIdentifier
+        lastIdentifier = context.uniqueIdentifier
         lastContext = context
         return [TestMessageHandler()]
     }
