@@ -33,7 +33,7 @@ public enum WebExtensionManagerFactory {
             windowTabProvider: WebExtensionWindowTabProvider(mainViewController: mainViewController),
             storageProvider: WebExtensionStorageProvider(),
             pixelFiring: iOSWebExtensionPixelFiring(),
-            handlerProvider: WebExtensionHandlerProvider(mainViewController: mainViewController)
+            handlerProvider: WebExtensionHandlerProvider()
         )
     }
 }
