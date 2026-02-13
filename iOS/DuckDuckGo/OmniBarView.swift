@@ -117,6 +117,7 @@ protocol OmniBarStatusUpdateable: AnyObject {
     var isSearchModeSwitcherHidden: Bool { get set }
     var searchMode: OmniBarSearchMode { get set }
     var isSearchAreaExpanded: Bool { get set }
+    func setSearchAreaExpanded(_ expanded: Bool, animated: Bool)
     var isPadReloadButtonHidden: Bool { get set }
     var isPadReloadButtonEnabled: Bool { get set }
 }

@@ -27,7 +27,7 @@ final class OmniBarSearchModeToggle: UIControl {
 
     private enum Metrics {
         static let toggleWidth: CGFloat = 122
-        static let toggleHeight: CGFloat = 22
+        static let toggleHeight: CGFloat = 35
         static let selectorInset: CGFloat = 2
         static let shadowRadius: CGFloat = 4
         static let shadowOffset = CGSize(width: 0, height: 2)

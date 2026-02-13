@@ -99,6 +99,10 @@ final class DefaultOmniBarSearchView: UIView {
 
         leftIconContainerPlaceholder.addSubview(leftIconContainer)
 
+        // Center alignment lets the search mode toggle (shorter than 44pt
+        // buttons) keep its intrinsic height without conflicting constraints.
+        trailingItemsContainer.alignment = .center
+
         mainStackView.addArrangedSubview(leftIconContainerPlaceholder)
         mainStackView.addArrangedSubview(textField)
         mainStackView.addArrangedSubview(trailingItemsContainer)

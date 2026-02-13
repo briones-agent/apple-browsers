@@ -651,15 +651,14 @@ class OmniBarViewController: UIViewController, OmniBar {
                     clear()
                 }
                 cancelAllAnimations()
-                // Clear the user's manual toggle override only when the switcher
-                // is hidden (e.g. switching to phone layout) or when the new state
-                // dictates a specific mode that differs from the override (e.g.
-                // navigating to duck.ai sets AIChatModeState with .duckAI).
-                // Transitions between editing states on iPad preserve the override
-                // so the user's toggle choice isn't reset by text selection or typing.
-                if !newState.showSearchModeSwitcher {
-                    userOverrideSearchMode = nil
-                } else if let override = userOverrideSearchMode, newState.searchMode != .search, newState.searchMode != override {
+                // Clear the user's manual toggle override when entering a
+                // non-editing "resting" state (e.g. tab switch, editing stopped).
+                // A resting state is one whose onEditingStoppedState is itself.
+                // Transitions between editing sub-states (e.g. empty ↔ text)
+                // preserve the override so the user's toggle choice persists
+                // while they type.
+                let isNewStateResting = !newState.isDifferentState(than: newState.onEditingStoppedState)
+                if isNewStateResting || !newState.showSearchModeSwitcher {
                     userOverrideSearchMode = nil
                 }
             }
@@ -696,7 +695,8 @@ class OmniBarViewController: UIViewController, OmniBar {
         // Respect user's manual toggle selection; fall back to what the state dictates.
         let effectiveSearchMode = userOverrideSearchMode ?? state.searchMode
         barView.searchMode = effectiveSearchMode
-        barView.isSearchAreaExpanded = effectiveSearchMode == .duckAI
+        // State-driven updates use non-animated expansion to avoid jank during tab switches
+        barView.setSearchAreaExpanded(effectiveSearchMode == .duckAI, animated: false)
 
         barView.isPadReloadButtonHidden = !state.showPadReloadButton
         barView.isPadReloadButtonEnabled = state.padReloadButtonEnabled
@@ -912,12 +912,8 @@ class OmniBarViewController: UIViewController, OmniBar {
     private func onSearchModeChanged(_ mode: OmniBarSearchMode) {
         userOverrideSearchMode = mode
 
-        switch mode {
-        case .duckAI:
-            barView.isSearchAreaExpanded = true
-        case .search:
-            barView.isSearchAreaExpanded = false
-        }
+        // User-driven toggle uses animated expansion for a smooth transition
+        barView.setSearchAreaExpanded(mode == .duckAI, animated: true)
 
         omniDelegate?.onPadSearchModeChanged(mode)
     }

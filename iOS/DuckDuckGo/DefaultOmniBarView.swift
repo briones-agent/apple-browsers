@@ -216,11 +216,21 @@ final class DefaultOmniBarView: UIView, OmniBarView {
         }
     }
 
+    private var suppressExpansionUpdate = false
+
     var isSearchAreaExpanded: Bool = false {
         didSet {
-            guard oldValue != isSearchAreaExpanded else { return }
-            updateSearchAreaExpansion(animated: true)
+            guard oldValue != isSearchAreaExpanded, !suppressExpansionUpdate else { return }
+            updateSearchAreaExpansion(animated: false)
         }
+    }
+
+    func setSearchAreaExpanded(_ expanded: Bool, animated: Bool) {
+        guard expanded != isSearchAreaExpanded else { return }
+        suppressExpansionUpdate = true
+        isSearchAreaExpanded = expanded
+        suppressExpansionUpdate = false
+        updateSearchAreaExpansion(animated: animated)
     }
 
     var isActiveState: Bool = false {
