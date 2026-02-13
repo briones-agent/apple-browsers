@@ -139,8 +139,35 @@ final class AIChatImageAttachmentThumbnailView: NSView {
         }
     }
 
+    private var trackingArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+
+        if let existingArea = trackingArea {
+            removeTrackingArea(existingArea)
+        }
+
+        let newTrackingArea = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeInKeyWindow],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(newTrackingArea)
+        trackingArea = newTrackingArea
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        NSCursor.arrow.set()
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        NSCursor.arrow.set()
+    }
+
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
+        addCursorRect(bounds, cursor: .arrow)
     }
 
     // MARK: - Image
