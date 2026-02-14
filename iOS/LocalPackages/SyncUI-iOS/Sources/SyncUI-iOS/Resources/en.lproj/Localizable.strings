@@ -1,3 +1,15 @@
+/* Auto-Restore - Description */
+"auto.restore.description" = "Automatically restore your data on this device if you reinstall the app.";
+
+/* Auto-Restore - Learn More Link */
+"auto.restore.learn.more" = "Learn More";
+
+/* Auto-Restore - Description + Learn More, with markdown link */
+"auto.restore.learn.more.full" = "Automatically restore your data on this device if you reinstall the app. [Learn More](sync-auto-restore://learn-more)";
+
+/* Auto-Restore - Toggle Label */
+"auto.restore.toggle.label" = "Auto-Restore";
+
 /* Standard Buttons - Back Button */
 "back.button" = "Back";
 
@@ -160,6 +172,9 @@
 /* Remove Device View - Title */
 "remove.device.title" = "Remove Device?";
 
+/* Save Recovery Code Sheet - Card Title */
+"save.recovery.code.card.title" = "Recovery Code";
+
 /* Save Recovery Code Sheet - Copy Code Toast */
 "save.recovery.code.code.copied.button" = "Recovery code copied to clipboard";
 
@@ -167,16 +182,16 @@
 "save.recovery.code.copy.code.button" = "Copy Code";
 
 /* Save Recovery Code Sheet - Save as PDF Button */
-"save.recovery.code.save.as.pdf.button" = "Save as PDF";
-
-/* Save Recovery Code Sheet - Description */
-"save.recovery.code.sheet.description" = "If you lose access to your devices, you will need this code to recover your synced data.";
+"save.recovery.code.save.as.pdf.button" = "Download as PDF";
 
 /* Save Recovery Code Sheet - Footer */
 "save.recovery.code.sheet.footer" = "Anyone with access to this code can access your synced data, so please keep it in a safe place.";
 
-/* Save Recovery Code Sheet - Title */
-"save.recovery.code.sheet.title" = "Save Recovery Code";
+/* Recovery Code Sheet - Description */
+"save.recovery.key.body" = "Save this code so you can recover your data if you lose access to this device — keep it safe.";
+
+/* Recovery Code Sheet - Title */
+"save.recovery.key.title" = "Recover Your Data Easily";
 
 /* Save RecoveryPDF - Button */
 "save.recovery.pdf.button" = "Save Recovery PDF";

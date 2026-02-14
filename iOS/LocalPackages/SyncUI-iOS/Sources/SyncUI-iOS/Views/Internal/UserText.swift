@@ -97,12 +97,24 @@ public struct UserText {
     static let preparingToSyncSheetFooter = NSLocalizedString("preparing.to.sync.sheet.footer", bundle: Bundle.module, value: "Connecting…", comment: "Preparing To Sync Sheet - Footer")
 
     // Save Recovery Code Sheet
-    static let saveRecoveryCodeSheetTitle = NSLocalizedString("save.recovery.code.sheet.title", bundle: Bundle.module, value: "Save Recovery Code", comment: "Save Recovery Code Sheet - Title")
-    static let saveRecoveryCodeSheetDescription = NSLocalizedString("save.recovery.code.sheet.description", bundle: Bundle.module, value: "If you lose access to your devices, you will need this code to recover your synced data.", comment: "Save Recovery Code Sheet - Description")
+    static let saveRecoveryCodeSheetTitle = NSLocalizedString("save.recovery.key.title", bundle: Bundle.module, value: "Recover Your Data Easily", comment: "Recovery Code Sheet - Title")
+    static let saveRecoveryCodeSheetDescription = NSLocalizedString("save.recovery.key.body", bundle: Bundle.module, value: "Save this code so you can recover your data if you lose access to this device — keep it safe.", comment: "Recovery Code Sheet - Description")
     static let saveRecoveryCodeSheetFooter = NSLocalizedString("save.recovery.code.sheet.footer", bundle: Bundle.module, value: "Anyone with access to this code can access your synced data, so please keep it in a safe place.", comment: "Save Recovery Code Sheet - Footer")
+    static let saveRecoveryCodeCardTitle = NSLocalizedString("save.recovery.code.card.title", bundle: Bundle.module, value: "Recovery Code", comment: "Save Recovery Code Sheet - Card Title")
     static let saveRecoveryCodeCopyCodeButton = NSLocalizedString("save.recovery.code.copy.code.button", bundle: Bundle.module, value: "Copy Code", comment: "Save Recovery Code Sheet - Copy Code Button")
-    static let saveRecoveryCodeSaveAsPdfButton = NSLocalizedString("save.recovery.code.save.as.pdf.button", bundle: Bundle.module, value: "Save as PDF", comment: "Save Recovery Code Sheet - Save as PDF Button")
+    static let saveRecoveryCodeSaveAsPdfButton = NSLocalizedString("save.recovery.code.save.as.pdf.button", bundle: Bundle.module, value: "Download as PDF", comment: "Save Recovery Code Sheet - Save as PDF Button")
     static let saveRecoveryCodeSaveCodeCopiedToast = NSLocalizedString("save.recovery.code.code.copied.button", bundle: Bundle.module, value: "Recovery code copied to clipboard", comment: "Save Recovery Code Sheet - Copy Code Toast")
+
+    // Auto-Restore
+    static let autoRestoreToggleLabel = NSLocalizedString("auto.restore.toggle.label", bundle: Bundle.module, value: "Auto-Restore", comment: "Auto-Restore - Toggle Label")
+    static let autoRestoreDescription = NSLocalizedString("auto.restore.description", bundle: Bundle.module, value: "Automatically restore your data on this device if you reinstall the app.", comment: "Auto-Restore - Description")
+    static let autoRestoreLearnMore = NSLocalizedString("auto.restore.learn.more", bundle: Bundle.module, value: "Learn More", comment: "Auto-Restore - Learn More Link")
+    static let autoRestoreLearnMoreFull = NSLocalizedString(
+        "auto.restore.learn.more.full",
+        bundle: Bundle.module,
+        value: "Automatically restore your data on this device if you reinstall the app. [Learn More](sync-auto-restore://learn-more)",
+        comment: "Auto-Restore - Description + Learn More, with markdown link"
+    )
 
     // Device Synced Sheet
     static let deviceSyncedSheetTitle = NSLocalizedString("device.synced.sheet.title", bundle: Bundle.module, value: "Your data is synced!", comment: "Device SyncedSheet - Title")
