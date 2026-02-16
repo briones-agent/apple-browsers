@@ -393,12 +393,12 @@ extension WebExtensionManager: WKWebExtensionControllerDelegate {
         let extensionName = extensionContext.webExtension.displayName ?? "Unknown"
 
         // Log message size before processing
-        if let messageSize = calculateMessageSize(message) {
-            let size = formatByteSize(messageSize)
-            Logger.webExtensions.log("📩 RECEIVED from web extension '\(extensionName)' (size: \(size))")
-        } else {
-            Logger.webExtensions.log("📩 RECEIVED from web extension '\(extensionName)'")
-        }
+        // if let messageSize = calculateMessageSize(message) {
+        //     let size = formatByteSize(messageSize)
+        //     Logger.webExtensions.log("📩 RECEIVED from web extension '\(extensionName)' (size: \(size))")
+        // } else {
+        //     Logger.webExtensions.log("📩 RECEIVED from web extension '\(extensionName)'")
+        // }
 
         // Log the received message from web extension
         if let messageDict = message as? [String: Any] {
@@ -408,10 +408,8 @@ extension WebExtensionManager: WKWebExtensionControllerDelegate {
             let messageContext = messageDict["context"] as? String
             let messageFeatureName = messageDict["featureName"] as? String
 
-            Logger.webExtensions.log("   Type: \(messageType)")
-            Logger.webExtensions.log("   Params: \(String(describing: messageParams))")
-            Logger.webExtensions.log("   Id: \(messageId ?? "nil")")
-            Logger.webExtensions.log("   Full payload: \(String(describing: message))")
+            Logger.webExtensions.log("📩  \(messageId ?? "nil") \(messageType) \(String(describing: messageParams))")
+            // Logger.webExtensions.log("   Full payload: \(String(describing: message))")
 
             var response: [String: Any] = [:]
 
