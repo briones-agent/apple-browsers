@@ -120,7 +120,14 @@ extension AIChatMessageHandler {
 
     private func getAIChatNativePrompt() -> Encodable? {
         guard let prompt = promptHandler.consumeData() as? AIChatNativePrompt else {
+            print("[DEBUG] getAIChatNativePrompt: promptHandler.consumeData() returned nil")
             return nil
+        }
+
+        if case .query(let query) = prompt.tool {
+            print("[DEBUG] getAIChatNativePrompt: query prompt, images count = \(query.images?.count ?? 0), toolChoice = \(String(describing: query.toolChoice))")
+        } else {
+            print("[DEBUG] getAIChatNativePrompt: non-query tool = \(String(describing: prompt.tool))")
         }
 
         return prompt

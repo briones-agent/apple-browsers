@@ -98,4 +98,13 @@ final class AIChatImageAttachmentsContainerView: NSView {
 
         onAttachmentsChanged?()
     }
+
+    func removeAllAttachments() {
+        attachments.removeAll()
+        stackView.arrangedSubviews.forEach {
+            stackView.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        onAttachmentsChanged?()
+    }
 }

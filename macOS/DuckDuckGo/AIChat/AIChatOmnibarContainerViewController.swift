@@ -157,6 +157,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         subscribeToThemeChanges()
         subscribeToTextChanges()
         subscribeToToolsVisibilityChanges()
+        setupAttachmentsProvider()
         applyThemeStyle()
     }
 
@@ -479,6 +480,20 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 self.attachmentsContainerView.addAttachment(attachment)
             }
         }
+    }
+
+    private func setupAttachmentsProvider() {
+        omnibarController.attachmentsProvider = { [weak self] in
+            self?.attachmentsContainerView.attachments ?? []
+        }
+        omnibarController.onAttachmentsClearRequested = { [weak self] in
+            self?.clearAttachments()
+        }
+    }
+
+    private func clearAttachments() {
+        attachmentsContainerView.removeAllAttachments()
+        updateAttachmentsLayout()
     }
 
     private func updateAttachmentsLayout() {

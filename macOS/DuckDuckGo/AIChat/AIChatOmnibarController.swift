@@ -56,6 +56,12 @@ final class AIChatOmnibarController {
     /// Whether the search toggle is enabled, toggled by the search button in the omnibar tools.
     var isSearchToggleEnabled = false
 
+    /// Provides the current image attachments from the container VC.
+    var attachmentsProvider: (() -> [AIChatImageAttachment])?
+
+    /// Called after a successful submit so the container VC can clear its attachment UI.
+    var onAttachmentsClearRequested: (() -> Void)?
+
     /// View model for managing chat suggestions. Always initialized, but only populated when feature flag is enabled.
     let suggestionsViewModel: AIChatSuggestionsViewModel
 
@@ -262,18 +268,52 @@ final class AIChatOmnibarController {
         PixelKit.fire(AIChatPixel.aiChatAddressBarAIChatSubmitPrompt, frequency: .dailyAndCount, includeAppVersionParameter: true)
 
         let toolChoice = isSearchToggleEnabled ? [Constants.webSearchTool] : nil
+        let attachments = attachmentsProvider?() ?? []
+        let images = Self.nativePromptImages(from: attachments)
+
+        print("[DEBUG] submit: attachmentsProvider is \(attachmentsProvider == nil ? "nil" : "set")")
+        print("[DEBUG] submit: attachments count = \(attachments.count)")
+        print("[DEBUG] submit: images count = \(images?.count ?? 0)")
+        if let images {
+            for (i, img) in images.enumerated() {
+                print("[DEBUG] submit: image[\(i)] format=\(img.format), base64 length=\(img.data.count)")
+            }
+        }
 
         Task { @MainActor in
             aiChatTabOpener.openAIChatTab(
                 with: .query(trimmedText, shouldAutoSubmit: true),
                 behavior: .currentTab
             )
-            // Re-set prompt after tab opener to include toolChoice (tab opener overwrites with a plain query)
-            promptHandler.setData(.queryPrompt(trimmedText, autoSubmit: true, toolChoice: toolChoice))
+            // Re-set prompt after tab opener to include toolChoice and images (tab opener overwrites with a plain query)
+            let prompt = AIChatNativePrompt.queryPrompt(trimmedText, autoSubmit: true, toolChoice: toolChoice, images: images)
+            if let jsonData = try? JSONEncoder().encode(prompt),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                // Truncate base64 data for readability
+                let truncated = jsonString.count > 500 ? String(jsonString.prefix(500)) + "... [truncated]" : jsonString
+                print("[DEBUG] submit: prompt JSON = \(truncated)")
+            }
+            promptHandler.setData(prompt)
         }
 
         currentText = ""
+//        onAttachmentsClearRequested?()
         delegate?.aiChatOmnibarControllerDidSubmit(self)
+    }
+
+    /// Converts image attachments to base64-encoded `NativePromptImage` values for the JS bridge.
+    private static func nativePromptImages(from attachments: [AIChatImageAttachment]) -> [AIChatNativePrompt.NativePromptImage]? {
+        guard !attachments.isEmpty else { return nil }
+        return attachments.compactMap { attachment in
+            guard let tiffData = attachment.image.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiffData),
+                  let pngData = bitmap.representation(using: .png, properties: [:]) else {
+                return nil
+            }
+            let base64 = pngData.base64EncodedString()
+            let format = (attachment.fileName as NSString).pathExtension.lowercased()
+            return AIChatNativePrompt.NativePromptImage(data: base64, format: format.isEmpty ? "png" : format)
+        }
     }
 
     /// Checks if the input text is a navigable URL (not a search query).
