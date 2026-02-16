@@ -46,14 +46,16 @@ public func encodeToJsonString(_ value: Any?) -> String {
             let jsonData = try JSONEncoder().encode(stringValue)
             return String(data: jsonData, encoding: .utf8) ?? "\"\(stringValue.replacingOccurrences(of: "\"", with: "\\\""))\""
         }
+        // Check Bool before Int/Double - NSNumber (from JavaScript) bridges to all three,
+        // and JavaScript booleans must be encoded as "true"/"false", not 1/0
+        if let boolValue = value as? Bool {
+            return boolValue ? "true" : "false"
+        }
         if let intValue = value as? Int {
             return String(intValue)
         }
         if let doubleValue = value as? Double {
             return String(doubleValue)
-        }
-        if let boolValue = value as? Bool {
-            return boolValue ? "true" : "false"
         }
 
         // Handle arrays and dictionaries via JSONSerialization

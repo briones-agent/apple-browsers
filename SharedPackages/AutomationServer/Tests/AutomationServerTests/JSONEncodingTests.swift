@@ -60,6 +60,22 @@ final class JSONEncodingTests: XCTestCase {
         XCTAssertEqual(result, "false")
     }
 
+    // MARK: - NSNumber (JavaScript Boolean) Handling
+
+    func testEncodeNSNumberBoolTrue_ReturnsTrueNotOne() {
+        // NSNumber bridging from JavaScript booleans - must return "true", not "1"
+        let nsNumber: NSNumber = true
+        let result = encodeToJsonString(nsNumber as Any)
+        XCTAssertEqual(result, "true", "JavaScript true (as NSNumber) should encode as 'true', not '1'")
+    }
+
+    func testEncodeNSNumberBoolFalse_ReturnsFalseNotZero() {
+        // NSNumber bridging from JavaScript booleans - must return "false", not "0"
+        let nsNumber: NSNumber = false
+        let result = encodeToJsonString(nsNumber as Any)
+        XCTAssertEqual(result, "false", "JavaScript false (as NSNumber) should encode as 'false', not '0'")
+    }
+
     // MARK: - Complex Types
 
     func testEncodeDictionary_ReturnsValidJSON() {
