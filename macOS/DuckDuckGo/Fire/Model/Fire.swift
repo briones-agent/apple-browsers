@@ -397,6 +397,8 @@ final class Fire: FireProtocol {
 
                 self.burningData = nil
 
+                self.reloadWebExtensions()
+
                 completion?()
 
                 Logger.fire.debug("Fire finished")
@@ -476,6 +478,9 @@ final class Fire: FireProtocol {
                 }
 
                 self.burningData = nil
+
+                self.reloadWebExtensions()
+
                 completion?()
 
                 Logger.fire.debug("Fire finished")
@@ -623,15 +628,35 @@ final class Fire: FireProtocol {
     // MARK: - Web cache
 
     private func burnWebCache() async {
+        await unloadWebExtensions()
         Logger.fire.debug("WebsiteDataStore began cookie deletion")
         await webCacheManager.clear()
         Logger.fire.debug("WebsiteDataStore completed cookie deletion")
     }
 
     private func burnWebCache(baseDomains: Set<String>? = nil) async {
+        await unloadWebExtensions()
         Logger.fire.debug("WebsiteDataStore began cookie deletion")
         await webCacheManager.clear(baseDomains: baseDomains)
         Logger.fire.debug("WebsiteDataStore completed cookie deletion")
+    }
+
+    // MARK: - Web Extensions
+
+    @MainActor
+    private func unloadWebExtensions() {
+        if #available(macOS 15.4, *), let webExtensionManager = NSApp.delegateTyped.webExtensionManager {
+            webExtensionManager.unloadAllExtensions()
+        }
+    }
+
+    @MainActor
+    private func reloadWebExtensions() {
+        if #available(macOS 15.4, *), let webExtensionManager = NSApp.delegateTyped.webExtensionManager {
+            Task {
+                await webExtensionManager.loadInstalledExtensions()
+            }
+        }
     }
 
     // MARK: - History

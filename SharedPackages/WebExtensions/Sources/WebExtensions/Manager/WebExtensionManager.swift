@@ -207,6 +207,31 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         return results
     }
 
+    @MainActor
+    public func unloadAllExtensions() {
+        let contexts = controller.extensionContexts
+        Logger.webExtensions.debug("🔄 Unloading all extensions from memory (count: \(contexts.count))")
+
+        var successCount = 0
+        var failureCount = 0
+
+        for context in contexts {
+            do {
+                try controller.unload(context)
+                successCount += 1
+            } catch {
+                Logger.webExtensions.error("❌ Failed to unload extension '\(context.uniqueIdentifier)': \(error.localizedDescription)")
+                failureCount += 1
+            }
+        }
+
+        if failureCount > 0 {
+            Logger.webExtensions.warning("⚠️ Unload all completed with \(failureCount) error(s): \(successCount) succeeded, \(failureCount) failed")
+        } else {
+            Logger.webExtensions.debug("✅ Successfully unloaded \(successCount) extension(s) from memory")
+        }
+    }
+
     // MARK: - Loading
 
     @MainActor
