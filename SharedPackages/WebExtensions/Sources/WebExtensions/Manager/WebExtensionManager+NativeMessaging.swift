@@ -144,15 +144,20 @@ extension WebExtensionManager {
     }
 
     private func enrichResponse(_ response: Any?, with message: WebExtensionMessage) -> Any? {
-        guard var responseDict = response as? [String: Any] else {
-            return response
+        var wrapper: [String: Any] = [
+            "featureName": message.featureName,
+            "result": response as Any
+        ]
+
+        if let id = message.id {
+            wrapper["id"] = id
         }
 
-        responseDict["id"] = message.id
-        responseDict["context"] = message.context
-        responseDict["featureName"] = message.featureName
+        if let context = message.context {
+            wrapper["context"] = context
+        }
 
-        return responseDict
+        return wrapper
     }
 
     public func webExtensionController(_ controller: WKWebExtensionController,
