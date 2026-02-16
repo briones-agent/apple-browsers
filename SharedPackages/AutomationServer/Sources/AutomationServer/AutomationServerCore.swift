@@ -34,6 +34,7 @@ public typealias ConnectionResultWithPath = (String, ConnectionResult)
 public actor PerConnectionQueue {
     private var isProcessing = false
     private var queue: [Data] = []
+    private var buffer = Data() // Buffer for incomplete HTTP requests
 
     public init() {}
 
@@ -42,7 +43,13 @@ public actor PerConnectionQueue {
         processor: @escaping (Data) async -> ConnectionResultWithPath,
         responder: @escaping (ConnectionResultWithPath) -> Void
     ) async {
-        queue.append(content)
+        // Append to buffer
+        buffer.append(content)
+
+        // Extract complete HTTP requests from buffer
+        while let completeRequest = extractCompleteRequest() {
+            queue.append(completeRequest)
+        }
 
         guard !isProcessing else { return }
         isProcessing = true
@@ -54,6 +61,65 @@ public actor PerConnectionQueue {
         }
 
         isProcessing = false
+    }
+
+    /// Extracts a complete HTTP request from the buffer if available
+    /// Returns nil if the request is incomplete
+    private func extractCompleteRequest() -> Data? {
+        guard !buffer.isEmpty else { return nil }
+
+        // Convert buffer to string for parsing
+        guard let bufferString = String(data: buffer, encoding: .utf8) else { return nil }
+
+        // Find end of headers (double CRLF or double LF)
+        let headerEndMarkers = ["\r\n\r\n", "\n\n"]
+        var headerEndIndex: String.Index?
+
+        for marker in headerEndMarkers {
+            if let index = bufferString.range(of: marker)?.upperBound {
+                headerEndIndex = index
+                break
+            }
+        }
+
+        guard let endOfHeaders = headerEndIndex else {
+            // Headers incomplete, wait for more data
+            return nil
+        }
+
+        // Extract headers
+        let headerSection = String(bufferString[..<endOfHeaders])
+
+        // Parse Content-Length header
+        var contentLength = 0
+        let lines = headerSection.components(separatedBy: CharacterSet.newlines)
+        for line in lines {
+            let lowercaseLine = line.lowercased()
+            if lowercaseLine.hasPrefix("content-length:") {
+                let parts = line.components(separatedBy: ":")
+                if parts.count >= 2,
+                   let length = Int(parts[1].trimmingCharacters(in: .whitespaces)) {
+                    contentLength = length
+                    break
+                }
+            }
+        }
+
+        // Calculate total request size
+        let headerBytes = bufferString.distance(from: bufferString.startIndex, to: endOfHeaders)
+        let totalRequestSize = headerBytes + contentLength
+
+        // Check if we have the complete request
+        guard buffer.count >= totalRequestSize else {
+            // Request incomplete, wait for more data
+            return nil
+        }
+
+        // Extract complete request
+        let requestData = buffer.prefix(totalRequestSize)
+        buffer.removeFirst(totalRequestSize)
+
+        return requestData
     }
 }
 
@@ -160,7 +226,7 @@ public final class AutomationServerCore {
                 return ("timeout", .failure(.timeout))
             }
             Logger.automationServer.debug("Still loading, waiting...")
-            try await Task.sleep(for: .milliseconds(200))
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
         }
         return await handleConnection(content)
     }
@@ -175,8 +241,11 @@ public final class AutomationServerCore {
 
         // Validate authentication token if configured
         if let expectedToken = authToken {
-            let tokenValid = stringContent.range(of: "Authorization: Bearer \(expectedToken)") != nil
-            guard tokenValid else {
+            let headers = extractHeaders(from: stringContent)
+            let authHeader = headers["authorization"] ?? ""
+            let expectedValue = "Bearer \(expectedToken)"
+
+            guard authHeader == expectedValue else {
                 Logger.automationServer.error("Unauthorized request - invalid or missing auth token")
                 return ("unauthorized", .failure(.unauthorized))
             }
@@ -205,6 +274,28 @@ public final class AutomationServerCore {
         let method = String(httpRequest[methodRange])
         let path = String(httpRequest[pathRange])
         return (method, path)
+    }
+
+    private func extractHeaders(from httpRequest: String) -> [String: String] {
+        var headers: [String: String] = [:]
+
+        // Split by double newline to separate headers from body
+        let parts = httpRequest.components(separatedBy: "\r\n\r\n")
+        guard let headerSection = parts.first else {
+            return headers
+        }
+
+        // Parse each header line
+        let lines = headerSection.components(separatedBy: CharacterSet.newlines)
+        for line in lines.dropFirst() { // Skip the request line (GET /path HTTP/1.1)
+            guard let colonIndex = line.firstIndex(of: ":") else { continue }
+
+            let key = String(line[..<colonIndex]).trimmingCharacters(in: .whitespaces).lowercased()
+            let value = String(line[line.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
+            headers[key] = value
+        }
+
+        return headers
     }
 
     public func handlePath(_ url: URLComponents, method: String) async -> ConnectionResult {

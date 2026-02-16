@@ -30,9 +30,9 @@ final class JSONEncodingTests: XCTestCase {
 
     // MARK: - Primitive Types
 
-    func testEncodeString_ReturnsStringDirectly() {
+    func testEncodeString_ReturnsQuotedString() {
         let result = encodeToJsonString("hello")
-        XCTAssertEqual(result, "hello")
+        XCTAssertEqual(result, "\"hello\"")
     }
 
     func testEncodeInt_ReturnsStringRepresentation() {
@@ -102,10 +102,11 @@ final class JSONEncodingTests: XCTestCase {
 
     // MARK: - Edge Cases
 
-    func testEncodeStringThatLooksLikeJSON_ReturnsStringDirectly() {
-        // When a string is already JSON, it should be returned as-is
+    func testEncodeStringThatLooksLikeJSON_ReturnsQuotedString() {
+        // Even JSON-like strings should be properly encoded as JSON string literals
         let jsonString = "{\"already\":\"json\"}"
         let result = encodeToJsonString(jsonString)
-        XCTAssertEqual(result, jsonString)
+        // The string itself should be escaped and quoted
+        XCTAssertEqual(result, "\"{\\\"already\\\":\\\"json\\\"}\"")
     }
 }
