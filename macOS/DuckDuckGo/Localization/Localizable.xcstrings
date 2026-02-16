@@ -2302,7 +2302,7 @@
     },
     "aichat.customize-button.tooltip" : {
       "comment" : "Tooltip for the customize button in AI chat omnibar",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

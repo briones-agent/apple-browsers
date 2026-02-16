@@ -647,7 +647,6 @@ struct UserText {
     static let aiChatTogglePopoverMessage = NSLocalizedString("aichat.toggle.popover.message", value: "Search as usual or get answers with AI. Either way, your information stays private.", comment: "Message for the AI Chat toggle introduction popover")
     static let aiChatTogglePopoverButton = NSLocalizedString("aichat.toggle.popover.button", value: "Customize AI Features", comment: "Button text for customizing AI features in the toggle popover")
     static let aiChatSendButtonTooltip = NSLocalizedString("aichat.send-button.tooltip", value: "Send", comment: "Tooltip for the send button in AI chat omnibar")
-    static let aiChatCustomizeButtonTooltip = NSLocalizedString("aichat.customize-button.tooltip", value: "Customize responses", comment: "Tooltip for the customize button in AI chat omnibar")
     static let aiChatSearchToggleButtonTooltip = NSLocalizedString("aichat.search-toggle-button.tooltip", value: "Search the web", comment: "Tooltip for the search toggle button in AI chat omnibar")
     static let aiChatImageUploadButtonTooltip = NSLocalizedString("aichat.image-upload-button.tooltip", value: "Attach image", comment: "Tooltip for the image upload button in AI chat omnibar")
     static let aiChatModelPickerButtonTooltip = NSLocalizedString("aichat.model-picker-button.tooltip", value: "Choose model", comment: "Tooltip for the model picker button in AI chat omnibar")
