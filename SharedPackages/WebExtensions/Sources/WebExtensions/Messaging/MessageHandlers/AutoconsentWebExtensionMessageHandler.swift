@@ -181,7 +181,7 @@ public final class AutoconsentWebExtensionMessageHandler: WebExtensionMessageHan
 
         if privacyConfigData.version == requestedVersion {
             return .success([
-                "updated": true
+                "updated": false
             ])
         } else {
             return .success([
