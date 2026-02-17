@@ -75,8 +75,8 @@ private enum LandingAnimationStates {
     static let logoStart = ComponentAnimationState.start(scale: 25.0 / 14.0, opacity: 0.0)
     static let logoEnd = ComponentAnimationState.end()
 
-    // Text: scales down from 300%, fades in, and slides up 49pt from below
-    static let textStart = ComponentAnimationState.start(scale: 3.0, opacity: 0.0)
+    // Text: fades in and slides up 49pt from below
+    static let textStart = ComponentAnimationState.start(opacity: 0.0)
     static let textOffsetStart: CGSize = CGSize(width: 0, height: 49)
     static let textEnd = ComponentAnimationState.end()
 
@@ -151,7 +151,6 @@ extension OnboardingRebranding.OnboardingView {
                     .foregroundStyle(onboardingTheme.colorPalette.textPrimary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: LandingViewMetrics.titleMaxWidth)
-                    .scaleEffect(text.scale)
                     .offset(textOffset)
                     .opacity(text.opacity)
             }
