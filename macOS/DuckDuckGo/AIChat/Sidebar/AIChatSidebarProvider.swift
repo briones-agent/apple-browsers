@@ -96,7 +96,7 @@ final class AIChatSidebarProvider: AIChatSidebarProviding {
 
     enum Constants {
         static let initialDefaultSidebarWidth: CGFloat = 400
-        static let minSidebarWidth: CGFloat = 300
+        static let minSidebarWidth: CGFloat = 310
         static let maxSidebarWidth: CGFloat = 900
     }
 
