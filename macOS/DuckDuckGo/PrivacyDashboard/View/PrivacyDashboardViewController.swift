@@ -54,9 +54,9 @@ final class PrivacyDashboardViewController: NSViewController {
 
     private let toggleProtectionsOffReporter: BrokenSiteReporter = {
         BrokenSiteReporter(pixelHandler: { parameters, encodedParameters in
-            Self.fireBreakagePixel(named: GeneralPixel.protectionToggledOffBreakageReport.name,
-                                   parameters: parameters,
-                                   encodedParameters: encodedParameters)
+            PrivacyDashboardViewController.fireBreakagePixel(named: GeneralPixel.protectionToggledOffBreakageReport.name,
+                                                             parameters: parameters,
+                                                             encodedParameters: encodedParameters)
         }, keyValueStoring: UserDefaults.standard)
     }()
 
@@ -108,9 +108,9 @@ final class PrivacyDashboardViewController: NSViewController {
 
         brokenSiteReporter = {
             BrokenSiteReporter(pixelHandler: { parameters, encodedParameters in
-                Self.fireBreakagePixel(named: NonStandardPixel.brokenSiteReport.name,
-                                       parameters: parameters,
-                                       encodedParameters: encodedParameters)
+                PrivacyDashboardViewController.fireBreakagePixel(named: NonStandardPixel.brokenSiteReport.name,
+                                                                 parameters: parameters,
+                                                                 encodedParameters: encodedParameters)
             }, keyValueStoring: UserDefaults.standard)
         }()
         super.init(nibName: nil, bundle: nil)
