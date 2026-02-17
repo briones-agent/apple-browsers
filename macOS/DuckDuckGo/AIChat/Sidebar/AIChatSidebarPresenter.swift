@@ -154,8 +154,10 @@ final class AIChatSidebarPresenter: AIChatSidebarPresenting {
         isAnimatingSidebarTransition = true
         sidebarPresenceWillChangeSubject.send(.init(tabID: tabID, isShown: isShowingSidebar))
 
-        // Hide resize handle immediately when the sidebar starts any transition
+        // Hide resize handle immediately when the sidebar starts any transition.
+        // Also reset the drag flag in case a transition interrupts an active drag.
         sidebarHost.setResizeHandleVisible(false)
+        isResizeDragging = false
 
         if isShowingSidebar {
             // Clear sidebar if session has expired (hidden for more than 60 minutes)
