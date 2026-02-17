@@ -76,6 +76,7 @@ final class AIChatSidebarPresenter: AIChatSidebarPresenting {
 
     private var isAnimatingSidebarTransition: Bool = false
     private var isResizeDragging: Bool = false
+    private var resizePixelDebounceWorkItem: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
 
     init(
@@ -313,6 +314,7 @@ extension AIChatSidebarPresenter: AIChatSidebarResizeDelegate {
         let clampedWidth = clampSidebarWidth(width)
         sidebarHost.applySidebarWidth(clampedWidth)
         sidebarProvider.setSidebarWidth(clampedWidth, for: currentTabID)
+        fireResizedPixelDebounced(width: clampedWidth)
     }
 
     func sidebarHostDidChangeAvailableWidth(_ availableWidth: CGFloat) {
@@ -326,6 +328,17 @@ extension AIChatSidebarPresenter: AIChatSidebarResizeDelegate {
     }
 
     // MARK: - Private Helpers
+
+    /// Debounces the resize pixel so rapid adjustments only fire once (after 500 ms).
+    private func fireResizedPixelDebounced(width: CGFloat) {
+        resizePixelDebounceWorkItem?.cancel()
+        let widthInt = Int(width)
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.pixelFiring?.fire(AIChatPixel.aiChatSidebarResized(width: widthInt), frequency: .dailyAndStandard)
+        }
+        resizePixelDebounceWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+    }
 
     /// Clamps a proposed sidebar width to the allowed range.
     private func clampSidebarWidth(_ width: CGFloat) -> CGFloat {
