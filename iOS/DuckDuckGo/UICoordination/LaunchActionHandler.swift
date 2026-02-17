@@ -24,7 +24,7 @@ enum LaunchAction {
 
     case openURL(URL)
     case handleShortcutItem(UIApplicationShortcutItem)
-    case showKeyboard(Date?)
+    case standardLaunch(Date?)
 
     init(actionToHandle: AppAction?, lastBackgroundDate: Date?) {
         switch actionToHandle {
@@ -33,10 +33,15 @@ enum LaunchAction {
         case .handleShortcutItem(let shortcutItem)?:
             self = .handleShortcutItem(shortcutItem)
         case nil:
-            self = .showKeyboard(lastBackgroundDate)
+            self = .standardLaunch(lastBackgroundDate)
         }
     }
 
+}
+
+@MainActor
+protocol IdleReturnLaunchDelegate: AnyObject {
+    func showNewTabPageAfterIdleReturn()
 }
 
 @MainActor
@@ -54,16 +59,25 @@ final class LaunchActionHandler: LaunchActionHandling {
     private let keyboardPresenter: KeyboardPresenting
     private let pixelFiring: PixelFiring.Type
     private let launchSourceManager: LaunchSourceManaging
+    private let idleReturnEvaluator: IdleReturnEvaluating
+    private weak var idleReturnDelegate: IdleReturnLaunchDelegate?
+
+    /// Set by the caller when the overlay should be removed only after the delegate has put the NTP in place (not in onAppReadyForInteractions).
+    var whenIdleReturnDelegateInvoked: (() -> Void)?
 
     init(urlHandler: URLHandling,
          shortcutItemHandler: ShortcutItemHandling,
          keyboardPresenter: KeyboardPresenting,
          launchSourceService: LaunchSourceManaging,
+         idleReturnEvaluator: IdleReturnEvaluating,
+         idleReturnDelegate: IdleReturnLaunchDelegate? = nil,
          pixelFiring: PixelFiring.Type = Pixel.self) {
         self.urlHandler = urlHandler
         self.shortcutItemHandler = shortcutItemHandler
         self.keyboardPresenter = keyboardPresenter
         self.launchSourceManager = launchSourceService
+        self.idleReturnEvaluator = idleReturnEvaluator
+        self.idleReturnDelegate = idleReturnDelegate
         self.pixelFiring = pixelFiring
     }
 
@@ -75,9 +89,15 @@ final class LaunchActionHandler: LaunchActionHandling {
         case .handleShortcutItem(let shortcutItem):
             launchSourceManager.setSource(.shortcut)
             shortcutItemHandler.handleShortcutItem(shortcutItem)
-        case .showKeyboard(let lastBackgroundDate):
+        case .standardLaunch(let lastBackgroundDate):
             launchSourceManager.setSource(.standard)
-            keyboardPresenter.showKeyboardOnLaunch(lastBackgroundDate: lastBackgroundDate)
+            if idleReturnEvaluator.shouldShowNTPAfterIdle(lastBackgroundDate: lastBackgroundDate),
+               let idleReturnDelegate {
+                whenIdleReturnDelegateInvoked?()
+                idleReturnDelegate.showNewTabPageAfterIdleReturn()
+            } else {
+                keyboardPresenter.showKeyboardOnLaunch(lastBackgroundDate: lastBackgroundDate)
+            }
         }
     }
 

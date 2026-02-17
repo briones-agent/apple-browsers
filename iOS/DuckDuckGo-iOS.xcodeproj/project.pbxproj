@@ -443,6 +443,8 @@
 		65BD16352D8C206F000795DE /* DuckPlayerPrimingModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BD16332D8C206F000795DE /* DuckPlayerPrimingModalView.swift */; };
 		65BD16362D8C206F000795DE /* DuckPlayerPrimingModalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BD16342D8C206F000795DE /* DuckPlayerPrimingModalViewModel.swift */; };
 		65BD16392D8DA439000795DE /* DuckPlayerDebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BD16382D8DA439000795DE /* DuckPlayerDebugSettingsView.swift */; };
+		CBAD0F1D2D02EE43006267B8 /* IdleReturnNTPDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD0F1C2D02EE43006267B8 /* IdleReturnNTPDebugView.swift */; };
+		CBAD0F1F2D02EE47006267B8 /* IdleReturnStorageKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD0F1E2D02EE46006267B8 /* IdleReturnStorageKeys.swift */; };
 		65D091242D47DF2100226164 /* DuckPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D091232D47DF1B00226164 /* DuckPlayerViewModel.swift */; };
 		65D091262D47DF2A00226164 /* DuckPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D091252D47DF2500226164 /* DuckPlayerView.swift */; };
 		65D7483F2D9C3EDB00554B1D /* DuckPlayerHosting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D7483E2D9C3EDB00554B1D /* DuckPlayerHosting.swift */; };
@@ -1907,6 +1909,7 @@
 		CB9C3F6C2D898BE000264725 /* PullToRefreshViewAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9C3F6B2D898BE000264725 /* PullToRefreshViewAdapter.swift */; };
 		CBAA195A27BFE15600A4BD49 /* NSManagedObjectContextExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAA195927BFE15600A4BD49 /* NSManagedObjectContextExtension.swift */; };
 		CBAD0F0C2CFF4EE1006267B8 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD0F0B2CFF4EDD006267B8 /* AppDependencies.swift */; };
+		CBAD0F1B2D02EE42006267B8 /* IdleReturnEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD0F1A2D02EE41006267B8 /* IdleReturnEvaluator.swift */; };
 		CBAD0F102D0062A7006267B8 /* ScreenshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD0F0F2D0062A3006267B8 /* ScreenshotService.swift */; };
 		CBAD0F142D01EE45006267B8 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD0F132D01EE40006267B8 /* SubscriptionService.swift */; };
 		CBC88EE12C7F834300F0F8C5 /* SpecialErrorPageUserScriptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC88EE02C7F834300F0F8C5 /* SpecialErrorPageUserScriptTests.swift */; };
@@ -4382,6 +4385,9 @@
 		CBAD0F002CFE1D54006267B8 /* Background.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Background.swift; sourceTree = "<group>"; };
 		CBAD0F052CFE270D006267B8 /* AppStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateMachine.swift; sourceTree = "<group>"; };
 		CBAD0F0B2CFF4EDD006267B8 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		CBAD0F1A2D02EE41006267B8 /* IdleReturnEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleReturnEvaluator.swift; sourceTree = "<group>"; };
+		CBAD0F1E2D02EE46006267B8 /* IdleReturnStorageKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleReturnStorageKeys.swift; sourceTree = "<group>"; };
+		CBAD0F1C2D02EE43006267B8 /* IdleReturnNTPDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleReturnNTPDebugView.swift; sourceTree = "<group>"; };
 		CBAD0F0F2D0062A3006267B8 /* ScreenshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotService.swift; sourceTree = "<group>"; };
 		CBAD0F132D01EE40006267B8 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		CBB6B2542AF6D543006B777C /* lt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = lt; path = lt.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -6996,6 +7002,7 @@
 				9FF967CC2E12182100E45B54 /* DefaultBrowserPromptDebugView */,
 				F1849C6F2D6E3D17000589A4 /* DiagnosticReport.swift */,
 				65BD16382D8DA439000795DE /* DuckPlayerDebugSettingsView.swift */,
+				CBAD0F1C2D02EE43006267B8 /* IdleReturnNTPDebugView.swift */,
 				564441A02D4D2089003C53B8 /* FeatureFlagsDebugSettings */,
 				1EDE39D12705D4A100C99C72 /* FileSizeDebugViewController.swift */,
 				C18ED43B2AB8364400BF3805 /* FileTextPreviewDebugViewController.swift */,
@@ -9082,6 +9089,8 @@
 				CBAD0F0B2CFF4EDD006267B8 /* AppDependencies.swift */,
 				CBAD0F052CFE270D006267B8 /* AppStateMachine.swift */,
 				98B31291218CCB8C00E54DE1 /* AppDependencyProvider.swift */,
+				CBAD0F1A2D02EE41006267B8 /* IdleReturnEvaluator.swift */,
+				CBAD0F1E2D02EE46006267B8 /* IdleReturnStorageKeys.swift */,
 				CBAD0EF72CFE1D14006267B8 /* AppStates */,
 			);
 			path = AppLifecycle;
@@ -11479,6 +11488,8 @@
 				6F8496412BC3D8EE00ADA54E /* OnboardingButtonsView.swift in Sources */,
 				9FE7CD592E13C40E006691AB /* DefaultBrowserPromptUserActivityManager.swift in Sources */,
 				CB3C78892D06D3A700A7E4ED /* Foreground.swift in Sources */,
+				CBAD0F1B2D02EE42006267B8 /* IdleReturnEvaluator.swift in Sources */,
+				CBAD0F1F2D02EE47006267B8 /* IdleReturnStorageKeys.swift in Sources */,
 				CB3C788A2D06D3A700A7E4ED /* Background.swift in Sources */,
 				C1AD33342DBAD1DD003B80A4 /* SaveCreditCardViewController.swift in Sources */,
 				365E900B2E566C2300BDB0E8 /* AIChatIntent.swift in Sources */,
@@ -11608,6 +11619,7 @@
 				98C785E92E687D490077819E /* InternalUserCommands.swift in Sources */,
 				C14135B52EC4BE880006F8C1 /* TabViewControllerAIChatExtension.swift in Sources */,
 				65BD16392D8DA439000795DE /* DuckPlayerDebugSettingsView.swift in Sources */,
+				CBAD0F1D2D02EE43006267B8 /* IdleReturnNTPDebugView.swift in Sources */,
 				F4D9C4FA25117A0F00814B71 /* HomeMessageStorage.swift in Sources */,
 				6F5041C92CC11A5100989E48 /* NewTabPageView.swift in Sources */,
 				D69FBF762B28BE3600B505F1 /* SettingsSubscriptionView.swift in Sources */,

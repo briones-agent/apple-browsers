@@ -466,6 +466,21 @@ extension MainCoordinator: ShortcutItemHandling {
 
 }
 
+// MARK: - IdleReturnLaunchDelegate
+
+extension MainCoordinator: IdleReturnLaunchDelegate {
+
+    func showNewTabPageAfterIdleReturn() {
+        controller.prepareForIdleReturnNTP { [weak self] in
+            guard let self else { return }
+            self.controller.newTab(reuseExisting: true, allowingKeyboard: true)
+            // Remove overlay after the next run loop so the NTP is in place and laid out
+            DispatchQueue.main.async { NotificationCenter.default.post(name: LaunchOverlayNotification.shouldRemove, object: nil) }
+        }
+    }
+
+}
+
 // MARK: - SystemSettingsPiPTutorialPresenting
 
 extension MainCoordinator: SystemSettingsPiPTutorialPresenting {

@@ -2023,6 +2023,32 @@ class MainViewController: UIViewController {
         themeColorManager.updateThemeColor()
         showBars() // In case the browser chrome bars are hidden when calling this method
     }
+
+    // MARK: - Idle return NTP (dismiss overlays so NTP is visible)
+    /// Dismisses tab switcher and any presented view controller (e.g. Settings) so the caller can then show the NTP.
+    func prepareForIdleReturnNTP(completion: @escaping () -> Void) {
+        if let tabSwitcher = tabSwitcherController {
+            tabSwitcher.dismiss(animated: true) { [weak self] in
+                self?.tabSwitcherController = nil
+                self?.dismissPresentedThenCall(completion)
+            }
+        } else {
+            dismissPresentedThenCall(completion)
+        }
+    }
+
+    private func dismissPresentedThenCall(_ completion: @escaping () -> Void) {
+        guard let presented = presentedViewController, !presented.isBeingDismissed else {
+            completion()
+            return
+        }
+        // Don't dismiss the omni bar's editing state (keyboard/switch) – we're reusing NTP and want to preserve focus
+        if presented is OmniBarEditingStateViewController {
+            completion()
+            return
+        }
+        presented.dismiss(animated: true, completion: completion)
+    }
     
     func updateFindInPage() {
         currentTab?.findInPage?.delegate = self
@@ -3675,6 +3701,7 @@ extension MainViewController: TabDelegate {
 extension MainViewController: TabSwitcherDelegate {
 
     func tabSwitcherDidDismiss(tabSwitcher: TabSwitcherViewController) {
+        tabSwitcherController = nil
         showMenuHighlighterIfNeeded()
     }
 

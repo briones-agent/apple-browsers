@@ -17,7 +17,13 @@
 //  limitations under the License.
 //
 
+import DesignResourcesKit
 import UIKit
+
+/// Notification posted when launch handling (and idle-return NTP) is complete. Kept for callers; overlay is currently disabled.
+enum LaunchOverlayNotification {
+    static let shouldRemove = Notification.Name("SceneDelegateLaunchOverlayShouldRemove")
+}
 
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
