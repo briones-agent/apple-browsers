@@ -151,7 +151,7 @@ struct BrokenSiteReportMocks {
     static var reportWithBreakageData: BrokenSiteReport {
         let breakageData = "%7B%22detections%22%3A%7B%22adwalls.generic%22%3A%7B%22detected%22%3Atrue%7D%7D%7D"
 #if os(iOS)
-        BrokenSiteReport(siteUrl: URL(string: "https://duckduckgo.com")!,
+        return BrokenSiteReport(siteUrl: URL(string: "https://duckduckgo.com")!,
                          category: "test",
                          description: "test",
                          osVersion: "test",
@@ -183,7 +183,7 @@ struct BrokenSiteReportMocks {
                          pageLoadTiming: nil,
                          breakageData: breakageData)
 #else
-        BrokenSiteReport(siteUrl: URL(string: "https://duckduckgo.com")!,
+        return BrokenSiteReport(siteUrl: URL(string: "https://duckduckgo.com")!,
                          category: "test",
                          description: "test",
                          osVersion: "test",
