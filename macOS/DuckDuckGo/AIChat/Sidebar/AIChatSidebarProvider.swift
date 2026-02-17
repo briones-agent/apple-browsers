@@ -27,8 +27,8 @@ typealias AIChatSidebarsByTab = [TabIdentifier: AIChatSidebar]
 /// A protocol that defines the interface for managing AI chat sidebars in tabs.
 /// This provider handles the lifecycle and state of chat sidebars across multiple browser tabs.
 protocol AIChatSidebarProviding: AnyObject {
-    /// The current width of the chat sidebar in points.
-    var sidebarWidth: CGFloat { get }
+    /// The sidebar width for the given tab, falling back to the default if none was set.
+    func sidebarWidth(for tabID: TabIdentifier) -> CGFloat
 
     /// The minimum allowed sidebar width in points.
     var minSidebarWidth: CGFloat { get }
@@ -36,8 +36,11 @@ protocol AIChatSidebarProviding: AnyObject {
     /// The maximum allowed sidebar width in points.
     var maxSidebarWidth: CGFloat { get }
 
-    /// Persists a new sidebar width after the user finishes a resize drag.
-    func setSidebarWidth(_ width: CGFloat)
+    /// The default sidebar width used when a tab has no per-tab width set.
+    var defaultSidebarWidth: CGFloat { get }
+
+    /// Persists a new sidebar width for the given tab.
+    func setSidebarWidth(_ width: CGFloat, for tabID: TabIdentifier)
 
     /// Returns the existing cached sidebar view controller for the specified tab, if one exists.
     /// - Parameter tabID: The unique identifier of the tab
@@ -92,17 +95,22 @@ final class AIChatSidebarProvider: AIChatSidebarProviding {
 
     enum Constants {
         static let defaultSidebarWidth: CGFloat = 400
+        static let minSidebarWidth: CGFloat = 300
+        static let maxSidebarWidth: CGFloat = 900
     }
 
     private let featureFlagger: FeatureFlagger
-    private var widthStorage: AIChatSidebarWidthStoring
 
-    var sidebarWidth: CGFloat { widthStorage.sidebarWidth }
-    var minSidebarWidth: CGFloat { widthStorage.minWidth }
-    var maxSidebarWidth: CGFloat { widthStorage.maxWidth }
+    var minSidebarWidth: CGFloat { Constants.minSidebarWidth }
+    var maxSidebarWidth: CGFloat { Constants.maxSidebarWidth }
+    var defaultSidebarWidth: CGFloat { Constants.defaultSidebarWidth }
 
-    func setSidebarWidth(_ width: CGFloat) {
-        widthStorage.sidebarWidth = width
+    func sidebarWidth(for tabID: TabIdentifier) -> CGFloat {
+        sidebarsByTab[tabID]?.sidebarWidth ?? Constants.defaultSidebarWidth
+    }
+
+    func setSidebarWidth(_ width: CGFloat, for tabID: TabIdentifier) {
+        sidebarsByTab[tabID]?.sidebarWidth = width
     }
 
     @Published private(set) var sidebarsByTab: AIChatSidebarsByTab
@@ -116,11 +124,9 @@ final class AIChatSidebarProvider: AIChatSidebarProviding {
     }
 
     init(sidebarsByTab: AIChatSidebarsByTab? = nil,
-         featureFlagger: FeatureFlagger,
-         widthStorage: AIChatSidebarWidthStoring = DefaultAIChatSidebarWidthStorage()) {
+         featureFlagger: FeatureFlagger) {
         self.sidebarsByTab = sidebarsByTab ?? [:]
         self.featureFlagger = featureFlagger
-        self.widthStorage = widthStorage
     }
 
     func getSidebarViewController(for tabID: TabIdentifier) -> AIChatSidebarViewController? {

@@ -634,15 +634,21 @@ class MockAIChatSidebarHosting: AIChatSidebarHosting {
 }
 
 class MockAIChatSidebarProvider: AIChatSidebarProviding {
-    var sidebarWidth: CGFloat = 400
+    var defaultSidebarWidth: CGFloat = 400
     var minSidebarWidth: CGFloat = 300
     var maxSidebarWidth: CGFloat = 900
     private(set) var lastSetWidth: CGFloat?
+    private(set) var lastSetWidthTabID: TabIdentifier?
     @Published var sidebarsByTab: AIChatSidebarsByTab = [:]
 
-    func setSidebarWidth(_ width: CGFloat) {
-        sidebarWidth = width
+    func sidebarWidth(for tabID: TabIdentifier) -> CGFloat {
+        sidebarsByTab[tabID]?.sidebarWidth ?? defaultSidebarWidth
+    }
+
+    func setSidebarWidth(_ width: CGFloat, for tabID: TabIdentifier) {
+        sidebarsByTab[tabID]?.sidebarWidth = width
         lastSetWidth = width
+        lastSetWidthTabID = tabID
     }
 
     var sidebarsByTabPublisher: AnyPublisher<DuckDuckGo_Privacy_Browser.AIChatSidebarsByTab, Never> {
