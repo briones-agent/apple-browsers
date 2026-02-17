@@ -321,4 +321,90 @@ final class RouteHandlerTests: XCTestCase {
             XCTFail("Expected success")
         }
     }
+
+    // The Rust WebDriver client sends all requests as HTTP GET. Verify that routes
+    // which were previously POST-only also accept GET (localhost-only server, no
+    // security benefit from method restrictions).
+
+    func testExecute_AcceptsGET() async {
+        mockProvider.executeScriptResult = .success("ok")
+        let url = URLComponents(string: "/execute?script=return%20true")!
+
+        let result = await server.handlePath(url, method: "GET")
+
+        if case .success(let message) = result {
+            XCTAssertEqual(message, "true")
+        } else {
+            XCTFail("Expected success for GET /execute")
+        }
+    }
+
+    func testCloseWindow_AcceptsGET() async {
+        let url = URLComponents(string: "/closeWindow")!
+
+        let result = await server.handlePath(url, method: "GET")
+
+        XCTAssertTrue(mockProvider.closeCurrentTabCalled)
+        if case .success(let message) = result {
+            XCTAssertEqual(message, "done")
+        } else {
+            XCTFail("Expected success for GET /closeWindow")
+        }
+    }
+
+    func testSwitchToWindow_AcceptsGET() async {
+        let url = URLComponents(string: "/switchToWindow?handle=target-tab")!
+
+        let result = await server.handlePath(url, method: "GET")
+
+        XCTAssertEqual(mockProvider.switchToTabCalled, "target-tab")
+        if case .success(let message) = result {
+            XCTAssertEqual(message, "done")
+        } else {
+            XCTFail("Expected success for GET /switchToWindow")
+        }
+    }
+
+    func testNewWindow_AcceptsGET() async {
+        mockProvider.newTabResult = "new-tab-handle"
+        let url = URLComponents(string: "/newWindow")!
+
+        let result = await server.handlePath(url, method: "GET")
+
+        XCTAssertTrue(mockProvider.newTabCalled)
+        if case .success = result {
+            // success is enough — response format tested in testNewWindow_ReturnsNewTabHandle
+        } else {
+            XCTFail("Expected success for GET /newWindow")
+        }
+    }
+
+    // MARK: - /screenshot Tests
+
+    func testScreenshot_ReturnsBase64Data() async {
+        let pngData = Data([0x89, 0x50, 0x4E, 0x47]) // PNG magic bytes
+        mockProvider.screenshotResult = pngData
+        let url = URLComponents(string: "/screenshot")!
+
+        let result = await server.handlePath(url, method: "GET")
+
+        if case .success(let message) = result {
+            XCTAssertEqual(message, pngData.base64EncodedString())
+        } else {
+            XCTFail("Expected success")
+        }
+    }
+
+    func testScreenshot_ReturnsErrorWhenFailed() async {
+        mockProvider.screenshotResult = nil
+        let url = URLComponents(string: "/screenshot")!
+
+        let result = await server.handlePath(url, method: "GET")
+
+        if case .failure(let error) = result {
+            XCTAssertEqual(error, .screenshotFailed)
+        } else {
+            XCTFail("Expected failure when screenshot is nil")
+        }
+    }
 }

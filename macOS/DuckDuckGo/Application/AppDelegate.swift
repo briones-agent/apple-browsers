@@ -493,7 +493,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let fetchedData: Data? = useTestConfig ? nil : configurationStore.loadData(for: .privacyConfiguration)
 
         if useTestConfig {
-            NSLog("[DDG-TEST-CONFIG] Skipping cached privacy config to use TEST_PRIVACY_CONFIG_PATH")
+            Logger.config.info("Skipping cached privacy config to use TEST_PRIVACY_CONFIG_PATH")
         }
 
         if AppVersion.runType.requiresEnvironment {

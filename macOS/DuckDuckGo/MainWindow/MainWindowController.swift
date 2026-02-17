@@ -103,29 +103,30 @@ final class MainWindowController: NSWindowController {
         NotificationCenter.default.removeObserver(self)
     }
 
+    /// Determines whether onboarding should be shown based on launch options and onboarding state.
+    /// Handles automation overrides, developer overrides, and normal onboarding logic.
+    private static func shouldShowOnboardingForLaunchOptions() -> Bool {
+        switch LaunchOptionsHandler().onboardingStatus {
+        case .notOverridden:
+            let onboardingIsComplete = OnboardingActionsManager.isOnboardingFinished || LocalStatisticsStore().waitlistUnlocked
+            return !onboardingIsComplete
+        case let .overridden(.developer(isOnboardingCompleted)):
+            return !isOnboardingCompleted
+        case let .overridden(.uiTests(isOnboardingCompleted)):
+            // Persist onboarding state across app re-launches during UI Tests
+            if isOnboardingCompleted {
+                OnboardingActionsManager.isOnboardingFinished = true
+            }
+            return !isOnboardingCompleted
+        }
+    }
+
     private var shouldShowOnboarding: Bool {
  #if DEBUG
         if AppVersion.runType == .unitTests || AppVersion.runType == .integrationTests {
             return false
         }
-
-        // Check if we override onboarding flag and show/hide onboarding accordingly
-        // If onboarding is not overridden, show onboarding only if users have not seen it.
-        let showOnboarding: Bool
-        switch LaunchOptionsHandler().onboardingStatus {
-        case .notOverridden:
-            let onboardingIsComplete = OnboardingActionsManager.isOnboardingFinished || LocalStatisticsStore().waitlistUnlocked
-            showOnboarding = !onboardingIsComplete
-        case let .overridden(.developer(isOnboardingCompleted)):
-            showOnboarding = !isOnboardingCompleted
-        case let .overridden(.uiTests(isOnboardingCompleted)):
-            // Set onboarding settings so state is persisted across app re-launches during UI Tests
-            if isOnboardingCompleted {
-                OnboardingActionsManager.isOnboardingFinished = true
-            }
-            showOnboarding = !isOnboardingCompleted
-        }
-        return showOnboarding
+        return Self.shouldShowOnboardingForLaunchOptions()
  #elseif REVIEW
         if AppVersion.runType == .uiTests {
             Application.appDelegate.onboardingContextualDialogsManager.state = .onboardingCompleted
@@ -135,39 +136,10 @@ final class MainWindowController: NSWindowController {
             if AppVersion.runType == .uiTestsOnboarding {
                 Application.appDelegate.onboardingContextualDialogsManager.state = .onboardingCompleted
             }
-
-            // Check if we override onboarding flag and show/hide onboarding accordingly
-            let showOnboarding: Bool
-            switch LaunchOptionsHandler().onboardingStatus {
-            case .notOverridden:
-                let onboardingIsComplete = OnboardingActionsManager.isOnboardingFinished || LocalStatisticsStore().waitlistUnlocked
-                showOnboarding = !onboardingIsComplete
-            case let .overridden(.developer(isOnboardingCompleted)):
-                showOnboarding = !isOnboardingCompleted
-            case let .overridden(.uiTests(isOnboardingCompleted)):
-                if isOnboardingCompleted {
-                    OnboardingActionsManager.isOnboardingFinished = true
-                }
-                showOnboarding = !isOnboardingCompleted
-            }
-            return showOnboarding
+            return Self.shouldShowOnboardingForLaunchOptions()
         }
  #else
-        // Check if we override onboarding flag and show/hide onboarding accordingly
-        let showOnboarding: Bool
-        switch LaunchOptionsHandler().onboardingStatus {
-        case .notOverridden:
-            let onboardingIsComplete = OnboardingActionsManager.isOnboardingFinished || LocalStatisticsStore().waitlistUnlocked
-            showOnboarding = !onboardingIsComplete
-        case let .overridden(.developer(isOnboardingCompleted)):
-            showOnboarding = !isOnboardingCompleted
-        case let .overridden(.uiTests(isOnboardingCompleted)):
-            if isOnboardingCompleted {
-                OnboardingActionsManager.isOnboardingFinished = true
-            }
-            showOnboarding = !isOnboardingCompleted
-        }
-        return showOnboarding
+        return Self.shouldShowOnboardingForLaunchOptions()
  #endif
     }
 

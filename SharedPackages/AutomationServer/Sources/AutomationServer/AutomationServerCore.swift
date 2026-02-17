@@ -371,15 +371,14 @@ public final class AutomationServerCore {
     }
 
     private func handleNavigationPath(_ url: URLComponents, method: String) async -> ConnectionResult {
+        // Accept both GET and POST for all routes — the Rust WebDriver client sends GET for all requests
+        // and this server is localhost-only so method restrictions provide no security benefit.
         switch url.path {
         case "/navigate":
-            guard method == "GET" || method == "POST" else { return .failure(.methodNotAllowed) }
             return navigate(url: url)
         case "/execute":
-            guard method == "POST" else { return .failure(.methodNotAllowed) }
             return await execute(url: url)
         case "/getUrl":
-            guard method == "GET" else { return .failure(.methodNotAllowed) }
             return .success(provider.currentURL?.absoluteString ?? "")
         default:
             return .failure(.unknownMethod)
@@ -389,19 +388,14 @@ public final class AutomationServerCore {
     private func handleWindowPath(_ url: URLComponents, method: String) -> ConnectionResult {
         switch url.path {
         case "/getWindowHandles":
-            guard method == "GET" else { return .failure(.methodNotAllowed) }
             return getWindowHandles(url: url)
         case "/closeWindow":
-            guard method == "POST" else { return .failure(.methodNotAllowed) }
             return closeWindow(url: url)
         case "/switchToWindow":
-            guard method == "POST" else { return .failure(.methodNotAllowed) }
             return switchToWindow(url: url)
         case "/newWindow":
-            guard method == "POST" else { return .failure(.methodNotAllowed) }
             return newWindow(url: url)
         case "/getWindowHandle":
-            guard method == "GET" else { return .failure(.methodNotAllowed) }
             return getWindowHandle(url: url)
         default:
             return .failure(.unknownMethod)
@@ -411,13 +405,10 @@ public final class AutomationServerCore {
     private func handleServerPath(_ url: URLComponents, method: String) async -> ConnectionResult {
         switch url.path {
         case "/shutdown":
-            guard method == "POST" else { return .failure(.methodNotAllowed) }
             return shutdown()
         case "/screenshot":
-            guard method == "GET" || method == "POST" else { return .failure(.methodNotAllowed) }
             return await takeScreenshot(url: url)
         case "/contentBlockerReady":
-            guard method == "GET" else { return .failure(.methodNotAllowed) }
             return contentBlockerReady()
         default:
             return .failure(.unknownMethod)

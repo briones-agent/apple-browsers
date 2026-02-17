@@ -22,6 +22,7 @@ import Combine
 import ContentBlocking
 import BrowserServicesKit
 import Common
+import os.log
 import Persistence
 import PixelKit
 import PixelExperimentKit
@@ -96,7 +97,7 @@ final class AppContentBlocking {
         let fetchedData: Data? = useTestConfig ? nil : configurationStore.loadData(for: .privacyConfiguration)
 
         if useTestConfig {
-            NSLog("[DDG-TEST-CONFIG] Skipping cached privacy config to use TEST_PRIVACY_CONFIG_PATH")
+            Logger.config.info("Skipping cached privacy config to use TEST_PRIVACY_CONFIG_PATH")
         }
 #else
         let fetchedEtag: String? = configurationStore.loadEtag(for: .privacyConfiguration)
