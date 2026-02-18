@@ -65,6 +65,7 @@ final class AIChatSidebarResizeHandleView: NSView {
     /// Registers a cursor rect so AppKit keeps the resize cursor visible even
     /// when the mouse is stationary over the handle.
     override func resetCursorRects() {
+        guard !isDragging else { return }
         addCursorRect(bounds, cursor: .resizeLeftRight)
     }
 
@@ -130,6 +131,7 @@ final class AIChatSidebarResizeHandleView: NSView {
         guard isDragging, let window else { return }
         isDragging = false
         NSCursor.pop()
+        window.invalidateCursorRects(for: self)
         let currentX = window.mouseLocationOutsideOfEventStream.x
         let finalWidth = dragStartWidth + (dragStartX - currentX)
         onResizeEnd?(finalWidth)
