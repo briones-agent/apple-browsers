@@ -44,6 +44,9 @@ final class AIChatImageAttachmentsContainerView: NSView {
     /// Called when a thumbnail is clicked.
     var onThumbnailClicked: ((UUID) -> Void)?
 
+    /// Called when an attachment is about to be removed. Allows parent to cleanup (e.g., cancel resize tasks).
+    var onAttachmentWillRemove: ((UUID) -> Void)?
+
     var isFull: Bool {
         attachments.count >= Constants.maxAttachments
     }
@@ -91,6 +94,8 @@ final class AIChatImageAttachmentsContainerView: NSView {
     func removeAttachment(id: UUID) {
         guard let index = attachments.firstIndex(where: { $0.id == id }) else { return }
 
+        onAttachmentWillRemove?(id)
+
         attachments.remove(at: index)
         let thumbnailView = stackView.arrangedSubviews[index]
         stackView.removeArrangedSubview(thumbnailView)
@@ -106,5 +111,14 @@ final class AIChatImageAttachmentsContainerView: NSView {
             $0.removeFromSuperview()
         }
         onAttachmentsChanged?()
+    }
+
+    /// Replaces an attachment's image in place. Used for updating from placeholder to loaded image.
+    func replaceAttachment(id: UUID, with newAttachment: AIChatImageAttachment) {
+        guard let index = attachments.firstIndex(where: { $0.id == id }) else { return }
+        guard let thumbnailView = stackView.arrangedSubviews[index] as? AIChatImageAttachmentThumbnailView else { return }
+
+        attachments[index] = newAttachment
+        thumbnailView.updateImage(newAttachment.image)
     }
 }

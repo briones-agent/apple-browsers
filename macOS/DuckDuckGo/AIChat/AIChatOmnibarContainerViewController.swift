@@ -78,6 +78,9 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// Suggestions view - always in hierarchy, height is 0 when no suggestions
     private let suggestionsView = AIChatSuggestionsView()
 
+    /// Tracks ongoing resize tasks by attachment ID. Used to ensure resizes complete before submission.
+    private var resizeTasks: [UUID: Task<Void, Never>] = [:]
+
     /// Constraint for suggestions view height
     private var suggestionsHeightConstraint: NSLayoutConstraint?
 
@@ -299,6 +302,11 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         attachmentsContainerView.onAttachmentsChanged = { [weak self] in
             self?.updateAttachmentsLayout()
         }
+        attachmentsContainerView.onAttachmentWillRemove = { [weak self] id in
+            // Cancel and remove resize task if still pending
+            self?.resizeTasks[id]?.cancel()
+            self?.resizeTasks.removeValue(forKey: id)
+        }
         containerView.addSubview(attachmentsContainerView)
 
         NSLayoutConstraint.activate([
@@ -472,9 +480,37 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             guard let self, response == .OK else { return }
             let remaining = Constants.maxAttachments - self.attachmentsContainerView.attachments.count
             for url in panel.urls.prefix(remaining) {
-                guard let image = NSImage(contentsOf: url) else { continue }
-                let attachment = AIChatImageAttachment(image: image, fileName: url.lastPathComponent, fileURL: url)
-                self.attachmentsContainerView.addAttachment(attachment)
+                guard let originalImage = NSImage(contentsOf: url) else { continue }
+
+                // Show original image immediately as placeholder (no resize)
+                let placeholderId = UUID()
+                let placeholderAttachment = AIChatImageAttachment(
+                    id: placeholderId,
+                    image: originalImage,
+                    fileName: url.lastPathComponent,
+                    fileURL: url,
+                    skipResize: true
+                )
+                self.attachmentsContainerView.addAttachment(placeholderAttachment)
+
+                // Resize in background and track task
+                let resizeTask = Task.detached(priority: .userInitiated) {
+                    let resizedAttachment = AIChatImageAttachment(
+                        id: placeholderId,
+                        image: originalImage,
+                        fileName: url.lastPathComponent,
+                        fileURL: url,
+                        skipResize: false  // This will resize
+                    )
+
+                    // Update UI on main thread
+                    await MainActor.run {
+                        self.attachmentsContainerView.replaceAttachment(id: placeholderId, with: resizedAttachment)
+                        self.resizeTasks.removeValue(forKey: placeholderId)
+                    }
+                }
+
+                self.resizeTasks[placeholderId] = resizeTask
             }
         }
     }
@@ -486,9 +522,25 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         omnibarController.onAttachmentsClearRequested = { [weak self] in
             self?.clearAttachments()
         }
+        omnibarController.areAttachmentsReadyProvider = { [weak self] in
+            self?.resizeTasks.isEmpty ?? true
+        }
+        omnibarController.waitForAttachmentsReady = { [weak self] in
+            guard let self else { return }
+            let tasks = Array(self.resizeTasks.values)
+            for task in tasks {
+                await task.value
+            }
+        }
     }
 
     private func clearAttachments() {
+        // Cancel any pending resize tasks
+        for task in resizeTasks.values {
+            task.cancel()
+        }
+        resizeTasks.removeAll()
+
         attachmentsContainerView.removeAllAttachments()
         updateAttachmentsLayout()
     }

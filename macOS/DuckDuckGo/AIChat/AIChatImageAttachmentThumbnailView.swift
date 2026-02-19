@@ -212,6 +212,11 @@ final class AIChatImageAttachmentThumbnailView: NSView {
         imageLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2.0
     }
 
+    /// Updates the displayed image. Used when replacing placeholder with loaded image.
+    func updateImage(_ image: NSImage) {
+        setImage(image)
+    }
+
     private func configureRemoveButtonImage() {
         removeButton.image = DesignSystemImages.Glyphs.Size16.clear
         removeButton.imageScaling = .scaleNone

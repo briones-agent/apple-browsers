@@ -62,6 +62,12 @@ final class AIChatOmnibarController {
     /// Called after a successful submit so the container VC can clear its attachment UI.
     var onAttachmentsClearRequested: (() -> Void)?
 
+    /// Checks if all attachments are ready (resizing complete).
+    var areAttachmentsReadyProvider: (() -> Bool)?
+
+    /// Waits for all attachment resizing to complete before proceeding.
+    var waitForAttachmentsReady: (() async -> Void)?
+
     /// View model for managing chat suggestions. Always initialized, but only populated when feature flag is enabled.
     let suggestionsViewModel: AIChatSuggestionsViewModel
 
@@ -268,10 +274,15 @@ final class AIChatOmnibarController {
         PixelKit.fire(AIChatPixel.aiChatAddressBarAIChatSubmitPrompt, frequency: .dailyAndCount, includeAppVersionParameter: true)
 
         let toolChoice = isSearchToggleEnabled ? [Constants.webSearchTool] : nil
-        let attachments = attachmentsProvider?() ?? []
-        let images = Self.nativePromptImages(from: attachments)
 
         Task { @MainActor in
+            // Wait for any pending image resizes to complete
+            await waitForAttachmentsReady?()
+
+            // Get attachments after resizes are complete
+            let attachments = attachmentsProvider?() ?? []
+            let images = Self.nativePromptImages(from: attachments)
+
             aiChatTabOpener.openAIChatTab(
                 with: .query(trimmedText, shouldAutoSubmit: true),
                 behavior: .currentTab
@@ -279,11 +290,12 @@ final class AIChatOmnibarController {
             // Re-set prompt after tab opener to include toolChoice and images (tab opener overwrites with a plain query)
             let prompt = AIChatNativePrompt.queryPrompt(trimmedText, autoSubmit: true, toolChoice: toolChoice, images: images)
             promptHandler.setData(prompt)
+
+            onAttachmentsClearRequested?()
+            delegate?.aiChatOmnibarControllerDidSubmit(self)
         }
 
         currentText = ""
-        onAttachmentsClearRequested?()
-        delegate?.aiChatOmnibarControllerDidSubmit(self)
     }
 
     /// Converts image attachments to base64-encoded `NativePromptImage` values for the JS bridge.
