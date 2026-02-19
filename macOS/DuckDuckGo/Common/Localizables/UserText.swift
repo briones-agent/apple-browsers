@@ -610,6 +610,7 @@ struct UserText {
     static let aiChatShowInApplicationMenuToggle = NSLocalizedString("duckai.show-in-application-menu.toggle-setting", value: "Show Duck.ai shortcuts in menus", comment: "Show Duck.ai in application menus")
     static let aiChatOpenInSidebarToggle = NSLocalizedString("duckai.open-in-sidebar.toggle-setting", value: "Open Duck.ai in the sidebar", comment: "Settings option to open Duck.ai in the sidebar")
     static let aiChatOpenSidebarWhenViewingWebsitesToggle = NSLocalizedString("duckai.open-sidebar-when-viewing-websites.toggle-setting", value: "Toggle Duck.ai in sidebar when viewing websites", comment: "Settings option to toggle Duck.ai in sidebar when viewing websites")
+    static let aiChatAutomaticallySendPageContentToggle = NSLocalizedString("duckai.automatically-send-page-content.toggle-setting", value: "Automatically send page content to the sidebar", comment: "Settings option to automatically send page content to the sidebar")
     static let aiChatPreferencesCaption = NSLocalizedString("ai-features.preferences.caption", value: "DuckDuckGo AI features are private and optional. Your data is not used to train AI.", comment: "Ai Chat preferences explanation")
     static let aiChatPreferencesLearnMoreButton = NSLocalizedString("ai-chat.preferences.learn-more", value: "Learn More", comment: "AI Chat preferences button to learn more about it")
     static let newAIChatMenuItem = NSLocalizedString("duckai.menu.new", value: "New Duck.ai Chat", comment: "Menu item to launch AI Chat")
@@ -774,7 +775,7 @@ struct UserText {
     static let passwordManagerAlertRemoveIdentityConfirmation = NSLocalizedString("passsword.manager.alert.remove-identity.confirmation", value: "Are you sure you want to delete this saved autofill info?", comment: "Text of the alert that asks the user to confirm they want to delete an identity")
     static let passwordManagerAlertRemoveNoteConfirmation = NSLocalizedString("passsword.manager.alert.remove-note.confirmation", value: "Are you sure you want to delete this note?", comment: "Text of the alert that asks the user to confirm they want to delete a note")
 
-    static let importBookmarks = NSLocalizedString("import.browser.data.bookmarks", value: "Import Bookmarks…", comment: "Opens Import Browser Data dialog")
+    static let importBookmarks = NSLocalizedString("import.browser.data.bookmarks", value: "Import Bookmarks", comment: "Opens Import Browser Data dialog")
     static let importPasswords = NSLocalizedString("import.browser.data.passwords", value: "Import Passwords…", comment: "Opens Import Browser Data dialog")
 
     static let importDataTitle = NSLocalizedString("import.browser.data", value: "Import to DuckDuckGo", comment: "Import Browser Data dialog title")
@@ -2126,6 +2127,8 @@ struct UserText {
     static let purchasingSubscriptionTitle = NSLocalizedString("subscription.progress.view.purchasing.subscription", value: "Purchase in progress...", comment: "Progress view title when starting the purchase")
     static let restoringSubscriptionTitle = NSLocalizedString("subscription.progress.view.restoring.subscription", value: "Restoring subscription...", comment: "Progress view title when restoring past subscription purchase")
     static let completingPurchaseTitle = NSLocalizedString("subscription.progress.view.completing.purchase", value: "Completing purchase...", comment: "Progress view title when completing the purchase")
+    static let planChangeInProgressTitle = NSLocalizedString("subscription.progress.view.plan.change.in.progress", value: "Plan change in progress…", comment: "Progress view title when starting a plan change (upgrade, downgrade, or cancel downgrade)")
+    static let completePlanChangeTitle = NSLocalizedString("subscription.progress.view.completing.plan.change", value: "Completing plan change…", comment: "Progress view title when completing a plan change with the backend")
 
     // MARK: - VPN Upsell Popover
     static let vpnUpsellPopoverTitle = NSLocalizedString("subscription.upsell.popover.title", value: "A VPN to secure your\nWi-Fi & personal info", comment: "Title shown in VPN Upsell popover")

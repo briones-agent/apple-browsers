@@ -21,9 +21,14 @@ import AIChat
 import Common
 import CryptoKit
 import os.log
+import Persistence
+import PixelKit
 
 final class UpdatesDebugMenu: NSMenu {
-    init() {
+    private let settings: any ThrowingKeyedStoring<UpdateControllerSettings>
+
+    init(keyValueStore: ThrowingKeyValueStoring) {
+        self.settings = keyValueStore.throwingKeyedStoring()
         super.init(title: "")
 
         buildItems {
@@ -61,15 +66,19 @@ final class UpdatesDebugMenu: NSMenu {
 
     // MARK: - Menu State Update
 
-    @UserDefaultsWrapper(key: .updateValidityStartDate, defaultValue: nil)
-    var updateValidityStartDate: Date?
+    private var updateValidityStartDate: Date? {
+        get { try? settings.updateValidityStartDate }
+        set { try? settings.set(newValue, for: \.updateValidityStartDate) }
+    }
 
     @objc func expireCurrentUpdate() {
         updateValidityStartDate = .distantPast
     }
 
-    @UserDefaultsWrapper(key: .pendingUpdateSince, defaultValue: .distantPast)
-    private var pendingUpdateSince: Date
+    private var pendingUpdateSince: Date {
+        get { (try? settings.pendingUpdateSince) ?? .distantPast }
+        set { try? settings.set(newValue, for: \.pendingUpdateSince) }
+    }
 
     @objc func resetLastUpdateCheck() {
         pendingUpdateSince = .distantPast
@@ -88,22 +97,20 @@ final class UpdatesDebugMenu: NSMenu {
     }
 
     @objc func showBrowserUpdatedPopover() {
-        let presenter = UpdateNotificationPresenter()
-        presenter.showUpdateNotification(
-            icon: NSImage.successCheckmark,
-            text: UserText.browserUpdatedNotification,
-            buttonText: UserText.viewDetails
-        )
+        let presenter = UpdateNotificationPresenter(pixelFiring: PixelKit.shared)
+        presenter.showUpdateNotification(for: .updated)
     }
 
 #if SPARKLE_ALLOWS_UNSIGNED_UPDATES
     // MARK: - Custom Feed URL
 
-    @UserDefaultsWrapper(key: .debugSparkleCustomFeedURL)
-    private var customFeedURL: String?
+    private var customFeedURL: String? {
+        get { try? settings.debugSparkleCustomFeedURL }
+        set { try? settings.set(newValue, for: \.debugSparkleCustomFeedURL) }
+    }
 
-    private var sparkleUpdateController: SparkleCustomFeedURLProviding? {
-        Application.appDelegate.updateController as? SparkleCustomFeedURLProviding
+    private var sparkleUpdateController: (any SparkleCustomFeedURLProviding)? {
+        Application.appDelegate.updateController as? any SparkleCustomFeedURLProviding
     }
 
     @objc func setCustomFeedURL() {

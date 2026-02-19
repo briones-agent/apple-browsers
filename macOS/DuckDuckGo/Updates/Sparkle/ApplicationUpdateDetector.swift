@@ -16,49 +16,54 @@
 //  limitations under the License.
 //
 
+import Common
 import Foundation
+import Persistence
 
-enum AppUpdateStatus {
-    case noChange
-    case updated
-    case downgraded
-}
+public final class ApplicationUpdateDetector {
 
-final class ApplicationUpdateDetector {
+    private var hasCheckedForUpdate = false
+    private var updateStatus: AppUpdateStatus = .noChange
+    private let settings: any ThrowingKeyedStoring<UpdateControllerSettings>
 
-    private static var hasCheckedForUpdate = false
-    private static var updateStatus: AppUpdateStatus = .noChange
+    init(settings: any ThrowingKeyedStoring<UpdateControllerSettings>) {
+        self.settings = settings
+    }
 
-    @UserDefaultsWrapper(key: .previousAppVersion, defaultValue: nil)
-    private static var previousAppVersion: String?
+    private var previousAppVersion: String? {
+        get { try? settings.previousAppVersion }
+        set { try? settings.set(newValue, for: \.previousAppVersion) }
+    }
 
-    @UserDefaultsWrapper(key: .previousBuild, defaultValue: nil)
-    private static var previousAppBuild: String?
+    private var previousAppBuild: String? {
+        get { try? settings.previousBuild }
+        set { try? settings.set(newValue, for: \.previousBuild) }
+    }
 
-    static func isApplicationUpdated(currentVersion: String? = nil,
-                                     currentBuild: String? = nil,
-                                     previousVersion: String? = nil,
-                                     previousBuild: String? = nil) -> AppUpdateStatus {
+    func isApplicationUpdated(currentVersion: String? = nil,
+                              currentBuild: String? = nil,
+                              previousVersion: String? = nil,
+                              previousBuild: String? = nil) -> AppUpdateStatus {
         // If the update check has already been performed, return the cached result
         if hasCheckedForUpdate {
             return updateStatus
         }
 
-        let currentVersion = currentVersion ?? getCurrentAppVersion()
-        let currentBuild = currentBuild ?? getCurrentAppBuild()
+        let currentVersion = currentVersion ?? Self.getCurrentAppVersion()
+        let currentBuild = currentBuild ?? Self.getCurrentAppBuild()
         let previousVersion = previousVersion ?? self.previousAppVersion
         let previousBuild = previousBuild ?? self.previousAppBuild
 
         // Save the current version and build to user defaults for future comparisons
-        Self.previousAppVersion = currentVersion
-        Self.previousAppBuild = currentBuild
+        self.previousAppVersion = currentVersion
+        self.previousAppBuild = currentBuild
 
         // Determine the update status
         if currentVersion == previousVersion {
             if let currentBuild = currentBuild, let previousBuild = previousBuild {
                 if currentBuild == previousBuild {
                     updateStatus = .noChange
-                } else if compareSemanticVersion(currentBuild, isGreaterThan: previousBuild) {
+                } else if Self.compareSemanticVersion(currentBuild, isGreaterThan: previousBuild) {
                     updateStatus = .updated
                 } else {
                     updateStatus = .downgraded
@@ -67,7 +72,7 @@ final class ApplicationUpdateDetector {
                 updateStatus = .noChange
             }
         } else if let currentVersion = currentVersion, let previousVersion = previousVersion {
-            if compareSemanticVersion(currentVersion, isGreaterThan: previousVersion) {
+            if Self.compareSemanticVersion(currentVersion, isGreaterThan: previousVersion) {
                 updateStatus = .updated
             } else {
                 updateStatus = .downgraded
@@ -92,16 +97,13 @@ final class ApplicationUpdateDetector {
     }
 
     private static func getCurrentAppVersion() -> String? {
-        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        let version = AppVersion().versionNumber
+        return version.isEmpty ? nil : version
     }
 
     private static func getCurrentAppBuild() -> String? {
-        return Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        let build = AppVersion().buildNumber
+        return build.isEmpty ? nil : build
     }
 
-#if DEBUG
-    static func resetState() {
-        hasCheckedForUpdate = false
-    }
-#endif
 }

@@ -16,12 +16,13 @@
 //  limitations under the License.
 //
 
-#if SPARKLE
-
 import XCTest
 import PixelKitTestingUtilities
-import PrivacyConfig
 import PixelKit
+import BrowserServicesKitTestsUtils
+import Persistence
+import PersistenceTestingUtils
+
 @testable import DuckDuckGo_Privacy_Browser
 
 final class SparkleUpdateWideEventTests: XCTestCase {
@@ -29,15 +30,20 @@ final class SparkleUpdateWideEventTests: XCTestCase {
     private var sut: SparkleUpdateWideEvent!
     private var mockWideEventManager: WideEventMock!
     private var mockInternalUserDecider: MockInternalUserDecider!
+    private var keyValueStore: ThrowingKeyValueStoring!
+    private var settings: (any ThrowingKeyedStoring<UpdateControllerSettings>)!
 
     override func setUp() {
         super.setUp()
+        keyValueStore = InMemoryThrowingKeyValueStore()
+        settings = keyValueStore.throwingKeyedStoring()
         mockWideEventManager = WideEventMock()
         mockInternalUserDecider = MockInternalUserDecider()
         sut = SparkleUpdateWideEvent(
             wideEventManager: mockWideEventManager,
             internalUserDecider: mockInternalUserDecider,
-            areAutomaticUpdatesEnabled: true
+            areAutomaticUpdatesEnabled: true,
+            settings: settings
         )
     }
 
@@ -45,6 +51,8 @@ final class SparkleUpdateWideEventTests: XCTestCase {
         sut = nil
         mockWideEventManager = nil
         mockInternalUserDecider = nil
+        settings = nil
+        keyValueStore = nil
         super.tearDown()
     }
 
@@ -373,11 +381,12 @@ final class SparkleUpdateWideEventTests: XCTestCase {
         let manualSut = SparkleUpdateWideEvent(
             wideEventManager: mockWideEventManager,
             internalUserDecider: mockInternalUserDecider,
-            areAutomaticUpdatesEnabled: false
+            areAutomaticUpdatesEnabled: false,
+            settings: settings
         )
 
         // When
-        manualSut.startFlow(initiationType: .manual)
+        manualSut.startFlow(initiationType: UpdateWideEventData.InitiationType.manual)
 
         // Then
         let startedData = mockWideEventManager.started.first as? UpdateWideEventData
@@ -390,11 +399,12 @@ final class SparkleUpdateWideEventTests: XCTestCase {
         let internalSut = SparkleUpdateWideEvent(
             wideEventManager: mockWideEventManager,
             internalUserDecider: mockInternalUserDecider,
-            areAutomaticUpdatesEnabled: true
+            areAutomaticUpdatesEnabled: true,
+            settings: settings
         )
 
         // When
-        internalSut.startFlow(initiationType: .automatic)
+        internalSut.startFlow(initiationType: UpdateWideEventData.InitiationType.automatic)
 
         // Then
         let startedData = mockWideEventManager.started.first as? UpdateWideEventData
@@ -435,21 +445,21 @@ final class SparkleUpdateWideEventTests: XCTestCase {
         XCTAssertEqual(lastUpdate?.lastKnownStep, .extractionCompleted)
     }
 
-    func test_updateFlow_updateFound_calculatesTimeSinceLastUpdateBucket() {
+    func test_updateFlow_updateFound_calculatesTimeSinceLastUpdateBucket() throws {
         let lastUpdateDate = Date().addingTimeInterval(-TimeInterval.days(7))
-        SparkleUpdateWideEvent.lastSuccessfulUpdateDate = lastUpdateDate
-        sut.startFlow(initiationType: .automatic)
+        try settings.set(lastUpdateDate, for: \.lastSuccessfulUpdateDate)
+        sut.startFlow(initiationType: UpdateWideEventData.InitiationType.automatic)
 
         sut.didFindUpdate(version: "1.0.0", build: "100", isCritical: false)
 
-        let updatedData = mockWideEventManager.updates.first as? UpdateWideEventData
+        let updatedData = mockWideEventManager.updates.last as? UpdateWideEventData
         XCTAssertNotNil(updatedData?.timeSinceLastUpdateBucket)
         XCTAssertEqual(updatedData?.timeSinceLastUpdateBucket, .lessThan1Month)
 
         let params = updatedData?.pixelParameters()
         XCTAssertEqual(params?["feature.data.ext.time_since_last_update"], "<1M")
 
-        SparkleUpdateWideEvent.lastSuccessfulUpdateDate = nil
+        try settings.set(nil, for: \.lastSuccessfulUpdateDate)
     }
 
     func test_completeFlow_failure_includesDiskSpaceInfo() {
@@ -681,5 +691,3 @@ final class SparkleUpdateWideEventTests: XCTestCase {
         XCTAssertEqual(startedData?.updateConfiguration, .manual)
     }
 }
-
-#endif

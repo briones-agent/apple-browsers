@@ -113,9 +113,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var appIconChanger: AppIconChanger!
     private var autoClearHandler: AutoClearHandler!
     private(set) var autofillPixelReporter: AutofillPixelReporter?
+    private var passwordsStatusBarMenu: PasswordsStatusBarMenu?
+    private var passwordsMenuBarCancellable: AnyCancellable?
 
     private(set) var syncDataProviders: SyncDataProvidersSource?
     private(set) var syncService: DDGSyncing?
+    private(set) var syncErrorHandler = SyncErrorHandler()
     private(set) var aiChatSyncCleaner: AIChatSyncCleaning?
     private var isSyncInProgressCancellable: AnyCancellable?
     private var syncFeatureFlagsCancellable: AnyCancellable?
@@ -277,7 +280,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     lazy var vpnUpsellVisibilityManager: VPNUpsellVisibilityManager = {
         return VPNUpsellVisibilityManager(
-            isFirstLaunch: false,
             isNewUser: AppDelegate.isNewUser,
             subscriptionManager: subscriptionManager,
             defaultBrowserProvider: SystemDefaultBrowserProvider(),
@@ -362,7 +364,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var didFinishLaunching = false
 
-    var updateController: UpdateController!
+    var updateController: UpdateController?
 #if SPARKLE
     var dockCustomization: DockCustomization?
 #endif
@@ -382,8 +384,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     let memoryUsageMonitor: MemoryUsageMonitor
-    let memoryPressureReporter: MemoryPressureReporter
+    /// Optional `var` because its `syncServiceProvider` closure captures `self`,
+    /// which is unavailable before `super.init()`. Initialized immediately after `super.init()`.
+    var memoryPressureReporter: MemoryPressureReporter?
     let memoryUsageThresholdReporter: MemoryUsageThresholdReporter
+    /// Optional `var` because its `syncServiceProvider` closure captures `self`,
+    /// which is unavailable before `super.init()`. Initialized immediately after `super.init()`.
+    var memoryUsageIntervalReporter: MemoryUsageIntervalReporter?
+
+    /// The date this app instance was launched, used for computing uptime in memory pixels.
+    private let appLaunchDate = Date()
 
     @MainActor
     // swiftlint:disable cyclomatic_complexity
@@ -778,7 +788,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         aboutPreferences = AboutPreferences(
             internalUserDecider: internalUserDecider,
             featureFlagger: featureFlagger,
-            windowControllersManager: windowControllersManager
+            windowControllersManager: windowControllersManager,
+            keyValueStore: UserDefaults.standard
         )
         accessibilityPreferences = AccessibilityPreferences()
         duckPlayer = DuckPlayer(
@@ -823,7 +834,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 fireCoordinator: fireCoordinator,
                 tld: tld,
                 autoconsentManagement: autoconsentManagement,
-                contentScopePreferences: contentScopePreferences
+                contentScopePreferences: contentScopePreferences,
+                syncErrorHandler: syncErrorHandler
             )
             privacyFeatures = AppPrivacyFeatures(contentBlocking: contentBlocking, database: database.db)
             appContentBlocking = contentBlocking
@@ -853,7 +865,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             fireCoordinator: fireCoordinator,
             tld: tld,
             autoconsentManagement: autoconsentManagement,
-            contentScopePreferences: contentScopePreferences
+            contentScopePreferences: contentScopePreferences,
+            syncErrorHandler: syncErrorHandler
         )
         privacyFeatures = AppPrivacyFeatures(
             contentBlocking: contentBlocking,
@@ -1046,7 +1059,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.attributedMetricManager.addNotificationsObserver()
 
         memoryUsageMonitor = MemoryUsageMonitor(internalUserDecider: internalUserDecider, logger: .memory)
-        memoryPressureReporter = MemoryPressureReporter(featureFlagger: featureFlagger, pixelFiring: PixelKit.shared, logger: .memory)
         memoryUsageThresholdReporter = MemoryUsageThresholdReporter(
             memoryUsageMonitor: memoryUsageMonitor,
             featureFlagger: featureFlagger,
@@ -1055,6 +1067,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         super.init()
+
+        memoryPressureReporter = MemoryPressureReporter(
+            featureFlagger: featureFlagger,
+            pixelFiring: PixelKit.shared,
+            memoryUsageMonitor: memoryUsageMonitor,
+            windowContext: WindowContext(
+                standardTabs: windowControllersManager.allTabCollectionViewModels.reduce(0) { $0 + $1.tabCollection.tabs.count },
+                pinnedTabs: windowControllersManager.pinnedTabsManagerProvider.currentPinnedTabManagers.reduce(0) { $0 + $1.tabCollection.tabs.count },
+                windows: windowControllersManager.mainWindowControllers.count
+            ),
+            isSyncEnabled: { [weak self] in
+                guard let syncService = self?.syncService else { return nil }
+
+                return syncService.authState == .active
+            },
+            launchDate: appLaunchDate,
+            logger: .memory
+        )
+
+        memoryUsageIntervalReporter = MemoryUsageIntervalReporter(
+            memoryUsageMonitor: memoryUsageMonitor,
+            featureFlagger: featureFlagger,
+            pixelFiring: PixelKit.shared,
+            windowContext: WindowContext(
+                standardTabs: windowControllersManager.allTabCollectionViewModels.reduce(0) { $0 + $1.tabCollection.tabs.count },
+                pinnedTabs: windowControllersManager.pinnedTabsManagerProvider.currentPinnedTabManagers.reduce(0) { $0 + $1.tabCollection.tabs.count },
+                windows: windowControllersManager.mainWindowControllers.count
+            ),
+            isSyncEnabled: { [weak self] in
+                guard let syncService = self?.syncService else { return nil }
+
+                return syncService.authState == .active
+            },
+            launchDate: appLaunchDate,
+            logger: .memory
+        )
 
         appContentBlocking?.userContentUpdating.userScriptDependenciesProvider = self
     }
@@ -1081,22 +1129,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                              keyValueStore: keyValueStore,
                                                              sessionRestorePromptCoordinator: sessionRestorePromptCoordinator,
                                                              pixelFiring: PixelKit.shared)
-#if APPSTORE
-        if AppVersion.runType != .uiTests {
-            updateController = AppStoreUpdateController()
-        }
-#elseif SPARKLE
-        if AppVersion.runType != .uiTests {
-            let controller: any SparkleUpdateControllerProtocol
-            if featureFlagger.isFeatureOn(.updatesSimplifiedFlow) {
-                controller = SimplifiedSparkleUpdateController(internalUserDecider: internalUserDecider)
-            } else {
-                controller = SparkleUpdateController(internalUserDecider: internalUserDecider)
-            }
-            self.updateController = controller
-            stateRestorationManager.subscribeToAutomaticAppRelaunching(using: controller.willRelaunchAppPublisher)
-        }
-#endif
+
+        initializeUpdateController()
 
         appIconChanger = AppIconChanger(internalUserDecider: internalUserDecider, appearancePreferences: appearancePreferences)
 
@@ -1157,7 +1191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupWebExtensions()
 
-        vpnUpsellVisibilityManager.setup(isFirstLaunch: isFirstLaunch)
+        vpnUpsellVisibilityManager.setup(isFirstLaunch: isFirstLaunch, isOnboardingFinished: OnboardingActionsManager.isOnboardingFinished)
 
         AtbAndVariantCleanup.cleanup()
         DefaultVariantManager().assignVariantIfNeeded { _ in
@@ -1261,6 +1295,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         TipKitAppEventHandler(featureFlagger: featureFlagger).appDidFinishLaunching()
 
         setUpAutofillPixelReporter()
+        setUpPasswordsMenuBarVisibility()
 
         remoteMessagingClient?.startRefreshingRemoteMessages()
 
@@ -1371,7 +1406,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func fireThemeDailyPixel() {
-        guard featureFlagger.isFeatureOn(.themes) else { return }
         PixelKit.fire(ThemePixels.themeNameDaily(themeName: themeManager.theme.name), frequency: .daily)
     }
 
@@ -1382,13 +1416,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SyncDiagnosisHelper(syncService: syncService).diagnoseAccountStatus()
     }
 
+    @MainActor
+    private func initializeUpdateController() {
+        guard AppVersion.runType != .uiTests else { return }
+
+        let buildType = StandardApplicationBuildType()
+        let notificationPresenter = UpdateNotificationPresenter(pixelFiring: PixelKit.shared)
+
+        if buildType.isAppStoreBuild {
+            guard let appStoreFactory = UpdateControllerFactory.self as? any AppStoreUpdateControllerFactory.Type else {
+                assertionFailure("Failed to instantiate app store update controller")
+                return
+            }
+
+            self.updateController = appStoreFactory.instantiate(
+                internalUserDecider: internalUserDecider,
+                featureFlagger: featureFlagger,
+                pixelFiring: PixelKit.shared,
+                notificationPresenter: notificationPresenter,
+                isOnboardingFinished: { OnboardingActionsManager.isOnboardingFinished }
+            )
+        } else {
+            assert(buildType.isSparkleBuild)
+
+            guard let sparkleFactory = UpdateControllerFactory.self as? any SparkleUpdateControllerFactory.Type else {
+                assertionFailure("Failed to instantiate sparkle update controller")
+                return
+            }
+
+            let allowCustomUpdateFeed = buildType.isDebugBuild || buildType.isReviewBuild
+            let sparkleUpdateController = sparkleFactory.instantiate(
+                internalUserDecider: internalUserDecider,
+                featureFlagger: featureFlagger,
+                pixelFiring: PixelKit.shared,
+                notificationPresenter: notificationPresenter,
+                keyValueStore: UserDefaults.standard,
+                allowCustomUpdateFeed: allowCustomUpdateFeed,
+                wideEvent: wideEvent,
+                isOnboardingFinished: { OnboardingActionsManager.isOnboardingFinished },
+                openUpdatesPage: { [windowControllersManager] in
+                    windowControllersManager.showTab(with: .releaseNotes)
+                }
+            )
+            stateRestorationManager.subscribeToAutomaticAppRelaunching(using: sparkleUpdateController.willRelaunchAppPublisher)
+            self.updateController = sparkleUpdateController
+        }
+    }
+
+    private var terminationHandler: TerminationDeciderHandler?
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard featureFlagger.isFeatureOn(.terminationDeciderSequence) else {
             return applicationShouldTerminateFallback()
         }
 
-        let handler = TerminationDeciderHandler(deciders: createTerminationDeciders())
-        return handler.executeTerminationDeciders()
+        // Already running — the in-flight handler will reply() when done
+        if terminationHandler != nil {
+            return .terminateLater
+        }
+
+        let handler = TerminationDeciderHandler(
+            deciders: createTerminationDeciders(),
+            replyToApplicationShouldTerminate: { [weak self] shouldTerminate in
+                self?.terminationHandler = nil
+                NSApp.reply(toApplicationShouldTerminate: shouldTerminate)
+            }
+        )
+        terminationHandler = handler
+        let reply = handler.executeTerminationDeciders()
+
+        if reply == .terminateCancel {
+            // Synchronous cancellation — discard handler
+            terminationHandler = nil
+        }
+        return reply
     }
 
     @MainActor
@@ -1468,7 +1569,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             action: .quit,
             isWarningEnabled: { [tabsPreferences] in
                 tabsPreferences.warnBeforeQuitting
-            }
+            },
+            isPhysicalKeyPress: WarnBeforeQuitManager.makePhysicalKeyPressCheck(for: currentEvent)
         ) else { return nil }
 
         let presenter = WarnBeforeQuitOverlayPresenter(
@@ -1575,7 +1677,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func setupWebExtensions() {
         if #available(macOS 15.4, *), featureFlagger.isFeatureOn(.webExtensions) {
-            let webExtensionManager = WebExtensionManagerFactory.makeManager()
+            let webExtensionManager = WebExtensionManagerFactory.makeManager(
+                privacyConfigurationManager: privacyFeatures.contentBlocking.privacyConfigurationManager,
+                autoconsentPreferences: cookiePopupProtectionPreferences
+            )
             self.webExtensionManager = webExtensionManager
 
             let publisher = (featureFlagger.localOverrides?.actionHandler as? FeatureFlagOverridesPublishingHandler<FeatureFlag>)?
@@ -1652,7 +1757,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 #else
         let environment = defaultEnvironment
 #endif
-        let syncErrorHandler = SyncErrorHandler()
         let syncDataProviders = SyncDataProvidersSource(
             bookmarksDatabase: bookmarkDatabase.db,
             bookmarkManager: bookmarkManager,
@@ -1666,9 +1770,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyValueStore: keyValueStore,
             environment: environment
         )
-        let aiChatSyncCleaner = AIChatSyncCleaner(sync: syncService,
-                                                   keyValueStore: keyValueStore,
-                                                   featureFlagProvider: AIChatFeatureFlagProvider(featureFlagger: featureFlagger))
+        let aiChatSyncCleaner = AIChatSyncCleaner(
+            sync: syncService,
+            keyValueStore: keyValueStore,
+            featureFlagProvider: AIChatFeatureFlagProvider(featureFlagger: featureFlagger),
+            httpRequestErrorHandler: syncErrorHandler.handleAiChatsError
+        )
         syncService.setCustomOperations([AIChatDeleteOperation(cleaner: aiChatSyncCleaner)])
 
         syncService.initializeIfNeeded()
@@ -1781,14 +1888,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func subscribeToUpdateControllerChanges() {
-#if SPARKLE
-        guard AppVersion.runType != .uiTests else { return }
+        guard AppVersion.runType != .uiTests,
+              let sparkleUpdateController = updateController as? any SparkleUpdateController else { return }
 
-        updateProgressCancellable = updateController.updateProgressPublisher
-            .sink { [weak self] progress in
-                (self?.updateController as? any SparkleUpdateControllerProtocol)?.checkNewApplicationVersionIfNeeded(updateProgress: progress)
+        updateProgressCancellable = sparkleUpdateController.updateProgressPublisher
+            .sink { [weak sparkleUpdateController] progress in
+                sparkleUpdateController?.checkNewApplicationVersionIfNeeded(updateProgress: progress)
             }
-#endif
     }
 
     private func emailDidSignInNotification(_ notification: Notification) {
@@ -1860,6 +1966,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                    queue: nil) { [weak self] _ in
             self?.autofillPixelReporter?.updateAutofillEnabledStatus(AutofillPreferences().askToSaveUsernamesAndPasswords)
         }
+    }
+
+    @MainActor
+    private func setUpPasswordsMenuBarVisibility() {
+        guard featureFlagger.isFeatureOn(.autofillPasswordsStatusBar) else {
+            passwordsStatusBarMenu?.hide()
+            passwordsStatusBarMenu = nil
+            passwordsMenuBarCancellable = nil
+            return
+        }
+
+        let preferences = AutofillPreferences()
+        if passwordsStatusBarMenu == nil {
+            passwordsStatusBarMenu = PasswordsStatusBarMenu(preferences: preferences, pinningManager: pinningManager)
+        }
+
+        if preferences.showInMenuBar {
+            passwordsStatusBarMenu?.show()
+        } else {
+            passwordsStatusBarMenu?.hide()
+        }
+
+        passwordsMenuBarCancellable = NotificationCenter.default.publisher(for: .autofillShowInMenuBarDidChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    let showInMenuBar = AutofillPreferences().showInMenuBar
+                    if showInMenuBar {
+                        self?.passwordsStatusBarMenu?.show()
+                    } else {
+                        self?.passwordsStatusBarMenu?.hide()
+                    }
+                }
+            }
     }
 }
 

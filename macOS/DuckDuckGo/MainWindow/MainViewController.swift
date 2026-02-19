@@ -82,6 +82,8 @@ final class MainViewController: NSViewController {
         themeManager.theme
     }
 
+    private(set) var allowsUserInteraction: Bool = true
+
     var shouldShowBookmarksBar: Bool {
         return !isInPopUpWindow
         && bookmarksBarVisibilityManager.isBookmarksBarVisible
@@ -228,7 +230,8 @@ final class MainViewController: NSViewController {
             aiChatMenuConfig: aiChatMenuConfig,
             aiChatTabOpener: aiChatTabOpener,
             windowControllersManager: windowControllersManager,
-            pixelFiring: pixelFiring
+            pixelFiring: pixelFiring,
+            featureFlagger: featureFlagger
         )
         aiChatSummarizer = AIChatSummarizer(
             aiChatMenuConfig: aiChatMenuConfig,
@@ -422,7 +425,11 @@ final class MainViewController: NSViewController {
     func showBookmarkPromptIfNeeded() {
         guard !isInPopUpWindow,
               !bookmarksBarViewController.bookmarksBarPromptShown,
-              OnboardingActionsManager.isOnboardingFinished else { return }
+              OnboardingActionsManager.isOnboardingFinished
+        else {
+            return
+        }
+
         if bookmarksBarIsVisible {
             // Don't show this to users who obviously know about the bookmarks bar already
             bookmarksBarViewController.bookmarksBarPromptShown = true
@@ -1174,6 +1181,23 @@ extension MainViewController {
         windowController.showWindow(nil)
     }
 
+}
+
+// MARK: - Preventing User Interaction
+
+extension MainViewController {
+
+    func userInteraction(prevented: Bool) {
+        allowsUserInteraction = !prevented
+        tabCollectionViewModel.changesEnabled = !prevented
+        tabCollectionViewModel.selectedTabViewModel?.tab.contentChangeEnabled = !prevented
+
+        tabBarViewController.fireButton.isEnabled = !prevented
+        tabBarViewController.isInteractionPrevented = prevented
+
+        navigationBarViewController.userInteraction(prevented: prevented)
+        bookmarksBarViewController.userInteraction(prevented: prevented)
+    }
 }
 
 // MARK: - Performance Testing

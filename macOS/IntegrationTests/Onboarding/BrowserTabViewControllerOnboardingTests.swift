@@ -23,6 +23,7 @@ import FeatureFlags
 import History
 import HistoryView
 import Onboarding
+import PersistenceTestingUtils
 import PrivacyConfig
 import PrivacyConfigTestsUtils
 import PrivacyDashboard
@@ -91,6 +92,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
     var shouldAutomaticallySendPageContext: Bool = true
     var showSearchAndDuckAIToggle: Bool = true
     var userDidSeeToggleOnboarding: Bool = false
+    var lastUsedSidebarWidth: Double?
 
     let isAIFeaturesEnabledPublisher: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher()
     let showShortcutOnNewTabPagePublisher: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher()
@@ -112,6 +114,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         shouldAutomaticallySendPageContext = true
         showSearchAndDuckAIToggle = true
         userDidSeeToggleOnboarding = false
+        lastUsedSidebarWidth = nil
     }
 }
 
@@ -182,7 +185,7 @@ final class BrowserTabViewControllerOnboardingTests: XCTestCase {
                     windowControllersManager: windowControllersManager,
                     featureFlagger: MockFeatureFlagger()
                 ),
-                aboutPreferences: AboutPreferences(internalUserDecider: featureFlagger.internalUserDecider, featureFlagger: featureFlagger, windowControllersManager: windowControllersManager),
+                aboutPreferences: AboutPreferences(internalUserDecider: featureFlagger.internalUserDecider, featureFlagger: featureFlagger, windowControllersManager: windowControllersManager, keyValueStore: InMemoryThrowingKeyValueStore()),
                 accessibilityPreferences: AccessibilityPreferences(),
                 duckPlayer: DuckPlayer(
                     preferencesPersistor: DuckPlayerPreferencesPersistorMock(),

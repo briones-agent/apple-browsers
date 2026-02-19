@@ -20,94 +20,15 @@ import AppKit
 import Combine
 import Foundation
 import os.log
+import Persistence
 import PixelKit
 import PrivacyConfig
-#if SPARKLE
 import Sparkle
-#endif
 
-enum UpdateState {
-    case upToDate
-    case updateCycle(UpdateCycleProgress)
-
-    init(from update: Update?, progress: UpdateCycleProgress) {
-        if let update, !update.isInstalled {
-            self = .updateCycle(progress)
-        } else if progress.isFailed {
-            self = .updateCycle(progress)
-        } else {
-            self = .upToDate
-        }
-    }
-}
-
-enum UpdateCycleProgress: CustomStringConvertible {
-    enum DoneReason: Int {
-        case finishedWithNoError = 100
-        case finishedWithNoUpdateFound = 101
-        case pausedAtDownloadCheckpoint = 102
-        case pausedAtRestartCheckpoint = 103
-        case proceededToInstallationAtRestartCheckpoint = 104
-        case dismissedWithNoError = 105
-        case dismissingObsoleteUpdate = 106
-    }
-
-    case updateCycleNotStarted
-    case updateCycleDidStart
-    case updateCycleDone(DoneReason)
-    case downloadDidStart
-    case downloading(Double)
-    case extractionDidStart
-    case extracting(Double)
-    case readyToInstallAndRelaunch
-    case installationDidStart
-    case installing
-    case updaterError(Error)
-
-    static var `default` = UpdateCycleProgress.updateCycleNotStarted
-
-    var isDone: Bool {
-        switch self {
-        case .updateCycleDone: return true
-        default: return false
-        }
-    }
-
-    var isIdle: Bool {
-        switch self {
-        case .updateCycleDone, .updateCycleNotStarted, .updaterError: return true
-        default: return false
-        }
-    }
-
-    var isFailed: Bool {
-        switch self {
-        case .updaterError: return true
-        default: return false
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .updateCycleNotStarted: return "updateCycleNotStarted"
-        case .updateCycleDidStart: return "updateCycleDidStart"
-        case .updateCycleDone(let reason): return "updateCycleDone(\(reason.rawValue))"
-        case .downloadDidStart: return "downloadDidStart"
-        case .downloading(let percentage): return "downloading(\(percentage))"
-        case .extractionDidStart: return "extractionDidStart"
-        case .extracting(let percentage): return "extracting(\(percentage))"
-        case .readyToInstallAndRelaunch: return "readyToInstallAndRelaunch"
-        case .installationDidStart: return "installationDidStart"
-        case .installing: return "installing"
-        case .updaterError(let error): return "updaterError(\(error.localizedDescription))(\(error.pixelParameters))"
-        }
-    }
-}
-
-#if SPARKLE
 final class UpdateUserDriver: NSObject, SPUUserDriver {
     private var internalUserDecider: InternalUserDecider
     var areAutomaticUpdatesEnabled: Bool
+    private let settings: any ThrowingKeyedStoring<UpdateControllerSettings>
 
     // Resume the update process when the user explicitly chooses to do so
     private var onResuming: (() -> Void)? {
@@ -118,8 +39,10 @@ final class UpdateUserDriver: NSObject, SPUUserDriver {
         }
     }
 
-    @UserDefaultsWrapper(key: .pendingUpdateSince, defaultValue: .distantPast)
-    private var pendingUpdateSince: Date
+    private var pendingUpdateSince: Date {
+        get { (try? settings.pendingUpdateSince) ?? .distantPast }
+        set { try? settings.set(newValue, for: \.pendingUpdateSince) }
+    }
 
     func updateLastUpdateDownloadedDate() {
         pendingUpdateSince = Date()
@@ -150,11 +73,13 @@ final class UpdateUserDriver: NSObject, SPUUserDriver {
 
     init(internalUserDecider: InternalUserDecider,
          areAutomaticUpdatesEnabled: Bool,
-         useLegacyAutoRestartLogic: Bool) {
+         useLegacyAutoRestartLogic: Bool,
+         settings: (any ThrowingKeyedStoring<UpdateControllerSettings>)) {
 
         self.internalUserDecider = internalUserDecider
         self.areAutomaticUpdatesEnabled = areAutomaticUpdatesEnabled
         self.useLegacyAutoRestartLogic = useLegacyAutoRestartLogic
+        self.settings = settings
     }
 
     func resume() {
@@ -327,7 +252,7 @@ final class UpdateUserDriver: NSObject, SPUUserDriver {
         // We do this here (not in WideEvent completion) because this callback happens
         // AFTER successful installation, making it the authoritative source.
         // Future update flows will use this to calculate time_since_last_update_ms.
-        SparkleUpdateWideEvent.lastSuccessfulUpdateDate = Date()
+        try? settings.set(Date(), for: \.lastSuccessfulUpdateDate)
         acknowledgement()
     }
 
@@ -340,5 +265,3 @@ final class UpdateUserDriver: NSObject, SPUUserDriver {
         updateProgress = .updateCycleDone(.dismissedWithNoError)
     }
 }
-
-#endif

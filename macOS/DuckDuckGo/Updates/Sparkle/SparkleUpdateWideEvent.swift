@@ -16,13 +16,12 @@
 //  limitations under the License.
 //
 
-#if SPARKLE
-
 import Common
 import Foundation
+import os.log
+import Persistence
 import PixelKit
 import PrivacyConfig
-import os.log
 
 /// Orchestrates Wide Event tracking for Sparkle update cycles.
 ///
@@ -45,21 +44,21 @@ import os.log
 /// - **App termination**: Active flows are cancelled with `appQuit` reason to distinguish from
 ///   user-initiated cancellations
 /// - **Abandoned flows**: Flows from previous sessions found at app launch are marked "abandoned"
-final class SparkleUpdateWideEvent {
+public final class SparkleUpdateWideEvent {
     private let wideEventManager: WideEventManaging
     private let internalUserDecider: InternalUserDecider
     private var currentFlowID: String?
-    var areAutomaticUpdatesEnabled: Bool
+    public var areAutomaticUpdatesEnabled: Bool
+    private let settings: any ThrowingKeyedStoring<UpdateControllerSettings>
 
-    @UserDefaultsWrapper(key: .lastSuccessfulUpdateDate, defaultValue: nil)
-    static var lastSuccessfulUpdateDate: Date?
-
-    init(wideEventManager: WideEventManaging,
-         internalUserDecider: InternalUserDecider,
-         areAutomaticUpdatesEnabled: Bool) {
+    public init(wideEventManager: WideEventManaging,
+                internalUserDecider: InternalUserDecider,
+                areAutomaticUpdatesEnabled: Bool,
+                settings: any ThrowingKeyedStoring<UpdateControllerSettings>) {
         self.wideEventManager = wideEventManager
         self.internalUserDecider = internalUserDecider
         self.areAutomaticUpdatesEnabled = areAutomaticUpdatesEnabled
+        self.settings = settings
     }
 
     /// Starts tracking a new update flow.
@@ -71,7 +70,7 @@ final class SparkleUpdateWideEvent {
     ///
     /// - Note: Edge case handled - User triggers manual check while automatic check is in progress,
     ///   or automatic check starts while previous manual check hasn't completed.
-    func startFlow(initiationType: UpdateWideEventData.InitiationType) {
+    public func startFlow(initiationType: UpdateWideEventData.InitiationType) {
         // Complete any existing pending flow
         if let existingFlowID = currentFlowID,
            var existingFlow = wideEventManager.getFlowData(UpdateWideEventData.self, globalID: existingFlowID) {
@@ -106,24 +105,24 @@ final class SparkleUpdateWideEvent {
     /// Ensures a flow exists, starting one if needed.
     ///
     /// Unlike `startFlow`, this preserves any existing flow rather than replacing it.
-    func ensureFlowExists(initiationType: UpdateWideEventData.InitiationType) {
+    public func ensureFlowExists(initiationType: UpdateWideEventData.InitiationType) {
         guard currentFlowID == nil else { return }
         startFlow(initiationType: initiationType)
     }
 
-    func getCurrentFlowData() -> UpdateWideEventData? {
+    public func getCurrentFlowData() -> UpdateWideEventData? {
         guard let globalID = currentFlowID else { return nil }
         return wideEventManager.getFlowData(UpdateWideEventData.self, globalID: globalID)
     }
 
-    func didStartUpdateCheck() {
+    public func didStartUpdateCheck() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.lastKnownStep = .updateCheckStarted
         }
     }
 
-    func didFindUpdate(version: String, build: String, isCritical: Bool) {
+    public func didFindUpdate(version: String, build: String, isCritical: Bool) {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.toVersion = version
@@ -133,13 +132,13 @@ final class SparkleUpdateWideEvent {
             data.lastKnownStep = .updateFound
 
             // Add time since last update if available (bucketed for privacy)
-            if let lastUpdateDate = Self.lastSuccessfulUpdateDate {
+            if let lastUpdateDate = try? settings.lastSuccessfulUpdateDate {
                 data.timeSinceLastUpdateBucket = UpdateWideEventData.TimeSinceUpdateBucket(from: lastUpdateDate)
             }
         }
     }
 
-    func didFindNoUpdate() {
+    public func didFindNoUpdate() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.updateCheckDuration?.complete()
@@ -148,7 +147,7 @@ final class SparkleUpdateWideEvent {
         Logger.updates.debug("Update WideEvent: no update found, check phase complete")
     }
 
-    func didStartDownload() {
+    public func didStartDownload() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.downloadDuration = .startingNow()
@@ -156,7 +155,7 @@ final class SparkleUpdateWideEvent {
         }
     }
 
-    func didCompleteDownload() {
+    public func didCompleteDownload() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.downloadDuration?.complete()
@@ -164,7 +163,7 @@ final class SparkleUpdateWideEvent {
         }
     }
 
-    func didStartExtraction() {
+    public func didStartExtraction() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.extractionDuration = .startingNow()
@@ -172,7 +171,7 @@ final class SparkleUpdateWideEvent {
         }
     }
 
-    func didCompleteExtraction() {
+    public func didCompleteExtraction() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.extractionDuration?.complete()
@@ -180,7 +179,7 @@ final class SparkleUpdateWideEvent {
         }
     }
 
-    func didInitiateRestart() {
+    public func didInitiateRestart() {
         guard let globalID = currentFlowID else { return }
         wideEventManager.updateFlow(globalID: globalID) { (data: inout UpdateWideEventData) in
             data.lastKnownStep = .restartingToUpdate
@@ -195,7 +194,7 @@ final class SparkleUpdateWideEvent {
     /// - Parameters:
     ///   - status: The final status of the update flow (success, failure, cancelled, unknown)
     ///   - error: Optional error that caused the failure
-    func completeFlow(status: WideEventStatus, error: Error? = nil) {
+    public func completeFlow(status: WideEventStatus, error: Error? = nil) {
         guard let globalID = currentFlowID,
               let flowData = wideEventManager.getFlowData(UpdateWideEventData.self, globalID: globalID) else {
             return
@@ -230,7 +229,7 @@ final class SparkleUpdateWideEvent {
     /// Completes all active timing measurements and records the cancellation reason for analytics.
     ///
     /// - Parameter reason: Why the flow was cancelled (e.g., user dismissed, settings changed, app quit)
-    func cancelFlow(reason: UpdateWideEventData.CancellationReason) {
+    public func cancelFlow(reason: UpdateWideEventData.CancellationReason) {
         guard let globalID = currentFlowID,
               let flowData = wideEventManager.getFlowData(UpdateWideEventData.self, globalID: globalID) else {
             return
@@ -258,7 +257,7 @@ final class SparkleUpdateWideEvent {
     /// - `.restartingToUpdate` → success (user clicked "Restart to Update")
     /// - `.extractionCompleted` → success (update ready, will install on quit)
     /// - Anything else → cancellation (user quit during active check/download)
-    func handleAppTermination() {
+    public func handleAppTermination() {
         guard let globalID = currentFlowID,
               let flowData = wideEventManager.getFlowData(UpdateWideEventData.self, globalID: globalID) else { return }
 
@@ -285,7 +284,7 @@ extension SparkleUpdateWideEvent {
     ///
     /// This method is synchronous and uses the callback-based completeFlow to avoid
     /// async coordination issues during initialization.
-    func cleanupAbandonedFlows() {
+    public func cleanupAbandonedFlows() {
         let pending: [UpdateWideEventData] = wideEventManager.getAllFlowData(UpdateWideEventData.self)
 
         // Any pending update pixels at app startup are considered abandoned,
@@ -295,5 +294,3 @@ extension SparkleUpdateWideEvent {
         }
     }
 }
-
-#endif
