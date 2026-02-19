@@ -76,10 +76,10 @@ final class IdleReturnEvaluator: IdleReturnEvaluating {
             return IdleReturnEvaluatorConstants.defaultIdleThresholdSeconds
         }
         do {
-            if let settingsDict = try JSONSerialization.jsonObject(with: jsonData) as? [String: String],
-               let secondsStr = settingsDict[IdleReturnEvaluatorConstants.idleThresholdSecondsSettingKey],
-               let seconds = Int(secondsStr), seconds >= 0 {
-                return seconds
+            if let settingsDict = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+               let value = settingsDict[IdleReturnEvaluatorConstants.idleThresholdSecondsSettingKey] as? NSNumber,
+               value.intValue >= 0 {
+                return value.intValue
             }
         } catch {
             Logger.general.debug("Idle return NTP idleThresholdSeconds parse failed: \(error.localizedDescription)")
