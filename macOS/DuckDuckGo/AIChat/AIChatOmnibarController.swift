@@ -183,6 +183,9 @@ final class AIChatOmnibarController {
         currentFetchTask?.cancel()
         currentFetchTask = nil
         suggestionsReader?.tearDown()
+
+        // Reset tools state when exiting Duck.ai mode
+        isSearchToggleEnabled = false
     }
 
     // MARK: - Suggestion Navigation

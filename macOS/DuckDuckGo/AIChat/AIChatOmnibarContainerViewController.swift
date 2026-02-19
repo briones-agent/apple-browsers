@@ -425,6 +425,15 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         windowFrameObserver = nil
         viewBoundsObserver?.cancel()
         viewBoundsObserver = nil
+
+        // Clear attachments and cancel pending resize tasks
+        clearAttachments()
+
+        // Reset tools state
+        searchToggleButton.isToggled = false
+        selectedModelId = AIChatModelProvider.defaultModel.id
+        modelPickerButton.modelName = AIChatModelProvider.defaultModel.shortDisplayName
+
         omnibarController.cleanup()
     }
 
