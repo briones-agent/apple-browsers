@@ -1159,7 +1159,29 @@ class MainViewController: UIViewController {
         viewCoordinator.omniBar.omniDelegate = self
     }
     
-    fileprivate func attachHomeScreen(isNewTab: Bool = false, allowingKeyboard: Bool = false) {
+    private static func makeEscapeHatchModel(from tab: Tab) -> EscapeHatchModel {
+        if tab.isAITab {
+            return EscapeHatchModel(
+                title: UserText.omnibarFullAIChatModeDisplayTitle,
+                subtitle: "Duck.ai",
+                isAITab: true,
+                domain: nil
+            )
+        }
+        if let link = tab.link {
+            let title = link.displayTitle ?? link.url.host?.droppingWwwPrefix() ?? ""
+            let subtitle = link.url.host?.droppingWwwPrefix() ?? link.url.absoluteString
+            return EscapeHatchModel(title: title, subtitle: subtitle, isAITab: false, domain: link.url.host)
+        }
+        return EscapeHatchModel(
+            title: UserText.homeTabTitle,
+            subtitle: "",
+            isAITab: false,
+            domain: nil
+        )
+    }
+
+    fileprivate func attachHomeScreen(isNewTab: Bool = false, allowingKeyboard: Bool = false, tabSwitchedFromIndex: Int? = nil) {
         guard !autoClearInProgress else { return }
         
         viewCoordinator.logoContainer.isHidden = false
@@ -1203,6 +1225,31 @@ class MainViewController: UIViewController {
         controller.chromeDelegate = self
 
         newTabPageViewController = controller
+
+        if featureFlagger.isFeatureOn(.showNTPAfterIdleReturn) {
+            let tabs = tabManager.model.tabs
+            let currentIndex = tabManager.model.currentIndex
+            let targetIndex: Int?
+            if let fromIndex = tabSwitchedFromIndex,
+               tabs.indices.contains(fromIndex),
+               fromIndex != currentIndex {
+                targetIndex = fromIndex
+            } else if tabs.count > 1, currentIndex > 0 {
+                targetIndex = currentIndex - 1
+            } else {
+                targetIndex = nil
+            }
+            if let targetIndex {
+                let tab = tabManager.model.get(tabAt: targetIndex)
+                let escapeHatchModel = Self.makeEscapeHatchModel(from: tab)
+                controller.setEscapeHatch(escapeHatchModel, targetTabIndex: targetIndex)
+            } else {
+                controller.setEscapeHatch(nil, targetTabIndex: 0)
+            }
+        } else {
+            controller.setEscapeHatch(nil, targetTabIndex: 0)
+        }
+
         addToContentContainer(controller: controller)
         viewCoordinator.logoContainer.isHidden = true
         adjustNewTabPageSafeAreaInsets(for: appSettings.currentAddressBarPosition)
@@ -1506,19 +1553,22 @@ class MainViewController: UIViewController {
         allowContentUnderflow = false
         
         if tabManager.model.tabs.indices.contains(index) {
+            // Capture the tab we're leaving before select() updates model.currentIndex (so escape hatch is correct when switching to NTP).
+            let tabSwitchedFromIndex = tabManager.model.currentIndex
             let tab = tabManager.select(tabAt: index)
-            select(tab: tab)
+            select(tab: tab, tabSwitchedFromIndex: tabSwitchedFromIndex)
         } else {
             assertionFailure("Invalid index selected")
         }
     }
 
-    fileprivate func select(tab: TabViewController) {
+    fileprivate func select(tab: TabViewController, tabSwitchedFromIndex passedFromIndex: Int? = nil) {
         let previousTab = currentTab
 
         hideNotificationBarIfBrokenSitePromptShown()
         if tab.link == nil {
-            attachHomeScreen()
+            let tabSwitchedFromIndex = passedFromIndex ?? previousTab.flatMap { tabManager.model.indexOf(tab: $0.tabModel) }
+            attachHomeScreen(tabSwitchedFromIndex: tabSwitchedFromIndex)
         } else {
             attachTab(tab: tab)
         }
@@ -2012,12 +2062,15 @@ class MainViewController: UIViewController {
         hideNotificationBarIfBrokenSitePromptShown()
         currentTab?.dismiss()
 
+        // Capture the tab we're leaving before we switch to the NTP (for escape hatch and idle return).
+        let tabSwitchedFromIndex = tabManager.model.currentIndex
+
         if reuseExisting, let existing = tabManager.firstHomeTab() {
             tabManager.selectTab(existing)
         } else {
             tabManager.addHomeTab()
         }
-        attachHomeScreen(isNewTab: true, allowingKeyboard: allowingKeyboard)
+        attachHomeScreen(isNewTab: true, allowingKeyboard: allowingKeyboard, tabSwitchedFromIndex: tabSwitchedFromIndex)
         tabsBarController?.refresh(tabsModel: tabManager.model, scrollToSelected: true)
         swipeTabsCoordinator?.refresh(tabsModel: tabManager.model, scrollToSelected: true)
         themeColorManager.updateThemeColor()
@@ -3361,6 +3414,10 @@ extension MainViewController: NewTabPageControllerDelegate {
 
     func newTabPageDidRequestFaviconsFetcherOnboarding(_ controller: NewTabPageViewController) {
         faviconsFetcherOnboarding.presentOnboardingIfNeeded(from: self)
+    }
+
+    func newTabPage(_ controller: NewTabPageViewController, didRequestSwitchToTabAt index: Int) {
+        select(tabAt: index)
     }
 }
 

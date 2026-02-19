@@ -656,6 +656,9 @@ public final class DefaultSubscriptionManager: SubscriptionManager {
     ///   - `false` for App Store on macOS < 12.0
     public func isUserEligibleForFreeTrial() -> Bool {
         if currentEnvironment.purchasePlatform == .stripe {
+            if UserDefaults.standard.bool(forKey: UserDefaults.Constants.stripeDisableFreeTrialKey) {
+                return false
+            }
             return true
         }
         guard #available(macOS 12.0, iOS 15.0, *) else { return false }

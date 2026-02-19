@@ -642,9 +642,17 @@ public extension UserDefaults {
 
     enum Constants {
         static let storefrontRegionOverrideKey = "Subscription.debug.storefrontRegionOverride"
+        /// When true, Stripe is treated as not offering a free trial (for testing no-trial flow).
+        static let stripeDisableFreeTrialKey = "Subscription.debug.stripeDisableFreeTrial"
         static let usaValue = "usa"
         static let rowValue = "row"
         static let hasPurchasePendingTransactionKey = "Subscription.hasPurchasePendingTransaction"
+    }
+
+    /// When true, Stripe is treated as not offering a free trial (for testing). Default false.
+    var stripeDisableFreeTrial: Bool {
+        get { bool(forKey: Constants.stripeDisableFreeTrialKey) }
+        set { set(newValue, forKey: Constants.stripeDisableFreeTrialKey) }
     }
 
     dynamic var storefrontRegionOverride: SubscriptionRegion? {
