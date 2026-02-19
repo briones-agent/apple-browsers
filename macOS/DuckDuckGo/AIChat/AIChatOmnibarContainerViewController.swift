@@ -473,7 +473,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.image]
+        // Only allow Duck.ai supported image formats
+        panel.allowedContentTypes = [.jpeg, .png, .webP]
 
         guard let window = view.window else { return }
         panel.beginSheetModal(for: window) { [weak self] response in
