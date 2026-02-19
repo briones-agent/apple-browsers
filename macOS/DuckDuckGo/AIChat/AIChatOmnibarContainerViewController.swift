@@ -299,9 +299,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         attachmentsContainerView.onAttachmentsChanged = { [weak self] in
             self?.updateAttachmentsLayout()
         }
-        attachmentsContainerView.onThumbnailClicked = { [weak self] id in
-            self?.revealAttachmentInFinder(id: id)
-        }
         containerView.addSubview(attachmentsContainerView)
 
         NSLayoutConstraint.activate([
@@ -467,7 +464,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = true
+        panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.image]
 
         guard let window = view.window else { return }
@@ -508,12 +505,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         }
 
         onPassthroughHeightNeedsUpdate?()
-    }
-
-    private func revealAttachmentInFinder(id: UUID) {
-        guard let attachment = attachmentsContainerView.attachments.first(where: { $0.id == id }),
-              let fileURL = attachment.fileURL else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
     }
 
     @objc private func modelPickerButtonClicked() {
