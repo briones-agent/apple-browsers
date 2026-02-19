@@ -33,9 +33,9 @@ final class AIChatImageAttachmentThumbnailView: NSView {
         static let removeButtonInset: CGFloat = 4
         /// How far the remove button extends beyond the thumbnail edge.
         static let removeButtonOverflow: CGFloat = 8
-        static let shadowRadius: CGFloat = 3
-        static let shadowOpacity: Float = 0.15
-        static let shadowOffset = CGSize(width: 0, height: -1)
+        static let shadowRadius: CGFloat = 4
+        static let shadowOpacity: Float = 0.3
+        static let shadowOffset = CGSize(width: 0, height: -2)
 
         // Remove button colors
         static let removeButtonBackgroundLight = NSColor(white: 1.0, alpha: 1.0)
