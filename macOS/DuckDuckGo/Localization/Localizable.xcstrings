@@ -2780,6 +2780,18 @@
         }
       }
     },
+    "aichat.sidebar.detach-button.tooltip" : {
+      "comment" : "Tooltip for button to detach the duck.ai sidebar into a floating window",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move to Window"
+          }
+        }
+      }
+    },
     "aichat.sidebar.expand-button.tooltip" : {
       "comment" : "Tooltip for button to open duck.ai chat from sidebar in a full tab",
       "extractionState" : "extracted_with_value",

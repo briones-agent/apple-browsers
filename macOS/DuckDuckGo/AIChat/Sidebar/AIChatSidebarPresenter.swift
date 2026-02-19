@@ -85,8 +85,15 @@ final class AIChatSidebarPresenter: AIChatSidebarPresenting {
     /// Updated only by resizes happening in this window.
     private var windowDefaultWidth: CGFloat
 
+    /// One floating window controller per detached tab.
+    private var floatingWindowControllers: [TabIdentifier: AIChatFloatingWindowController] = [:]
+
     private var isSidebarResizable: Bool {
         featureFlagger.isFeatureOn(.aiChatSidebarResizable)
+    }
+
+    private var isSidebarFloatingEnabled: Bool {
+        featureFlagger.isFeatureOn(.aiChatSidebarFloating)
     }
 
     init(
@@ -273,6 +280,51 @@ final class AIChatSidebarPresenter: AIChatSidebarPresenting {
             aiChatTabOpener.openAIChatTab(with: .payload(payload), behavior: .newTab(selected: true))
         }
     }
+
+    // MARK: - Detach / Attach
+
+    /// Moves the current tab's docked sidebar into a floating window.
+    private func detachSidebar() {
+        guard isSidebarFloatingEnabled,
+              let tabID = sidebarHost.currentTabID,
+              let sidebarVC = sidebarProvider.getSidebarViewController(for: tabID),
+              floatingWindowControllers[tabID] == nil else { return }
+
+        let screenFrame = sidebarHost.sidebarContainerScreenFrame ?? NSRect(x: 200, y: 200, width: 400, height: 600)
+
+        sidebarVC.removeCompletely()
+
+        collapseSidebar(withAnimation: false)
+
+        let controller = AIChatFloatingWindowController(
+            tabID: tabID,
+            sidebarViewController: sidebarVC,
+            contentRect: screenFrame)
+        controller.delegate = self
+        floatingWindowControllers[tabID] = controller
+
+        sidebarProvider.sidebarsByTab[tabID]?.setDetached()
+
+        controller.show()
+    }
+
+    /// Docks a floating sidebar back into the browser window for the given tab.
+    private func attachSidebar(for tabID: TabIdentifier) {
+        guard let controller = floatingWindowControllers[tabID],
+              let sidebarVC = controller.detachSidebarViewController() else { return }
+
+        floatingWindowControllers.removeValue(forKey: tabID)
+
+        sidebarProvider.sidebarsByTab[tabID]?.setDocked()
+
+        sidebarVC.delegate = self
+        sidebarHost.embedSidebarViewController(sidebarVC)
+        sidebarProvider.sidebarsByTab[tabID]?.setRevealed()
+
+        updateSidebarConstraints(for: tabID, isShowingSidebar: true, withAnimation: false)
+
+        controller.close()
+    }
 }
 
 extension AIChatSidebarPresenter: AIChatSidebarHostingDelegate {
@@ -316,6 +368,10 @@ extension AIChatSidebarPresenter: AIChatSidebarViewControllerDelegate {
 
         windowControllersManager.lastKeyMainWindowController?.window?.makeFirstResponder(nil)
         toggleSidebar()
+    }
+
+    func didClickDetachButton() {
+        detachSidebar()
     }
 }
 
@@ -397,5 +453,21 @@ extension AIChatSidebarPresenter: AIChatSidebarResizeDelegate {
         // Not enough room: split 50/50, but respect the minimum
         let halfWidth = availableWidth / 2
         return max(minWidth, halfWidth)
+    }
+}
+
+// MARK: - AIChatFloatingWindowControllerDelegate
+
+extension AIChatSidebarPresenter: AIChatFloatingWindowControllerDelegate {
+
+    func floatingWindowDidClose(_ controller: AIChatFloatingWindowController) {
+        let tabID = controller.tabID
+        floatingWindowControllers.removeValue(forKey: tabID)
+        sidebarProvider.sidebarsByTab[tabID]?.setDocked()
+        sidebarProvider.sidebarsByTab[tabID]?.setHidden()
+    }
+
+    func floatingWindowDidRequestDock(_ controller: AIChatFloatingWindowController) {
+        attachSidebar(for: controller.tabID)
     }
 }

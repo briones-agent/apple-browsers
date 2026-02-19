@@ -28,6 +28,8 @@ protocol AIChatSidebarViewControllerDelegate: AnyObject {
     func didClickOpenInNewTabButton()
     /// Called when the user clicks the "Close" button
     func didClickCloseButton()
+    /// Called when the user clicks the "Detach" button to pop the sidebar into a floating window.
+    func didClickDetachButton()
 }
 
 /// A view controller that manages the AI Chat sidebar interface.
@@ -59,6 +61,7 @@ final class AIChatSidebarViewController: NSViewController {
     private let burnerMode: BurnerMode
 
     private var openInNewTabButton: MouseOverButton!
+    private var detachButton: MouseOverButton!
     private var closeButton: MouseOverButton!
     private var webViewContainer: WebViewContainerView!
     private var separator: NSView!
@@ -165,6 +168,17 @@ final class AIChatSidebarViewController: NSViewController {
         openInNewTabButton.isBordered = false
         topBar.addSubview(openInNewTabButton)
 
+        detachButton = MouseOverButton(image: .moveTabToNewWindow, target: self, action: #selector(detachButtonClicked))
+        detachButton.toolTip = UserText.aiChatSidebarDetachButtonTooltip
+        detachButton.translatesAutoresizingMaskIntoConstraints = false
+        detachButton.bezelStyle = .shadowlessSquare
+        detachButton.cornerRadius = 9
+        detachButton.normalTintColor = .button
+        detachButton.mouseDownColor = .buttonMouseDown
+        detachButton.mouseOverColor = .buttonMouseOver
+        detachButton.isBordered = false
+        topBar.addSubview(detachButton)
+
         let titleLabel = NSTextField(labelWithString: UserText.aiChatSidebarTitle)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.alignment = .center
@@ -189,9 +203,14 @@ final class AIChatSidebarViewController: NSViewController {
             openInNewTabButton.heightAnchor.constraint(equalToConstant: Constants.barButtonHeight),
             openInNewTabButton.widthAnchor.constraint(equalToConstant: Constants.barButtonWidth),
 
+            detachButton.leadingAnchor.constraint(equalTo: openInNewTabButton.trailingAnchor, constant: 4),
+            detachButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+            detachButton.heightAnchor.constraint(equalToConstant: Constants.barButtonHeight),
+            detachButton.widthAnchor.constraint(equalToConstant: Constants.barButtonWidth),
+
             titleLabel.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
-            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: openInNewTabButton.trailingAnchor, constant: Constants.titleLabelSideMargin),
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: detachButton.trailingAnchor, constant: Constants.titleLabelSideMargin),
             titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -Constants.titleLabelSideMargin),
 
             closeButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -Constants.barButtonMargin),
@@ -295,7 +314,15 @@ final class AIChatSidebarViewController: NSViewController {
         delegate?.didClickOpenInNewTabButton()
     }
 
+    @objc private func detachButtonClicked() {
+        delegate?.didClickDetachButton()
+    }
+
     @objc private func closeButtonClicked() {
+        if let window = view.window, window is AIChatFloatingWindow {
+            window.close()
+            return
+        }
         delegate?.didClickCloseButton()
     }
 

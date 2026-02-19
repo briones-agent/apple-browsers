@@ -90,6 +90,9 @@ protocol AIChatSidebarHosting: AnyObject  {
 
     /// The total width available for both the webview and sidebar.
     var availableWidth: CGFloat { get }
+
+    /// The sidebar container's frame in screen coordinates, used for "pop off in place" positioning.
+    var sidebarContainerScreenFrame: NSRect? { get }
 }
 
 extension BrowserTabViewController: AIChatSidebarHosting {
@@ -121,5 +124,11 @@ extension BrowserTabViewController: AIChatSidebarHosting {
 
     var availableWidth: CGFloat {
         view.bounds.width
+    }
+
+    var sidebarContainerScreenFrame: NSRect? {
+        guard let window = view.window else { return nil }
+        let frameInWindow = sidebarContainer.convert(sidebarContainer.bounds, to: nil)
+        return window.convertToScreen(frameInWindow)
     }
 }

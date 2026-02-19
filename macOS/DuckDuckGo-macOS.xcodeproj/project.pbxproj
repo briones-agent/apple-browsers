@@ -256,6 +256,10 @@
 		1E15F69B2DF0D1590061395E /* AIChatSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E15F6992DF0D1590061395E /* AIChatSidebar.swift */; };
 		1EA1C0042F12000000000002 /* AIChatSidebarResizeHandleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EA1C0032F12000000000002 /* AIChatSidebarResizeHandleView.swift */; };
 		1EA1C0052F12000000000002 /* AIChatSidebarResizeHandleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EA1C0032F12000000000002 /* AIChatSidebarResizeHandleView.swift */; };
+		418399D4200F4DC8B3B0ABDB /* AIChatFloatingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12E99106CCA4281998533BC /* AIChatFloatingWindow.swift */; };
+		A2386B5C129943ED88670FBE /* AIChatFloatingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12E99106CCA4281998533BC /* AIChatFloatingWindow.swift */; };
+		3713B9E763D3429881172AA2 /* AIChatFloatingWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1812146DE841448CA4CE3FD1 /* AIChatFloatingWindowController.swift */; };
+		541B2C4D448B4C109EF580A3 /* AIChatFloatingWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1812146DE841448CA4CE3FD1 /* AIChatFloatingWindowController.swift */; };
 		1E2A887A2E2E477A00C29AC0 /* AIChatSidebarProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E2A88792E2E477A00C29AC0 /* AIChatSidebarProviderTests.swift */; };
 		1E2A887B2E2E477A00C29AC0 /* AIChatSidebarProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E2A88792E2E477A00C29AC0 /* AIChatSidebarProviderTests.swift */; };
 		1E2A88802E2E532600C29AC0 /* AIChatSidebarPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E2A887F2E2E532600C29AC0 /* AIChatSidebarPresenterTests.swift */; };
@@ -4616,6 +4620,8 @@
 		1E15F6962DF08EDD0061395E /* AIChatSidebarHosting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatSidebarHosting.swift; sourceTree = "<group>"; };
 		1E15F6992DF0D1590061395E /* AIChatSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatSidebar.swift; sourceTree = "<group>"; };
 		1EA1C0032F12000000000002 /* AIChatSidebarResizeHandleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatSidebarResizeHandleView.swift; sourceTree = "<group>"; };
+		A12E99106CCA4281998533BC /* AIChatFloatingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatFloatingWindow.swift; sourceTree = "<group>"; };
+		1812146DE841448CA4CE3FD1 /* AIChatFloatingWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatFloatingWindowController.swift; sourceTree = "<group>"; };
 		1E2A88792E2E477A00C29AC0 /* AIChatSidebarProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatSidebarProviderTests.swift; sourceTree = "<group>"; };
 		1E2A887F2E2E532600C29AC0 /* AIChatSidebarPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatSidebarPresenterTests.swift; sourceTree = "<group>"; };
 		1E33A5502EBB632E000E828B /* AutoconsentStatsMock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoconsentStatsMock.swift; sourceTree = "<group>"; };
@@ -7299,6 +7305,15 @@
 			path = Sidebar;
 			sourceTree = "<group>";
 		};
+		4773D76F5C4F4B31900F6E7A /* FloatingWindow */ = {
+			isa = PBXGroup;
+			children = (
+				A12E99106CCA4281998533BC /* AIChatFloatingWindow.swift */,
+				1812146DE841448CA4CE3FD1 /* AIChatFloatingWindowController.swift */,
+			);
+			path = FloatingWindow;
+			sourceTree = "<group>";
+		};
 		31521ABE2CC0139C00248E6F /* AIChat */ = {
 			isa = PBXGroup;
 			children = (
@@ -7307,8 +7322,9 @@
 				31BFDB782ECA5FCD00ADFABD /* AIChatOmnibarController.swift */,
 				31BFDB6F2ECA46DD00ADFABD /* AIChatOmnibarTextContainerViewController.swift */,
 				31E3FD712CE39C4600A392C8 /* Debug */,
-				1E4EDA262DE9ED1C0019B6E8 /* Sidebar */,
-				31CF74542CDC1771004ACCE5 /* UserScript */,
+			1E4EDA262DE9ED1C0019B6E8 /* Sidebar */,
+			4773D76F5C4F4B31900F6E7A /* FloatingWindow */,
+			31CF74542CDC1771004ACCE5 /* UserScript */,
 				1D5C23272F150A580055046E /* Suggestions */,
 				319FCFF42CC83003004F9288 /* AIChatDebugMenu.swift */,
 				C150EB212F0D817100A98C97 /* AIChatFeatureFlagProvider.swift */,
@@ -14624,6 +14640,8 @@
 				3706FB6F293F65D500E42796 /* BookmarkListViewController.swift in Sources */,
 				1E15F6972DF08EDD0061395E /* AIChatSidebarHosting.swift in Sources */,
 				1EA1C0042F12000000000002 /* AIChatSidebarResizeHandleView.swift in Sources */,
+				418399D4200F4DC8B3B0ABDB /* AIChatFloatingWindow.swift in Sources */,
+				3713B9E763D3429881172AA2 /* AIChatFloatingWindowController.swift in Sources */,
 				3706FB72293F65D500E42796 /* RecentlyClosedCoordinator.swift in Sources */,
 				ED1B618D2ED8B256008E0935 /* PasswordEntryRetryPromptView.swift in Sources */,
 				3706FB74293F65D500E42796 /* FaviconHostReference.swift in Sources */,
@@ -16597,6 +16615,8 @@
 				BBE013EA2C5BFD660025F2C6 /* BookmarksEmptyStateContent.swift in Sources */,
 				1E15F6982DF08EDD0061395E /* AIChatSidebarHosting.swift in Sources */,
 				1EA1C0052F12000000000002 /* AIChatSidebarResizeHandleView.swift in Sources */,
+				A2386B5C129943ED88670FBE /* AIChatFloatingWindow.swift in Sources */,
+				541B2C4D448B4C109EF580A3 /* AIChatFloatingWindowController.swift in Sources */,
 				B59AB6452EFB179F00C2F87A /* SearchField.swift in Sources */,
 				EEC4A66D2B2C894F00F7C0AA /* VPNLocationPreferenceItemModel.swift in Sources */,
 				3776582F27F82E62009A6B35 /* AutofillPreferences.swift in Sources */,
