@@ -7,6 +7,21 @@
 /* Auto-Restore - Description + Learn More, with markdown link */
 "auto.restore.learn.more.full" = "Automatically restore your data on this device if you reinstall the app. [Learn More](sync-auto-restore://learn-more)";
 
+/* Auto-Restore Screen - Description */
+"auto.restore.screen.description" = "Automatically restore your data on this device if you reinstall the app.";
+
+/* Auto-Restore Screen - Title */
+"auto.restore.screen.title" = "Auto-Restore";
+
+/* Auto-Restore Settings Row - Label */
+"auto.restore.settings.row.label" = "Auto-Restore on This Device";
+
+/* Auto-Restore Settings Row - Off */
+"auto.restore.settings.row.off" = "Off";
+
+/* Auto-Restore Settings Row - On */
+"auto.restore.settings.row.on" = "On";
+
 /* Auto-Restore - Toggle Label */
 "auto.restore.toggle.label" = "Auto-Restore";
 
