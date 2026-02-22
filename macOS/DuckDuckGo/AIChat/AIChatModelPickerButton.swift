@@ -27,7 +27,7 @@ final class AIChatModelPickerButton: NSView {
         static let height: CGFloat = 28
         static let horizontalPadding: CGFloat = 10
         static let iconTextSpacing: CGFloat = 3
-        static let chevronSize: CGFloat = 12
+        static let chevronSize: CGFloat = 16
         static let fontSize: CGFloat = 12
         static let cornerRadius: CGFloat = 14
     }
@@ -49,7 +49,7 @@ final class AIChatModelPickerButton: NSView {
         let imageView = NSImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.imageScaling = .scaleProportionallyDown
-        imageView.image = DesignSystemImages.Glyphs.Size12.arrowDown
+        imageView.image = DesignSystemImages.Glyphs.Size16.chevronDownMedium
         return imageView
     }()
 

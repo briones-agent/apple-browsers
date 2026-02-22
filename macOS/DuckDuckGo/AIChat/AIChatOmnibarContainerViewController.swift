@@ -216,7 +216,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
 
     private func updateToolButtonsVisibility(isEnabled: Bool) {
         imageUploadButton.isHidden = !isEnabled || attachmentsContainerView.isFull
-        // modelPickerButton.isHidden = !isEnabled  // Disabled until model fetching integrated
+        modelPickerButton.isHidden = !isEnabled
         attachmentsContainerView.isHidden = !isEnabled
         if !isEnabled {
             attachmentsHeightConstraint?.constant = 0
@@ -285,7 +285,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         modelPickerButton.modelName = AIChatModelProvider.defaultModel.shortDisplayName
         modelPickerButton.toolTip = UserText.aiChatModelPickerButtonTooltip
         modelPickerButton.setAccessibilityLabel(UserText.aiChatModelPickerButtonTooltip)
-        modelPickerButton.isHidden = true  // Hidden until model fetching is integrated
         containerView.addSubview(modelPickerButton)
 
         attachmentsContainerView.translatesAutoresizingMaskIntoConstraints = false
