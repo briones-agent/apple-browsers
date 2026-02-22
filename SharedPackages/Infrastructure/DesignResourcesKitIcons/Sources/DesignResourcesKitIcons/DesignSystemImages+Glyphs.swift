@@ -86,6 +86,10 @@ public extension DesignSystemImages {
             public static var addToHome: DesignSystemImage { .init(resource: .addToHome16) }
             public static var addToTaskbar: DesignSystemImage { .init(resource: .addToTaskbar16) }
             public static var aiChat: DesignSystemImage { .init(resource: .aiChat16) }
+            public static var aiModelClaude: DesignSystemImage { .init(resource: .aiModelClaude16) }
+            public static var aiModelLlama: DesignSystemImage { .init(resource: .aiModelLlama16) }
+            public static var aiModelMistral: DesignSystemImage { .init(resource: .aiModelMistral16) }
+            public static var aiModelOpenAI: DesignSystemImage { .init(resource: .aiModelOpenAi16) }
             public static var aiChatAdd: DesignSystemImage { .init(resource: .aiChatAdd16) }
             public static var aiChatGradientColor: DesignSystemImage { .init(resource: .aiChatGradientColor16) }
             public static var aiChatHistory: DesignSystemImage { .init(resource: .aiChatHistory16) }
