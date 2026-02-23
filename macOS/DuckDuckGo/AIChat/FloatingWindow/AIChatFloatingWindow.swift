@@ -22,8 +22,8 @@ import AppKit
 ///
 /// Uses `NSWindow` (not `NSPanel`) so it participates fully in Mission Control,
 /// Stage Manager, Exposé, and the macOS Window menu. The native title bar is kept
-/// for OS integration but rendered transparent with traffic-light buttons hidden,
-/// giving room for a custom header drawn by the content view controller.
+/// for OS integration but rendered transparent while preserving standard traffic lights.
+/// The content view controller draws a custom header.
 final class AIChatFloatingWindow: NSWindow {
 
     private enum Constants {
@@ -60,10 +60,6 @@ final class AIChatFloatingWindow: NSWindow {
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
 
-        standardWindowButton(.closeButton)?.isHidden = true
-        standardWindowButton(.miniaturizeButton)?.isHidden = true
-        standardWindowButton(.zoomButton)?.isHidden = true
-
         isMovableByWindowBackground = true
 
         title = UserText.aiChatSidebarTitle
@@ -72,6 +68,10 @@ final class AIChatFloatingWindow: NSWindow {
         minSize = NSSize(width: Constants.minWidth, height: Constants.minHeight)
 
         backgroundColor = .windowBackgroundColor
+
+        toolbar = NSToolbar()
+        toolbar?.showsBaselineSeparator = true
+        toolbarStyle = .unifiedCompact
     }
 
     override func cancelOperation(_ sender: Any?) {

@@ -45,9 +45,9 @@ final class AIChatViewController: NSViewController {
 
     private enum Constants {
         static let separatorWidth: CGFloat = 1
-        static let topBarHeight: CGFloat = 48
-        static let barButtonHeight: CGFloat = 32
-        static let barButtonWidth: CGFloat = 32
+        static let topBarHeight: CGFloat = 38
+        static let barButtonHeight: CGFloat = 28
+        static let barButtonWidth: CGFloat = 28
         static let barButtonMargin: CGFloat = 12
         static let titleLabelSideMargin: CGFloat = 8
         static let titleButtonHeight: CGFloat = 28
@@ -207,7 +207,7 @@ final class AIChatViewController: NSViewController {
             openInNewTabButton.heightAnchor.constraint(equalToConstant: Constants.barButtonHeight),
             openInNewTabButton.widthAnchor.constraint(equalToConstant: Constants.barButtonWidth),
 
-            attachButton.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: Constants.barButtonMargin),
+            attachButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -Constants.barButtonMargin),
             attachButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
             attachButton.heightAnchor.constraint(equalToConstant: Constants.barButtonHeight),
             attachButton.widthAnchor.constraint(equalToConstant: Constants.barButtonWidth),
@@ -218,8 +218,8 @@ final class AIChatViewController: NSViewController {
 
             titleButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
             titleButton.heightAnchor.constraint(equalToConstant: Constants.titleButtonHeight),
-            titleButton.leadingAnchor.constraint(greaterThanOrEqualTo: attachButton.trailingAnchor, constant: Constants.titleButtonGutter),
-            titleButton.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -Constants.titleButtonGutter),
+            titleButton.leadingAnchor.constraint(greaterThanOrEqualTo: openInNewTabButton.trailingAnchor, constant: Constants.titleButtonGutter),
+            titleButton.trailingAnchor.constraint(lessThanOrEqualTo: attachButton.leadingAnchor, constant: -Constants.titleButtonGutter),
             titleButton.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
 
             // Right side: detach (docked) + close
@@ -242,7 +242,7 @@ final class AIChatViewController: NSViewController {
         button.isBordered = false
         button.title = ""
         button.imagePosition = .noImage
-        button.cornerRadius = 6
+        button.cornerRadius = 9
         button.mouseOverColor = .buttonMouseOver
         button.mouseDownColor = .buttonMouseDown
         button.clipsToBounds = false
@@ -251,7 +251,7 @@ final class AIChatViewController: NSViewController {
         button.refusesFirstResponder = true
         button.toolTip = UserText.aiChatSidebarTitleButtonTooltip
         button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        button.backgroundInset = NSPoint(x: 0, y: -3)
+        button.backgroundInset = .zero
         titleFaviconView = NSImageView()
         titleFaviconView.translatesAutoresizingMaskIntoConstraints = false
         titleFaviconView.imageScaling = .scaleProportionallyUpOrDown
@@ -323,6 +323,7 @@ final class AIChatViewController: NSViewController {
         openInNewTabButton.isHidden = isFloating
         detachButton.isHidden = isFloating
         attachButton.isHidden = !isFloating
+        closeButton.isHidden = isFloating
         titleLabel.isHidden = isFloating
         titleButton.isHidden = !isFloating
     }
