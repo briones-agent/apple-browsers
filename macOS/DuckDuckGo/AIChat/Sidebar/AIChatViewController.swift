@@ -336,6 +336,9 @@ final class AIChatViewController: NSViewController {
         webViewContainer.layer?.backgroundColor = NSColor.navigationBarBackground.cgColor
         container.addSubview(webViewContainer)
 
+        // Pinch zoom does not make sense in the AI Chat sidebar.
+        aiTab.webView.allowsMagnification = false
+
         aiTab.setDelegate(self)
 
         // Observe bounds changes to update the mask
