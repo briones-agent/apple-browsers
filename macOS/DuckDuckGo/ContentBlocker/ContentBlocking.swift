@@ -26,6 +26,7 @@ import Persistence
 import PixelKit
 import PixelExperimentKit
 import PrivacyConfig
+import WebExtensions
 
 protocol ContentBlockingProtocol {
 
@@ -87,7 +88,8 @@ final class AppContentBlocking {
         tld: TLD,
         autoconsentManagement: AutoconsentManagement,
         contentScopePreferences: ContentScopePreferences,
-        syncErrorHandler: SyncErrorHandling
+        syncErrorHandler: SyncErrorHandling,
+        webExtensionAvailability: WebExtensionAvailabilityProviding?
     ) {
 #if DEBUG || REVIEW
         // When TEST_PRIVACY_CONFIG_PATH is set, skip cached config to use embedded (test) config
@@ -131,7 +133,8 @@ final class AppContentBlocking {
             tld: tld,
             autoconsentManagement: autoconsentManagement,
             contentScopePreferences: contentScopePreferences,
-            syncErrorHandler: syncErrorHandler
+            syncErrorHandler: syncErrorHandler,
+            webExtensionAvailability: webExtensionAvailability
         )
     }
 
@@ -158,7 +161,8 @@ final class AppContentBlocking {
         tld: TLD,
         autoconsentManagement: AutoconsentManagement,
         contentScopePreferences: ContentScopePreferences,
-        syncErrorHandler: SyncErrorHandling
+        syncErrorHandler: SyncErrorHandling,
+        webExtensionAvailability: WebExtensionAvailabilityProviding?
     ) {
         self.privacyConfigurationManager = privacyConfigurationManager
         self.tld = tld
@@ -209,7 +213,8 @@ final class AppContentBlocking {
                                                   fireCoordinator: fireCoordinator,
                                                   autoconsentManagement: autoconsentManagement,
                                                   contentScopePreferences: contentScopePreferences,
-                                                  syncErrorHandler: syncErrorHandler)
+                                                  syncErrorHandler: syncErrorHandler,
+                                                  webExtensionAvailability: webExtensionAvailability)
 
         adClickAttributionRulesProvider = AdClickAttributionRulesProvider(config: adClickAttribution,
                                                                           compiledRulesSource: contentBlockingManager,
