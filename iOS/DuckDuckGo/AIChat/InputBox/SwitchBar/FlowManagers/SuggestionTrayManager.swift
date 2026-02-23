@@ -57,7 +57,10 @@ final class SuggestionTrayManager: NSObject {
     // MARK: - Properties
     
     weak var delegate: SuggestionTrayManagerDelegate?
-    
+
+    /// When set, called when the user taps the escape hatch card on the tray's NTP (OmniBar editing state). Pass the target tab index.
+    var onEscapeHatchTapped: ((Int) -> Void)?
+
     private let switchBarHandler: SwitchBarHandling
     private let dependencies: SuggestionTrayDependencies
     private var cancellables = Set<AnyCancellable>()
@@ -203,10 +206,12 @@ final class SuggestionTrayManager: NSObject {
     
     private func showSuggestionTray(_ type: SuggestionTrayViewController.SuggestionType, animated: Bool) {
         guard let suggestionTray = suggestionTrayViewController else { return }
-        
+
+        // When showing favorites/NTP, always show the tray so the empty state (logo + escape hatch) can appear even with no favorites or remote messages.
         let canShowSuggestion =
             suggestionTray.canShow(for: type, animated: animated) ||
-            (type == .favorites && suggestionTray.hasRemoteMessages)
+            (type == .favorites && suggestionTray.hasRemoteMessages) ||
+            (type == .favorites)
 
         if canShowSuggestion {
             suggestionTray.view.isHidden = false
@@ -288,6 +293,6 @@ extension SuggestionTrayManager: NewTabPageControllerDelegate {
     }
 
     func newTabPage(_ controller: NewTabPageViewController, didRequestSwitchToTabAt index: Int) {
-        // no-op; escape hatch is only shown on the real NTP in MainViewController
+        onEscapeHatchTapped?(index)
     }
 }

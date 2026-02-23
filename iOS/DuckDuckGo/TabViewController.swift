@@ -1150,7 +1150,7 @@ class TabViewController: UIViewController {
             if webView.canGoBack {
                 duckPlayerNavigationHandler.handleGoBack(webView: webView)
                 webView.goBack()
-                chromeDelegate?.omniBar.endEditing()
+                chromeDelegate?.omniBar.endEditing(completion: nil)
                 return
             }
             if openingTab != nil {
@@ -1170,7 +1170,7 @@ class TabViewController: UIViewController {
         if webView.canGoBack {
             webView.goBack()
             duckPlayerNavigationHandler.handleGoBack(webView: webView)
-            chromeDelegate?.omniBar.endEditing()
+            chromeDelegate?.omniBar.endEditing(completion: nil)
             return
         }
 
@@ -1188,7 +1188,7 @@ class TabViewController: UIViewController {
 
         if webView.goForward() != nil {
             duckPlayerNavigationHandler.handleGoForward(webView: webView)
-            chromeDelegate?.omniBar.endEditing()
+            chromeDelegate?.omniBar.endEditing(completion: nil)
         }
     }
     
@@ -1939,7 +1939,7 @@ extension TabViewController: WKNavigationDelegate {
                 return
             }
 
-            self.chromeDelegate?.omniBar.endEditing()
+            self.chromeDelegate?.omniBar.endEditing(completion: nil)
             self.chromeDelegate?.setBarsHidden(false, animated: true, customAnimationDuration: nil)
 
             // Present the contextual onboarding

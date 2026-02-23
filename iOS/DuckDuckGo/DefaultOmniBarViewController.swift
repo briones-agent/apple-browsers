@@ -160,9 +160,17 @@ final class DefaultOmniBarViewController: OmniBarViewController {
         animateNextEditingTransition = true
     }
 
-    override func endEditing() {
-        super.endEditing()
-        editingStateViewController?.dismissAnimated()
+    override func endEditing(completion: (() -> Void)?) {
+        super.endEditing(completion: nil)
+        dismissEditingState(completion: completion)
+    }
+
+    /// Dismisses the OmniBar editing state and notifies the delegate when done so the address bar can be refreshed (e.g. to match the current tab).
+    private func dismissEditingState(completion: (() -> Void)? = nil) {
+        editingStateViewController?.dismissAnimated { [weak self] in
+            completion?()
+            self?.omniDelegate?.omniBarDidEndEditing()
+        }
     }
 
     var shouldClipShadows: Bool {
@@ -261,34 +269,34 @@ extension DefaultOmniBarViewController: OmniBarEditingStateViewControllerDelegat
     }
 
     func onQuerySubmitted(_ query: String) {
-        editingStateViewController?.dismissAnimated()
+        dismissEditingState()
         omniDelegate?.onOmniQuerySubmitted(query)
     }
 
     func onPromptSubmitted(_ query: String, tools: [AIChatRAGTool]?) {
-        editingStateViewController?.dismissAnimated { [weak self] in
+        dismissEditingState { [weak self] in
             guard let self else { return }
             self.omniDelegate?.onPromptSubmitted(query, tools: tools)
         }
     }
 
     func onSelectFavorite(_ favorite: BookmarkEntity) {
-        editingStateViewController?.dismissAnimated()
+        dismissEditingState()
         omniDelegate?.onSelectFavorite(favorite)
     }
 
     func onEditFavorite(_ favorite: BookmarkEntity) {
-        editingStateViewController?.dismissAnimated()
+        dismissEditingState()
         omniDelegate?.onEditFavorite(favorite)
     }
 
     func onSelectSuggestion(_ suggestion: Suggestion) {
         omniDelegate?.onOmniSuggestionSelected(suggestion)
-        editingStateViewController?.dismissAnimated()
+        dismissEditingState()
     }
 
     func onVoiceSearchRequested(from mode: TextEntryMode) {
-        editingStateViewController?.dismissAnimated { [weak self] in
+        dismissEditingState { [weak self] in
             guard let self else { return }
 
             let voiceSearchTarget: VoiceSearchTarget = (mode == .aiChat) ? .AIChat : .SERP
@@ -297,7 +305,7 @@ extension DefaultOmniBarViewController: OmniBarEditingStateViewControllerDelegat
     }
 
     func onChatHistorySelected(url: URL) {
-        editingStateViewController?.dismissAnimated { [weak self] in
+        dismissEditingState { [weak self] in
             guard let self else { return }
             self.omniDelegate?.onChatHistorySelected(url: url)
         }
@@ -306,6 +314,14 @@ extension DefaultOmniBarViewController: OmniBarEditingStateViewControllerDelegat
     func onDismissRequested() {
         // Fire cancel pixel only (no other side effects) when experimental bar is dismissed via back button
         omniDelegate?.onExperimentalAddressBarCancelPressed()
+    }
+
+    func onEscapeHatchTapped(targetTabIndex: Int) {
+        omniDelegate?.onEscapeHatchTapped(targetTabIndex: targetTabIndex)
+    }
+
+    func currentEscapeHatchForEditingState() -> (model: EscapeHatchModel, targetTabIndex: Int)? {
+        omniDelegate?.escapeHatchForOmniBarEditingState()
     }
 }
 

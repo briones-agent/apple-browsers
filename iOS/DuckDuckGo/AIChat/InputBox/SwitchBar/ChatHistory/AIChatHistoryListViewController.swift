@@ -22,6 +22,7 @@ import Combine
 import Core
 import DesignResourcesKit
 import DesignResourcesKitIcons
+import SwiftUI
 import UIKit
 
 /// A view controller displaying the list of recent AI chats
@@ -36,6 +37,13 @@ final class AIChatHistoryListViewController: UIViewController {
         static let cellHeight: CGFloat = 44
         static let horizontalInset: CGFloat = 16
         static let topContentInset: CGFloat = -20
+        static let escapeHatchHeaderHeight: CGFloat = 92
+        /// Space between the input field (above) and the escape hatch card.
+        static let escapeHatchTopPadding: CGFloat = 20
+        /// Space between the escape hatch card and the first chat row.
+        static let escapeHatchBottomPadding: CGFloat = 16
+        /// Extra space below the last row so it isn’t cut off.
+        static let bottomContentInset: CGFloat = 24
     }
 
     // MARK: - Properties
@@ -53,13 +61,17 @@ final class AIChatHistoryListViewController: UIViewController {
         tableView.backgroundColor = UIColor(designSystemColor: .background)
         tableView.separatorInset = UIEdgeInsets(top: 0, left: Constants.horizontalInset + Constants.iconSize + Constants.iconTextSpacing, bottom: 0, right: 0)
         tableView.sectionFooterHeight = 0
-        tableView.contentInset = UIEdgeInsets(top: Constants.topContentInset, left: 0, bottom: 0, right: 0)
+        tableView.contentInset = UIEdgeInsets(top: Constants.topContentInset, left: 0, bottom: Constants.bottomContentInset, right: 0)
         return tableView
     }()
 
     private var chats: [AIChatSuggestion] {
         viewModel.filteredSuggestions
     }
+
+    private var escapeHatchHostingController: UIHostingController<ReturnToTabCard>?
+    private var currentEscapeHatchModel: EscapeHatchModel?
+    private var currentEscapeHatchTargetTabIndex: Int?
 
     // MARK: - Initialization
 
@@ -102,6 +114,56 @@ final class AIChatHistoryListViewController: UIViewController {
                 self?.tableView.reloadData()
             }
             .store(in: &cancellables)
+    }
+
+    /// When the chat list is shown in OmniBar editing state, the escape hatch card can be shown at the top and scrolls with the list. Pass nil to hide.
+    func setEscapeHatch(_ model: EscapeHatchModel?, targetTabIndex: Int, onTapped: (() -> Void)?) {
+        if model == currentEscapeHatchModel && targetTabIndex == currentEscapeHatchTargetTabIndex {
+            return
+        }
+        currentEscapeHatchModel = model
+        currentEscapeHatchTargetTabIndex = model != nil ? targetTabIndex : nil
+
+        if let model, let onTapped {
+            let card = ReturnToTabCard(model: model, onTap: onTapped)
+            let hosting = UIHostingController(rootView: card)
+            hosting.view.backgroundColor = .clear
+            escapeHatchHostingController = hosting
+
+            addChild(hosting)
+
+            let wrapper = UIView()
+            wrapper.backgroundColor = UIColor(designSystemColor: .background)
+            hosting.view.translatesAutoresizingMaskIntoConstraints = false
+            wrapper.addSubview(hosting.view)
+
+            let horizontalInset: CGFloat = 16
+            NSLayoutConstraint.activate([
+                hosting.view.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor, constant: horizontalInset),
+                hosting.view.trailingAnchor.constraint(equalTo: wrapper.trailingAnchor, constant: -horizontalInset),
+                hosting.view.topAnchor.constraint(equalTo: wrapper.topAnchor, constant: Constants.escapeHatchTopPadding),
+                hosting.view.bottomAnchor.constraint(equalTo: wrapper.bottomAnchor, constant: -Constants.escapeHatchBottomPadding)
+            ])
+
+            hosting.didMove(toParent: self)
+
+            let width = tableView.bounds.width > 0 ? tableView.bounds.width : view.bounds.width
+            let totalHeaderHeight = Constants.escapeHatchTopPadding + Constants.escapeHatchHeaderHeight + Constants.escapeHatchBottomPadding
+            wrapper.frame = CGRect(x: 0, y: 0, width: width, height: totalHeaderHeight)
+            UIView.performWithoutAnimation {
+                tableView.tableHeaderView = wrapper
+            }
+        } else {
+            if let hosting = escapeHatchHostingController {
+                hosting.willMove(toParent: nil)
+                hosting.view.removeFromSuperview()
+                hosting.removeFromParent()
+            }
+            escapeHatchHostingController = nil
+            UIView.performWithoutAnimation {
+                tableView.tableHeaderView = nil
+            }
+        }
     }
 
     private func configureCell(_ cell: UITableViewCell, with chat: AIChatSuggestion) {

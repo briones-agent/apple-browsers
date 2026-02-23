@@ -270,7 +270,7 @@ extension NewTabPageViewController {
 
             let nextSpec = dialogProvider.nextHomeScreenMessageNew()
             guard nextSpec != .subscriptionPromotion else {
-                chromeDelegate?.omniBar.endEditing()
+                chromeDelegate?.omniBar.endEditing(completion: nil)
                 showNextDaxDialog()
                 return
             }

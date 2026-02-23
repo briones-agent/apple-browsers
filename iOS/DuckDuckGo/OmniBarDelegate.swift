@@ -107,6 +107,15 @@ protocol OmniBarDelegate: AnyObject {
     func onExperimentalAddressBarClearPressed()
     func onExperimentalAddressBarCancelPressed()
     func dismissContextualSheetIfNeeded(completion: @escaping () -> Void)
+
+    /// When the user is on the NTP and the escape hatch feature is on, returns the model and target tab index for the OmniBar editing state. Nil when not applicable.
+    func escapeHatchForOmniBarEditingState() -> (model: EscapeHatchModel, targetTabIndex: Int)?
+
+    /// Called when the user taps the escape hatch card in the OmniBar editing state. Implementer should switch to the tab and dismiss the OmniBar.
+    func onEscapeHatchTapped(targetTabIndex: Int)
+
+    /// Called when the OmniBar leaves editing state (e.g. after dismiss). Implementer can refresh the address bar to match the current tab.
+    func omniBarDidEndEditing()
 }
 
 extension OmniBarDelegate {
@@ -179,5 +188,15 @@ extension OmniBarDelegate {
 
     func dismissContextualSheetIfNeeded(completion: @escaping () -> Void) {
         completion()
+    }
+
+    func escapeHatchForOmniBarEditingState() -> (model: EscapeHatchModel, targetTabIndex: Int)? {
+        nil
+    }
+
+    func onEscapeHatchTapped(targetTabIndex: Int) {
+    }
+
+    func omniBarDidEndEditing() {
     }
 }

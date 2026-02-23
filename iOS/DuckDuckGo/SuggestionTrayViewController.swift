@@ -343,6 +343,11 @@ class SuggestionTrayViewController: UIViewController {
         autocompleteController = nil
     }
 
+    /// Forwards escape hatch to the embedded NTP when showing favorites (e.g. from OmniBar editing state). Pass nil to hide the card.
+    func setEscapeHatch(_ model: EscapeHatchModel?, targetTabIndex: Int) {
+        newTabPage?.setEscapeHatch(model, targetTabIndex: targetTabIndex)
+    }
+
     private func removeNewTabPage(animated: Bool) {
         guard let controller = newTabPage else { return }
         removeController(controller, animated: animated)

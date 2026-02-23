@@ -24,7 +24,7 @@ import Foundation
 /// **Most recently used tab rule:** When the current tab is the NTP (home), the tab to show in the
 /// escape hatch is the one we switched away from — i.e. the tab at index `currentIndex - 1`, only
 /// when `tabs.count > 1` and `currentIndex > 0`. If there is only one tab, no escape hatch is shown.
-struct EscapeHatchModel {
+struct EscapeHatchModel: Equatable {
 
     /// Display title (e.g. page title or "Duck.ai" for AI tab).
     let title: String

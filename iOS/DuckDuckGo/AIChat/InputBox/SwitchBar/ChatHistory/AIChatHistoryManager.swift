@@ -108,6 +108,11 @@ final class AIChatHistoryManager {
         fetchSuggestionsIfNeeded(query: "")
     }
 
+    /// When the chat list is shown in OmniBar editing state, the escape hatch card can be shown at the top. Pass nil to hide. onTapped is called when the user taps the card (pass the target tab index to your handler when setting the hatch).
+    func setEscapeHatch(_ model: EscapeHatchModel?, targetTabIndex: Int, onTapped: (() -> Void)?) {
+        historyViewController?.setEscapeHatch(model, targetTabIndex: targetTabIndex, onTapped: onTapped)
+    }
+
     /// Subscribes to text changes from a publisher with debounce and fetches filtered suggestions
     /// - Parameter textPublisher: A publisher that emits text changes
     func subscribeToTextChanges<P: Publisher>(_ textPublisher: P) where P.Output == String, P.Failure == Never {

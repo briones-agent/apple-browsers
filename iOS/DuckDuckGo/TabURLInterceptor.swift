@@ -57,7 +57,7 @@ final class TabURLInterceptorDefault: TabURLInterceptor {
     }
 
     static let interceptedURLs: [InterceptedURLInfo] = [
-        InterceptedURLInfo(id: .subscription, path: "/pro")
+        InterceptedURLInfo(id: .subscription, path: "/subscriptions")
     ]
     
     func allowsNavigatingTo(url: URL) -> Bool {

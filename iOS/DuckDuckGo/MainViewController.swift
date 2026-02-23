@@ -114,6 +114,9 @@ class MainViewController: UIViewController {
         newTabPageViewController != nil
     }
 
+    /// When the full-screen NTP is shown, we set the escape hatch with a specific "return to" tab index. We store it here so the OmniBar editing state can use the same target (buildEscapeHatch(tabSwitchedFromIndex:)) instead of the nil fallback (currentIndex - 1).
+    private var escapeHatchTargetTabIndexForCurrentNTP: Int?
+
     var autoClearInProgress = false
     var autoClearShouldRefreshUIAfterClear = true
 
@@ -1119,7 +1122,7 @@ class MainViewController: UIViewController {
     private func addLaunchTabNotificationObserver() {
         launchTabObserver = LaunchTabNotification.addObserver(handler: { [weak self] urlString in
             guard let self = self else { return }
-            viewCoordinator.omniBar.endEditing()
+            viewCoordinator.omniBar.endEditing(completion: nil)
             if let url = URL(trimmedAddressBarString: urlString, useUnifiedLogic: isUnifiedURLPredictionEnabled), url.isValid(usingUnifiedLogic: isUnifiedURLPredictionEnabled) {
                 self.loadUrlInNewTab(url, inheritedAttribution: nil)
             } else {
@@ -1181,6 +1184,26 @@ class MainViewController: UIViewController {
         )
     }
 
+    /// Shared escape hatch logic for NTP and OmniBar. Returns (model, targetTabIndex) when there is a valid tab to return to; callers check feature flag and (for OmniBar) that current tab is NTP.
+    private func buildEscapeHatch(tabSwitchedFromIndex: Int? = nil) -> (model: EscapeHatchModel, targetTabIndex: Int)? {
+        let tabs = tabManager.model.tabs
+        let currentIndex = tabManager.model.currentIndex
+        let targetIndex: Int?
+        if let fromIndex = tabSwitchedFromIndex,
+           tabs.indices.contains(fromIndex),
+           fromIndex != currentIndex {
+            targetIndex = fromIndex
+        } else if tabs.count > 1, currentIndex > 0 {
+            targetIndex = currentIndex - 1
+        } else {
+            targetIndex = nil
+        }
+        guard let targetIndex else { return nil }
+        let tab = tabManager.model.get(tabAt: targetIndex)
+        let model = Self.makeEscapeHatchModel(from: tab)
+        return (model, targetIndex)
+    }
+
     fileprivate func attachHomeScreen(isNewTab: Bool = false, allowingKeyboard: Bool = false, tabSwitchedFromIndex: Int? = nil) {
         guard !autoClearInProgress else { return }
         
@@ -1227,27 +1250,16 @@ class MainViewController: UIViewController {
         newTabPageViewController = controller
 
         if featureFlagger.isFeatureOn(.showNTPAfterIdleReturn) {
-            let tabs = tabManager.model.tabs
-            let currentIndex = tabManager.model.currentIndex
-            let targetIndex: Int?
-            if let fromIndex = tabSwitchedFromIndex,
-               tabs.indices.contains(fromIndex),
-               fromIndex != currentIndex {
-                targetIndex = fromIndex
-            } else if tabs.count > 1, currentIndex > 0 {
-                targetIndex = currentIndex - 1
-            } else {
-                targetIndex = nil
-            }
-            if let targetIndex {
-                let tab = tabManager.model.get(tabAt: targetIndex)
-                let escapeHatchModel = Self.makeEscapeHatchModel(from: tab)
-                controller.setEscapeHatch(escapeHatchModel, targetTabIndex: targetIndex)
+            if let hatch = buildEscapeHatch(tabSwitchedFromIndex: tabSwitchedFromIndex) {
+                controller.setEscapeHatch(hatch.model, targetTabIndex: hatch.targetTabIndex)
+                escapeHatchTargetTabIndexForCurrentNTP = hatch.targetTabIndex
             } else {
                 controller.setEscapeHatch(nil, targetTabIndex: 0)
+                escapeHatchTargetTabIndexForCurrentNTP = nil
             }
         } else {
             controller.setEscapeHatch(nil, targetTabIndex: 0)
+            escapeHatchTargetTabIndexForCurrentNTP = nil
         }
 
         addToContentContainer(controller: controller)
@@ -1287,6 +1299,7 @@ class MainViewController: UIViewController {
         newTabPageViewController?.willMove(toParent: nil)
         newTabPageViewController?.dismiss()
         newTabPageViewController = nil
+        escapeHatchTargetTabIndexForCurrentNTP = nil
     }
 
     @IBAction func onFirePressed() {
@@ -1619,7 +1632,7 @@ class MainViewController: UIViewController {
         // prepopulate VC for current tab if needed
         if let currentTab = tabManager.current(createIfNeeded: true) {
             select(tab: currentTab)
-            viewCoordinator.omniBar.endEditing()
+            viewCoordinator.omniBar.endEditing(completion: nil)
         } else {
             attachHomeScreen()
         }
@@ -1710,7 +1723,7 @@ class MainViewController: UIViewController {
 
     func dismissOmniBar() {
         hideSuggestionTray()
-        viewCoordinator.omniBar.endEditing()
+        viewCoordinator.omniBar.endEditing(completion: nil)
         refreshOmniBar()
     }
 
@@ -2805,6 +2818,23 @@ extension MainViewController: OmniBarDelegate {
         loadUrlInNewTab(url, inheritedAttribution: nil)
     }
 
+    func escapeHatchForOmniBarEditingState() -> (model: EscapeHatchModel, targetTabIndex: Int)? {
+        guard featureFlagger.isFeatureOn(.showNTPAfterIdleReturn),
+              tabManager.model.currentTab?.link == nil else {
+            return nil
+        }
+        return buildEscapeHatch(tabSwitchedFromIndex: escapeHatchTargetTabIndexForCurrentNTP)
+    }
+
+    func onEscapeHatchTapped(targetTabIndex: Int) {
+        select(tabAt: targetTabIndex)
+        viewCoordinator.omniBar.endEditing(completion: nil)
+    }
+
+    func omniBarDidEndEditing() {
+        refreshControls()
+    }
+
     func didRequestCurrentURL() -> URL? {
         return currentTab?.url
     }
@@ -3223,7 +3253,7 @@ extension MainViewController: OmniBarDelegate {
         hideSuggestionTray()
 
         if let currentTab, aiChatContextualModeFeature.isAvailable, newTabPageViewController == nil {
-            omniBar.endEditing()
+            omniBar.endEditing(completion: nil)
             currentTab.presentContextualAIChatSheet(from: self)
         } else {
             openAIChatFromAddressBar()
@@ -3250,7 +3280,7 @@ extension MainViewController: OmniBarDelegate {
 
         let isEditing = omniBar.isTextFieldEditing
         let textFieldValue = omniBar.text
-        omniBar.endEditing()
+        omniBar.endEditing(completion: nil)
 
         OpenAIChatFromAddressBarHandling().determineOpeningStrategy(
             isTextFieldEditing: isEditing,
@@ -4085,7 +4115,7 @@ extension MainViewController: FireExecutorDelegate {
     }
     
     func willStartBurningTabs(fireRequest: FireRequest) {
-        omniBar.endEditing()
+        omniBar.endEditing(completion: nil)
         findInPageView?.done()
     }
     

@@ -36,7 +36,7 @@ protocol OmniBar: AnyObject {
     func refreshText(forUrl url: URL?, forceFullURL: Bool)
 
     func beginEditing(animated: Bool, forTextEntryMode textEntryMode: TextEntryMode)
-    func endEditing()
+    func endEditing(completion: (() -> Void)?)
 
     func showSeparator()
     func hideSeparator()

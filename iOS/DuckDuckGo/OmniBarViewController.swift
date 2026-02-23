@@ -358,8 +358,9 @@ class OmniBarViewController: UIViewController, OmniBar {
         textField.becomeFirstResponder()
     }
 
-    func endEditing() {
+    func endEditing(completion: (() -> Void)?) {
         textField.resignFirstResponder()
+        completion?()
     }
 
     func refreshText(forUrl url: URL?, forceFullURL: Bool) {

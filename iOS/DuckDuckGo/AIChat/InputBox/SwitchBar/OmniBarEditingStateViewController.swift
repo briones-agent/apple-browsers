@@ -40,6 +40,10 @@ protocol OmniBarEditingStateViewControllerDelegate: AnyObject {
     func onVoiceSearchRequested(from mode: TextEntryMode)
     func onChatHistorySelected(url: URL)
     func onDismissRequested()
+    /// Called when the user taps the escape hatch card. Implementer should switch to the tab and dismiss the OmniBar.
+    func onEscapeHatchTapped(targetTabIndex: Int)
+    /// Returns the current escape hatch (same logic as full-screen NTP) so the editing state can show the latest "return to" tab. Called when updating placements.
+    func currentEscapeHatchForEditingState() -> (model: EscapeHatchModel, targetTabIndex: Int)?
 }
 
 /// Main coordinator for the OmniBar editing state, managing multiple specialized components
@@ -99,6 +103,9 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
     private let switchBarSubmissionMetrics: SwitchBarSubmissionMetricsProviding
 
     private weak var contentAnimator: UIViewPropertyAnimator?
+
+    /// When true, we deferred focus in viewWillAppear to avoid keyboard moving the logo during the presentation transition.
+    private var didDeferFocusForPresentationTransition: Bool = false
 
     // MARK: - Initialization
 
@@ -164,6 +171,19 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
 
         DailyPixel.fireDailyAndCount(pixel: .aiChatInternalSwitchBarDisplayed)
         DailyPixel.fireDailyAndCount(pixel: .aiChatExperimentalOmnibarShown)
+
+        updateDaxVisibility()
+        updateSwipeContainerSafeArea()
+
+        if didDeferFocusForPresentationTransition {
+            didDeferFocusForPresentationTransition = false
+            switchBarVC.focusTextField()
+            if automaticallySelectsTextOnAppear {
+                DispatchQueue.main.async {
+                    self.switchBarVC.textEntryViewController.selectAllText()
+                }
+            }
+        }
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -203,8 +223,11 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         let horizontalMargin: CGFloat = isHorizontallyCompactLayoutEnabled ? Constants.horizontalMarginForCompactLayout : 0
         self.contentContainerViewLeadingConstraint?.constant = horizontalMargin
         self.contentContainerViewTrailingConstraint?.constant = -horizontalMargin
-        self.updateDaxVisibility()
-        self.updateLayoutForCurrentOrientation()
+
+        if !isBeingPresented {
+            updateDaxVisibility()
+            updateLayoutForCurrentOrientation()
+        }
 
         self.navigationActionBarManager?.navigationActionBarViewController?.isShowingGradient = !isHorizontallyCompactLayoutEnabled && isUsingTopBarPosition
     }
@@ -303,6 +326,9 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
 
         let manager = SuggestionTrayManager(switchBarHandler: switchBarHandler, dependencies: dependencies)
         manager.delegate = self
+        manager.onEscapeHatchTapped = { [weak self] index in
+            self?.delegate?.onEscapeHatchTapped(targetTabIndex: index)
+        }
         manager.installInContainerView(searchContainer, parentViewController: containerViewController)
         suggestionTrayManager = manager
     }
@@ -524,17 +550,50 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         let shouldDisplayFavoritesOverlay = suggestionTrayManager?.shouldDisplayFavoritesOverlay == true
         let isHorizontallyCompactLayoutEnabled = requiresHorizontallyCompactLayout(for: view.bounds.size)
         let isShowingChatHistory = aiChatHistoryManager?.hasSuggestions == true
+        let hasEscapeHatch = delegate?.currentEscapeHatchForEditingState() != nil
 
-        let isHomeDaxVisible = !shouldDisplaySuggestionTray && !shouldDisplayFavoritesOverlay && !isHorizontallyCompactLayoutEnabled
+        let isAIChatMode = switchBarHandler.currentToggleState == .aiChat
+        let trayWithNTPVisible = switchBarHandler.currentToggleState == .search && !shouldDisplaySuggestionTray
+        // When on Duck.ai the chat list is the content; don't show the managed logo so it doesn't flash when switching to Search (where the NTP logo appears in the tray).
+        let isHomeDaxVisible = !isAIChatMode && !shouldDisplaySuggestionTray && !shouldDisplayFavoritesOverlay && !isHorizontallyCompactLayoutEnabled && !trayWithNTPVisible
 
+        // Having the escape hatch card is like having chat messages: we have content on the AI side, so never show the Dax logo there (avoids flash when switching to Duck.ai).
+        let hasContentOnAISide = isShowingChatHistory || hasEscapeHatch
         let isAIDaxVisible: Bool
-        if switchBarHandler.isUsingFadeOutAnimation {
-            isAIDaxVisible = !isHorizontallyCompactLayoutEnabled && !isShowingChatHistory
+        if isAIChatMode {
+            isAIDaxVisible = false
+        } else if switchBarHandler.isUsingFadeOutAnimation {
+            isAIDaxVisible = !isHorizontallyCompactLayoutEnabled && !hasContentOnAISide
         } else {
-            isAIDaxVisible = !shouldDisplaySuggestionTray && !isHorizontallyCompactLayoutEnabled && !isShowingChatHistory
+            isAIDaxVisible = !shouldDisplaySuggestionTray && !isHorizontallyCompactLayoutEnabled && !hasContentOnAISide
         }
 
         daxLogoManager.updateVisibility(isHomeDaxVisible: isHomeDaxVisible, isAIDaxVisible: isAIDaxVisible)
+        updateEscapeHatchPlacements()
+    }
+
+    private func updateEscapeHatchPlacements() {
+//        let isSearchMode = switchBarHandler.currentToggleState == .search
+//        let showingTrayWithNTP = isSearchMode && (suggestionTrayManager?.shouldDisplaySuggestionTray == false)
+        let hatch = delegate?.currentEscapeHatchForEditingState()
+
+        suggestionTrayManager?.suggestionTrayViewController?.setEscapeHatch(hatch?.model, targetTabIndex: hatch?.targetTabIndex ?? 0)
+
+//        if showingTrayWithNTP, let hatch = hatch {
+//            suggestionTrayManager?.suggestionTrayViewController?.setEscapeHatch(hatch.model, targetTabIndex: hatch.targetTabIndex)
+//        } else {
+//            suggestionTrayManager?.suggestionTrayViewController?.setEscapeHatch(nil, targetTabIndex: 0)
+//        }
+//
+//        // Always set the hatch on the chat list when we have one so it is already there when switching to Duck.ai (avoids flash). When on Search the chat container is hidden.
+//        if let hatch = hatch {
+//            let targetTabIndex = hatch.targetTabIndex
+            aiChatHistoryManager?.setEscapeHatch(hatch?.model, targetTabIndex: hatch?.targetTabIndex ?? 0) { [weak self] in
+                self?.delegate?.onEscapeHatchTapped(targetTabIndex: hatch?.targetTabIndex ?? 0)
+            }
+//        } else {
+//            aiChatHistoryManager?.setEscapeHatch(nil, targetTabIndex: 0, onTapped: nil)
+//        }
     }
 }
 
@@ -557,6 +616,7 @@ extension OmniBarEditingStateViewController: SwipeContainerViewControllerDelegat
 
     func swipeContainerViewController(_ controller: SwipeContainerViewController, didSwipeToMode mode: TextEntryMode) {
         switchBarHandler.setToggleState(mode)
+        updateDaxVisibility()
     }
 
     func swipeContainerViewController(_ controller: SwipeContainerViewController, didUpdateScrollProgress progress: CGFloat) {
@@ -573,6 +633,7 @@ extension OmniBarEditingStateViewController: FadeOutContainerViewControllerDeleg
 
     func fadeOutContainerViewController(_ controller: FadeOutContainerViewController, didTransitionToMode mode: TextEntryMode) {
         switchBarHandler.setToggleState(mode)
+        updateDaxVisibility()
     }
 
     func fadeOutContainerViewController(_ controller: FadeOutContainerViewController, didUpdateTransitionProgress progress: CGFloat) {

@@ -89,6 +89,7 @@ final class UniversalOmniBarEditingStateTransition: NSObject, UIViewControllerAn
         }
 
         transitionContext.containerView.addSubview(toVC.view)
+        toVC.view.frame = transitionContext.finalFrame(for: toVC)
 
         // Let the VC adjust to the initial size of the textView
         toVC.switchBarVC.view.layoutIfNeeded()
