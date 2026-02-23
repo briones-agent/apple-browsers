@@ -378,8 +378,7 @@ final class AIChatCoordinator: AIChatCoordinating {
             return
         }
 
-        if let controller = session.floatingWindowController {
-            controller.show()
+        if session.floatingWindowController != nil {
             return
         }
 
@@ -403,6 +402,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         }
         session.floatingWindowController = controller
         session.state.floatingWindowFrame = frame
+        // Show only when re-creating a missing floating window (e.g. restoration path).
         controller.show()
         chatFloatingStateDidChangeSubject.send(tabID)
     }
