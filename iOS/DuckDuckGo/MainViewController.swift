@@ -3448,6 +3448,10 @@ extension MainViewController: NewTabPageControllerDelegate {
     }
 
     func newTabPageDidRequestSwitchToTab(_ controller: NewTabPageViewController, index: Int) {
+        guard tabManager.model.tabs.indices.contains(index) else {
+            controller.setEscapeHatch(nil, targetTabIndex: 0)
+            return
+        }
         select(tabAt: index)
     }
 }
