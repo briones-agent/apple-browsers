@@ -62,6 +62,12 @@ final class AIChatViewController: NSViewController {
     weak var delegate: AIChatViewControllerDelegate?
     var tabID: TabIdentifier?
     public var aiChatPayload: AIChatPayload?
+    var isChatFloatingEnabled = true {
+        didSet {
+            guard isViewLoaded else { return }
+            updateTopBarForHostingContext()
+        }
+    }
     private(set) var currentAIChatURL: URL
 
     let themeManager: ThemeManaging
@@ -321,7 +327,7 @@ final class AIChatViewController: NSViewController {
     private func updateTopBarForHostingContext() {
         let isFloating = view.window is AIChatFloatingWindow
         openInNewTabButton.isHidden = isFloating
-        detachButton.isHidden = isFloating
+        detachButton.isHidden = isFloating || !isChatFloatingEnabled
         attachButton.isHidden = !isFloating
         closeButton.isHidden = isFloating
         titleLabel.isHidden = isFloating

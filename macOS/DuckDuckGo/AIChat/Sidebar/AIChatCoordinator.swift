@@ -224,6 +224,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         let session = sessionStore.getOrCreateSession(for: tabID, burnerMode: sidebarHost.burnerMode)
         let chatViewController = session.chatViewController ?? session.makeChatViewController(tabID: tabID)
 
+        chatViewController.isChatFloatingEnabled = isChatFloatingEnabled
         chatViewController.delegate = self
         sidebarHost.embedChatViewController(chatViewController, for: nil)
         session.state.setSidebar()
@@ -384,6 +385,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         }
 
         let chatViewController = session.chatViewController ?? session.makeChatViewController(tabID: tabID)
+        chatViewController.isChatFloatingEnabled = isChatFloatingEnabled
         chatViewController.delegate = self
         chatViewController.removeCompletely()
 
