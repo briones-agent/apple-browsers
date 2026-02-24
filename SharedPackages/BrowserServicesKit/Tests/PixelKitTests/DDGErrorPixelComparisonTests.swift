@@ -131,7 +131,7 @@ final class DDGErrorPixelComparisonTests: XCTestCase {
             defaultHeaders: [:],
             dailyPixelCalendar: nil,
             defaults: userDefaults()
-        ) { pixelName, headers, parameters, _, _, _ in
+        ) { pixelName, headers, parameters, _, _, _, _ in
             print("DEBUG: FireRequest called #\(callCount + 1) for pixel: \(pixelName) with parameters: \(parameters)")
             callCount += 1
             if ddgErrorParams == nil {
@@ -182,7 +182,7 @@ final class DDGErrorPixelComparisonTests: XCTestCase {
             defaultHeaders: [:],
             dailyPixelCalendar: nil,
             defaults: userDefaults()
-        ) { _, _, parameters, _, _, _ in
+        ) { _, _, parameters, _, _, _, _ in
             if ddgErrorParams == nil {
                 ddgErrorParams = parameters
             } else {
@@ -247,7 +247,7 @@ final class DDGErrorPixelComparisonTests: XCTestCase {
             defaultHeaders: [:],
             dailyPixelCalendar: nil,
             defaults: userDefaults()
-        ) { _, _, parameters, _, _, _ in
+        ) { _, _, parameters, _, _, _, _ in
             if ddgErrorParams == nil {
                 ddgErrorParams = parameters
             } else {
@@ -300,7 +300,7 @@ final class DDGErrorPixelComparisonTests: XCTestCase {
             defaultHeaders: [:],
             dailyPixelCalendar: nil,
             defaults: userDefaults()
-        ) { _, _, parameters, _, _, _ in
+        ) { _, _, parameters, _, _, _, _ in
             wrappedErrorParams = parameters
         }
 
