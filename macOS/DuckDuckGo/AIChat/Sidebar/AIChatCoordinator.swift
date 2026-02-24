@@ -300,7 +300,7 @@ final class AIChatCoordinator: AIChatCoordinating {
     private func handleAIChatHandoff(with payload: AIChatPayload) {
         guard let currentTabID = sidebarHost.currentTabID else { return }
 
-        if isSidebarOpen(for: currentTabID) {
+        if isChatPresented(for: currentTabID) {
             aiChatTabOpener.openAIChatTab(with: .payload(payload), behavior: .newTab(selected: true))
         } else {
             /// https://app.asana.com/1/137249556945/project/276630244458377/task/1211982069731816
@@ -319,6 +319,11 @@ final class AIChatCoordinator: AIChatCoordinating {
                 frequency: .dailyAndStandard
             )
         }
+    }
+
+    private func isChatPresented(for tabID: TabIdentifier) -> Bool {
+        guard let mode = sessionStore.sessions[tabID]?.state.presentationMode else { return false }
+        return mode != .hidden
     }
 
     // MARK: - UI Teardown
