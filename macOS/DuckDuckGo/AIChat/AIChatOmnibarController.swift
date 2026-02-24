@@ -234,7 +234,6 @@ final class AIChatOmnibarController {
         currentFetchTask = nil
         modelsFetchTask?.cancel()
         modelsFetchTask = nil
-        models = []
         suggestionsReader?.tearDown()
     }
 
