@@ -83,10 +83,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// Constraint for suggestions view height
     private var suggestionsHeightConstraint: NSLayoutConstraint?
 
-    /// Model picker trailing constraints - toggled based on submit button visibility
-    private var modelPickerToSubmitConstraint: NSLayoutConstraint?
-    private var modelPickerToContainerConstraint: NSLayoutConstraint?
-
     /// Attachments container height constraint - 0 when empty
     private var attachmentsHeightConstraint: NSLayoutConstraint?
 
@@ -189,7 +185,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         textChangeCancellable = omnibarController.$currentText
             .receive(on: DispatchQueue.main)
             .sink { [weak self] text in
-                self?.updateSubmitButtonVisibility(for: text)
+                self?.updateSubmitButtonState(for: text)
             }
     }
 
@@ -201,18 +197,24 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             }
     }
 
-    private func updateSubmitButtonVisibility(for text: String) {
+    private func updateSubmitButtonState(for text: String) {
         let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        submitButton.isHidden = !hasText
+        applySubmitButtonAppearance(enabled: hasText)
+    }
 
-        // Reposition model picker: next to submit button or at container edge
-        // Deactivate first to avoid conflicting constraints
-        if hasText {
-            modelPickerToContainerConstraint?.isActive = false
-            modelPickerToSubmitConstraint?.isActive = true
-        } else {
-            modelPickerToSubmitConstraint?.isActive = false
-            modelPickerToContainerConstraint?.isActive = true
+    private func applySubmitButtonAppearance(enabled: Bool) {
+        submitButton.isEnabled = enabled
+
+        NSAppearance.withAppAppearance {
+            if enabled {
+                submitButton.layer?.backgroundColor = NSColor(designSystemColor: .accentPrimary).cgColor
+                submitButton.normalTintColor = .white
+                submitButton.mouseOverTintColor = NSColor(designSystemColor: .buttonsPrimaryText).withAlphaComponent(0.8)
+            } else {
+                submitButton.layer?.backgroundColor = NSColor.clear.cgColor
+                submitButton.normalTintColor = NSColor.secondaryLabelColor
+                submitButton.mouseOverTintColor = NSColor.secondaryLabelColor
+            }
         }
     }
 
@@ -274,7 +276,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
 
         submitButton.image = DesignSystemImages.Glyphs.Size12.arrowRight
         submitButton.imagePosition = .imageOnly
-        submitButton.isHidden = true  // Initially hidden until text is entered
         submitButton.toolTip = UserText.aiChatSendButtonTooltip
         containerView.addSubview(submitButton)
 
@@ -341,10 +342,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         attachmentsHeightConstraint?.isActive = true
 
         // Model picker trailing: next to submit button when visible, or near container edge when hidden
-        modelPickerToSubmitConstraint = modelPickerButton.trailingAnchor.constraint(equalTo: submitButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing)
-        modelPickerToContainerConstraint = modelPickerButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -Constants.submitButtonTrailingInset)
-        modelPickerToSubmitConstraint?.isActive = false
-        modelPickerToContainerConstraint?.isActive = true
+        // Submit button is always visible, so model picker always sits to its left
+        modelPickerButton.trailingAnchor.constraint(equalTo: submitButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing).isActive = true
 
         applyTheme(theme: themeManager.theme)
     }
@@ -649,11 +648,9 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             backgroundView.borderColor = borderColor
         }
 
-        submitButton.layer?.backgroundColor = colorsProvider.accentPrimaryColor.cgColor
         submitButton.layer?.cornerRadius = Constants.submitButtonCornerRadius
-
-        submitButton.normalTintColor = .white
-        submitButton.mouseOverTintColor = NSColor(designSystemColor: .buttonsPrimaryText).withAlphaComponent(0.8)
+        // Colour is set dynamically by applySubmitButtonAppearance based on enabled state
+        applySubmitButtonAppearance(enabled: !omnibarController.currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
         let toolButtonTintColor = NSColor(designSystemColor: .textPrimary)
         imageUploadButton.tintColor = toolButtonTintColor

@@ -199,11 +199,10 @@ final class AIChatOmnibarController {
         preferences.selectedModelId ?? models.first(where: { $0.entityHasAccess })?.id ?? ""
     }
 
-    /// The model ID to include in the prompt. Returns nil when models are unavailable,
-    /// so the backend uses its default model.
+    /// The model ID to include in the prompt. Returns nil if the user has never
+    /// explicitly selected a model, so the backend uses its default.
     var currentModelId: String? {
-        guard !models.isEmpty else { return nil }
-        return preferences.selectedModelId
+        preferences.selectedModelId
     }
 
     /// Whether the currently selected model supports image upload.
