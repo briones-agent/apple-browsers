@@ -56,6 +56,12 @@ final class AIChatOmnibarToolButton: NSView {
         }
     }
 
+    var isEnabled: Bool = true {
+        didSet {
+            updateAppearance()
+        }
+    }
+
     var hoverBackgroundColor: NSColor = .clear
     var pressedBackgroundColor: NSColor = .clear
 
@@ -144,6 +150,13 @@ final class AIChatOmnibarToolButton: NSView {
         CATransaction.setDisableActions(true)
 
         NSAppearance.withAppAppearance {
+            guard isEnabled else {
+                backgroundLayer.opacity = 0
+                iconImageView.contentTintColor = NSColor.secondaryLabelColor
+                CATransaction.commit()
+                return
+            }
+
             // For toggle buttons, skip the pressed effect - just show toggled or normal state
             let showPressedEffect = isMouseDown && !togglesOnClick
 
@@ -215,7 +228,7 @@ final class AIChatOmnibarToolButton: NSView {
 
     override func mouseUp(with event: NSEvent) {
         let locationInView = convert(event.locationInWindow, from: nil)
-        if bounds.contains(locationInView) && isMouseDown {
+        if bounds.contains(locationInView) && isMouseDown && isEnabled {
             if togglesOnClick {
                 isToggled.toggle()
             }

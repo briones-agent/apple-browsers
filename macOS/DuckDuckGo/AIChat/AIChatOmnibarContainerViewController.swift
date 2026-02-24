@@ -53,7 +53,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         static let submitButtonTrailingInset: CGFloat = 13
         static let submitButtonBottomInset: CGFloat = 8
         static let toolButtonSize: CGFloat = 28
-        static let toolButtonLeadingInset: CGFloat = 10
+        static let toolButtonLeadingInset: CGFloat = 11
         static let toolButtonSpacing: CGFloat = 3
         static let toolButtonBottomInset: CGFloat = 8
         static let modelPickerTrailingSpacing: CGFloat = 4
@@ -219,11 +219,11 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     }
 
     private func updateToolButtonsVisibility(isEnabled: Bool) {
+        imageUploadButton.isHidden = !isEnabled
         if isEnabled {
-            imageUploadButton.isHidden = attachmentsContainerView.isFull || !omnibarController.selectedModelSupportsImageUpload
+            imageUploadButton.isEnabled = !attachmentsContainerView.isFull && omnibarController.selectedModelSupportsImageUpload
             modelPickerButton.isHidden = omnibarController.models.isEmpty
         } else {
-            imageUploadButton.isHidden = true
             modelPickerButton.isHidden = true
         }
         attachmentsContainerView.isHidden = !isEnabled
@@ -545,9 +545,9 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             ? Constants.attachmentsRowHeight + Constants.attachmentsBottomSpacing
             : 0
 
-        // Hide the upload button when at max attachments or model doesn't support images
+        // Disable the upload button when at max attachments or model doesn't support images
         if omnibarController.isOmnibarToolsEnabled {
-            imageUploadButton.isHidden = attachmentsContainerView.isFull || !omnibarController.selectedModelSupportsImageUpload
+            imageUploadButton.isEnabled = !attachmentsContainerView.isFull && omnibarController.selectedModelSupportsImageUpload
         }
 
         onPassthroughHeightNeedsUpdate?()
@@ -630,10 +630,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
 
         if !supportsImageUpload {
             clearAttachments()
-            imageUploadButton.isHidden = true
-        } else {
-            imageUploadButton.isHidden = attachmentsContainerView.isFull
         }
+        imageUploadButton.isEnabled = supportsImageUpload && !attachmentsContainerView.isFull
     }
 
     private func applyTheme(theme: ThemeStyleProviding) {
