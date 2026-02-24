@@ -30,7 +30,7 @@ final class InstallationAttributionPixelHandlerTests: XCTestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
         capturedParams = PixelCapturedParameters()
-        fireRequest = { event, frequency, headers, parameters, namePrefix, reservedCharacters, includeAppVersion, doNotEnforcePrefix, onComplete in
+        fireRequest = { event, frequency, headers, parameters, _, namePrefix, reservedCharacters, includeAppVersion, doNotEnforcePrefix, onComplete in
             self.capturedParams.event = event
             self.capturedParams.frequency = frequency
             self.capturedParams.headers = headers
