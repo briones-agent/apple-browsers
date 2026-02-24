@@ -23,6 +23,7 @@ import AutoconsentStats
 import Bookmarks
 import BrokenSitePrompt
 import BrowserServicesKit
+import MetricsAggregatorMac
 import Cocoa
 import Combine
 import Common
@@ -220,6 +221,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let privacyStats: PrivacyStatsCollecting
     let autoconsentStats: AutoconsentStatsCollecting
+    /// SQLite-backed aggregator for counter/gauge metrics and pixel outbox. Nil when run type does not require environment (e.g. tests).
+    let metricsAggregator: MetricsAggregator?
+    private var metricsAggregatorCollectionTimer: Timer?
     private var autoconsentEventCoordinator: AutoconsentEventCoordinator?
     let activeRemoteMessageModel: ActiveRemoteMessageModel
     let newTabPageCustomizationModel: NewTabPageCustomizationModel
@@ -1002,6 +1006,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         privacyStats = PrivacyStats(databaseProvider: PrivacyStatsDatabase())
 #endif
         autoconsentStats = AutoconsentStats(keyValueStore: keyValueStore, isFeatureEnabled: { featureFlagger.isFeatureOn(.newTabPageAutoconsentStats) })
+        if AppVersion.runType.requiresEnvironment {
+            do {
+                metricsAggregator = try MetricsAggregator(databaseURL: nil)
+            } catch {
+                PixelKit.fire(DebugEvent(GeneralPixel.keyValueFileStoreInitError, error: error))
+                Thread.sleep(forTimeInterval: 1)
+                fatalError("Could not initialize MetricsAggregator: \(error.localizedDescription)")
+            }
+        } else {
+            metricsAggregator = nil
+        }
         autoconsentEventCoordinator = Self.makeAutoconsentEventCoordinator(
             autoconsentStats: autoconsentStats,
             historyCoordinating: historyCoordinator,
@@ -1139,6 +1154,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     // swiftlint:enable cyclomatic_complexity
 
+    private func startMetricsAggregatorCollectionTask() {
+        guard let aggregator = metricsAggregator else { return }
+        let interval: TimeInterval = 30
+        metricsAggregatorCollectionTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            DispatchQueue.global(qos: .utility).async { [weak self] in
+                self?.runMetricsAggregatorCollectionAndLogPending(aggregator: aggregator)
+            }
+        }
+        metricsAggregatorCollectionTimer?.tolerance = 5
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            self?.runMetricsAggregatorCollectionAndLogPending(aggregator: aggregator)
+        }
+    }
+
+    private func runMetricsAggregatorCollectionAndLogPending(aggregator: MetricsAggregator) {
+        do {
+            let collected = try aggregator.collectMetrics()
+            let pending = try aggregator.pendingPixels(limit: 100)
+            Logger.general.debug(
+                "MetricsAggregator: collected \(collected) pixel(s), pending \(pending.count): \(pending.map { "\($0.start) - \($0.pixel)(\($0.parameters))" })"
+            )
+        } catch {
+            Logger.general.error("MetricsAggregator collection failed: \(error.localizedDescription)")
+        }
+    }
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         /// Check for reinstalling user by comparing bundle creation dates.
         /// Stores the bundle's creation date in the KeyValueStore and compares
@@ -1193,6 +1234,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         defer {
             didFinishLaunching = true
         }
+
+        startMetricsAggregatorCollectionTask()
 
         Task {
             await subscriptionManager.loadInitialData()

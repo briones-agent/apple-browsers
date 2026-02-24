@@ -50,6 +50,7 @@ let package = Package(
         .library(name: "PageRefreshMonitor", targets: ["PageRefreshMonitor"]),
         .library(name: "PrivacyStats", targets: ["PrivacyStats"]),
         .library(name: "AutoconsentStats", targets: ["AutoconsentStats"]),
+        .library(name: "GRDB", targets: ["GRDB"]),
         .library(name: "SharedObjCTestsUtils", targets: ["SharedObjCTestsUtils"]),
         .library(name: "WKAbstractions", targets: ["WKAbstractions"]),
     ],

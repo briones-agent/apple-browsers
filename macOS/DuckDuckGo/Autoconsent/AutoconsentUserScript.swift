@@ -25,6 +25,7 @@ import UserScript
 import WebKit
 import FeatureFlags
 import WebExtensions
+import MetricsAggregatorMac
 
 protocol AutoconsentUserScriptDelegate: AnyObject {
     func autoconsentUserScript(consentStatus: CookieConsentInfo)
@@ -53,6 +54,7 @@ final class AutoconsentUserScript: NSObject, WKScriptMessageHandlerWithReply, Us
     private let management: AutoconsentManagement
     private let featureFlagger: FeatureFlagger
     private let webExtensionAvailability: WebExtensionAvailabilityProviding?
+    private let metrics: MetricsAggregator?
 
     public var messageNames: [String] { MessageName.allCases.map(\.rawValue) }
     let source: String
@@ -84,6 +86,18 @@ final class AutoconsentUserScript: NSObject, WKScriptMessageHandlerWithReply, Us
         self.preferences = preferences
         self.featureFlagger = featureFlagger
         self.webExtensionAvailability = webExtensionAvailability
+        self.metrics = Application.appDelegate.metricsAggregator
+        do {
+            try self.metrics?.registerPixel("autoconsent", aggregationInterval: 120)
+            try self.metrics?.registerPixel("navigation", aggregationInterval: 600)
+            try self.metrics?.registerCounter(pixel: "navigation", name: "init", buckets: [
+                BucketRange(minInclusive: 1, maxExclusive: 3, name: "1-2"),
+                BucketRange(minInclusive: 3, maxExclusive: 6, name: "3-5"),
+                BucketRange(minInclusive: 5, maxExclusive: 11, name: "5-10"),
+                BucketRange(minInclusive: 11, maxExclusive: 21, name: "10-20"),
+                BucketRange(minInclusive: 21, name: "20+"),
+            ])
+        } catch {}
     }
 
     func userContentController(_ userContentController: WKUserContentController,
@@ -342,6 +356,7 @@ extension AutoconsentUserScript {
                 consentHeuristicEnabled: consentHeuristicEnabled
             )
             firePixel(pixel: .acInit)
+            try? self.metrics?.increment(pixel: "navigation", name: "init")
         }
         let remoteConfig = self.config.settings(for: .autoconsent)
         let disabledCMPs = remoteConfig["disabledCMPs"] as? [String] ?? []
@@ -669,11 +684,12 @@ extension AutoconsentUserScript {
                 self.management.pixelCounter = [:]
                 self.management.detectedByPatternsCache.removeAll()
                 self.management.detectedByBothCache.removeAll()
-                self.management.detectedOnlyRulesCache.removeAll()
+                self.management.detectedOnlyRulesCache.removeAll()                
             }
         }
         // increment counter
         management.pixelCounter[pixel.key, default: 0] += 1
+        try? self.metrics?.increment(pixel: "autoconsent", name: pixel.key)
 
         // fire daily pixel if needed
         PixelKit.fire(pixel, frequency: .daily, withAdditionalParameters: additionalParams)
