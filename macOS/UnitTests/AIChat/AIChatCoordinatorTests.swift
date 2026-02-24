@@ -665,7 +665,7 @@ final class AIChatCoordinatorTests: XCTestCase {
         let controller = mockSessionStore.sessions[tabID]!.floatingWindowController!
 
         // When
-        coordinator.floatingWindowDidClose(controller)
+        coordinator.floatingWindowDidClose(controller, initiatedByUser: true)
 
         // Then
         let session = mockSessionStore.sessions[tabID]

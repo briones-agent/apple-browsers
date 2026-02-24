@@ -67,6 +67,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866474376005
     case webExtensions
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213380159275576
+    case embeddedExtension
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866616130440
     case syncSeamlessAccountSwitching
 
@@ -154,9 +157,6 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866720018164
     case syncFeatureLevel3
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866720557742
-    case themes
-
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866619633097
     case appStoreUpdateFlow
 
@@ -198,9 +198,6 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1201141132935289/task/1210497696306780?focus=true
     case standaloneMigration
-
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212014826835069?focus=true
-    case newTabPageAutoconsentStats
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211998614203544?focus=true
     case allowProTierPurchase
@@ -305,6 +302,10 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213279513677422
     case aiChatSidebarFloating
+
+    /// Startup Metrics Feature Flag
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213380840527060
+    case startupMetrics
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -336,7 +337,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .warnBeforeQuit,
                 .wideEventPostEndpoint,
                 .memoryPressureReporting,
-                .themes,
                 .crashCollectionDisableKeysSorting,
                 .crashCollectionLimitCallStackTreeDepth,
                 .memoryUsageReporting,
@@ -365,6 +365,7 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .networkProtectionAppStoreSysexMessage,
                 .syncSeamlessAccountSwitching,
                 .webExtensions,
+                .embeddedExtension,
                 .autoUpdateInDEBUG,
                 .autoUpdateInREVIEW,
                 .updatesWontAutomaticallyRestartApp,
@@ -398,7 +399,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .dbpRemoteBrokerDelivery,
                 .dbpClickActionDelayReductionOptimization,
                 .syncFeatureLevel3,
-                .themes,
                 .appStoreUpdateFlow,
                 .unifiedURLPredictor,
                 .webKitPerformanceReporting,
@@ -413,7 +413,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .showHideAIGeneratedImagesSection,
                 .standaloneMigration,
                 .blackFridayCampaign,
-                .newTabPageAutoconsentStats,
                 .allowProTierPurchase,
                 .popupBlocking,
                 .extendedUserInitiatedPopupTimeout,
@@ -438,7 +437,8 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .freeTrialConversionWideEvent,
                 .supportsSyncChatsDeletion,
                 .aiChatSidebarResizable,
-                .aiChatSidebarFloating:
+                .aiChatSidebarFloating,
+                .startupMetrics:
             return true
         case .freemiumDBP,
                 .contextualOnboarding,
@@ -481,6 +481,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(AutofillSubfeature.partialFormSaves))
         case .webExtensions:
             return .internalOnly()
+        case .embeddedExtension:
+            return .remoteReleasable(.subfeature(WebExtensionsSubfeature.embeddedExtension))
         case .syncSeamlessAccountSwitching:
             return .remoteReleasable(.subfeature(SyncSubfeature.seamlessAccountSwitching))
         case .syncCreditCards:
@@ -543,8 +545,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(SyncSubfeature.newSyncEntryPoints))
         case .syncFeatureLevel3:
             return .remoteReleasable(.subfeature(SyncSubfeature.level3AllowCreateAccount))
-        case .themes:
-            return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.themes))
         case .appStoreUpdateFlow:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.appStoreUpdateFlow))
         case .unifiedURLPredictor:
@@ -571,8 +571,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(AIChatSubfeature.showHideAiGeneratedImages))
         case .standaloneMigration:
             return .remoteReleasable(.subfeature(AIChatSubfeature.standaloneMigration))
-        case .newTabPageAutoconsentStats:
-            return .remoteReleasable(.subfeature(HtmlNewTabPageSubfeature.autoconsentStats))
         case .allowProTierPurchase:
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.allowProTierPurchase))
         case .popupBlocking:
@@ -630,6 +628,8 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatSidebarResizable:
             return .remoteReleasable(.subfeature(AIChatSubfeature.sidebarResizable))
         case .aiChatSidebarFloating:
+            return .internalOnly()
+        case .startupMetrics:
             return .internalOnly()
         }
     }

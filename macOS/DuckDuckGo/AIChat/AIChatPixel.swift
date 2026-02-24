@@ -111,7 +111,6 @@ enum AIChatPixel: PixelKitEvent {
 
     /// Event Trigger: User clicks the floating title to activate associated tab.
     case aiChatSidebarFloatingTabActivated
-
     // MARK: - Summarization
 
     /// Event Trigger: User triggers summarize action (either via keyboard shortcut or a context menu action)
