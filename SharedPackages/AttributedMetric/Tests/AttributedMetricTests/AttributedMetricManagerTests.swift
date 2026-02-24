@@ -943,7 +943,7 @@ final class AttributedMetricManagerTests: XCTestCase {
     func testActiveSearchDaysSameDayDedup() {
         var pixelFireCount = 0
 
-        let fixture = createTestFixture { pixelName, _, _, _, _, _ in
+        let fixture = createTestFixture { pixelName, _, _, _, _, _, _ in
             if pixelName == "attributed_metric_active_past_week" {
                 pixelFireCount += 1
             }
@@ -984,7 +984,7 @@ final class AttributedMetricManagerTests: XCTestCase {
     func testAdClickThresholdNotBurnedOnEarlyReturn() {
         var pixelFireCount = 0
 
-        let fixture = createTestFixture { pixelName, _, _, _, _, _ in
+        let fixture = createTestFixture { pixelName, _, _, _, _, _, _ in
             if pixelName == "attributed_metric_average_ad_clicks_past_week" {
                 pixelFireCount += 1
             }
@@ -1033,7 +1033,7 @@ final class AttributedMetricManagerTests: XCTestCase {
     func testDuckAIChatSameDayDedupAndNextDayFire() {
         var pixelFireCount = 0
 
-        let fixture = createTestFixture { pixelName, _, _, _, _, _ in
+        let fixture = createTestFixture { pixelName, _, _, _, _, _, _ in
             if pixelName == "attributed_metric_average_duck_ai_usage_past_week" {
                 pixelFireCount += 1
             }
@@ -1070,7 +1070,7 @@ final class AttributedMetricManagerTests: XCTestCase {
     func testSearchCountThresholdNotBurnedWithNoData() {
         var pixelFireCount = 0
 
-        let fixture = createTestFixture { pixelName, _, _, _, _, _ in
+        let fixture = createTestFixture { pixelName, _, _, _, _, _, _ in
             if pixelName == "attributed_metric_average_searches_past_week_first_month" ||
                pixelName == "attributed_metric_average_searches_past_week" {
                 pixelFireCount += 1
@@ -1170,7 +1170,7 @@ final class AttributedMetricManagerTests: XCTestCase {
     func testPixelDoesNotFireTwiceWithin24hAcrossUTCMidnight() {
         var activeSearchPixelCount = 0
 
-        let fixture = createTestFixture { pixelName, _, _, _, _, _ in
+        let fixture = createTestFixture { pixelName, _, _, _, _, _, _ in
             if pixelName == "attributed_metric_active_past_week" {
                 activeSearchPixelCount += 1
             }
