@@ -380,6 +380,10 @@ final class AIChatCoordinator: AIChatCoordinating {
             return
         }
 
+        guard session.state.presentationMode == .floating else {
+            return
+        }
+
         if session.floatingWindowController != nil {
             return
         }
@@ -417,22 +421,31 @@ final class AIChatCoordinator: AIChatCoordinating {
         let floatingFrame = controller.frame
         controller.onFrameChanged = nil
 
-        guard let chatViewController = controller.detachChatViewController() else { return }
+        guard let chatViewController = controller.detachChatViewController() else {
+            controller.delegate = nil
+            controller.close(initiatedByUser: false)
+            session.floatingWindowController = nil
+            session.state.setHidden()
+            chatFloatingStateDidChangeSubject.send(tabID)
+            return
+        }
 
         session.state.floatingWindowFrame = floatingFrame
-        session.floatingWindowController = nil
+        // Set sidebar mode before any tab/window focus changes to avoid
+        // a transient "floating without controller" state.
+        session.state.setSidebar()
 
         windowController(for: tabID)?.window?.makeKeyAndOrderFront(nil)
 
         chatViewController.delegate = self
         sidebarHost.embedChatViewController(chatViewController, for: tabID)
-        session.state.setSidebar()
 
         transitionSidebar(for: tabID, isShowing: true, animated: false)
         sidebarPresenceWillChangeSubject.send(.init(tabID: tabID, isShown: true))
 
         controller.delegate = nil
         controller.close(initiatedByUser: false)
+        session.floatingWindowController = nil
 
         chatFloatingStateDidChangeSubject.send(tabID)
     }
