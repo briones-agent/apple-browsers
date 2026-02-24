@@ -630,7 +630,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatSidebarResizable:
             return .remoteReleasable(.subfeature(AIChatSubfeature.sidebarResizable))
         case .aiChatSidebarFloating:
-            return .remoteReleasable(.subfeature(AIChatSubfeature.sidebarFloating))
+            return .internalOnly()
         }
     }
 }
