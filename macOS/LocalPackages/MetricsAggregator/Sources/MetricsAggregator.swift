@@ -76,79 +76,60 @@ public final class MetricsAggregator {
             throw MetricsAggregatorError.operationFailed(message: msg)
         }
     }
-
-    private func withCStrings(
-        pixel: String,
-        name: String,
-        buckets: [BucketRange]?,
-        _ body: (UnsafePointer<CChar>, Int, UnsafePointer<CChar>, Int, UnsafePointer<CChar>?, Int) -> Int32
-    ) throws {
-        try pixel.withCString { pixelPtr in
-            try name.withCString { namePtr in
-                let pixelLen = pixel.utf8.count
-                let nameLen = name.utf8.count
-                if let buckets = buckets, !buckets.isEmpty {
-                    let encoder = JSONEncoder()
-                    encoder.keyEncodingStrategy = .convertToSnakeCase
-                    let data = try encoder.encode(buckets)
-                    let json = String(data: data, encoding: .utf8) ?? "[]"
-                    try json.withCString { jsonPtr in
-                        let code = body(pixelPtr, pixelLen, namePtr, nameLen, jsonPtr, json.utf8.count)
-                        try check(code)
-                    }
-                } else {
-                    let code = body(pixelPtr, pixelLen, namePtr, nameLen, nil, 0)
-                    try check(code)
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Registration
 public extension MetricsAggregator {
-    func registerPixel(_ pixel: String, aggregationInterval: TimeInterval = 3600) throws {
+    /// Registers an aggregation with the given name, interval, and full metric specs (counters/gauges with optional buckets).
+    /// Creation date is stored for pruning relative to the latest aggregation.
+    func registerAggregation(name: String, aggregationInterval: TimeInterval, metricsSpecs: [MetricSpec]) throws {
+        let createdAt = MetricsAggregator.iso8601Now()
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let specsData = try encoder.encode(metricsSpecs)
+        let specsJson = String(data: specsData, encoding: .utf8) ?? "[]"
         try withHandle { h in
-            try pixel.withCString { ptr in
-                try check(ddg_ma_register_pixel(h, ptr, pixel.utf8.count, aggregationInterval))
+            try name.withCString { namePtr in
+                try createdAt.withCString { createdPtr in
+                    try specsJson.withCString { specsPtr in
+                        try check(ddg_ma_register_aggregation(
+                            h,
+                            namePtr, name.utf8.count,
+                            aggregationInterval,
+                            createdPtr, createdAt.utf8.count,
+                            specsPtr, specsJson.utf8.count
+                        ))
+                    }
+                }
             }
         }
     }
 
-    func registerCounter(pixel: String, name: String, buckets: [BucketRange]? = nil) throws {
-        try withHandle { h in
-            try withCStrings(pixel: pixel, name: name, buckets: buckets) { pixelPtr, pixelLen, namePtr, nameLen, bucketsPtr, bucketsLen in
-                ddg_ma_register_counter(h, pixelPtr, pixelLen, namePtr, nameLen, bucketsPtr, bucketsLen)
-            }
-        }
-    }
-
-    func registerGauge(pixel: String, name: String, buckets: [BucketRange]? = nil) throws {
-        try withHandle { h in
-            try withCStrings(pixel: pixel, name: name, buckets: buckets) { pixelPtr, pixelLen, namePtr, nameLen, bucketsPtr, bucketsLen in
-                ddg_ma_register_gauge(h, pixelPtr, pixelLen, namePtr, nameLen, bucketsPtr, bucketsLen)
-            }
-        }
+    private static func iso8601Now() -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.string(from: Date())
     }
 }
 
 // MARK: - Mutation
 public extension MetricsAggregator {
-    func increment(pixel: String, name: String, by amount: Double = 1) throws {
+    func increment(aggregationName: String, metricName: String, by amount: Double = 1) throws {
         try withHandle { h in
-            try pixel.withCString { pixelPtr in
-                try name.withCString { namePtr in
-                    try check(ddg_ma_increment(h, pixelPtr, pixel.utf8.count, namePtr, name.utf8.count, amount))
+            try aggregationName.withCString { pixelPtr in
+                try metricName.withCString { namePtr in
+                    try check(ddg_ma_increment(h, pixelPtr, aggregationName.utf8.count, namePtr, metricName.utf8.count, amount))
                 }
             }
         }
     }
 
-    func set(pixel: String, name: String, value: Double) throws {
+    func set(aggregationName: String, metricName: String, value: Double) throws {
         try withHandle { h in
-            try pixel.withCString { pixelPtr in
-                try name.withCString { namePtr in
-                    try check(ddg_ma_set(h, pixelPtr, pixel.utf8.count, namePtr, name.utf8.count, value))
+            try aggregationName.withCString { pixelPtr in
+                try metricName.withCString { namePtr in
+                    try check(ddg_ma_set(h, pixelPtr, aggregationName.utf8.count, namePtr, metricName.utf8.count, value))
                 }
             }
         }
@@ -210,6 +191,20 @@ public extension MetricsAggregator {
             return Int(n)
         }
     }
+
+    /// Prunes aggregations whose created_at is older than (latest created_at - olderThanInterval).
+    /// Use to remove old specs after a device restores an old session.
+    @discardableResult
+    func pruneAggregations(olderThanInterval: TimeInterval) throws -> Int {
+        try withHandle { h in
+            let n = ddg_ma_prune_aggregations(h, olderThanInterval)
+            if n == -1 {
+                let msg = Self.lastErrorMessage(from: handle)
+                throw MetricsAggregatorError.operationFailed(message: msg)
+            }
+            return Int(n)
+        }
+    }
 }
 
 private struct PendingPixelEntry: Decodable {
@@ -229,12 +224,12 @@ private let pendingPixelDateFormatter: ISO8601DateFormatter = {
 
 // MARK: - Housekeeping
 public extension MetricsAggregator {
-    func peek(pixel: String, name: String) throws -> Double? {
+    func peek(aggregationName: String, metricName: String) throws -> Double? {
         try withHandle { h in
             var value: Double = 0
-            let result: Int32 = try pixel.withCString { pixelPtr in
-                try name.withCString { namePtr in
-                    ddg_ma_peek(h, pixelPtr, pixel.utf8.count, namePtr, name.utf8.count, &value)
+            let result: Int32 = try aggregationName.withCString { pixelPtr in
+                try metricName.withCString { namePtr in
+                    ddg_ma_peek(h, pixelPtr, aggregationName.utf8.count, namePtr, metricName.utf8.count, &value)
                 }
             }
             if result == -1 {

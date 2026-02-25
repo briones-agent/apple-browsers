@@ -13,6 +13,9 @@ const METRIC_TYPE_COUNTER: &str = "counter";
 const METRIC_TYPE_GAUGE: &str = "gauge";
 const DEFAULT_AGGREGATION_INTERVAL: f64 = 3600.0;
 
+const VALUE_TYPE_INT: &str = "int";
+const VALUE_TYPE_DOUBLE: &str = "double";
+
 const MIGRATION_V1: &str = "
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS pixel_config (
@@ -50,6 +53,11 @@ CREATE TABLE IF NOT EXISTS metrics_outbox (
 );
 ";
 
+const MIGRATION_V2: &str = "
+CREATE TABLE IF NOT EXISTS _schema_version (version INTEGER NOT NULL);
+INSERT OR IGNORE INTO _schema_version (version) VALUES (1);
+";
+
 const COLLECT_METRICS_SQL: &str = "
 WITH mature AS (
   SELECT m.id, m.pixel, m.metric_type, m.metric_name, m.value, m.created_at
@@ -67,18 +75,19 @@ with_bucket AS (
     EXISTS (SELECT 1 FROM metric_buckets b2 WHERE b2.pixel = mature.pixel AND b2.metric_name = mature.metric_name) AS has_buckets
   FROM mature
 ),
+with_spec AS (
+  SELECT with_bucket.*, COALESCE(s.value_type, 'int') AS value_type
+  FROM with_bucket
+  LEFT JOIN metric_spec s ON s.pixel = with_bucket.pixel AND s.metric_name = with_bucket.metric_name
+),
 with_resolved AS (
   SELECT id, pixel, metric_type, metric_name, created_at,
-    CASE
-      WHEN bucket_name IS NOT NULL THEN bucket_name
-      WHEN has_buckets THEN NULL
-      ELSE CAST(value AS TEXT)
-    END AS resolved_value
-  FROM with_bucket
+    bucket_name AS bucket_or_null, value, value_type, has_buckets
+  FROM with_spec
 )
-SELECT id, pixel, metric_type, metric_name, created_at, resolved_value
+SELECT id, pixel, metric_type, metric_name, created_at, bucket_or_null, value, value_type, has_buckets
 FROM with_resolved
-WHERE resolved_value IS NOT NULL
+WHERE bucket_or_null IS NOT NULL OR NOT has_buckets
 ";
 
 #[derive(Deserialize)]
@@ -86,6 +95,16 @@ struct BucketInput {
     min_inclusive: f64,
     max_exclusive: Option<f64>,
     name: String,
+}
+
+#[derive(Deserialize)]
+struct MetricSpecInput {
+    name: String,
+    #[serde(rename = "type")]
+    metric_type: String,
+    buckets: Option<Vec<BucketInput>>,
+    #[serde(rename = "value_type")]
+    value_type: Option<String>,
 }
 
 struct MetricsAggregatorDb {
@@ -99,7 +118,18 @@ impl MetricsAggregatorDb {
     }
 
     fn run_migration(conn: &Connection) -> rusqlite::Result<()> {
-        conn.execute_batch(MIGRATION_V1)
+        conn.execute_batch(MIGRATION_V1)?;
+        conn.execute_batch(MIGRATION_V2)?;
+        let version: i64 = conn.query_row("SELECT COALESCE(MAX(version), 0) FROM _schema_version", [], |r| r.get(0))?;
+        if version < 2 {
+            let _ = conn.execute("ALTER TABLE pixel_config ADD COLUMN created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))", []);
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS metric_spec (pixel TEXT NOT NULL, metric_name TEXT NOT NULL, metric_type TEXT NOT NULL, value_type TEXT NOT NULL DEFAULT 'int', PRIMARY KEY (pixel, metric_name))",
+                [],
+            )?;
+            conn.execute("INSERT INTO _schema_version (version) VALUES (2)", [])?;
+        }
+        Ok(())
     }
 }
 
@@ -160,85 +190,69 @@ fn with_handle<T>(handle: *mut c_void, f: impl FnOnce(&mut MetricsAggregatorDb) 
     f(db)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn ddg_ma_register_pixel(
-    handle: *mut c_void,
-    pixel_ptr: *const c_char,
-    pixel_len: usize,
-    interval: c_double,
-) -> c_int {
-    let pixel = match ptr_to_string(pixel_ptr as *const c_char, pixel_len) {
-        Some(p) => p,
-        None => return -1,
-    };
-    with_handle(handle, |db| {
-        db.conn
-            .execute(
-                "INSERT OR REPLACE INTO pixel_config (pixel, aggregation_interval) VALUES (?1, ?2)",
-                params![pixel, interval],
-            )
-            .map(|_| 0)
-            .unwrap_or_else(|e| {
-                db.set_err(e);
-                -1
-            })
-    })
-}
-
-fn register_counter_impl(
+fn register_aggregation_impl(
     conn: &Connection,
     pixel: &str,
-    name: &str,
-    buckets: Option<&[BucketInput]>,
+    aggregation_interval: f64,
+    created_at: &str,
+    specs: &[MetricSpecInput],
 ) -> rusqlite::Result<()> {
     conn.execute(
-        "INSERT OR IGNORE INTO pixel_config (pixel, aggregation_interval) VALUES (?1, ?2)",
-        params![pixel, DEFAULT_AGGREGATION_INTERVAL],
+        "INSERT OR REPLACE INTO pixel_config (pixel, aggregation_interval, created_at) VALUES (?1, ?2, ?3)",
+        params![pixel, aggregation_interval, created_at],
     )?;
-    conn.execute("DELETE FROM metric_buckets WHERE pixel = ?1 AND metric_name = ?2", params![pixel, name])?;
-    if let Some(buckets) = buckets {
-        let mut insert = conn.prepare(
-            "INSERT INTO metric_buckets (pixel, metric_name, ordinal, min_inclusive, max_exclusive, name) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        )?;
-        for (ordinal, b) in buckets.iter().enumerate() {
-            insert.execute(params![pixel, name, ordinal as i32, b.min_inclusive, b.max_exclusive, b.name])?;
+    for spec in specs {
+        let value_type = spec.value_type.as_deref().unwrap_or(VALUE_TYPE_INT);
+        conn.execute("DELETE FROM metric_buckets WHERE pixel = ?1 AND metric_name = ?2", params![pixel, spec.name])?;
+        if let Some(ref buckets) = spec.buckets {
+            let mut insert = conn.prepare(
+                "INSERT INTO metric_buckets (pixel, metric_name, ordinal, min_inclusive, max_exclusive, name) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
+            for (ordinal, b) in buckets.iter().enumerate() {
+                insert.execute(params![pixel, spec.name, ordinal as i32, b.min_inclusive, b.max_exclusive, b.name])?;
+            }
         }
+        conn.execute(
+            "INSERT OR REPLACE INTO metric_spec (pixel, metric_name, metric_type, value_type) VALUES (?1, ?2, ?3, ?4)",
+            params![pixel, spec.name, spec.metric_type, value_type],
+        )?;
     }
     Ok(())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ddg_ma_register_counter(
+pub unsafe extern "C" fn ddg_ma_register_aggregation(
     handle: *mut c_void,
-    pixel_ptr: *const c_char,
-    pixel_len: usize,
     name_ptr: *const c_char,
     name_len: usize,
-    buckets_json_ptr: *const c_char,
-    buckets_json_len: usize,
+    aggregation_interval: c_double,
+    created_at_ptr: *const c_char,
+    created_at_len: usize,
+    specs_json_ptr: *const c_char,
+    specs_json_len: usize,
 ) -> c_int {
-    let pixel = match ptr_to_string(pixel_ptr as *const c_char, pixel_len) {
+    let pixel = match ptr_to_string(name_ptr as *const c_char, name_len) {
         Some(p) => p,
         None => return -1,
     };
-    let name = match ptr_to_string(name_ptr as *const c_char, name_len) {
-        Some(n) => n,
+    let created_at = match ptr_to_string(created_at_ptr as *const c_char, created_at_len) {
+        Some(s) => s,
         None => return -1,
     };
-    let buckets: Option<Vec<BucketInput>> = if !buckets_json_ptr.is_null() && buckets_json_len > 0 {
-        let json_str = match ptr_to_string(buckets_json_ptr as *const c_char, buckets_json_len) {
+    let specs: Vec<MetricSpecInput> = if specs_json_ptr.is_null() || specs_json_len == 0 {
+        vec![]
+    } else {
+        let json_str = match ptr_to_string(specs_json_ptr as *const c_char, specs_json_len) {
             Some(s) => s,
             None => return -1,
         };
         match serde_json::from_str(&json_str) {
-            Ok(b) => Some(b),
-            Err(e) => return -1,
+            Ok(s) => s,
+            Err(_e) => return -1,
         }
-    } else {
-        None
     };
     with_handle(handle, |db| {
-        match register_counter_impl(&db.conn, &pixel, &name, buckets.as_deref()) {
+        match register_aggregation_impl(&db.conn, &pixel, aggregation_interval, &created_at, &specs) {
             Ok(()) => 0,
             Err(e) => {
                 db.set_err(e);
@@ -248,25 +262,19 @@ pub unsafe extern "C" fn ddg_ma_register_counter(
     })
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn ddg_ma_register_gauge(
-    handle: *mut c_void,
-    pixel_ptr: *const c_char,
-    pixel_len: usize,
-    name_ptr: *const c_char,
-    name_len: usize,
-    buckets_json_ptr: *const c_char,
-    buckets_json_len: usize,
-) -> c_int {
-    ddg_ma_register_counter(
-        handle,
-        pixel_ptr,
-        pixel_len,
-        name_ptr,
-        name_len,
-        buckets_json_ptr,
-        buckets_json_len,
-    )
+fn ensure_metric_spec(conn: &Connection, pixel: &str, metric_name: &str, metric_type: &str) -> rusqlite::Result<()> {
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM metric_spec WHERE pixel = ?1 AND metric_name = ?2",
+        params![pixel, metric_name],
+        |r| r.get(0),
+    )?;
+    if count == 0 {
+        conn.execute(
+            "INSERT INTO metric_spec (pixel, metric_name, metric_type, value_type) VALUES (?1, ?2, ?3, ?4)",
+            params![pixel, metric_name, metric_type, VALUE_TYPE_INT],
+        )?;
+    }
+    Ok(())
 }
 
 #[no_mangle]
@@ -289,10 +297,14 @@ pub unsafe extern "C" fn ddg_ma_increment(
     with_handle(handle, |db| {
         db.conn
             .execute(
-                "INSERT OR IGNORE INTO pixel_config (pixel, aggregation_interval) VALUES (?1, ?2)",
+                "INSERT OR IGNORE INTO pixel_config (pixel, aggregation_interval, created_at) VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
                 params![pixel, DEFAULT_AGGREGATION_INTERVAL],
             )
             .ok();
+        if let Err(e) = ensure_metric_spec(&db.conn, &pixel, &name, METRIC_TYPE_COUNTER) {
+            db.set_err(e);
+            return -1;
+        }
         db.conn
             .execute(
                 "INSERT INTO aggregated_metrics (pixel, metric_type, metric_name, value, created_at, updated_at)
@@ -328,10 +340,14 @@ pub unsafe extern "C" fn ddg_ma_set(
     with_handle(handle, |db| {
         db.conn
             .execute(
-                "INSERT OR IGNORE INTO pixel_config (pixel, aggregation_interval) VALUES (?1, ?2)",
+                "INSERT OR IGNORE INTO pixel_config (pixel, aggregation_interval, created_at) VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
                 params![pixel, DEFAULT_AGGREGATION_INTERVAL],
             )
             .ok();
+        if let Err(e) = ensure_metric_spec(&db.conn, &pixel, &name, METRIC_TYPE_GAUGE) {
+            db.set_err(e);
+            return -1;
+        }
         db.conn
             .execute(
                 "INSERT INTO aggregated_metrics (pixel, metric_type, metric_name, value, created_at, updated_at)
@@ -347,9 +363,23 @@ pub unsafe extern "C" fn ddg_ma_set(
     })
 }
 
+fn format_resolved_value(bucket_or_null: Option<String>, value: f64, value_type: &str) -> String {
+    match bucket_or_null {
+        Some(b) => b,
+        None => {
+            if value_type == VALUE_TYPE_INT {
+                format!("{}", value as i64)
+            } else {
+                value.to_string()
+            }
+        }
+    }
+}
+
 fn collect_metrics_impl(conn: &Connection) -> rusqlite::Result<c_int> {
     let mut stmt = conn.prepare(COLLECT_METRICS_SQL)?;
-    let rows: Vec<(i64, String, String, String, String, String)> = stmt
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(i64, String, String, String, String, Option<String>, f64, String, i64)> = stmt
         .query_map([], |row| {
             Ok((
                 row.get::<_, i64>(0)?,
@@ -357,7 +387,10 @@ fn collect_metrics_impl(conn: &Connection) -> rusqlite::Result<c_int> {
                 row.get::<_, String>(2)?,
                 row.get::<_, String>(3)?,
                 row.get::<_, String>(4)?,
-                row.get::<_, String>(5)?,
+                row.get::<_, Option<String>>(5)?,
+                row.get::<_, f64>(6)?,
+                row.get::<_, String>(7)?,
+                row.get::<_, i64>(8)?,
             ))
         })?
         .filter_map(|r| r.ok())
@@ -372,15 +405,16 @@ fn collect_metrics_impl(conn: &Connection) -> rusqlite::Result<c_int> {
     )?;
     let mut by_pixel: HashMap<String, (String, Vec<(String, String)>)> = HashMap::new();
     let mut ids_to_delete = Vec::new();
-    for (id, pixel, _metric_type, metric_name, created_at, resolved_value) in &rows {
+    for (id, pixel, _metric_type, metric_name, created_at, bucket_or_null, value, value_type, _has_buckets) in &rows {
         ids_to_delete.push(*id);
+        let resolved_value = format_resolved_value(bucket_or_null.clone(), *value, value_type);
         let entry = by_pixel
             .entry(pixel.clone())
             .or_insert_with(|| (created_at.clone(), Vec::new()));
         if created_at < &entry.0 {
             entry.0 = created_at.clone();
         }
-        entry.1.push((metric_name.clone(), resolved_value.clone()));
+        entry.1.push((metric_name.clone(), resolved_value));
     }
     let tx = conn.unchecked_transaction()?;
     let mut outbox_count: c_int = 0;
@@ -556,12 +590,51 @@ pub unsafe extern "C" fn ddg_ma_peek(
     })
 }
 
+fn prune_aggregations_impl(conn: &Connection, interval_seconds: f64) -> rusqlite::Result<c_int> {
+    let max_created: Option<String> = conn.query_row(
+        "SELECT MAX(created_at) FROM pixel_config",
+        [],
+        |r| r.get(0),
+    ).ok();
+    let Some(ref max_created) = max_created else {
+        return Ok(0);
+    };
+    let interval_str = interval_seconds.to_string();
+    let cutoff: Option<String> = conn.query_row(
+        "SELECT datetime(?1, '-' || ?2 || ' seconds')",
+        params![max_created, interval_str],
+        |r| r.get(0),
+    ).ok();
+    let Some(ref cutoff) = cutoff else {
+        return Ok(0);
+    };
+    conn.execute("DELETE FROM metric_buckets WHERE pixel IN (SELECT pixel FROM pixel_config WHERE created_at < ?1)", [cutoff])?;
+    conn.execute("DELETE FROM aggregated_metrics WHERE pixel IN (SELECT pixel FROM pixel_config WHERE created_at < ?1)", [cutoff])?;
+    conn.execute("DELETE FROM metric_spec WHERE pixel IN (SELECT pixel FROM pixel_config WHERE created_at < ?1)", [cutoff])?;
+    let n = conn.execute("DELETE FROM pixel_config WHERE created_at < ?1", [cutoff])?;
+    Ok(n as c_int)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ddg_ma_prune_aggregations(handle: *mut c_void, interval_seconds: c_double) -> c_int {
+    with_handle(handle, |db| {
+        match prune_aggregations_impl(&db.conn, interval_seconds) {
+            Ok(n) => n,
+            Err(e) => {
+                db.set_err(e);
+                -1
+            }
+        }
+    })
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ddg_ma_reset(handle: *mut c_void) -> c_int {
     with_handle(handle, |db| {
         db.conn.execute("DELETE FROM metrics_outbox", []).ok();
         db.conn.execute("DELETE FROM aggregated_metrics", []).ok();
         db.conn.execute("DELETE FROM metric_buckets", []).ok();
+        db.conn.execute("DELETE FROM metric_spec", []).ok();
         db.conn.execute("DELETE FROM pixel_config", []).ok();
         0
     })

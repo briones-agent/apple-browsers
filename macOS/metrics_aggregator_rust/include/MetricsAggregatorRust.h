@@ -20,14 +20,9 @@ void ddg_ma_close(void *handle);
 /** Free a string returned by the library (e.g. ddg_ma_pending_pixels, ddg_ma_last_error_message). */
 void ddg_ma_free_string(char *ptr);
 
-/** Register a pixel with aggregation interval in seconds. Returns 0 on success, -1 on error. */
-int ddg_ma_register_pixel(void *handle, const char *pixel_ptr, size_t pixel_len, double interval);
-
-/** Register a counter metric; buckets_json is UTF-8 JSON array or NULL/empty for none. Returns 0 on success, -1 on error. */
-int ddg_ma_register_counter(void *handle, const char *pixel_ptr, size_t pixel_len, const char *name_ptr, size_t name_len, const char *buckets_json_ptr, size_t buckets_json_len);
-
-/** Register a gauge metric; same as register_counter for bucket config. Returns 0 on success, -1 on error. */
-int ddg_ma_register_gauge(void *handle, const char *pixel_ptr, size_t pixel_len, const char *name_ptr, size_t name_len, const char *buckets_json_ptr, size_t buckets_json_len);
+/** Register an aggregation with name, interval, created_at (ISO8601 UTF-8), and metrics specs JSON. Returns 0 on success, -1 on error. */
+int ddg_ma_register_aggregation(void *handle, const char *name_ptr, size_t name_len, double aggregation_interval,
+    const char *created_at_ptr, size_t created_at_len, const char *specs_json_ptr, size_t specs_json_len);
 
 /** Increment a counter. Returns 0 on success, -1 on error. */
 int ddg_ma_increment(void *handle, const char *pixel_ptr, size_t pixel_len, const char *name_ptr, size_t name_len, double by);
@@ -49,6 +44,9 @@ int ddg_ma_mark_failed(void *handle, int64_t id);
 
 /** Delete outbox entries with attempts > max_attempts. Returns deleted count, or -1 on error. */
 int ddg_ma_purge_expired(void *handle, int max_attempts);
+
+/** Prune aggregations whose created_at is older than (max(created_at) - interval_seconds). Returns count of rows deleted, or -1 on error. */
+int ddg_ma_prune_aggregations(void *handle, double interval_seconds);
 
 /** Peek current value. out_value must be non-NULL. Returns 1 if value written, 0 if no row, -1 on error. */
 int ddg_ma_peek(void *handle, const char *pixel_ptr, size_t pixel_len, const char *name_ptr, size_t name_len, double *out_value);
