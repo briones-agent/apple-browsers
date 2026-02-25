@@ -75,6 +75,7 @@ final class AIChatState: NSObject {
     /// Marks the chat as presented in a floating window.
     func setFloating() {
         presentationMode = .floating
+        hiddenAt = nil
     }
 
     /// Marks the chat as hidden.
@@ -117,6 +118,9 @@ extension AIChatState: NSSecureCoding {
         self.init(initialAIChatURL: initialAIChatURL)
         self.presentationMode = Self.decodePresentationMode(from: coder)
         self.hiddenAt = coder.decodeObject(of: NSDate.self, forKey: CodingKeys.hiddenAt) as Date?
+        if presentationMode != .hidden {
+            self.hiddenAt = nil
+        }
         self.sidebarWidth = coder.decodeObject(of: NSNumber.self, forKey: CodingKeys.sidebarWidth).map { CGFloat($0.doubleValue) }
         self.floatingWindowFrame = coder.decodeObject(of: NSValue.self, forKey: CodingKeys.floatingWindowFrame)?.rectValue
     }

@@ -136,6 +136,19 @@ final class AIChatStateTests: XCTestCase {
         XCTAssertEqual(chatState.presentationMode, .floating)
     }
 
+    func testSetFloating_clearsHiddenAt() {
+        // Given
+        chatState.setHidden()
+        XCTAssertNotNil(chatState.hiddenAt)
+
+        // When
+        chatState.setFloating()
+
+        // Then
+        XCTAssertEqual(chatState.presentationMode, .floating)
+        XCTAssertNil(chatState.hiddenAt)
+    }
+
     func testSetSidebar_fromFloating_setsPresentationModeToSidebar() {
         chatState.setFloating()
         XCTAssertEqual(chatState.presentationMode, .floating)
@@ -217,5 +230,20 @@ final class AIChatStateTests: XCTestCase {
 
         // Then
         XCTAssertEqual(decoded.presentationMode, .sidebar)
+    }
+
+    func testNSSecureCoding_whenPresentationModeIsFloating_hiddenAtIsNormalizedToNil() {
+        // Given
+        chatState.setHidden(at: Date().addingTimeInterval(-3600))
+        chatState.setFloating()
+        chatState.updateHiddenAt(Date().addingTimeInterval(-3600))
+
+        // When
+        let data = try! NSKeyedArchiver.archivedData(withRootObject: chatState!, requiringSecureCoding: true)
+        let decoded = try! NSKeyedUnarchiver.unarchivedObject(ofClass: AIChatState.self, from: data)!
+
+        // Then
+        XCTAssertEqual(decoded.presentationMode, .floating)
+        XCTAssertNil(decoded.hiddenAt)
     }
 }
