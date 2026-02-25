@@ -167,7 +167,8 @@ final class AIChatCoordinator: AIChatCoordinating {
 
     func toggleSidebar() {
         guard !isAnimatingSidebarTransition,
-              let currentTabID = sidebarHost.currentTabID else { return }
+              let currentTabID = sidebarHost.currentTabID,
+              !isChatFloating(for: currentTabID) else { return }
 
         if isSidebarOpen(for: currentTabID) {
             hideSidebar(for: currentTabID, animated: true)
