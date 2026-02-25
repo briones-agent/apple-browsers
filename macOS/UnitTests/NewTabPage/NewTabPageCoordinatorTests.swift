@@ -144,7 +144,7 @@ final class NewTabPageCoordinatorTests: XCTestCase {
                 openURLHandler: { _ in },
                 navigateToFeedbackHandler: { },
                 navigateToPIRHandler: { },
-                navigateToSoftwareUpdate: { }
+                navigateToSoftwareUpdateHandler: { }
             ),
             historyCoordinator: HistoryCoordinatingMock(),
             contentBlocking: ContentBlockingMock(),

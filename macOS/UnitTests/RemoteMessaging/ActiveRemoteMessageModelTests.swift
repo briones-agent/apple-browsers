@@ -51,7 +51,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         XCTAssertNil(model.newTabPageRemoteMessage)
@@ -65,7 +65,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         XCTAssertEqual(model.newTabPageRemoteMessage, message)
@@ -79,7 +79,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
         await model.dismissRemoteMessage(with: .close)
 
@@ -94,7 +94,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         XCTAssertFalse(store.hasShownRemoteMessage(withID: message.id))
@@ -122,7 +122,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         XCTAssertNotNil(model.tabBarRemoteMessage)
@@ -149,7 +149,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         XCTAssertNotNil(model.tabBarRemoteMessage)
@@ -164,7 +164,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         XCTAssertNil(model.tabBarRemoteMessage)
@@ -192,7 +192,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
         XCTAssertNotNil(model.tabBarRemoteMessage)
         XCTAssertNil(model.newTabPageRemoteMessage)
@@ -231,7 +231,7 @@ final class ActiveRemoteMessageModelTests: XCTestCase {
             openURLHandler: { _ in },
             navigateToFeedbackHandler: { },
             navigateToPIRHandler: { },
-            navigateToSoftwareUpdate: { }
+            navigateToSoftwareUpdateHandler: { }
         )
 
         // THEN

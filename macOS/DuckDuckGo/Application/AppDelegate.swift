@@ -955,7 +955,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         windowControllersManager.showTab(with: .subscription(url))
                     }
                 }
-            }, navigateToSoftwareUpdate: {
+            }, navigateToSoftwareUpdateHandler: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Software-Update-Settings.extension")!)
             })
         } else {
@@ -969,7 +969,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 openURLHandler: { _ in },
                 navigateToFeedbackHandler: { },
                 navigateToPIRHandler: { },
-                navigateToSoftwareUpdate: { }
+                navigateToSoftwareUpdateHandler: { }
             )
         }
 

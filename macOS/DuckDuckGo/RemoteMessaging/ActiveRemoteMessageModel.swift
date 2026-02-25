@@ -67,20 +67,20 @@ final class ActiveRemoteMessageModel: ObservableObject {
     /**
      * Handler for opening the Software Update system settings.
      */
-    let navigateToSoftwareUpdate: () async -> Void
+    let navigateToSoftwareUpdateHandler: () async -> Void
 
     convenience init(remoteMessagingClient: RemoteMessagingClient,
                      openURLHandler: @escaping (URL) async -> Void,
                      navigateToFeedbackHandler: @escaping () async -> Void,
                      navigateToPIRHandler: @escaping () async -> Void,
-                     navigateToSoftwareUpdate: @escaping () async -> Void) {
+                     navigateToSoftwareUpdateHandler: @escaping () async -> Void) {
         self.init(
             remoteMessagingStore: remoteMessagingClient.store,
             remoteMessagingAvailabilityProvider: remoteMessagingClient.remoteMessagingAvailabilityProvider,
             openURLHandler: openURLHandler,
             navigateToFeedbackHandler: navigateToFeedbackHandler,
             navigateToPIRHandler: navigateToPIRHandler,
-            navigateToSoftwareUpdate: navigateToSoftwareUpdate
+            navigateToSoftwareUpdateHandler: navigateToSoftwareUpdateHandler
         )
     }
 
@@ -93,13 +93,13 @@ final class ActiveRemoteMessageModel: ObservableObject {
         openURLHandler: @escaping (URL) async -> Void,
         navigateToFeedbackHandler: @escaping () async -> Void,
         navigateToPIRHandler: @escaping () async -> Void,
-        navigateToSoftwareUpdate: @escaping () async -> Void
+        navigateToSoftwareUpdateHandler: @escaping () async -> Void
     ) {
         self.store = remoteMessagingStore
         self.openURLHandler = openURLHandler
         self.navigateToFeedbackHandler = navigateToFeedbackHandler
         self.navigateToPIRHandler = navigateToPIRHandler
-        self.navigateToSoftwareUpdate = navigateToSoftwareUpdate
+        self.navigateToSoftwareUpdateHandler = navigateToSoftwareUpdateHandler
 
         let messagesDidChangePublisher = NotificationCenter.default.publisher(for: RemoteMessagingStore.Notifications.remoteMessagesDidChange)
             .asVoid()
