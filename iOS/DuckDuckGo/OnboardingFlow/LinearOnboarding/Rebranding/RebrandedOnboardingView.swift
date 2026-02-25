@@ -525,7 +525,6 @@ struct ScrollableOnboardingBackground: View {
 
     private enum Metrics {
         static let exitDuration: TimeInterval = 1.0
-        static let enterDelay: TimeInterval = 0.3
         static let enterDuration: TimeInterval = 1.5
         static let backgroundImageWidth: CGFloat = 1366
     }
@@ -579,7 +578,7 @@ struct ScrollableOnboardingBackground: View {
 
             // Animate entering background after delay (slides in from right)
             if #available(iOS 17, *) {
-                withAnimation(.easeInOut(duration: Metrics.enterDuration).delay(Metrics.enterDelay)) {
+                withAnimation(.easeInOut(duration: Metrics.enterDuration)) {
                     enteringTransitionProgress = 1.0
                 } completion: {
                     // Update previous state after animation completes (iOS 17+)
@@ -587,9 +586,9 @@ struct ScrollableOnboardingBackground: View {
                 }
             } else {
                 // Calculate total duration: the longer of the two overlapping animations
-                let totalDuration = max(Metrics.exitDuration, Metrics.enterDelay + Metrics.enterDuration)
+                let totalDuration = max(Metrics.exitDuration, Metrics.enterDuration)
 
-                withAnimation(.easeInOut(duration: Metrics.enterDuration).delay(Metrics.enterDelay)) {
+                withAnimation(.easeInOut(duration: Metrics.enterDuration)) {
                     enteringTransitionProgress = 1.0
                 }
 
