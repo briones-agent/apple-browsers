@@ -288,6 +288,7 @@ class SyncSettingsViewController: UIHostingController<SyncSettingsView> {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         connector = nil
+        refreshAutoRestoreDecisionState()
         syncService.scheduler.requestSyncImmediately()
     }
 
@@ -301,6 +302,10 @@ class SyncSettingsViewController: UIHostingController<SyncSettingsView> {
 
     func updateOptions() {
         syncService.scheduler.requestSyncImmediately()
+    }
+
+    func refreshAutoRestoreDecisionState() {
+        rootView.model.refreshAutoRestoreDecisionState()
     }
 
     func refreshForState(_ authState: SyncAuthState) {

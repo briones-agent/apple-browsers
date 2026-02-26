@@ -204,6 +204,16 @@ public class SyncSettingsViewModel: ObservableObject {
         }
     }
 
+    @MainActor
+    public func refreshAutoRestoreDecisionState() {
+        guard isAutoRestoreFeatureAvailable else {
+            isAutoRestoreEnabled = false
+            return
+        }
+
+        isAutoRestoreEnabled = autoRestoreProvider.existingDecision() == true
+    }
+
     func disableSync() {
         isBusy = true
         Task { @MainActor in

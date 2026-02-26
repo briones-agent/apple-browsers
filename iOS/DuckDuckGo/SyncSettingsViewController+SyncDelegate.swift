@@ -351,6 +351,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 self?.shareRecoveryPDF()
             },
             onDismiss: { [weak self] in
+                self?.refreshAutoRestoreDecisionState()
                 self?.showDeviceConnected()
             },
             autoRestoreProvider: syncAutoRestoreHandler,

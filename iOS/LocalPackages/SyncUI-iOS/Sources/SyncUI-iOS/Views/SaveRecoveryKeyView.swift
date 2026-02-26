@@ -33,6 +33,14 @@ public struct SaveRecoveryKeyView: View {
 
     @ObservedObject var model: SaveRecoveryKeyViewModel
 
+    private var autoRestoreBinding: Binding<Bool> {
+        Binding {
+            model.isAutoRestoreEnabled
+        } set: { newValue in
+            model.autoRestoreToggled(newValue)
+        }
+    }
+
     public init(model: SaveRecoveryKeyViewModel) {
         self.model = model
     }
@@ -163,7 +171,7 @@ public struct SaveRecoveryKeyView: View {
     @ViewBuilder
     func autoRestoreSection() -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $model.isAutoRestoreEnabled) {
+            Toggle(isOn: autoRestoreBinding) {
                 Text(UserText.autoRestoreToggleLabel)
                     .daxBodyRegular()
             }
@@ -183,9 +191,6 @@ public struct SaveRecoveryKeyView: View {
                     model.presentLearnMore()
                     return .handled
                 })
-        }
-        .onChange(of: model.isAutoRestoreEnabled) { isEnabled in
-            model.autoRestoreToggled(isEnabled)
         }
     }
 
