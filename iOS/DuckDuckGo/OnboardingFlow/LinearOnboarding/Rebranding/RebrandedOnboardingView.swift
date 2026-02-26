@@ -319,7 +319,7 @@ extension OnboardingRebranding {
             return makeBubbleView(configuration: configuration, stepInfo: stepInfo) {
                 VStack {
                     bubbleBackedDialogContent(for: state.type)
-                        .visibility(showBubbleContent ? .visible : .invisible)
+                        .opacity(showBubbleContent ? 1 : 0)
                 }
             }
             .onAppear {
