@@ -174,6 +174,23 @@ final class AIChatCoordinator: AIChatCoordinating {
                 self?.refreshFloatingFeatureAvailability()
             }
             .store(in: &cancellables)
+
+        windowControllersManager.stateChanged
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.refreshFloatingTitleInteractivityForAllSessions()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)
+            .merge(with: NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification))
+            .merge(with: NotificationCenter.default.publisher(for: NSWindow.didChangeOcclusionStateNotification))
+            .merge(with: NotificationCenter.default.publisher(for: NSWorkspace.activeSpaceDidChangeNotification))
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshFloatingTitleInteractivityForAllSessions()
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Public API
@@ -378,6 +395,28 @@ final class AIChatCoordinator: AIChatCoordinating {
         }
     }
 
+    private func refreshFloatingTitleInteractivity(for tabID: TabIdentifier) {
+        guard let session = sessionStore.sessions[tabID],
+              session.state.presentationMode == .floating else { return }
+        session.chatViewController?.setFloatingTitleActionEnabled(!isBrowserTabVisible(for: tabID))
+    }
+
+    private func refreshFloatingTitleInteractivityForAllSessions() {
+        for tabID in sessionStore.sessions.keys {
+            refreshFloatingTitleInteractivity(for: tabID)
+        }
+    }
+
+    private func isBrowserTabVisible(for tabID: TabIdentifier) -> Bool {
+        guard let controller = windowController(for: tabID),
+              let window = controller.window,
+              window.occlusionState.contains(.visible) else {
+            return false
+        }
+
+        return controller.mainViewController.tabCollectionViewModel.selectedTabViewModel?.tab.uuid == tabID
+    }
+
     // MARK: - UI Teardown
 
     private func tearDownUI(for tabID: TabIdentifier) {
@@ -438,6 +477,7 @@ final class AIChatCoordinator: AIChatCoordinating {
 
         session.floatingWindowController = controller
         session.state.setFloating()
+        refreshFloatingTitleInteractivity(for: tabID)
 
         controller.show()
         fireAIChatSidebarPixel(.aiChatSidebarDetached)
@@ -477,6 +517,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         }
         session.floatingWindowController = controller
         session.state.floatingWindowFrame = frame
+        refreshFloatingTitleInteractivity(for: tabID)
         // Show only when re-creating a missing floating window (e.g. restoration path).
         controller.show()
         chatFloatingStateDidChangeSubject.send(tabID)
@@ -540,6 +581,7 @@ extension AIChatCoordinator: AIChatSidebarHostingDelegate {
                 restoreFloatingWindowIfNeeded(for: tabID)
             }
         }
+        refreshFloatingTitleInteractivityForAllSessions()
     }
 
     func sidebarHostDidUpdateTabs() {
@@ -602,6 +644,7 @@ extension AIChatCoordinator: AIChatViewControllerDelegate {
         windowController(for: tabID)?.window?.makeKeyAndOrderFront(nil)
         sidebarHost.selectTab(with: tabID)
         sessionStore.sessions[tabID]?.floatingWindowController?.show()
+        refreshFloatingTitleInteractivity(for: tabID)
     }
 }
 

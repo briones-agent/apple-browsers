@@ -87,6 +87,7 @@ final class AIChatViewController: NSViewController {
     private var webViewContainer: WebViewContainerView!
     private var separator: NSView!
     private var topBar: NSView!
+    private var isFloatingTitleActionEnabled = true
 
     private lazy var aiTab: Tab = Tab(content: .url(currentAIChatURL, source: .ui), burnerMode: burnerMode, isLoadedInSidebar: true)
 
@@ -333,6 +334,18 @@ final class AIChatViewController: NSViewController {
         closeButton.isHidden = isFloating
         titleLabel.isHidden = isFloating
         titleButton.isHidden = !isFloating
+
+        // In floating mode, title can either be actionable (show tab) or passive text.
+        titleArrowView?.isHidden = !isFloatingTitleActionEnabled
+        titleButton.toolTip = isFloatingTitleActionEnabled ? UserText.aiChatSidebarTitleButtonTooltip : nil
+        titleButton.mouseOverColor = isFloatingTitleActionEnabled ? .buttonMouseOver : nil
+        titleButton.mouseDownColor = isFloatingTitleActionEnabled ? .buttonMouseDown : nil
+    }
+
+    func setFloatingTitleActionEnabled(_ enabled: Bool) {
+        isFloatingTitleActionEnabled = enabled
+        guard isViewLoaded else { return }
+        updateTopBarForHostingContext()
     }
 
     private func createAndSetupWebViewContainer(in container: NSView) {
@@ -442,7 +455,7 @@ final class AIChatViewController: NSViewController {
     }
 
     @objc private func titleButtonClicked() {
-        guard let tabID else { return }
+        guard isFloatingTitleActionEnabled, let tabID else { return }
         delegate?.didClickTitleButton(for: tabID)
     }
 
