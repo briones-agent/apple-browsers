@@ -38,6 +38,7 @@ public struct AIChatModel {
         case meta
         case anthropic
         case mistral
+        case unknown
     }
 
     public init(id: String, displayName: String, shortDisplayName: String, provider: ModelProvider, supportsImageUpload: Bool, entityHasAccess: Bool) {
@@ -57,6 +58,7 @@ public struct AIChatModel {
         case .meta: return DesignSystemImages.Glyphs.Size16.aiModelLlama
         case .anthropic: return DesignSystemImages.Glyphs.Size16.aiModelClaude
         case .mistral: return DesignSystemImages.Glyphs.Size16.aiModelMistral
+        case .unknown: return nil
         }
     }
     #elseif os(iOS)
@@ -66,6 +68,7 @@ public struct AIChatModel {
         case .meta: return DesignSystemImages.Glyphs.Size16.aiModelLlama
         case .anthropic: return DesignSystemImages.Glyphs.Size16.aiModelClaude
         case .mistral: return DesignSystemImages.Glyphs.Size16.aiModelMistral
+        case .unknown: return nil
         }
     }
     #endif

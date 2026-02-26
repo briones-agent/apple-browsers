@@ -148,9 +148,14 @@ final class AIChatModelsServiceTests: XCTestCase {
         XCTAssertEqual(provider, .mistral)
     }
 
-    func testWhenProviderIsUnknown_ThenDefaultsToOpenAI() {
-        let provider = AIChatModel.ModelProvider.from(id: "unknown-model", providerString: "unknown-provider")
+    func testWhenProviderIsOpenAIString_ThenMapsToOpenAI() {
+        let provider = AIChatModel.ModelProvider.from(id: "gpt-5", providerString: "openai")
         XCTAssertEqual(provider, .openAI)
+    }
+
+    func testWhenProviderIsUnknown_ThenMapsToUnknown() {
+        let provider = AIChatModel.ModelProvider.from(id: "unknown-model", providerString: "unknown-provider")
+        XCTAssertEqual(provider, .unknown)
     }
 
     func testWhenModelIdHasMetaPrefix_ThenIdTakesPrecedenceOverProviderString() {

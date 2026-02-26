@@ -146,8 +146,10 @@ extension AIChatModel.ModelProvider {
             return .mistral
         } else if providerString == "anthropic" {
             return .anthropic
-        } else {
+        } else if providerString == "openai" {
             return .openAI
+        } else {
+            return .unknown
         }
     }
 }
