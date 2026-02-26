@@ -89,7 +89,9 @@ extension SyncSettingsView {
 
             Button(UserText.recoverSyncedDataLink) {
                 Task { @MainActor in
-                    if await model.commonAuthenticate() {
+                    if model.delegate?.isEligibleForAutoRestore() == true {
+                        model.delegate?.showAutoRestoreReady()
+                    } else if await model.commonAuthenticate() {
                         isRecoverSyncedDataSheetVisible = true
                     }
                 }

@@ -310,6 +310,11 @@ class SyncSettingsViewController: UIHostingController<SyncSettingsView> {
 
     func refreshForState(_ authState: SyncAuthState) {
         rootView.model.isSyncEnabled = authState != .inactive
+        // Sync recovery completion is inferred when auth transitions away from `.inactive`,
+        // so dismiss the recovering sheet if it is still visible at that point.
+        if authState != .inactive {
+            dismissRecoveringDataViewIfPresented()
+        }
         if authState != .inactive {
             rootView.model.syncEnabled(recoveryCode: recoveryCode)
             refreshDevices()

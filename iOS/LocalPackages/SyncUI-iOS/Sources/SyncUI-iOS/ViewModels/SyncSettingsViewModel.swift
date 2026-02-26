@@ -24,7 +24,10 @@ import Combine
 public protocol SyncManagementViewModelDelegate: AnyObject {
 
     func authenticateUser() async throws
-    func showRecoverData()
+    func isEligibleForAutoRestore() -> Bool
+    func showAutoRestoreReady()
+    func showRecoveringDataAutoRestore()
+    func showRecoveryCodeEntry()
     func showSyncWithAnotherDevice()
     func showRecoveryPDF()
     func shareRecoveryPDF()
@@ -324,11 +327,17 @@ public class SyncSettingsViewModel: ObservableObject {
         delegate?.fireOtherPlatformLinksPixel(event: event, with: source)
     }
 
-    public func recoverSyncDataPressed() {
+    public func startRecoveryCodeEntry() {
         Task { @MainActor in
-            if await commonAuthenticate() {
-                delegate?.showRecoverData()
-            }
+            guard await commonAuthenticate() else { return }
+            delegate?.showRecoveryCodeEntry()
+        }
+    }
+
+    public func startAutoRestore() {
+        Task { @MainActor in
+            guard await commonAuthenticate() else { return }
+            delegate?.showRecoveringDataAutoRestore()
         }
     }
 

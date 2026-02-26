@@ -282,12 +282,51 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         }
     }
 
+    func isEligibleForAutoRestore() -> Bool {
+        syncAutoRestoreHandler.isEligibleForAutoRestore()
+    }
+
+    @MainActor
+    func showAutoRestoreReady() {
+        dismissPresentedViewController()
+        let readyView = AutoRestoreReadyView(model: rootView.model, onCancel: { [weak self] in
+            self?.dismissPresentedViewController()
+        })
+        navigationController?.present(UIHostingController(rootView: readyView), animated: true)
+    }
+
+    func showRecoveringDataAutoRestore() {
+        dismissPresentedViewController { [weak self] in
+            self?.navigationController?.present(UIHostingController(rootView: RecoveringDataView()), animated: true) { [weak self] in
+                guard let self else { return }
+                Task {
+                    await self.performAutoRestore()
+                }
+            }
+        }
+    }
+
+    func performAutoRestore() async {
+        do {
+            try await syncService.enableSyncFromPreservedAccount()
+        } catch {
+            await handleError(.unableToSyncToServer, error: error, event: .syncLoginError)
+        }
+    }
+
+    func dismissRecoveringDataViewIfPresented() {
+        guard navigationController?.presentedViewController is UIHostingController<RecoveringDataView> else {
+            return
+        }
+        dismissPresentedViewController()
+    }
+
     @MainActor
     func showSyncWithAnotherDevice() {
         collectCode(showQRCode: true)
     }
 
-    func showRecoverData() {
+    func showRecoveryCodeEntry() {
         authenticateUser { [weak self] error in
             guard error == nil, let self else { return }
 

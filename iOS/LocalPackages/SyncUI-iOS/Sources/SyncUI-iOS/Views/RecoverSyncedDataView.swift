@@ -56,7 +56,7 @@ public struct RecoverSyncedDataView: View {
             .foregroundStyle(Color(designSystemColor: .textPrimary))
         } foregroundContent: {
             Button {
-                model.recoverSyncDataPressed()
+                model.startRecoveryCodeEntry()
             } label: {
                 Text(UserText.recoverSyncedDataButton)
             }

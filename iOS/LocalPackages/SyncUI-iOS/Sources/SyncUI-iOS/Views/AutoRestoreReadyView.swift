@@ -25,22 +25,13 @@ public struct AutoRestoreReadyView: View {
 
     @ObservedObject public var model: SyncSettingsViewModel
     var onCancel: () -> Void
-    var onRestoreStart: () -> Void
-    var onRestoreError: () -> Void
-    var onScan: () -> Void
 
     public init(
         model: SyncSettingsViewModel,
-        onCancel: @escaping () -> Void,
-        onRestoreStart: @escaping () -> Void,
-        onRestoreError: @escaping () -> Void,
-        onScan: @escaping () -> Void
+        onCancel: @escaping () -> Void
     ) {
         self.model = model
         self.onCancel = onCancel
-        self.onRestoreStart = onRestoreStart
-        self.onRestoreError = onRestoreError
-        self.onScan = onScan
     }
 
     public var body: some View {
@@ -71,12 +62,7 @@ public struct AutoRestoreReadyView: View {
         } foregroundContent: {
             VStack(spacing: 8) {
                 Button {
-                    Task { @MainActor in
-                        await model.restoreMyData(
-                            onAuthenticated: onRestoreStart,
-                            onRestoreError: onRestoreError
-                        )
-                    }
+                    model.startAutoRestore()
                 } label: {
                     Text(UserText.autoRestoreReadyRestoreButton)
                 }
@@ -85,7 +71,9 @@ public struct AutoRestoreReadyView: View {
                 .padding(.horizontal, 30)
                 .padding(.bottom, 8)
 
-                Button(action: onScan) {
+                Button {
+                    model.startRecoveryCodeEntry()
+                } label: {
                     Text(UserText.autoRestoreReadyScanCodeLink)
                         .daxBodyRegular()
                         .foregroundColor(Color(designSystemColor: .accent))
