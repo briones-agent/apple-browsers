@@ -41,6 +41,7 @@ final class UserScripts: UserScriptsProvider {
     let autoconsentUserScript: AutoconsentUserScript
     let aiChatUserScript: AIChatUserScript
     let subscriptionUserScript: SubscriptionUserScript
+    let useSubscriptionUserScript: UseSubscriptionUserScript
     let subscriptionNavigationHandler: SubscriptionURLNavigationHandler
     let serpSettingsUserScript: SERPSettingsUserScript
     let pageContextUserScript: PageContextUserScript
@@ -120,6 +121,10 @@ final class UserScripts: UserScriptsProvider {
         contentScopeUserScriptIsolated.registerSubfeature(delegate: faviconScript)
         contentScopeUserScriptIsolated.registerSubfeature(delegate: aiChatUserScript)
         contentScopeUserScriptIsolated.registerSubfeature(delegate: subscriptionUserScript)
+        useSubscriptionUserScript = UseSubscriptionUserScript(
+            subscriptionManager: AppDependencyProvider.shared.subscriptionManager,
+            debugHost: aiChatDebugSettings.messagePolicyHostname)
+        contentScopeUserScriptIsolated.registerSubfeature(delegate: useSubscriptionUserScript)
         contentScopeUserScriptIsolated.registerSubfeature(delegate: serpSettingsUserScript)
         contentScopeUserScript.registerSubfeature(delegate: printingSubfeature)
         contentScopeUserScript.registerSubfeature(delegate: pageContextUserScript)

@@ -56,6 +56,7 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
     let aiChatUserScript: AIChatUserScript?
     let pageContextUserScript: PageContextUserScript?
     let subscriptionUserScript: SubscriptionUserScript?
+    let useSubscriptionUserScript: UseSubscriptionUserScript?
     let historyViewUserScript: HistoryViewUserScript
     let newTabPageUserScript: NewTabPageUserScript?
     let serpSettingsUserScript: SERPSettingsUserScript?
@@ -199,6 +200,12 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
 
         if let subscriptionUserScript {
             contentScopeUserScriptIsolated.registerSubfeature(delegate: subscriptionUserScript)
+        }
+        useSubscriptionUserScript = UseSubscriptionUserScript(
+            subscriptionManager: NSApp.delegateTyped.subscriptionManager,
+            debugHost: aiChatDebugURLSettings.customURLHostname)
+        if let useSubscriptionUserScript {
+            contentScopeUserScriptIsolated.registerSubfeature(delegate: useSubscriptionUserScript)
         }
 
         if let youtubeOverlayScript {
