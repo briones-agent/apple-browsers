@@ -237,7 +237,7 @@ final class AIChatCoordinator: AIChatCoordinating {
     }
 
     func closeFloatingWindow(for tabID: TabIdentifier) {
-        sessionStore.sessions[tabID]?.floatingWindowController?.close(initiatedByUser: false)
+        sessionStore.sessions[tabID]?.floatingWindowController?.close(reason: .system)
     }
 
     func closeChat(for tabID: TabIdentifier, withAnimation: Bool) {
@@ -422,7 +422,7 @@ final class AIChatCoordinator: AIChatCoordinating {
 
     private func tearDownUI(for tabID: TabIdentifier) {
         guard let session = sessionStore.sessions[tabID] else { return }
-        session.floatingWindowController?.close(initiatedByUser: false)
+        session.floatingWindowController?.close(reason: .system)
         session.chatViewController?.stopLoading()
         session.chatViewController?.removeCompletely()
     }
@@ -532,8 +532,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         controller.onFrameChanged = nil
 
         guard let chatViewController = controller.detachChatViewController() else {
-            controller.delegate = nil
-            controller.close(initiatedByUser: false)
+            controller.close(reason: .attach)
             session.floatingWindowController = nil
             session.state.setHidden()
             chatFloatingStateDidChangeSubject.send(tabID)
@@ -558,8 +557,7 @@ final class AIChatCoordinator: AIChatCoordinating {
             transitionSidebar(for: tabID, isShowing: true, animated: false)
         }
 
-        controller.delegate = nil
-        controller.close(initiatedByUser: false)
+        controller.close(reason: .attach)
         session.floatingWindowController = nil
 
         fireAIChatSidebarPixel(.aiChatSidebarAttached)

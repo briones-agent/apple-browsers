@@ -31,6 +31,17 @@ protocol AIChatFloatingWindowControllerDelegate: AnyObject {
 /// `AIChatViewController` that was moved out of the docked sidebar.
 @MainActor
 final class AIChatFloatingWindowController: NSObject {
+    /// Why the floating window is being closed.
+    ///
+    /// - user: Closed by explicit user action in the floating window.
+    /// - attach: Closed because chat is being re-docked to the sidebar. Delegate callback is suppressed.
+    /// - system: Closed programmatically by coordinator/session cleanup.
+    enum CloseReason {
+        case user
+        case attach
+        case system
+    }
+
     typealias WindowFactory = (NSRect) -> NSWindow
 
     static var windowFactory: WindowFactory = { contentRect in
@@ -49,7 +60,7 @@ final class AIChatFloatingWindowController: NSObject {
 
     private let floatingWindow: NSWindow
     private var chatViewController: AIChatViewController?
-    private var closeInitiatedByUser = true
+    private var closeReason: CloseReason = .user
     private var cancellables = Set<AnyCancellable>()
 
     var isShowing: Bool {
@@ -78,9 +89,17 @@ final class AIChatFloatingWindowController: NSObject {
         NotificationCenter.default.publisher(for: NSWindow.willCloseNotification, object: floatingWindow)
             .sink { [weak self] _ in
                 guard let self else { return }
-                let initiatedByUser = self.closeInitiatedByUser
-                self.closeInitiatedByUser = true
-                self.delegate?.floatingWindowDidClose(self, initiatedByUser: initiatedByUser)
+                let closeReason = self.closeReason
+                self.closeReason = .user
+
+                switch closeReason {
+                case .attach:
+                    return
+                case .user:
+                    self.delegate?.floatingWindowDidClose(self, initiatedByUser: true)
+                case .system:
+                    self.delegate?.floatingWindowDidClose(self, initiatedByUser: false)
+                }
             }
             .store(in: &cancellables)
 
@@ -97,8 +116,8 @@ final class AIChatFloatingWindowController: NSObject {
         floatingWindow.makeKeyAndOrderFront(nil)
     }
 
-    func close(initiatedByUser: Bool = true) {
-        closeInitiatedByUser = initiatedByUser
+    func close(reason: CloseReason = .user) {
+        closeReason = reason
         floatingWindow.close()
     }
 
