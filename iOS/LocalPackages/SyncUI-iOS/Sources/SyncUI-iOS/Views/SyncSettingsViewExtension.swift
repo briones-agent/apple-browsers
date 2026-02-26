@@ -151,6 +151,20 @@ extension SyncSettingsView {
     @ViewBuilder
     func saveRecoveryPDF() -> some View {
         Section {
+            if model.isAutoRestoreFeatureAvailable {
+                NavigationLink(destination: AutoRestoreSettingsView(model: model)) {
+                    HStack {
+                        Text(UserText.autoRestoreSettingsRowLabel)
+                            .daxBodyRegular()
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(model.autoRestoreStatusText)
+                            .daxBodyRegular()
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
             Button(UserText.saveRecoveryPDFButton) {
                 model.saveRecoveryPDF()
             }
