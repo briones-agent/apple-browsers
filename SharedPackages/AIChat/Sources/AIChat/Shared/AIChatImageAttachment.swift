@@ -54,27 +54,26 @@ public struct AIChatImageAttachment: Identifiable {
     ///   - maxDimension: Maximum dimension (width or height) in pixels
     /// - Returns: Resized image, or original if no resize needed
     private static func resizeIfNeeded(_ image: NSImage, maxDimension: CGFloat) -> NSImage {
-        let size = image.size
+        // Use actual pixel dimensions from CGImage, not NSImage.size which is in points
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return image
+        }
+
+        let pixelWidth = CGFloat(cgImage.width)
+        let pixelHeight = CGFloat(cgImage.height)
 
         // Don't upscale images that are already small enough
-        guard size.width > maxDimension || size.height > maxDimension else {
+        guard pixelWidth > maxDimension || pixelHeight > maxDimension else {
             return image
         }
 
         // Calculate new size maintaining aspect ratio
-        let aspectRatio = size.width / size.height
+        let aspectRatio = pixelWidth / pixelHeight
         let newSize: NSSize
-        if size.width > size.height {
-            // Landscape or square: constrain width
+        if pixelWidth > pixelHeight {
             newSize = NSSize(width: maxDimension, height: maxDimension / aspectRatio)
         } else {
-            // Portrait: constrain height
             newSize = NSSize(width: maxDimension * aspectRatio, height: maxDimension)
-        }
-
-        // Use Core Graphics for faster resizing
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return image
         }
 
         let width = Int(newSize.width)
