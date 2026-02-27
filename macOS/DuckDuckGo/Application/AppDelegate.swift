@@ -24,6 +24,7 @@ import Bookmarks
 import BrokenSitePrompt
 import BrowserServicesKit
 import Cocoa
+import EventHub
 import Combine
 import Common
 import Configuration
@@ -162,6 +163,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let downloadListCoordinator: DownloadListCoordinator
     let autoconsentManagement = AutoconsentManagement()
     let attributedMetricManager: AttributedMetricManager
+    private(set) lazy var eventHubIntegration = MacOSEventHubIntegration(
+        configManager: privacyFeatures.contentBlocking.privacyConfigurationManager
+    )
 
     @MainActor
     private(set) lazy var autoconsentStatsPopoverCoordinator: AutoconsentStatsPopoverCoordinator = AutoconsentStatsPopoverCoordinator(
@@ -1428,6 +1432,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         defaultBrowserAndDockPromptService.applicationDidBecomeActive()
+        eventHubIntegration.applicationDidBecomeActive()
 
         Task { @MainActor in
             await autoconsentStatsPopoverCoordinator.checkAndShowDialogIfNeeded()

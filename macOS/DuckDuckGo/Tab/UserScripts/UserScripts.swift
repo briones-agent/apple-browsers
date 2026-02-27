@@ -19,6 +19,7 @@
 import AIChat
 import AppUpdaterShared
 import BrowserServicesKit
+import EventHub
 import Foundation
 import HistoryView
 import NewTabPage
@@ -260,6 +261,10 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
         let identityTheftRestorationPagesFeature = IdentityTheftRestorationPagesFeature(subscriptionManager: Application.appDelegate.subscriptionManager)
         identityTheftRestorationPagesUserScript.registerSubfeature(delegate: identityTheftRestorationPagesFeature)
         userScripts.append(identityTheftRestorationPagesUserScript)
+    }
+
+    func registerEventHubSubfeature(_ subfeature: EventHubSubfeature) {
+        contentScopeUserScriptIsolated.registerSubfeature(delegate: subfeature)
     }
 
     lazy var userScripts: [UserScript] = [
