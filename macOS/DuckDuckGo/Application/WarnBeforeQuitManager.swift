@@ -289,7 +289,11 @@ final class WarnBeforeQuitManager: ApplicationTerminationDecider {
         // Skip warning for simulated key events (e.g., from mouse button remapping tools).
         // CGEventSource.hidSystemState only reflects physical hardware — programmatic key
         // injections via CGEventPost won't appear in the HID state.
-        if let isPhysicalKeyPress, !isPhysicalKeyPress() {
+        // Exclude floating AI Chat close from this guard: on first Cmd+W after detach,
+        // hidSystemState can briefly report a false negative and incorrectly bypass warning UI.
+        if action != .closeFloatingAIChat,
+           let isPhysicalKeyPress,
+           !isPhysicalKeyPress() {
             Logger.general.debug("WarnBeforeQuitManager: Skipping warning — key event is not from physical keyboard")
             return .sync(.next)
         }
