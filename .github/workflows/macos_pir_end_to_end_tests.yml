@@ -116,6 +116,10 @@ jobs:
         echo "First attempt to sync code signing assets failed. Retrying..."
         bundle exec fastlane sync_signing_ci
 
+    - name: Ping local host
+      run: |
+        ping localhost
+
     - name: Download and unzip artifact
       uses: actions/download-artifact@v4
 
