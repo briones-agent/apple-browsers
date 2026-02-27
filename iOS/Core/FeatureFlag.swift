@@ -381,7 +381,8 @@ extension FeatureFlag: FeatureFlagDescribing {
              .crashCollectionLimitCallStackTreeDepth,
              .tabSwitcherTrackerCount,
              .iPadDuckaiOnTab,
-             .suppressTrackerAnimationOnColdStart:
+             .suppressTrackerAnimationOnColdStart,
+             .syncAutoRestore:
             true
         default:
             false
