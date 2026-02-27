@@ -52,6 +52,7 @@ let package = Package(
         .library(name: "AutoconsentStats", targets: ["AutoconsentStats"]),
         .library(name: "SharedObjCTestsUtils", targets: ["SharedObjCTestsUtils"]),
         .library(name: "WKAbstractions", targets: ["WKAbstractions"]),
+        .library(name: "EventHub", targets: ["EventHub"]),
     ],
     dependencies: [
         .package(url: "https://github.com/duckduckgo/duckduckgo-autofill.git", exact: "19.0.0"),
@@ -542,6 +543,17 @@ let package = Package(
                 .define("DEBUG", .when(configuration: .debug))
             ]
         ),
+        .target(
+            name: "EventHub",
+            dependencies: [
+                "Common",
+                "UserScript",
+                "PrivacyConfig",
+            ],
+            swiftSettings: [
+                .define("DEBUG", .when(configuration: .debug))
+            ]
+        ),
         // MARK: - Test Targets
         .target(
             name: "SharedObjCTestsUtils",
@@ -866,6 +878,12 @@ let package = Package(
                 "SharedObjCTestsUtils",
                 "AutoconsentStats",
                 "PersistenceTestingUtils",
+            ]
+        ),
+        .testTarget(
+            name: "EventHubTests",
+            dependencies: [
+                "EventHub",
             ]
         ),
     ],
