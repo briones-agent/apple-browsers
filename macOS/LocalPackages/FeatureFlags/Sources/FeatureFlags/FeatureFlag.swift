@@ -54,13 +54,6 @@ public enum FeatureFlag: String, CaseIterable {
     /// Controls automatic update downloads in REVIEW builds (off by default)
     case autoUpdateInREVIEW
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866615802881
-    case updatesWontAutomaticallyRestartApp
-
-    /// Simplified update flow without expiration logic
-    /// Requires: .updatesWontAutomaticallyRestartApp (via subfeature)
-    case updatesSimplifiedFlow
-
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866715515023
     case autofillPartialFormSaves
 
@@ -187,9 +180,6 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866477623612
     case dataImportNewExperience
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866721275379
-    case scheduledDefaultBrowserAndDockPromptsInactiveUser
-
     /// https://app.asana.com/1/137249556945/project/1205842942115003/task/1210884473312053
     case attributedMetrics
 
@@ -229,10 +219,6 @@ public enum FeatureFlag: String, CaseIterable {
     /// New permission management view
     /// https://app.asana.com/1/137249556945/project/1148564399326804/task/1211985993948718?focus=true
     case newPermissionView
-
-    /// Tab closing event recreation (failsafe for removing private API)
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212206087745586?focus=true
-    case tabClosingEventRecreation
 
     /// Shows a survey when quitting the app for the first time in a determined period
     /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1212242893241885?focus=true
@@ -306,6 +292,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// Startup Metrics Feature Flag
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213380840527060
     case startupMetrics
+
+    /// Private Process Name Flag
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213442286513425
+    case privateProcessName
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -328,7 +318,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .extendedUserInitiatedPopupTimeout,
                 .suppressEmptyPopUpsOnApproval,
                 .popupPermissionButtonPersistence,
-                .tabClosingEventRecreation,
                 .dataImportWideEventMeasurement,
                 .firstTimeQuitSurvey,
                 .aiChatOmnibarOnboarding,
@@ -368,8 +357,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .embeddedExtension,
                 .autoUpdateInDEBUG,
                 .autoUpdateInREVIEW,
-                .updatesWontAutomaticallyRestartApp,
-                .updatesSimplifiedFlow,
                 .scamSiteProtection,
                 .tabCrashDebugging,
                 .maliciousSiteProtection,
@@ -438,14 +425,13 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .supportsSyncChatsDeletion,
                 .aiChatSidebarResizable,
                 .aiChatSidebarFloating,
-                .startupMetrics:
+                .startupMetrics,
+                .privateProcessName:
             return true
         case .freemiumDBP,
                 .contextualOnboarding,
                 .unknownUsernameCategorization,
                 .credentialsImportPromotionForExistingUsers,
-                .scheduledDefaultBrowserAndDockPromptsInactiveUser,
-                .tabClosingEventRecreation,
                 .terminationDeciderSequence,
                 .crashCollectionDisableKeysSorting,
                 .crashCollectionLimitCallStackTreeDepth:
@@ -473,14 +459,10 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .disabled
         case .autoUpdateInREVIEW:
             return .disabled
-        case .updatesWontAutomaticallyRestartApp:
-            return .remoteReleasable(.feature(.updatesWontAutomaticallyRestartApp))
-        case .updatesSimplifiedFlow:
-            return .remoteReleasable(.subfeature(UpdatesSubfeature.simplifiedFlow))
         case .autofillPartialFormSaves:
             return .remoteReleasable(.subfeature(AutofillSubfeature.partialFormSaves))
         case .webExtensions:
-            return .internalOnly()
+            return .remoteReleasable(.feature(.webExtensions))
         case .embeddedExtension:
             return .remoteReleasable(.subfeature(WebExtensionsSubfeature.embeddedExtension))
         case .syncSeamlessAccountSwitching:
@@ -563,8 +545,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.blurryAddressBarTahoeFix))
         case .dataImportNewExperience:
             return .remoteReleasable(.subfeature(DataImportSubfeature.newDataImportExperience))
-        case .scheduledDefaultBrowserAndDockPromptsInactiveUser:
-            return .remoteReleasable(.subfeature(SetAsDefaultAndAddToDockSubfeature.scheduledDefaultBrowserAndDockPromptsInactiveUser))
         case .attributedMetrics:
             return .remoteReleasable(.feature(.attributedMetrics))
         case .showHideAIGeneratedImagesSection:
@@ -587,8 +567,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.webNotifications))
         case .newPermissionView:
             return .remoteReleasable(.feature(.combinedPermissionView))
-        case .tabClosingEventRecreation:
-            return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.tabClosingEventRecreation))
         case .firstTimeQuitSurvey:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.firstTimeQuitSurvey))
         case .terminationDeciderSequence:
@@ -608,7 +586,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .memoryUsageReporting:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.memoryUsageReporting))
         case .aiChatSync:
-            return .disabled
+            return .remoteReleasable(.subfeature(SyncSubfeature.aiChatSync))
         case .heuristicAction:
             return .remoteReleasable(.subfeature(AutoconsentSubfeature.heuristicAction))
         case .nextStepsListWidget:
@@ -631,6 +609,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .internalOnly()
         case .startupMetrics:
             return .internalOnly()
+        case .privateProcessName:
+            return .disabled
         }
     }
 }

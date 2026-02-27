@@ -179,17 +179,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         windowControllersManager.stateChanged
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
-                self?.refreshFloatingTitleInteractivityForAllSessions()
-            }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)
-            .merge(with: NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification))
-            .merge(with: NotificationCenter.default.publisher(for: NSWindow.didChangeOcclusionStateNotification))
-            .merge(with: NotificationCenter.default.publisher(for: NSWorkspace.activeSpaceDidChangeNotification))
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.refreshFloatingTitleInteractivityForAllSessions()
+                self?.refreshFloatingTitleStateForAllSessions()
             }
             .store(in: &cancellables)
     }
@@ -406,30 +396,19 @@ final class AIChatCoordinator: AIChatCoordinating {
         }
     }
 
-    private func refreshFloatingTitleInteractivity(for tabID: TabIdentifier) {
+    private func refreshFloatingTitleState(for tabID: TabIdentifier) {
         guard let session = sessionStore.sessions[tabID],
               session.state.presentationMode == .floating else {
             return
         }
         session.floatingWindowController?.updateTabViewModel(tabViewModel(for: tabID))
-        let shouldEnableAction = !isBrowserTabVisible(for: tabID)
-        session.chatViewController?.setFloatingTitleActionEnabled(shouldEnableAction)
+        session.chatViewController?.setFloatingTitleActionEnabled(true)
     }
 
-    private func refreshFloatingTitleInteractivityForAllSessions() {
+    private func refreshFloatingTitleStateForAllSessions() {
         for tabID in sessionStore.sessions.keys {
-            refreshFloatingTitleInteractivity(for: tabID)
+            refreshFloatingTitleState(for: tabID)
         }
-    }
-
-    private func isBrowserTabVisible(for tabID: TabIdentifier) -> Bool {
-        guard let controller = windowController(for: tabID),
-              let window = controller.window,
-              window.occlusionState.contains(.visible) else {
-            return false
-        }
-
-        return controller.mainViewController.tabCollectionViewModel.selectedTabViewModel?.tab.uuid == tabID
     }
 
     // MARK: - UI Teardown
@@ -494,7 +473,7 @@ final class AIChatCoordinator: AIChatCoordinating {
 
         session.floatingWindowController = controller
         session.state.setFloating()
-        refreshFloatingTitleInteractivity(for: tabID)
+        refreshFloatingTitleState(for: tabID)
 
         controller.show()
         fireAIChatSidebarPixel(.aiChatSidebarDetached)
@@ -534,7 +513,7 @@ final class AIChatCoordinator: AIChatCoordinating {
         }
         session.floatingWindowController = controller
         session.state.floatingWindowFrame = frame
-        refreshFloatingTitleInteractivity(for: tabID)
+        refreshFloatingTitleState(for: tabID)
         // Show only when re-creating a missing floating window (e.g. restoration path).
         controller.show()
         chatFloatingStateDidChangeSubject.send(tabID)
@@ -598,7 +577,7 @@ extension AIChatCoordinator: AIChatSidebarHostingDelegate {
                 restoreFloatingWindowIfNeeded(for: tabID)
             }
         }
-        refreshFloatingTitleInteractivityForAllSessions()
+        refreshFloatingTitleStateForAllSessions()
     }
 
     func sidebarHostDidUpdateTabs() {
@@ -801,8 +780,10 @@ private extension AIChatCoordinator {
     func activateTabFromFloatingTitle(for tabID: TabIdentifier) {
         windowController(for: tabID)?.window?.makeKeyAndOrderFront(nil)
         sidebarHost.selectTab(with: tabID)
-        sessionStore.sessions[tabID]?.floatingWindowController?.show()
-        refreshFloatingTitleInteractivity(for: tabID)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.sessionStore.sessions[tabID]?.floatingWindowController?.show()
+        }
+        refreshFloatingTitleState(for: tabID)
     }
 
     func owningCoordinator(for tabID: TabIdentifier) -> AIChatCoordinator? {
