@@ -1318,6 +1318,7 @@ class TabViewController: UIViewController {
     private var didGoBackForward: Bool = false {
         didSet {
             if didGoBackForward {
+                contextualOnboardingLogic.setDaxDialogDismiss()
                 contextualOnboardingPresenter.dismissContextualOnboardingIfNeeded(from: self)
             }
         }

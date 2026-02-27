@@ -1141,11 +1141,11 @@ final class DaxDialog: XCTestCase {
         // GIVEN
         let settings = MockDaxDialogsSettings()
         settings.browsingWithTrackersShown = true
-        settings.fireMessageExperimentShown = false
+        settings.fireMessageExperimentShown = true  // In production, this is set when fire dialog is shown
         settings.fireButtonPulseDateShown = nil
         let sut = makeSUT(settings: settings)
 
-        // Simulate fire dialog being visible
+        // Simulate fire dialog being visible (in production, setFireEducationMessageSeen() sets both)
         sut.setLastShownDialog(type: .fire)
 
         // WHEN

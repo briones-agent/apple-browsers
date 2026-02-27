@@ -314,8 +314,12 @@ final class DaxDialogs: NewTabDialogSpecProvider, ContextualOnboardingLogic, Con
     }
     
     var shouldShowFireButtonPulse: Bool {
-        // Show fire the user hasn't seen the fire education dialog or the fire button has not animated before.
-        nonDDGBrowsingMessageSeen && canShowFireButtonAnimationIfDialogIsVisible && (!settings.fireMessageExperimentShown && settings.fireButtonPulseDateShown == nil) && isEnabled
+        // Fire button can pulse when user has seen at least one browsing dialog AND either:
+        // 1. Fire dialog is currently displayed, OR
+        // 2. User navigates away, hasn't seen fire dialog yet, pulse hasn't been shown and no non-fire dialog is currently showing
+        let fireEducationNotSeenYet = !settings.fireMessageExperimentShown && settings.fireButtonPulseDateShown == nil
+
+        return isEnabled && nonDDGBrowsingMessageSeen && canShowFireButtonAnimationIfDialogIsVisible && (isShowingFireDialog || fireEducationNotSeenYet)
     }
 
     var shouldShowPrivacyButtonPulse: Bool {
