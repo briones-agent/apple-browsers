@@ -142,6 +142,7 @@ final class AIChatFloatingWindowController: NSObject {
     // MARK: - Private
 
     private func subscribeToTabInfo(_ tabViewModel: TabViewModel?) {
+        tabInfoCancellable = nil
         guard let tabViewModel else { return }
         chatViewController?.updateFloatingTitle(tabViewModel.title, favicon: tabViewModel.favicon)
         floatingWindow.title = windowTitle(for: tabViewModel.title)
