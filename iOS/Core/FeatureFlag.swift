@@ -381,7 +381,8 @@ extension FeatureFlag: FeatureFlagDescribing {
              .crashCollectionLimitCallStackTreeDepth,
              .tabSwitcherTrackerCount,
              .iPadDuckaiOnTab,
-             .suppressTrackerAnimationOnColdStart:
+             .suppressTrackerAnimationOnColdStart,
+             .syncAutoRestore:
             true
         default:
             false
@@ -646,7 +647,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .newDeviceSyncPrompt:
             return .remoteReleasable(.subfeature(SyncSubfeature.newDeviceSyncPrompt))
         case .syncAutoRestore:
-            return .disabled
+            return .remoteReleasable(.subfeature(SyncSubfeature.syncAutoRestore))
         case .winBackOffer:
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.winBackOffer))
         case .blackFridayCampaign:
