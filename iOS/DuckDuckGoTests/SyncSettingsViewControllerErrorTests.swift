@@ -33,6 +33,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
     var vc: SyncSettingsViewController!
     var errorHandler: CapturingSyncPausedStateManager!
     var ddgSyncing: MockDDGSyncing!
+    var syncAutoRestoreHandler: MockSyncAutoRestoreHandler!
     var testRecoveryCode = "eyJyZWNvdmVyeSI6eyJ1c2VyX2lkIjoiMDZGODhFNzEtNDFBRS00RTUxLUE2UkRtRkEwOTcwMDE5QkYwIiwicHJpbWFyeV9rZXkiOiI1QTk3U3dsQVI5RjhZakJaU09FVXBzTktnSnJEYnE3aWxtUmxDZVBWazgwPSJ9fQ=="
 
     @MainActor
@@ -64,13 +65,15 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
             secureVaultErrorReporter: MockSecureVaultReporting(),
             syncErrorHandler: CapturingAdapterErrorHandler())
         let featureFlagger = MockFeatureFlagger(enabledFeatureFlags: [.syncSeamlessAccountSwitching])
+        syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
         vc = SyncSettingsViewController(
             syncService: ddgSyncing,
             syncBookmarksAdapter: bookmarksAdapter,
             syncCredentialsAdapter: credentialsAdapter,
             syncCreditCardsAdapter: creditCardsAdapter,
             syncPausedStateManager: errorHandler,
-            featureFlagger: featureFlagger
+            featureFlagger: featureFlagger,
+            syncAutoRestoreHandler: syncAutoRestoreHandler
         )
     }
 
@@ -78,6 +81,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         cancellables = nil
         errorHandler = nil
         vc = nil
+        syncAutoRestoreHandler = nil
         super.tearDown()
     }
 
@@ -187,6 +191,26 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
 
         XCTAssertTrue(didDelete)
         XCTAssertTrue(errorHandler.syncDidTurnOffCalled)
+    }
+
+    @MainActor
+    func testWhenShowRecoveryPDFAndAutoRestoreFeatureEnabledAndNoExistingDecisionThenPersistsDefaultEnabledDecision() {
+        syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
+        syncAutoRestoreHandler.existingAutoRestoreDecision = nil
+
+        vc.showRecoveryPDF()
+
+        XCTAssertEqual(syncAutoRestoreHandler.persistedDecisions, [true])
+    }
+
+    @MainActor
+    func testWhenShowRecoveryPDFAndExistingAutoRestoreDecisionThenDoesNotPersistDefaultDecision() {
+        syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
+        syncAutoRestoreHandler.existingAutoRestoreDecision = false
+
+        vc.showRecoveryPDF()
+
+        XCTAssertTrue(syncAutoRestoreHandler.persistedDecisions.isEmpty)
     }
 
     func x_test_syncCodeEntered_accountAlreadyExists_oneDevice_disconnectsThenLogsInAgain() async {

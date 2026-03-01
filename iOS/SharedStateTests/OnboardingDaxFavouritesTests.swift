@@ -244,27 +244,6 @@ import AIChatTestingUtilities
 
 }
 
-private final class MockSyncAutoRestoreHandler: SyncAutoRestoreHandling {
-
-    var isAutoRestoreFeatureEnabled: Bool = false
-
-    func existingDecision() -> Bool? {
-        nil
-    }
-
-    func persistDecision(_ decision: Bool) -> Bool {
-        false
-    }
-
-    func clearDecision() {}
-
-    func isEligibleForAutoRestore() -> Bool {
-        false
-    }
-
-    func restoreFromPreservedAccount() async {}
-}
-
 private struct MockDarkReaderFeatureSettings: DarkReaderFeatureSettings {
     var isFeatureEnabled: Bool = false
     var isForceDarkModeEnabled: Bool = false

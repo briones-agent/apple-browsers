@@ -29,3 +29,27 @@ class MockFavoriteDisplayModeStorage: FavoritesDisplayModeStoring {
 }
 
 class MockFavoritesDisplayModeStoring: MockFavoriteDisplayModeStorage {}
+
+final class MockSyncAutoRestoreHandler: SyncAutoRestoreHandling {
+    var isAutoRestoreFeatureEnabled = false
+    var existingAutoRestoreDecision: Bool?
+    var persistedDecisions: [Bool] = []
+    var persistResult = true
+
+    func existingDecision() -> Bool? {
+        existingAutoRestoreDecision
+    }
+
+    func persistDecision(_ decision: Bool) -> Bool {
+        persistedDecisions.append(decision)
+        return persistResult
+    }
+
+    func clearDecision() {}
+
+    func isEligibleForAutoRestore() -> Bool {
+        false
+    }
+
+    func restoreFromPreservedAccount() async {}
+}

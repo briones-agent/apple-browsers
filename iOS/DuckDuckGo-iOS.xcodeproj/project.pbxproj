@@ -2166,6 +2166,7 @@
 		F1AF3A3D2F44932300D2BAD3 /* TempPlaceholderModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AF3A3C2F44932300D2BAD3 /* TempPlaceholderModifier.swift */; };
 		F1AF3A3F2F44AD1100D2BAD3 /* RebrandedAppIconPickerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AF3A3E2F44AD1100D2BAD3 /* RebrandedAppIconPickerViewModel.swift */; };
 		F1AF3A412F44AE2600D2BAD3 /* AppIconManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AF3A402F44AE2400D2BAD3 /* AppIconManaging.swift */; };
+		A1B2C3D52F7F111100ABCDEF /* SaveRecoveryKeyViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42F7F111100ABCDEF /* SaveRecoveryKeyViewModelTests.swift */; };
 		F1BDDC022C340DDF00459306 /* SyncManagementViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BDDC002C340DDF00459306 /* SyncManagementViewModelTests.swift */; };
 		F1BE54581E69DE1000FCF649 /* TutorialSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BE54571E69DE1000FCF649 /* TutorialSettings.swift */; };
 		F1CA3C371F045878005FADB3 /* PrivacyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA3C361F045878005FADB3 /* PrivacyStore.swift */; };
@@ -4725,6 +4726,7 @@
 		F1AF3A3C2F44932300D2BAD3 /* TempPlaceholderModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempPlaceholderModifier.swift; sourceTree = "<group>"; };
 		F1AF3A3E2F44AD1100D2BAD3 /* RebrandedAppIconPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RebrandedAppIconPickerViewModel.swift; sourceTree = "<group>"; };
 		F1AF3A402F44AE2400D2BAD3 /* AppIconManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconManaging.swift; sourceTree = "<group>"; };
+		A1B2C3D42F7F111100ABCDEF /* SaveRecoveryKeyViewModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SaveRecoveryKeyViewModelTests.swift; sourceTree = "<group>"; };
 		F1B745211E549D550072547E /* UIColorExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = UIColorExtension.swift; path = ../Core/UIColorExtension.swift; sourceTree = "<group>"; };
 		F1BDDC002C340DDF00459306 /* SyncManagementViewModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SyncManagementViewModelTests.swift; sourceTree = "<group>"; };
 		F1BE54571E69DE1000FCF649 /* TutorialSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TutorialSettings.swift; sourceTree = "<group>"; };
@@ -10172,6 +10174,7 @@
 		F1BDDC012C340DDF00459306 /* SyncUI */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D42F7F111100ABCDEF /* SaveRecoveryKeyViewModelTests.swift */,
 				F1BDDC002C340DDF00459306 /* SyncManagementViewModelTests.swift */,
 			);
 			path = SyncUI;
@@ -12638,6 +12641,7 @@
 				C13EEA1E2D64CFCA001D5DC3 /* DataImportViewModelTests.swift in Sources */,
 				9F7634BE2EA8633300804550 /* PromptCooldownIntervalProviderTests.swift in Sources */,
 				9FAB4B762E98C70B00D8298A /* HomeMessageViewModelTests.swift in Sources */,
+				A1B2C3D52F7F111100ABCDEF /* SaveRecoveryKeyViewModelTests.swift in Sources */,
 				F1BDDC022C340DDF00459306 /* SyncManagementViewModelTests.swift in Sources */,
 				9FFDA83B2DFA8E58007923F7 /* MockAVQueuePlayer.swift in Sources */,
 				D625AAEC2BBEF27600BC189A /* TabURLInterceptorTests.swift in Sources */,
