@@ -70,6 +70,7 @@ import AIChatTestingUtilities
         contextualOnboardingLogicMock = ContextualOnboardingLogicMock()
         let historyManager = MockHistoryManager()
         let syncService = MockDDGSyncing(authState: .active, isSyncInProgress: false)
+        let syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
         let featureFlagger = MockFeatureFlagger()
         let aiChatSettings = MockAIChatSettingsProvider()
         let fireproofing = MockFireproofing()
@@ -156,6 +157,7 @@ import AIChatTestingUtilities
             subscriptionFeatureAvailability: SubscriptionFeatureAvailabilityMock.enabled,
             voiceSearchHelper: MockVoiceSearchHelper(isSpeechRecognizerAvailable: true, voiceSearchEnabled: true),
             featureFlagger: featureFlagger,
+            syncAutoRestoreHandler: syncAutoRestoreHandler,
             contentScopeExperimentsManager: MockContentScopeExperimentManager(),
             fireproofing: fireproofing,
             textZoomCoordinator: textZoomCoordinator,
@@ -240,6 +242,27 @@ import AIChatTestingUtilities
         XCTAssertTrue(contextualOnboardingLogicMock.didCallEnableAddFavoriteFlow)
     }
 
+}
+
+private final class MockSyncAutoRestoreHandler: SyncAutoRestoreHandling {
+
+    var isAutoRestoreFeatureEnabled: Bool = false
+
+    func existingDecision() -> Bool? {
+        nil
+    }
+
+    func persistDecision(_ decision: Bool) -> Bool {
+        false
+    }
+
+    func clearDecision() {}
+
+    func isEligibleForAutoRestore() -> Bool {
+        false
+    }
+
+    func restoreFromPreservedAccount() async {}
 }
 
 private struct MockDarkReaderFeatureSettings: DarkReaderFeatureSettings {
