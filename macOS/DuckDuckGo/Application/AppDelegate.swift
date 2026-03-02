@@ -1455,12 +1455,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 internalUserDecider: internalUserDecider,
                 featureFlagger: featureFlagger,
                 crashSenderPixelEvents: CrashReportSender.pixelEvents,
-                fireCrashPixel: { bundleID, appVersion in
-                    var params = [String: String]()
-                    if let appVersion {
-                        params[PixelKit.Parameters.appVersion] = appVersion
-                    }
-                    let appIdentifier = CrashPixelAppIdentifier(bundleID)
+                fireCrashPixel: { parameters in
+                    var params = parameters
+                    let appIdentifier = CrashPixelAppIdentifier(params.removeValue(forKey: "bundle"))
                     PixelKit.fire(GeneralPixel.crash(appIdentifier: appIdentifier),
                                   frequency: .dailyAndStandard,
                                   withAdditionalParameters: params,
