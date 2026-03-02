@@ -16,155 +16,160 @@
 //  limitations under the License.
 //
 
-import XCTest
+import Foundation
+import Testing
+
 @testable import CrashReporting
 
-final class CrashReportReaderTests: XCTestCase {
+struct CrashReportReaderTests {
 
-    private var fileManager: MockFileManager!
     private let appBundleIdentifier = "com.duckduckgo.macos"
     private let vpnBundleIdentifier = "com.duckduckgo.macos.vpn.network-extension"
     private var validBundleIdentifiers: [String] {
         [appBundleIdentifier, vpnBundleIdentifier]
     }
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        fileManager = MockFileManager()
-    }
-
-    override func tearDownWithError() throws {
-        fileManager = nil
-        try super.tearDownWithError()
-    }
-
-    func testWhenFilesHaveUnsupportedExtensionsTheyAreIgnored() throws {
+    @Test("When files have unsupported extensions, they are ignored", .timeLimit(.minutes(1)))
+    func whenFilesHaveUnsupportedExtensionsTheyAreIgnored() throws {
+        let fileManager = MockFileManager()
         let now = Date()
 
-        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "DuckDuckGo-legacy.crash", contents: sampleLegacyReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "DuckDuckGo-unexpected.txt", contents: "text", in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "DuckDuckGo-legacy.crash", contents: sampleLegacyReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "DuckDuckGo-unexpected.txt", contents: "text", in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: now.addingTimeInterval(-120))
 
-        XCTAssertEqual(reports.count, 2)
+        #expect(reports.count == 2)
         let returnedNames = Set(reports.map { $0.url.lastPathComponent })
-        XCTAssertEqual(returnedNames, ["DuckDuckGo-valid.ips", "DuckDuckGo-legacy.crash"])
+        #expect(returnedNames == ["DuckDuckGo-valid.ips", "DuckDuckGo-legacy.crash"])
     }
 
-    func testWhenFilesDoNotBelongToAppTheyAreFilteredOut() throws {
+    @Test("When files do not belong to app, they are filtered out", .timeLimit(.minutes(1)))
+    func whenFilesDoNotBelongToAppTheyAreFilteredOut() throws {
+        let fileManager = MockFileManager()
         let now = Date()
 
-        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "\(vpnBundleIdentifier)-123.crash", contents: sampleLegacyReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "OtherApp.crash", contents: sampleLegacyReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "\(vpnBundleIdentifier)-123.crash", contents: sampleLegacyReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "OtherApp.crash", contents: sampleLegacyReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: now.addingTimeInterval(-120))
 
         let returnedNames = Set(reports.map { $0.url.lastPathComponent })
-        XCTAssertEqual(returnedNames, ["DuckDuckGo-valid.ips", "\(vpnBundleIdentifier)-123.crash"])
+        #expect(returnedNames == ["DuckDuckGo-valid.ips", "\(vpnBundleIdentifier)-123.crash"])
     }
 
-    func testWhenReportIsOlderThanLastCheckItIsIgnored() throws {
+    @Test("When report is older than last check, it is ignored", .timeLimit(.minutes(1)))
+    func whenReportIsOlderThanLastCheckItIsIgnored() throws {
+        let fileManager = MockFileManager()
         let now = Date()
         let lastCheck = now.addingTimeInterval(-120)
 
-        try writeReport(named: "DuckDuckGo-old.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-3600))
-        try writeReport(named: "DuckDuckGo-new.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "DuckDuckGo-old.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-3600), fileManager: fileManager)
+        try writeReport(named: "DuckDuckGo-new.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: lastCheck)
 
-        XCTAssertEqual(reports.count, 1)
-        XCTAssertEqual(reports.first?.url.lastPathComponent, "DuckDuckGo-new.ips")
+        #expect(reports.count == 1)
+        #expect(reports.first?.url.lastPathComponent == "DuckDuckGo-new.ips")
     }
 
-    func testReportsAreLoadedFromUserAndSystemDirectories() throws {
+    @Test("Reports are loaded from user and system directories", .timeLimit(.minutes(1)))
+    func reportsAreLoadedFromUserAndSystemDirectories() throws {
+        let fileManager = MockFileManager()
         let now = Date()
 
-        try writeReport(named: "DuckDuckGo-user.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "DuckDuckGo-system.crash", contents: sampleLegacyReport(), in: FileManager.systemDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "DuckDuckGo-user.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "DuckDuckGo-system.crash", contents: sampleLegacyReport(), in: FileManager.systemDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: now.addingTimeInterval(-120))
 
         let returnedNames = Set(reports.map { $0.url.lastPathComponent })
-        XCTAssertEqual(returnedNames, ["DuckDuckGo-user.ips", "DuckDuckGo-system.crash"])
+        #expect(returnedNames == ["DuckDuckGo-user.ips", "DuckDuckGo-system.crash"])
     }
 
-    func testWhenIPSBundleIDDoesNotMatchItIsFilteredOut() throws {
+    @Test("When IPS bundle ID does not match, it is filtered out", .timeLimit(.minutes(1)))
+    func whenIPSBundleIDDoesNotMatchItIsFilteredOut() throws {
+        let fileManager = MockFileManager()
         let now = Date()
 
-        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "DuckDuckGo-other.ips", contents: sampleIPSReport(bundleID: "com.example.other"), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "DuckDuckGo-other.ips", contents: sampleIPSReport(bundleID: "com.example.other"), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: now.addingTimeInterval(-120))
 
-        XCTAssertEqual(reports.count, 1)
-        XCTAssertEqual(reports.first?.url.lastPathComponent, "DuckDuckGo-valid.ips")
+        #expect(reports.count == 1)
+        #expect(reports.first?.url.lastPathComponent == "DuckDuckGo-valid.ips")
     }
 
-    func testWhenIPSBundleIDMatchesVpnExtensionItIsIncluded() throws {
+    @Test("When IPS bundle ID matches VPN extension, it is included", .timeLimit(.minutes(1)))
+    func whenIPSBundleIDMatchesVpnExtensionItIsIncluded() throws {
+        let fileManager = MockFileManager()
         let now = Date()
 
-        try writeReport(named: "\(vpnBundleIdentifier)-valid.ips", contents: sampleIPSReport(bundleID: vpnBundleIdentifier), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "\(vpnBundleIdentifier)-valid.ips", contents: sampleIPSReport(bundleID: vpnBundleIdentifier), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: now.addingTimeInterval(-120))
 
-        XCTAssertEqual(reports.count, 1)
-        XCTAssertEqual(reports.first?.bundleID, vpnBundleIdentifier)
+        #expect(reports.count == 1)
+        #expect(reports.first?.bundleID == vpnBundleIdentifier)
     }
 
-    func testWhenIPSBundleIDHasSuffixItIsFilteredOut() throws {
+    @Test("When IPS bundle ID has suffix, it is filtered out", .timeLimit(.minutes(1)))
+    func whenIPSBundleIDHasSuffixItIsFilteredOut() throws {
+        let fileManager = MockFileManager()
         let now = Date()
 
-        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
-        try writeReport(named: "DuckDuckGo-suffixed.ips", contents: sampleIPSReport(bundleID: "\(appBundleIdentifier).debug"), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60))
+        try writeReport(named: "DuckDuckGo-valid.ips", contents: sampleIPSReport(), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
+        try writeReport(named: "DuckDuckGo-suffixed.ips", contents: sampleIPSReport(bundleID: "\(appBundleIdentifier).debug"), in: FileManager.userDiagnosticReports, creationDate: now.addingTimeInterval(-60), fileManager: fileManager)
 
-        let reader = makeReader(now: now)
+        let reader = makeReader(now: now, fileManager: fileManager)
         let reports = reader.getCrashReports(since: now.addingTimeInterval(-120))
 
-        XCTAssertEqual(reports.count, 1)
-        XCTAssertEqual(reports.first?.url.lastPathComponent, "DuckDuckGo-valid.ips")
+        #expect(reports.count == 1)
+        #expect(reports.first?.url.lastPathComponent == "DuckDuckGo-valid.ips")
     }
 
     // MARK: - Helpers
 
-    private func writeReport(named name: String, contents: String, in directory: URL, creationDate: Date) throws {
+    private func writeReport(named name: String,
+                             contents: String,
+                             in directory: URL,
+                             creationDate: Date,
+                             fileManager: MockFileManager) throws {
         let url = directory.appendingPathComponent(name)
         fileManager.registerFile(at: url, in: directory, contents: contents, creationDate: creationDate)
     }
 
-    private func makeReader(now: Date) -> CrashReportReader {
+    private func makeReader(now: Date, fileManager: MockFileManager) -> CrashReportReader {
         let validBundleIDs = validBundleIdentifiers
         return CrashReportReader(fileManager: fileManager,
                                  validBundleIdentifierProvider: { validBundleIDs },
                                  dateProvider: { now })
     }
 
-    private func sampleIPSReport(bundleID: String? = nil) -> String {
+    private func sampleIPSReport(bundleID: String? = nil) throws -> String {
         let bundleIDValue = bundleID ?? appBundleIdentifier
         let original = "\"bundleID\":\"com.duckduckgo.macos.browser\""
         let replacement = "\"bundleID\":\"\(bundleIDValue)\""
-        return exampleCrashReportContents.replacingOccurrences(of: original, with: replacement, options: [], range: nil)
+        return try loadExampleCrashReportContents()
+            .replacingOccurrences(of: original, with: replacement, options: [], range: nil)
     }
 
     private func sampleLegacyReport() -> String {
-        return "Process: DuckDuckGo [123]"
+        "Process: DuckDuckGo [123]"
     }
 
-    private lazy var exampleCrashReportContents: String = {
-        let bundle = Bundle(for: CrashReportReaderTests.self)
-        guard let url = bundle.url(forResource: "DuckDuckGo-ExampleCrash", withExtension: "ips"),
-              let contents = try? String(contentsOf: url) else {
-            XCTFail("Missing sample JSON crash file")
-            return ""
-        }
-        return contents
-    }()
+    private func loadExampleCrashReportContents() throws -> String {
+        let url = try #require(Bundle.module.url(forResource: "DuckDuckGo-ExampleCrash", withExtension: "ips"))
+        return try String(contentsOf: url)
+    }
 
 }

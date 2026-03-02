@@ -77,7 +77,10 @@ let package = Package(
             dependencies: [
                 "CrashReporting",
             ],
-            path: "Tests/CrashReportingTests"
+            path: "Tests/CrashReportingTests",
+            resources: [
+                .process("DuckDuckGo-ExampleCrash.ips"),
+            ]
         ),
         .testTarget(
             name: "AppStoreCrashCollectionTests",

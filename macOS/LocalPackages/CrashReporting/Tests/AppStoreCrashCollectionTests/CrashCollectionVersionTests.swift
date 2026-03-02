@@ -22,7 +22,7 @@ import Testing
 
 struct CrashCollectionVersionTests {
 
-    @Test("Build number is removed from App Version")
+    @Test("Build number is removed from App Version", .timeLimit(.minutes(1)))
     @available(macOS 12.0, *)
     func buildNumberIsRemovedFromAppVersion() {
         #expect(CrashCollection.removeBuildNumber(from: nil) == nil)

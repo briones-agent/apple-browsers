@@ -16,45 +16,42 @@
 //  limitations under the License.
 //
 
-import XCTest
+import Foundation
+import Testing
+
 @testable import CrashReporting
 
-class CrashReportTests: XCTestCase {
+struct CrashReportTests {
 
-    func testWhenParsingIPSCrashReports_ThenCrashReportDataDoesNotIncludeIdentifyingInformation() {
-        let bundle = Bundle(for: CrashReportTests.self)
-        let url = bundle.resourceURL!.appendingPathComponent("DuckDuckGo-ExampleCrash.ips")
+    @Test("When parsing IPS crash reports, crash report data does not include identifying information", .timeLimit(.minutes(1)))
+    func whenParsingIPSCrashReportsThenCrashReportDataDoesNotIncludeIdentifyingInformation() throws {
+        let url = try #require(Bundle.module.url(forResource: "DuckDuckGo-ExampleCrash", withExtension: "ips"))
 
         let report = JSONCrashReport(url: url, fileManager: .default)
 
-        XCTAssertNotNil(report.content)
-        XCTAssertNotNil(report.contentData)
+        #expect(report.contentData != nil)
+        let content = try #require(report.content)
 
         // Verify that the content includes the slice ID
-        XCTAssertTrue(report.content!.contains("7fc6ff2c-a85d-3116-96d9-9368ec955ba1"))
+        #expect(content.contains("7fc6ff2c-a85d-3116-96d9-9368ec955ba1"))
 
         // Verify that the content does not include the sleepWakeUUID anywhere in the report
-        XCTAssertFalse(report.content!.contains("2384290E-F858-4024-9488-11D3FF94B4DD"))
+        #expect(!content.contains("2384290E-F858-4024-9488-11D3FF94B4DD"))
 
         // Verify that the content does not include the device identitier
-        XCTAssertFalse(report.content!.contains("483B097A-A969-596F-9F2A-357347BB1DEC"))
+        #expect(!content.contains("483B097A-A969-596F-9F2A-357347BB1DEC"))
 
         // Verify that the content does not include any experiment rollout identifiers
-        XCTAssertFalse(report.content!.contains("602ad4dac86151000cf27e46"))
-        XCTAssertFalse(report.content!.contains("5fc94383418129005b4e9ae0"))
-        XCTAssertFalse(report.content!.contains("5ffde50ce2aacd000d47a95f"))
-        XCTAssertFalse(report.content!.contains("60da5e84ab0ca017dace9abf"))
-        XCTAssertFalse(report.content!.contains("607844aa04477260f58a8077"))
-        XCTAssertFalse(report.content!.contains("601d9415f79519000ccd4b69"))
+        #expect(!content.contains("602ad4dac86151000cf27e46"))
+        #expect(!content.contains("5fc94383418129005b4e9ae0"))
+        #expect(!content.contains("5ffde50ce2aacd000d47a95f"))
+        #expect(!content.contains("60da5e84ab0ca017dace9abf"))
+        #expect(!content.contains("607844aa04477260f58a8077"))
+        #expect(!content.contains("601d9415f79519000ccd4b69"))
 
         // Verify that the sleepWakeUUID is definitely empty
-        XCTAssertTrue(report.content!.contains(#""sleepWakeUUID":"<removed>""#))
-        XCTAssertTrue(report.content!.contains(#""deviceIdentifierForVendor":"<removed>""#))
-    }
-
-    private func ipsCrashURL() -> URL {
-        let bundle = Bundle(for: CrashReportTests.self)
-        return bundle.resourceURL!.appendingPathComponent("DuckDuckGo-ExampleCrash.ips")
+        #expect(content.contains(#""sleepWakeUUID":"<removed>""#))
+        #expect(content.contains(#""deviceIdentifierForVendor":"<removed>""#))
     }
 
 }
