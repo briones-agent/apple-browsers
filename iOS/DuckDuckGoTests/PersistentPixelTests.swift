@@ -44,7 +44,7 @@ final class PersistentPixelTests: XCTestCase {
         DelayedPixelFiringMock.tearDown()
 
         let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
+        formatter.formatOptions = [.withFullDate]
         testDateString = formatter.string(from: Date())
         oldDateString = formatter.string(from: Date().addingTimeInterval(-.days(30)))
     }

@@ -61,9 +61,23 @@ public final class PersistentPixel: PersistentPixelFiring {
 
     private let dateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
+        // Use day-level precision only to avoid creating a high-entropy fingerprint
+        // that could link pixel retries across sessions. Full timestamps (withInternetDateTime)
+        // included seconds, making each pixel fire uniquely identifiable.
+        formatter.formatOptions = [.withFullDate]
+        return formatter
+    }()
+
+    /// Fallback formatter for parsing legacy timestamps stored with second-level precision.
+    private let legacyDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+
+    private func parseTimestamp(_ dateString: String) -> Date? {
+        return dateFormatter.date(from: dateString) ?? legacyDateFormatter.date(from: dateString)
+    }
 
     public convenience init() {
         self.init(pixelFiring: Pixel.self,
@@ -245,7 +259,7 @@ public final class PersistentPixel: PersistentPixelFiring {
         let date28DaysAgo = calendar.date(byAdding: .day, value: -28, to: currentDate)
 
         for pixelMetadata in queuedPixels {
-            if let sendDateString = pixelMetadata.timestamp, let sendDate = dateFormatter.date(from: sendDateString), let date28DaysAgo {
+            if let sendDateString = pixelMetadata.timestamp, let sendDate = parseTimestamp(sendDateString), let date28DaysAgo {
                 if sendDate < date28DaysAgo {
                     pixelIDsAccessQueue.sync {
                         _ = pixelIDsToRemove.insert(pixelMetadata.id)
