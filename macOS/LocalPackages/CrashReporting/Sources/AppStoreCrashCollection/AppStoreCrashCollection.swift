@@ -28,10 +28,12 @@ extension CrashReportingFactory: AppStoreCrashReportingFactory {
     @available(macOS 12.0, *)
     public static func instantiate(internalUserDecider: InternalUserDecider,
                                    featureFlagger: FeatureFlagger,
+                                   crashSenderPixelEvents: EventMapping<CrashReportSenderError>?,
                                    fireCrashPixel: @escaping (_ bundleID: String?, _ appVersion: String?) -> Void,
                                    promptForConsent: @escaping (_ crashPayload: Data) async -> Bool) -> any CrashReporting {
         return AppStoreCrashCollection(internalUserDecider: internalUserDecider,
                                        featureFlagger: featureFlagger,
+                                       crashSenderPixelEvents: crashSenderPixelEvents,
                                        fireCrashPixel: fireCrashPixel,
                                        promptForConsent: promptForConsent)
     }
@@ -40,20 +42,22 @@ extension CrashReportingFactory: AppStoreCrashReportingFactory {
 @available(macOS 12.0, *)
 public final class AppStoreCrashCollection: CrashReporting {
 
-    private lazy var crashCollection = CrashCollection(
-        crashReportSender: CrashReportSender(platform: .macOSAppStore, pixelEvents: nil)
-    )
+    private lazy var crashCollection = CrashCollection(crashReportSender: CrashReportSender(platform: .macOSAppStore,
+                                                                                             pixelEvents: crashSenderPixelEvents))
     private let internalUserDecider: InternalUserDecider
     private let featureFlagger: FeatureFlagger
+    private let crashSenderPixelEvents: EventMapping<CrashReportSenderError>?
     private let fireCrashPixel: (_ bundleID: String?, _ appVersion: String?) -> Void
     private let promptForConsent: (_ crashPayload: Data) async -> Bool
 
     public init(internalUserDecider: InternalUserDecider,
                 featureFlagger: FeatureFlagger,
+                crashSenderPixelEvents: EventMapping<CrashReportSenderError>?,
                 fireCrashPixel: @escaping (_ bundleID: String?, _ appVersion: String?) -> Void,
                 promptForConsent: @escaping (_ crashPayload: Data) async -> Bool) {
         self.internalUserDecider = internalUserDecider
         self.featureFlagger = featureFlagger
+        self.crashSenderPixelEvents = crashSenderPixelEvents
         self.fireCrashPixel = fireCrashPixel
         self.promptForConsent = promptForConsent
     }

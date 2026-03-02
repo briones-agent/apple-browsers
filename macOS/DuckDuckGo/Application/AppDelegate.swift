@@ -1454,6 +1454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return appStoreFactory.instantiate(
                 internalUserDecider: internalUserDecider,
                 featureFlagger: featureFlagger,
+                crashSenderPixelEvents: CrashReportSender.pixelEvents,
                 fireCrashPixel: { bundleID, appVersion in
                     var params = [String: String]()
                     if let appVersion {
