@@ -31,7 +31,6 @@ public class SaveRecoveryKeyViewModel: ObservableObject {
     @Published var isAutoRestoreEnabled: Bool
 
     private let presentLearnMoreAction: () -> Void
-    private var isUpdatingToggleProgrammatically = false
     private let persistAutoRestoreDecision: (Bool) -> Bool
 
     public init(
@@ -67,13 +66,9 @@ public class SaveRecoveryKeyViewModel: ObservableObject {
 
     @discardableResult
     func autoRestoreToggled(_ isEnabled: Bool) -> Bool {
-        guard isAutoRestoreFeatureEnabled, !isUpdatingToggleProgrammatically else { return true }
-        guard persistDecision(isEnabled) else {
-            isUpdatingToggleProgrammatically = true
-            isAutoRestoreEnabled.toggle()
-            isUpdatingToggleProgrammatically = false
-            return false
-        }
+        guard isAutoRestoreFeatureEnabled else { return true }
+        guard persistDecision(isEnabled) else { return false }
+        isAutoRestoreEnabled = isEnabled
         return true
     }
 

@@ -71,7 +71,7 @@ final class SaveRecoveryKeyViewModelTests: XCTestCase {
         XCTAssertTrue(persistSpy.persistedDecisions.isEmpty)
     }
 
-    func testWhenAutoRestoreToggledAndPersistSucceedsThenReturnsTrueAndKeepsSelection() {
+    func testWhenAutoRestoreToggledAndPersistSucceedsThenReturnsTrueAndUpdatesState() {
         let persistSpy = AutoRestoreDecisionPersistSpy()
         let sut = SaveRecoveryKeyViewModel(
             key: "test-key",
@@ -82,7 +82,6 @@ final class SaveRecoveryKeyViewModelTests: XCTestCase {
             persistAutoRestoreDecision: persistSpy.persist(_:),
             presentLearnMore: {}
         )
-        sut.isAutoRestoreEnabled = false
 
         let didPersist = sut.autoRestoreToggled(false)
 
@@ -91,7 +90,7 @@ final class SaveRecoveryKeyViewModelTests: XCTestCase {
         XCTAssertEqual(persistSpy.persistedDecisions, [false])
     }
 
-    func testWhenAutoRestoreToggledAndPersistFailsThenReturnsFalseAndRevertsSelection() {
+    func testWhenAutoRestoreToggledAndPersistFailsThenReturnsFalseAndKeepsOriginalState() {
         let persistSpy = AutoRestoreDecisionPersistSpy()
         persistSpy.result = false
         let sut = SaveRecoveryKeyViewModel(
@@ -103,7 +102,6 @@ final class SaveRecoveryKeyViewModelTests: XCTestCase {
             persistAutoRestoreDecision: persistSpy.persist(_:),
             presentLearnMore: {}
         )
-        sut.isAutoRestoreEnabled = false
 
         let didPersist = sut.autoRestoreToggled(false)
 
@@ -123,7 +121,6 @@ final class SaveRecoveryKeyViewModelTests: XCTestCase {
             persistAutoRestoreDecision: persistSpy.persist(_:),
             presentLearnMore: {}
         )
-        sut.isAutoRestoreEnabled = false
 
         let didPersist = sut.autoRestoreToggled(false)
 
