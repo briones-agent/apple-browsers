@@ -493,7 +493,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        // Only allow Duck.ai supported image formats
         panel.allowedContentTypes = [.jpeg, .png, .webP]
 
         guard let window = view.window else { return }
@@ -501,46 +500,49 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             guard let self, response == .OK else { return }
             let remaining = Constants.maxAttachments - self.attachmentsContainerView.attachments.count
             for url in panel.urls.prefix(remaining) {
-                guard let originalImage = NSImage(contentsOf: url) else { continue }
+                self.addImageAttachment(from: url)
+            }
+        }
+    }
 
-                // Show original image immediately as placeholder (no resize)
-                let placeholderId = UUID()
-                let placeholderAttachment = AIChatImageAttachment(
-                    id: placeholderId,
-                    image: originalImage,
-                    fileName: url.lastPathComponent,
-                    fileURL: url,
-                    skipResize: true
-                )
-                self.attachmentsContainerView.addAttachment(placeholderAttachment)
-                PixelKit.fire(AIChatPixel.aiChatAddressBarImageAttached, frequency: .dailyAndCount, includeAppVersionParameter: true)
+    private func addImageAttachment(from url: URL) {
+        guard let originalImage = NSImage(contentsOf: url) else { return }
 
-                // Resize in background and track task.
-                // Load a separate NSImage from disk — NSImage is not thread-safe,
-                // so sharing the same instance across threads would cause a data race.
-                let fileURL = url
-                let resizeTask = Task.detached(priority: .userInitiated) { [weak self] in
-                    guard !Task.isCancelled else { return }
+        let placeholderId = UUID()
+        let placeholder = AIChatImageAttachment(
+            id: placeholderId,
+            image: originalImage,
+            fileName: url.lastPathComponent,
+            fileURL: url,
+            skipResize: true
+        )
+        attachmentsContainerView.addAttachment(placeholder)
+        PixelKit.fire(AIChatPixel.aiChatAddressBarImageAttached, frequency: .dailyAndCount, includeAppVersionParameter: true)
 
-                    guard let backgroundImage = NSImage(contentsOf: fileURL) else { return }
-                    let resizedAttachment = AIChatImageAttachment(
-                        id: placeholderId,
-                        image: backgroundImage,
-                        fileName: fileURL.lastPathComponent,
-                        fileURL: fileURL,
-                        skipResize: false  // This will resize
-                    )
+        resizeTasks[placeholderId] = makeResizeTask(for: url, placeholderId: placeholderId)
+    }
 
-                    guard !Task.isCancelled else { return }
+    /// Resizes the image on a background thread and replaces the placeholder when done.
+    /// Loads a separate NSImage from disk — NSImage is not thread-safe,
+    /// so sharing the same instance across threads would cause a data race.
+    private func makeResizeTask(for fileURL: URL, placeholderId: UUID) -> Task<Void, Never> {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard !Task.isCancelled else { return }
 
-                    // Update UI on main thread
-                    await MainActor.run { [weak self] in
-                        self?.attachmentsContainerView.replaceAttachment(id: placeholderId, with: resizedAttachment)
-                        self?.resizeTasks.removeValue(forKey: placeholderId)
-                    }
-                }
+            guard let backgroundImage = NSImage(contentsOf: fileURL) else { return }
+            let resized = AIChatImageAttachment(
+                id: placeholderId,
+                image: backgroundImage,
+                fileName: fileURL.lastPathComponent,
+                fileURL: fileURL,
+                skipResize: false
+            )
 
-                self.resizeTasks[placeholderId] = resizeTask
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run { [weak self] in
+                self?.attachmentsContainerView.replaceAttachment(id: placeholderId, with: resized)
+                self?.resizeTasks.removeValue(forKey: placeholderId)
             }
         }
     }
