@@ -208,19 +208,70 @@ private func selectUnpinnedTab(at index: Int, ...) -> Bool {
 }
 ```
 
-**New `stubTab(at:)` method:**
+**New `stubTab(at:)` — Stubbing Flow (Tab → TabStub):**
+
+The full sequence when the user suspends an inactive tab:
+
+```
+1. Guard preconditions (not pinned, not active, not burner)
+2. Render snapshot if missing (tab may never have been deselected)
+3. Capture interactionStateData from the live WKWebView
+4. Capture all display data (title, favicon, muted state, localHistory)
+5. Create TabStub from captured data
+6. Stop media and loading on the tab
+7. Replace the tab with the stub in TabCollection
+8. Old Tab deallocates → WKWebView torn down, memory freed
+9. Web extension receives didCloseTab for the old tab
+```
+
 ```swift
 func stubTab(at index: TabIndex) {
     guard index.isUnpinnedTab else { return }       // pinned tabs are never stubbable
     guard index != selectionIndex else { return }    // can't stub active tab
     guard let tab = tab(at: index) else { return }
     guard !tab.burnerMode.isBurner else { return }   // can't stub burner tabs
+
+    // Ensure a snapshot exists before we lose the webView.
+    // renderTabSnapshot() is async but the snapshot may already
+    // be cached from a prior tab deselection. If not, we render
+    // synchronously or accept a nil snapshot for this edge case.
+    if tab.tabSnapshot == nil {
+        tab.renderTabSnapshot()
+    }
+
+    // Force-capture interactionStateData now, while webView is alive.
+    // getActualInteractionStateData() reads webView.interactionState.
+    _ = tab.getActualInteractionStateData()
+
+    // Create the lightweight stub with all captured data
     let stub = TabStub(from: tab)
+
+    // Stop media playback and any in-progress loading before replacement
+    tab.stopAllMediaAndLoading()
+
+    // Replace in collection — this triggers:
+    //   - TabCollectionViewModel removes TabViewModel for the old tab
+    //   - TabCollectionViewModel creates TabStubViewModel for the new stub
+    //   - Web extension didCloseTab fires for the old tab (inside replaceItem)
+    //   - Old Tab loses all strong references → deinit → WKWebView deallocated
     tabCollection.replaceItem(at: index.item, with: .stub(stub))
 }
 ```
 
-**New `restoreStub(_:at:)` method:**
+**New `restoreStub(_:at:)` — Restoration Flow (TabStub → Tab):**
+
+The full sequence when a stub is activated (user clicks it, or it's selected programmatically):
+
+```
+1. Create a new Tab from stub data (uuid, content, title, favicon, interactionStateData)
+2. Restore the snapshot identifier so preview is preserved during load
+3. Replace the stub with the new tab in TabCollection
+4. TabCollectionViewModel creates TabViewModel, removes TabStubViewModel
+5. Web extension receives didOpenTab for the new tab
+6. Tab's webView restores session from interactionStateData
+7. Tab begins loading (pendingStateRestoration source triggers reload)
+```
+
 ```swift
 func restoreStub(_ stub: TabStub, at index: Int) {
     let tab = Tab(uuid: stub.uuid,
@@ -231,9 +282,18 @@ func restoreStub(_ stub: TabStub, at index: Int) {
                   shouldLoadInBackground: false,
                   burnerMode: stub.burnerMode,
                   lastSelectedAt: stub.lastSelectedAt)
+
+    // Restore snapshot identifier so the existing persisted snapshot
+    // is reused for tab preview until the webView finishes loading
     if let snapshotID = stub.snapshotIdentifier {
         tab.tabSnapshots?.setIdentifier(snapshotID)
     }
+
+    // Replace in collection — this triggers:
+    //   - TabCollectionViewModel creates TabViewModel for the new tab
+    //   - TabCollectionViewModel removes TabStubViewModel for the old stub
+    //   - Web extension didOpenTab fires for the new tab (inside replaceItem)
+    //   - TabStub loses all strong references → deinit (snapshot NOT cleared)
     tabCollection.replaceItem(at: index, with: .tab(tab))
 }
 ```
