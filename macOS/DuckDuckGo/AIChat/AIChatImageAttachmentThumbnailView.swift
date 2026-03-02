@@ -37,11 +37,9 @@ final class AIChatImageAttachmentThumbnailView: NSView {
         static let shadowOpacity: Float = 0.3
         static let shadowOffset = CGSize(width: 0, height: -2)
 
-        // Remove button colors
-        static let removeButtonBackgroundLight = NSColor(white: 1.0, alpha: 1.0)
-        static let removeButtonBackgroundDark = NSColor(white: 0.15, alpha: 1.0)
-        static let removeButtonIconOpacityLight: CGFloat = 0.84
-        static let removeButtonIconOpacityDark: CGFloat = 0.78
+        // Remove button colors (defined in Assets.xcassets)
+        static let removeButtonBackgroundColorName = "AIChatRemoveButtonBackgroundColor"
+        static let removeButtonIconColorName = "AIChatRemoveButtonIconColor"
     }
 
     /// Total height of the view including the remove button overflow.
@@ -233,14 +231,8 @@ final class AIChatImageAttachmentThumbnailView: NSView {
     private func updateAppearance() {
         NSAppearance.withAppAppearance {
             let surfaceColor = NSColor(designSystemColor: .surfacePrimary)
-
-            let isDarkMode = NSApp.effectiveAppearance.effectiveThemeAppearance == .dark
-            let removeButtonBackgroundColor = isDarkMode
-                ? Constants.removeButtonBackgroundDark
-                : Constants.removeButtonBackgroundLight
-            let removeButtonIconColor = isDarkMode
-                ? NSColor.white.withAlphaComponent(Constants.removeButtonIconOpacityDark)
-                : NSColor.black.withAlphaComponent(Constants.removeButtonIconOpacityLight)
+            let removeButtonBackgroundColor = NSColor(named: Constants.removeButtonBackgroundColorName) ?? .white
+            let removeButtonIconColor = NSColor(named: Constants.removeButtonIconColorName) ?? .black
 
             imageContainerView.layer?.borderColor = surfaceColor.cgColor
             shadowBackingView.layer?.backgroundColor = surfaceColor.cgColor
