@@ -1415,6 +1415,7 @@ extension TabBarViewItem: NSMenuDelegate {
     }
 
     private func addSuspendResumeMenuItem(to menu: NSMenu) {
+        guard !isPinned else { return }
         let isSuspended = tabViewModel?.isSuspended ?? false
         let title = isSuspended ? UserText.resumeTab : UserText.suspendTab
         let menuItem = NSMenuItem(title: title, action: #selector(suspendTabAction(_:)), keyEquivalent: "")
