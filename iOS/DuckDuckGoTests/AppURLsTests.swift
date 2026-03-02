@@ -288,7 +288,8 @@ final class AppURLsTests: XCTestCase {
 
     func testExternalDependencyURLsNotChanged() {
         XCTAssertEqual(URL.surrogates.absoluteString, "https://staticcdn.duckduckgo.com/surrogates.txt")
-        XCTAssertEqual(URL.privacyConfig.absoluteString, "https://staticcdn.duckduckgo.com/trackerblocking/config/v4/ios-config.json")
+        XCTAssertEqual(URL.privacyConfig.absoluteString,
+                       "https://raw.githubusercontent.com/duckduckgo/privacy-configuration/18b651eb6d3272029539617aa9b4ef92827819d5/overrides/ios-override.json")
         XCTAssertEqual(URL.trackerDataSet.absoluteString, "https://staticcdn.duckduckgo.com/trackerblocking/v5/current/ios-tds.json")
         XCTAssertEqual(URL.bloomFilter.absoluteString, "https://staticcdn.duckduckgo.com/https/https-mobile-v2-bloom.bin")
         XCTAssertEqual(URL.bloomFilterSpec.absoluteString, "https://staticcdn.duckduckgo.com/https/https-mobile-v2-bloom-spec.json")

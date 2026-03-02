@@ -25,6 +25,7 @@ import Onboarding
 import SystemSettingsPiPTutorial
 import SetDefaultBrowserCore
 import AIChat
+import PrivacyConfig
 
 @MainActor
 final class OnboardingIntroViewModel: ObservableObject {
@@ -86,9 +87,9 @@ final class OnboardingIntroViewModel: ObservableObject {
 
     let copy: Copy
     var onCompletingOnboardingIntro: (() -> Void)?
-    private var introSteps: [OnboardingIntroStep] {
-        onboardingManager.onboardingSteps
-    }
+    var onOpenAIChatFromOnboarding: ((String?, Bool, AIChatOnboardingConsentType) -> Void)?
+    var onSearchFromOnboarding: ((String) -> Void)?
+    private var introSteps: [OnboardingIntroStep]
     private var currentIntroStep: OnboardingIntroStep
 
     private let defaultBrowserManager: DefaultBrowserManaging
@@ -99,6 +100,7 @@ final class OnboardingIntroViewModel: ObservableObject {
     private let onboardingSearchExperienceProvider: OnboardingSearchExperienceProvider
     private let appIconProvider: () -> AppIcon
     private let addressBarPositionProvider: () -> AddressBarPosition
+    private let featureFlagger: FeatureFlagger
 
     convenience init(pixelReporter: LinearOnboardingPixelReporting, systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging, daxDialogsManager: ContextualDaxDialogDisabling) {
         let onboardingManager = OnboardingManager()
@@ -115,7 +117,8 @@ final class OnboardingIntroViewModel: ObservableObject {
             currentOnboardingStep: onboardingManager.onboardingSteps.first ?? .introDialog(isReturningUser: false),
             onboardingSearchExperienceProvider: onboardingSearchExperienceProvider,
             appIconProvider: { AppIconManager.shared.appIcon },
-            addressBarPositionProvider: { AppUserDefaults().currentAddressBarPosition }
+            addressBarPositionProvider: { AppUserDefaults().currentAddressBarPosition },
+            featureFlagger: AppDependencyProvider.shared.featureFlagger
         )
     }
 
@@ -128,7 +131,8 @@ final class OnboardingIntroViewModel: ObservableObject {
         currentOnboardingStep: OnboardingIntroStep,
         onboardingSearchExperienceProvider: OnboardingSearchExperienceProvider,
         appIconProvider: @escaping () -> AppIcon,
-        addressBarPositionProvider: @escaping () -> AddressBarPosition
+        addressBarPositionProvider: @escaping () -> AddressBarPosition,
+        featureFlagger: FeatureFlagger = AppDependencyProvider.shared.featureFlagger
     ) {
         self.defaultBrowserManager = defaultBrowserManager
         self.contextualDaxDialogs = contextualDaxDialogs
@@ -138,7 +142,9 @@ final class OnboardingIntroViewModel: ObservableObject {
         self.onboardingSearchExperienceProvider = onboardingSearchExperienceProvider
         self.appIconProvider = appIconProvider
         self.addressBarPositionProvider = addressBarPositionProvider
+        self.featureFlagger = featureFlagger
 
+        introSteps = onboardingManager.onboardingSteps
         currentIntroStep = currentOnboardingStep
         copy = .default
     }
@@ -206,14 +212,39 @@ final class OnboardingIntroViewModel: ObservableObject {
     func selectSearchExperienceAction() {
         if onboardingSearchExperienceProvider.didEnableAIChatSearchInputDuringOnboarding {
             pixelReporter.measureChooseAIChat()
+            insertExperimentStepIfNeeded()
         } else {
             pixelReporter.measureChooseSearchOnly()
         }
         makeNextViewState()
     }
 
+    func selectDuckAIQueryExperimentAction() {
+        if onboardingSearchExperienceProvider.didEnableAIChatSearchInputDuringOnboarding {
+            pixelReporter.measureDuckAIQueryExperimentChooseAIChat()
+        } else {
+            pixelReporter.measureDuckAIQueryExperimentChooseSearchOnly()
+        }
+        makeNextViewState()
+    }
+
     func tapped() {
         isSkipped = true
+    }
+
+    func openAIChatFromOnboarding(prompt: String?, autoSend: Bool) {
+        onOpenAIChatFromOnboarding?(prompt, autoSend, onboardingConsentTypeForURLParameter())
+    }
+
+    func searchFromOnboarding(query: String) {
+        onSearchFromOnboarding?(query)
+    }
+
+    func measureDuckAIQueryExperimentQuerySubmission(isDuckAISelected: Bool, promptSource: DuckAIQueryExperimentPromptSource) {
+        pixelReporter.measureDuckAIQueryExperimentQuerySubmission(
+            isDuckAISelected: isDuckAISelected,
+            promptSource: promptSource
+        )
     }
 
 #if DEBUG || ALPHA
@@ -253,6 +284,8 @@ private extension OnboardingIntroViewModel {
             OnboardingView.ViewState.onboarding(.init(type: .chooseAddressBarPositionDialog, step: stepInfo()))
         case .searchExperienceSelection:
             OnboardingView.ViewState.onboarding(.init(type: .chooseSearchExperienceDialog, step: stepInfo()))
+        case .duckAIQueryExperimentSelection(let defaultSelection):
+            OnboardingView.ViewState.onboarding(.init(type: .duckAIQueryExperimentDialog(defaultSelection: defaultSelection), step: stepInfo()))
         }
 
         state = viewState
@@ -295,6 +328,47 @@ private extension OnboardingIntroViewModel {
             pixelReporter.measureAddressBarPositionSelectionImpression()
         case .chooseSearchExperienceDialog:
             pixelReporter.measureSearchExperienceSelectionImpression()
+        case .duckAIQueryExperimentDialog:
+            pixelReporter.measureDuckAIQueryExperimentSelectionImpression()
+        }
+    }
+
+    func insertExperimentStepIfNeeded() {
+        guard let currentStepIndex = introSteps.firstIndex(of: currentIntroStep) else { return }
+        guard !introSteps.contains(where: {
+            if case .duckAIQueryExperimentSelection = $0 { return true }
+            return false
+        }) else { return }
+        guard let cohort = resolveDuckAIQueryExperimentCohortID() else { return }
+
+        switch cohort {
+        case .control:
+            return
+        case .treatmentA:
+            introSteps.insert(.duckAIQueryExperimentSelection(defaultSelection: true), at: currentStepIndex + 1)
+        case .treatmentB:
+            introSteps.insert(.duckAIQueryExperimentSelection(defaultSelection: false), at: currentStepIndex + 1)
+        }
+    }
+
+    func resolveDuckAIQueryExperimentCohortID() -> FeatureFlag.DuckAIQueryExperimentCohort? {
+        guard featureFlagger.isFeatureOn(.duckAIQueryExperiment) else { return nil }
+        // TODO: Temporary override for dev validation; remove once remote cohort mapping is finalized.
+        // return featureFlagger.resolveCohort(for: FeatureFlag.duckAIQueryExperiment) as? FeatureFlag.DuckAIQueryExperimentCohort
+        return .treatmentB
+    }
+
+    func onboardingConsentTypeForURLParameter() -> AIChatOnboardingConsentType {
+        guard case .duckAIQueryExperimentSelection = currentIntroStep else { return .default }
+        guard let cohort = resolveDuckAIQueryExperimentCohortID() else { return .default }
+
+        switch cohort {
+        case .treatmentA:
+            return .deferUntilFirstQuery
+        case .treatmentB:
+            return .deferUntilFirstQuery
+        default:
+            return .default
         }
     }
 

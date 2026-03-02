@@ -2123,6 +2123,39 @@ public struct UserText {
             }
         }
 
+        enum DuckAIQueryExperiment {
+            public static let title = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.title",
+                value: "Ready to get started?\nTry a search or AI chat!",
+                comment: "Title for the onboarding Duck.ai query experiment screen."
+            )
+            public static let aiPlaceholder = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.placeholder.ai",
+                value: "Ask privately",
+                comment: "Placeholder for AI query input in onboarding Duck.ai query experiment screen."
+            )
+            public static let searchPlaceholder = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.placeholder.search",
+                value: "Search privately",
+                comment: "Placeholder for search query input in onboarding Duck.ai query experiment screen."
+            )
+            public static let suggestionOption1 = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.suggestion.option1",
+                value: "how to say \"duck\" in spanish",
+                comment: "First suggestion chip label in onboarding Duck.ai query experiment screen."
+            )
+            public static let suggestionOption2 = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.suggestion.option2",
+                value: "mighty ducks cast",
+                comment: "Second suggestion chip label in onboarding Duck.ai query experiment screen."
+            )
+            public static let suggestionSurpriseMe = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.suggestion.surprise-me",
+                value: "surprise me!",
+                comment: "Surprise me suggestion chip label in onboarding Duck.ai query experiment screen."
+            )
+        }
+
         enum ContextualOnboarding {
             static let onboardingTryASearchTitle = NSLocalizedString("contextual.onboarding.try-a-search.title", value: "Ready to get started?\nTry a search!", comment: "Title of a popover on the browser that invites the user to try a search")
             static let onboardingTryASearchMessage = NSLocalizedString("contextual.onboarding.highlights.try-a-search.message", value: "Your DuckDuckGo searches are always private.", comment: "Message of a popover on the browser that invites the user to try a search explaining that their searches are private")

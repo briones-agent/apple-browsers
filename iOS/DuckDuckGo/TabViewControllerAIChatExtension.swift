@@ -24,7 +24,7 @@ import UIKit
 /// Protocol for tab controllers that support full mode AIChat content loading.
 protocol AITabController {
     /// Loads AIChat with optional query, auto-submit, payload, and RAG tools.
-    func load(_ query: String?, autoSend: Bool, payload: Any?, tools: [AIChatRAGTool]?)
+    func load(_ query: String?, autoSend: Bool, payload: Any?, onboardingConsentType: AIChatOnboardingConsentType, tools: [AIChatRAGTool]?)
 
     /// Submits a start chat action to initiate a new AI Chat conversation.
     func submitStartChatAction()
@@ -43,11 +43,20 @@ protocol AITabController {
 extension TabViewController: AITabController {
 
     /// Loads AIChat with optional query, auto-submit, payload, and RAG tools.
-    func load(_ query: String? = nil, autoSend: Bool = false, payload: Any? = nil, tools: [AIChatRAGTool]? = nil) {
+    func load(_ query: String? = nil,
+              autoSend: Bool = false,
+              payload: Any? = nil,
+              onboardingConsentType: AIChatOnboardingConsentType = .default,
+              tools: [AIChatRAGTool]? = nil) {
 
         aiChatContentHandler.setPayload(payload: payload)
 
-        let queryURL = aiChatContentHandler.buildQueryURL(query: query, autoSend: autoSend, tools: tools)
+        let queryURL = aiChatContentHandler.buildQueryURL(
+            query: query,
+            autoSend: autoSend,
+            onboardingConsentType: onboardingConsentType,
+            tools: tools
+        )
 
         load(url: queryURL)
     }
@@ -69,7 +78,12 @@ extension TabViewController: AITabController {
     
     /// Opens a new AI chat in a new tab.
     func openNewChatInNewTab() {
-        let newChatURL = aiChatContentHandler.buildQueryURL(query: nil, autoSend: false, tools: nil)
+        let newChatURL = aiChatContentHandler.buildQueryURL(
+            query: nil,
+            autoSend: false,
+            onboardingConsentType: .default,
+            tools: nil
+        )
         delegate?.tab(self, didRequestNewTabForUrl: newChatURL, openedByPage: false, inheritingAttribution: nil)
     }
 

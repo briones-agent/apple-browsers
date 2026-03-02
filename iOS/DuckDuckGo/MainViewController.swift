@@ -1529,18 +1529,29 @@ class MainViewController: UIViewController {
         }
     }
     
-    /// Loads content into the current AI Chat tab with optional query, auto-send, payload, and tools.
+    /// Loads content into the current AI Chat tab with optional query, auto-send, payload, consent type, and tools.
     ///
     /// - Parameters:
     ///   - query: Optional query string to load in AI Chat
     ///   - autoSend: Whether to automatically send the query. Defaults to `false`.
     ///   - payload: Optional payload data for AI Chat. Defaults to `nil`.
+    ///   - onboardingConsentType: Optional consent behavior type to hand off to Duck.ai.
     ///   - tools: Optional RAG tools available in AI Chat. Defaults to `nil`.
-    func load(_ query: String? = nil, autoSend: Bool = false, payload: Any? = nil, tools: [AIChatRAGTool]? = nil) {
+    func load(_ query: String? = nil,
+              autoSend: Bool = false,
+              payload: Any? = nil,
+              onboardingConsentType: AIChatOnboardingConsentType = .default,
+              tools: [AIChatRAGTool]? = nil) {
         guard let currentTab else { fatalError("no tab") }
         
         prepareTabForRequest {
-            currentTab.load(query, autoSend: autoSend, payload: payload, tools: tools)
+            currentTab.load(
+                query,
+                autoSend: autoSend,
+                payload: payload,
+                onboardingConsentType: onboardingConsentType,
+                tools: tools
+            )
         }
     }
 
@@ -2590,12 +2601,29 @@ class MainViewController: UIViewController {
         Pixel.fire(pixel: pixel, withAdditionalParameters: pixelParameters, includedParameters: [.atb])
     }
 
-    func openAIChat(_ query: String? = nil, autoSend: Bool = false, payload: Any? = nil, tools: [AIChatRAGTool]? = nil) {
+    func openAIChat(_ query: String? = nil,
+                    autoSend: Bool = false,
+                    payload: Any? = nil,
+                    onboardingConsentType: AIChatOnboardingConsentType = .default,
+                    tools: [AIChatRAGTool]? = nil) {
 
         if aichatFullModeFeature.isAvailable || aichatIPadTabFeature.isAvailable {
-            openAIChatInTab(query, autoSend: autoSend, payload: payload, tools: tools)
+            openAIChatInTab(
+                query,
+                autoSend: autoSend,
+                payload: payload,
+                onboardingConsentType: onboardingConsentType,
+                tools: tools
+            )
         } else {
-            aiChatViewControllerManager.openAIChat(query, payload: payload, autoSend: autoSend, tools: tools, on: self)
+            aiChatViewControllerManager.openAIChat(
+                query,
+                payload: payload,
+                autoSend: autoSend,
+                onboardingConsentType: onboardingConsentType,
+                tools: tools,
+                on: self
+            )
         }
     }
     
@@ -2605,8 +2633,13 @@ class MainViewController: UIViewController {
     ///   - query: Optional initial query to send to AI Chat
     ///   - autoSend: Whether to automatically send the query
     ///   - payload: Optional payload data for AI Chat
+    ///   - onboardingConsentType: Optional consent behavior type to hand off to Duck.ai.
     ///   - tools: Optional RAG tools available in AI Chat
-    private func openAIChatInTab(_ query: String? = nil, autoSend: Bool = false, payload: Any? = nil, tools: [AIChatRAGTool]? = nil) {
+    private func openAIChatInTab(_ query: String? = nil,
+                                 autoSend: Bool = false,
+                                 payload: Any? = nil,
+                                 onboardingConsentType: AIChatOnboardingConsentType = .default,
+                                 tools: [AIChatRAGTool]? = nil) {
         
         if currentTab == nil {
             if tabManager.current(createIfNeeded: true) == nil {
@@ -2614,7 +2647,13 @@ class MainViewController: UIViewController {
             }
         }
 
-        load(query, autoSend: autoSend, payload: payload, tools: tools)
+        load(
+            query,
+            autoSend: autoSend,
+            payload: payload,
+            onboardingConsentType: onboardingConsentType,
+            tools: tools
+        )
     }
     
     /// Executes the closure if the current tab is an AI tab

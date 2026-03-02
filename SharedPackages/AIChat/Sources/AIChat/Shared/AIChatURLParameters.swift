@@ -17,8 +17,34 @@
 //
 
 public enum AIChatURLParameters {
+    /// Prompt text passed to Duck.ai.
     public static let promptQueryName = "q"
+    /// Flag indicating the prompt should be auto-submitted.
     public static let autoSubmitPromptQueryName = "prompt"
+    /// Value used with `autoSubmitPromptQueryName` for auto-submit.
     public static let autoSubmitPromptQueryValue = "1"
+    /// Repeating parameter for selecting one or more RAG tools.
     public static let toolChoiceName = "toolChoice"
+    /// Consent behavior selector used for onboarding consent-flow experiments.
+    public static let consentTypeQueryName = "consentType"
+    /// Consent type value that defers consent until first real query.
+    public static let deferUntilFirstQueryConsentTypeValue = "1"
+}
+
+/// Allowed onboarding consent behaviors passed through Duck.ai URL query params.
+public enum AIChatOnboardingConsentType {
+    /// Default behavior: no explicit consent-type parameter is sent.
+    case `default`
+    /// Defers consent collection until the user sends their first real query.
+    case deferUntilFirstQuery
+
+    /// Serialized query value for `consentType` (if any).
+    public var queryValue: String? {
+        switch self {
+        case .default:
+            return nil
+        case .deferUntilFirstQuery:
+            return AIChatURLParameters.deferUntilFirstQueryConsentTypeValue
+        }
+    }
 }

@@ -228,6 +228,9 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1211652685709099?focus=true
     case onboardingSearchExperience
 
+    /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1211652685709099?focus=true
+    case duckAIQueryExperiment
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866472842661
     case storeSerpSettings
 
@@ -381,7 +384,8 @@ extension FeatureFlag: FeatureFlagDescribing {
              .crashCollectionLimitCallStackTreeDepth,
              .tabSwitcherTrackerCount,
              .iPadDuckaiOnTab,
-             .suppressTrackerAnimationOnColdStart:
+             .suppressTrackerAnimationOnColdStart,
+             .duckAIQueryExperiment:
             true
         default:
             false
@@ -394,6 +398,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             UITestExperimentCohort.self
         case .autofillOnboardingExperiment:
             AutofillOnboardingExperimentCohort.self
+        case .duckAIQueryExperiment:
+            DuckAIQueryExperimentCohort.self
         default:
             nil
         }
@@ -410,6 +416,12 @@ extension FeatureFlag: FeatureFlagDescribing {
         case variant1
         case variant2
         case variant3
+    }
+
+    public enum DuckAIQueryExperimentCohort: String, FeatureFlagCohortDescribing {
+        case control
+        case treatmentA
+        case treatmentB
     }
 
     public static var localOverrideStoreName: String = "com.duckduckgo.app.featureFlag.localOverrides"
@@ -446,6 +458,7 @@ extension FeatureFlag: FeatureFlagDescribing {
              .vpnMenuItem,
              .forgetAllInSettings,
              .onboardingSearchExperience,
+             .duckAIQueryExperiment,
              .fullDuckAIMode,
              .iPadDuckaiOnTab,
              .iPadAIToggle,
@@ -669,6 +682,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.feature(.attributedMetrics))
         case .onboardingSearchExperience:
             return .remoteReleasable(.subfeature(AIChatSubfeature.onboardingSearchExperience))
+        case .duckAIQueryExperiment:
+            return .remoteReleasable(.subfeature(AIChatSubfeature.duckAIQueryExperiment))
         case .storeSerpSettings:
             return .remoteReleasable(.subfeature(SERPSubfeature.storeSerpSettings))
         case .showHideAIGeneratedImagesSection:

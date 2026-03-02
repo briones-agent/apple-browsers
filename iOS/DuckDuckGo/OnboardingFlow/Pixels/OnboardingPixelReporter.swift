@@ -87,6 +87,17 @@ protocol OnboardingIntroPixelReporting: OnboardingIntroImpressionReporting {
     func measureSearchExperienceSelectionImpression()
     func measureChooseAIChat()
     func measureChooseSearchOnly()
+    func measureDuckAIQueryExperimentSelectionImpression()
+    func measureDuckAIQueryExperimentChooseSearchOnly()
+    func measureDuckAIQueryExperimentChooseAIChat()
+    func measureDuckAIQueryExperimentQuerySubmission(isDuckAISelected: Bool, promptSource: DuckAIQueryExperimentPromptSource)
+}
+
+extension OnboardingIntroPixelReporting {
+    func measureDuckAIQueryExperimentSelectionImpression() {}
+    func measureDuckAIQueryExperimentChooseSearchOnly() {}
+    func measureDuckAIQueryExperimentChooseAIChat() {}
+    func measureDuckAIQueryExperimentQuerySubmission(isDuckAISelected: Bool, promptSource: DuckAIQueryExperimentPromptSource) {}
 }
 
 protocol OnboardingCustomInteractionPixelReporting {
@@ -177,6 +188,13 @@ final class OnboardingPixelReporter {
 
 }
 
+enum DuckAIQueryExperimentPromptSource: String {
+    case custom
+    case option1
+    case option2
+    case option3
+}
+
 // MARK: - Fire Enqueued Pixels
 
 extension OnboardingPixelReporter {
@@ -192,6 +210,12 @@ extension OnboardingPixelReporter {
 // MARK: - OnboardingPixelReporter + Intro
 
 extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
+    private enum DuckAIQueryExperimentMetric {
+        static let searchMetricName = "search_type"
+        static let aiChatMetricName = "aichat_type"
+        static let conversionWindow: ConversionWindow = 0...0
+        static let subfeatureID = AIChatSubfeature.duckAIQueryExperiment.rawValue
+    }
 
     func measureSkipOnboardingCTAAction() {
         fire(event: .onboardingIntroSkipOnboardingCTAPressed, unique: false)
@@ -244,6 +268,32 @@ extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
     func measureChooseSearchOnly() {
         fire(event: .onboardingIntroSearchOnlySelected, unique: false)
     }
+
+    func measureDuckAIQueryExperimentSelectionImpression() {
+        fire(event: .onboardingIntroDuckAIExperimentToggleImpressionUnique, unique: true)
+    }
+
+    func measureDuckAIQueryExperimentChooseSearchOnly() {
+        fire(event: .onboardingIntroDuckAIExperimentToggleContinuePressedSearch, unique: false)
+    }
+
+    func measureDuckAIQueryExperimentChooseAIChat() {
+        fire(event: .onboardingIntroDuckAIExperimentToggleContinuePressedAI, unique: false)
+    }
+
+    func measureDuckAIQueryExperimentQuerySubmission(isDuckAISelected: Bool, promptSource: DuckAIQueryExperimentPromptSource) {
+        let metricName = isDuckAISelected
+        ? DuckAIQueryExperimentMetric.aiChatMetricName
+        : DuckAIQueryExperimentMetric.searchMetricName
+
+        experimentPixel.fireExperimentPixel(
+            for: DuckAIQueryExperimentMetric.subfeatureID,
+            metric: metricName,
+            conversionWindowDays: DuckAIQueryExperimentMetric.conversionWindow,
+            value: promptSource.rawValue
+        )
+    }
+
 }
 
 // MARK: - OnboardingPixelReporter + Custom Interaction

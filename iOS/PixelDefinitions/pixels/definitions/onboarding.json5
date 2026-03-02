@@ -19,5 +19,26 @@
         "triggers": ["other"],
         "suffixes": ["platform", "form_factor"],
         "parameters": ["appVersion"]
+    },
+    "m_preonboarding_duckai_toggle-screen-impression_unique": {
+        "description": "Fires when the onboarding experiment toggle screen is shown",
+        "owners": ["pikorddg"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": ["appVersion"]
+    },
+    "m_preonboarding_duckai_toggle-continue-pressed.search": {
+        "description": "Fires when the user continues with Search selected on the onboarding experiment toggle screen",
+        "owners": ["pikorddg"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": ["appVersion"]
+    },
+    "m_preonboarding_duckai_toggle-continue-pressed.ai": {
+        "description": "Fires when the user continues with Search & Duck.ai selected on the onboarding experiment toggle screen",
+        "owners": ["pikorddg"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": ["appVersion"]
     }
 }

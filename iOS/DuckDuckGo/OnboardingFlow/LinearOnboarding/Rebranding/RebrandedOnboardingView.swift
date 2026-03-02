@@ -366,6 +366,8 @@ extension OnboardingRebranding {
                 addressBarPositionView
             case .chooseSearchExperienceDialog:
                 searchExperienceSelectionView
+            case .duckAIQueryExperimentDialog:
+                EmptyView()
             }
         }
 
@@ -418,6 +420,14 @@ extension OnboardingRebranding {
                     additionalTopMargin: BubbleBackedDialogMetrics.searchExperienceAdditionalTopMargin,
                     isVisible: true,
                     showsStepCounter: true
+                )
+            case .duckAIQueryExperimentDialog:
+                BubbleBackedDialogConfiguration(
+                    tailOffset: onboardingTheme.linearOnboardingMetrics.bubbleTailOffset,
+                    tailDirection: .leading,
+                    additionalTopMargin: BubbleBackedDialogMetrics.searchExperienceAdditionalTopMargin,
+                    isVisible: false,
+                    showsStepCounter: false
                 )
             }
         }

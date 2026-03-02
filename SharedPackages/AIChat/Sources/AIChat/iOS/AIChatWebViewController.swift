@@ -115,11 +115,18 @@ final class AIChatWebViewController: UIViewController {
 
 extension AIChatWebViewController {
 
+    /// Local aliases for AI Chat URL query parameters used when building query handoff URLs.
     struct QueryParameters {
-        static let queryKey = "q"
-        static let autoSendKey = "prompt"
-        static let autoSendValue = "1"
-        static let toolChoice = "toolChoice"
+        /// Prompt text key.
+        static let queryKey = AIChatURLParameters.promptQueryName
+        /// Auto-submit flag key.
+        static let autoSendKey = AIChatURLParameters.autoSubmitPromptQueryName
+        /// Auto-submit flag value.
+        static let autoSendValue = AIChatURLParameters.autoSubmitPromptQueryValue
+        /// Tool selection key (can appear multiple times).
+        static let toolChoice = AIChatURLParameters.toolChoiceName
+        /// Consent behavior key used in onboarding consent flows.
+        static let consentTypeKey = AIChatURLParameters.consentTypeQueryName
     }
 
     func reload() {
@@ -131,12 +138,17 @@ extension AIChatWebViewController {
         webView.load(request)
     }
 
-    func loadQuery(_ query: String, autoSend: Bool, tools: [AIChatRAGTool]?) {
-        let url = buildQueryURL(query: query, autoSend: autoSend, tools: tools)
+    func loadQuery(_ query: String, autoSend: Bool, onboardingConsentType: AIChatOnboardingConsentType = .default, tools: [AIChatRAGTool]?) {
+        let url = buildQueryURL(
+            query: query,
+            autoSend: autoSend,
+            onboardingConsentType: onboardingConsentType,
+            tools: tools
+        )
         webView.load(URLRequest(url: url))
     }
 
-    private func buildQueryURL(query: String, autoSend: Bool, tools: [AIChatRAGTool]?) -> URL {
+    private func buildQueryURL(query: String, autoSend: Bool, onboardingConsentType: AIChatOnboardingConsentType = .default, tools: [AIChatRAGTool]?) -> URL {
         guard var components = URLComponents(url: chatModel.aiChatURL, resolvingAgainstBaseURL: false) else {
             return chatModel.aiChatURL
         }
@@ -151,6 +163,13 @@ extension AIChatWebViewController {
         if autoSend {
             queryItems.removeAll { $0.name == QueryParameters.autoSendKey }
             queryItems.append(URLQueryItem(name: QueryParameters.autoSendKey, value: QueryParameters.autoSendValue))
+        }
+
+        if let consentTypeValue = onboardingConsentType.queryValue {
+            queryItems.removeAll { $0.name == QueryParameters.consentTypeKey }
+            queryItems.append(URLQueryItem(name: QueryParameters.consentTypeKey, value: consentTypeValue))
+        } else {
+            queryItems.removeAll { $0.name == QueryParameters.consentTypeKey }
         }
 
         if let tools = tools, !tools.isEmpty {

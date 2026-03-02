@@ -145,6 +145,7 @@ enum OnboardingIntroStep: Equatable {
     case appIconSelection
     case addressBarPositionSelection
     case searchExperienceSelection
+    case duckAIQueryExperimentSelection(defaultSelection: Bool)
     case addToDockPromo
 }
 

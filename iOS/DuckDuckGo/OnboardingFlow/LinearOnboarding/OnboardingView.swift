@@ -22,6 +22,12 @@ import Onboarding
 import DuckUI
 import SystemSettingsPiPTutorial
 import MetricBuilder
+import UIKit
+import DesignResourcesKit
+import DesignResourcesKitIcons
+import Core
+import AIChat
+import UIComponents
 
 // MARK: - OnboardingView
 
@@ -33,8 +39,6 @@ struct OnboardingView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject private var model: OnboardingIntroViewModel
-
-    @State private var isPlayingSetAsDefaultVideo: Bool = false
 
     init(model: OnboardingIntroViewModel) {
         self.model = model
@@ -90,11 +94,17 @@ struct OnboardingView: View {
                                 addressBarPreferenceSelectionView
                             case .chooseSearchExperienceDialog:
                                 searchExperienceSelectionView
+                            case .duckAIQueryExperimentDialog(let defaultSelection):
+                                experimentSearchExperienceSelectionView(defaultSelection: defaultSelection)
                             }
                         }
                     }
                 )
-                .onboardingProgressIndicator(currentStep: state.step.currentStep, totalSteps: state.step.totalSteps)
+                .onboardingProgressIndicator(
+                    currentStep: state.step.currentStep,
+                    totalSteps: state.step.totalSteps,
+                    isVisible: !state.type.isExperimentSearchScreen
+                )
             }
             .frame(width: geometry.size.width, alignment: .center)
             .offset(y: geometry.size.height * Metrics.dialogVerticalOffsetPercentage.build(v: verticalSizeClass, h: horizontalSizeClass))
@@ -104,8 +114,10 @@ struct OnboardingView: View {
                     model.introState.animateIntroText = true
                 }
             }
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.25), value: state.type)
         }
-        .padding()
+        .padding(16)
     }
 
     private var landingView: some View {
@@ -209,6 +221,17 @@ struct OnboardingView: View {
         .onboardingDaxDialogStyle()
     }
 
+    private func experimentSearchExperienceSelectionView(defaultSelection: Bool) -> some View {
+        DuckAIExperimentSearchContent(
+            defaultSelection: defaultSelection,
+            action: model.selectDuckAIQueryExperimentAction,
+            openAIChatAction: model.openAIChatFromOnboarding,
+            openSearchAction: model.searchFromOnboarding,
+            measureQuerySubmissionAction: model.measureDuckAIQueryExperimentQuerySubmission
+        )
+        .onboardingDaxDialogStyle()
+    }
+
     private func animateBrowserComparisonViewState(isResumingOnboarding: Bool) {
         // Hide content of Intro dialog before animating
         model.introState.showIntroViewContent = false
@@ -235,6 +258,315 @@ struct OnboardingView: View {
         }
     }
 
+    struct DuckAIExperimentSearchContent: View {
+        private let action: () -> Void
+        private let openAIChatAction: (String?, Bool) -> Void
+        private let openSearchAction: (String) -> Void
+        private let measureQuerySubmissionAction: (Bool, DuckAIQueryExperimentPromptSource) -> Void
+        @StateObject private var pickerViewModel: ImageSegmentedPickerViewModel
+
+        @State private var query = ""
+        @State private var isDuckAISelected: Bool
+        
+        private static let pickerItems: [ImageSegmentedPickerItem] = [
+            ImageSegmentedPickerItem(
+                text: UserText.searchInputToggleSearchButtonTitle,
+                selectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.findSearchGradientColor),
+                unselectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.findSearch)
+            ),
+            ImageSegmentedPickerItem(
+                text: UserText.searchInputToggleAIChatButtonTitle,
+                selectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.aiChatGradientColor),
+                unselectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.aiChat)
+            )
+        ]
+
+        init(
+            defaultSelection: Bool,
+            action: @escaping () -> Void,
+            openAIChatAction: @escaping (String?, Bool) -> Void,
+            openSearchAction: @escaping (String) -> Void,
+            measureQuerySubmissionAction: @escaping (Bool, DuckAIQueryExperimentPromptSource) -> Void
+        ) {
+            self.action = action
+            self.openAIChatAction = openAIChatAction
+            self.openSearchAction = openSearchAction
+            self.measureQuerySubmissionAction = measureQuerySubmissionAction
+            _isDuckAISelected = State(initialValue: defaultSelection)
+            let initialSelection = defaultSelection ? Self.pickerItems[1] : Self.pickerItems[0]
+            _pickerViewModel = StateObject(wrappedValue: ImageSegmentedPickerViewModel(
+                items: Self.pickerItems,
+                selectedItem: initialSelection,
+                configuration: ImageSegmentedPickerConfiguration(),
+                scrollProgress: defaultSelection ? 1 : 0,
+                isScrollProgressDriven: false
+            ))
+        }
+
+        var body: some View {
+            VStack(spacing: 16) {
+                Text(UserText.Onboarding.DuckAIQueryExperiment.title)
+                    .font(Font(UIFont.daxTitle3()))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(Color(designSystemColor: .textPrimary))
+
+                ImageSegmentedPickerView(viewModel: pickerViewModel)
+                    .frame(width: 216, height: 38)
+                    .onChange(of: pickerViewModel.selectedItem) { selectedItem in
+                        isDuckAISelected = selectedItem == Self.pickerItems[1]
+                    }
+                    .onChange(of: isDuckAISelected) { isSelected in
+                        let selection = isSelected ? Self.pickerItems[1] : Self.pickerItems[0]
+                        if pickerViewModel.selectedItem != selection {
+                            pickerViewModel.selectItem(selection)
+                        }
+                        pickerViewModel.updateScrollProgress(isSelected ? 1 : 0)
+                    }
+                    .padding(.top, 10)
+                    .padding(.bottom, 3.67)
+
+                queryField
+                    .padding(.bottom, 24)
+                suggestionChips
+            }
+        }
+
+        private var queryField: some View {
+            HStack(alignment: .bottom, spacing: 8) {
+                if isDuckAISelected {
+                    OnboardingQueryField(
+                        text: $query,
+                        placeholder: UserText.Onboarding.DuckAIQueryExperiment.aiPlaceholder
+                    )
+                    .frame(minHeight: 44, maxHeight: 84, alignment: .topLeading)
+                } else {
+                    OnboardingSearchTextField(
+                        text: $query,
+                        placeholder: UserText.Onboarding.DuckAIQueryExperiment.searchPlaceholder,
+                        onSubmit: handlePrimaryAction
+                    )
+                    .frame(height: 26, alignment: .center)
+                }
+
+                Button(action: handlePrimaryAction) {
+                    Image(
+                        uiImage: isDuckAISelected
+                        ? DesignSystemImages.Glyphs.Size16.arrowRight
+                        : DesignSystemImages.Glyphs.Size24.findSearchSmall
+                    )
+                        .renderingMode(.template)
+                        .font(Font(UIFont.daxBodyBold()))
+                        .foregroundColor(Color(designSystemColor: .iconsSecondary))
+                        .opacity(0.3)
+                        .frame(width: 28, height: 28)
+                        .offset(y: 1)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(designSystemColor: .surface))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color(designSystemColor: .lines), lineWidth: 0.6)
+            )
+            .cornerRadius(14)
+            .frame(width: 310.67)
+            .shadow(color: queryFieldShadowColors.0, radius: 8, y: 2)
+            .shadow(color: queryFieldShadowColors.1, radius: 4, y: 1)
+            .animation(.easeInOut(duration: 0.2), value: isDuckAISelected)
+        }
+
+        private var suggestionChips: some View {
+            VStack(spacing: 8) {
+                suggestionChip(UserText.Onboarding.DuckAIQueryExperiment.suggestionOption1, promptSource: .option1, icon: DesignSystemImages.Glyphs.Size16.aiChat)
+                suggestionChip(UserText.Onboarding.DuckAIQueryExperiment.suggestionOption2, promptSource: .option2, icon: DesignSystemImages.Glyphs.Size16.aiChat)
+                suggestionChip(UserText.Onboarding.DuckAIQueryExperiment.suggestionSurpriseMe, promptSource: .option3, icon: DesignSystemImages.Glyphs.Size16.wand)
+            }
+        }
+
+        private func suggestionChip(_ title: String, promptSource: DuckAIQueryExperimentPromptSource, icon: UIImage) -> some View {
+            Button {
+                openSelectedExperience(prompt: title, autoSend: true, promptSource: promptSource)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(uiImage: icon)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 16, height: 16)
+                    Text(title)
+                        .font(Font(UIFont.daxBodyBold()))
+                    Spacer()
+                }
+                .foregroundColor(Color(designSystemColor: .accent))
+                .padding(.horizontal, 14)
+                .frame(width: 317.33, height: 46.33)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(designSystemColor: .accent), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+
+        private func storeSelection() {
+            let onboardingProvider = OnboardingSearchExperience()
+            onboardingProvider.storeAIChatSearchInputDuringOnboardingChoice(enable: isDuckAISelected)
+        }
+
+        private func handlePrimaryAction() {
+            let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            openSelectedExperience(
+                prompt: trimmedQuery.isEmpty ? nil : trimmedQuery,
+                autoSend: !trimmedQuery.isEmpty,
+                promptSource: .custom
+            )
+        }
+
+        private var queryFieldShadowColors: (Color, Color) {
+            (
+                Color(designSystemColor: .shadowSecondary),
+                Color(designSystemColor: .shadowTertiary)
+            )
+        }
+
+        private func openSelectedExperience(prompt: String?, autoSend: Bool, promptSource: DuckAIQueryExperimentPromptSource) {
+            storeSelection()
+
+            if autoSend {
+                measureQuerySubmissionAction(isDuckAISelected, promptSource)
+            }
+
+            if isDuckAISelected {
+                openAIChatAction(prompt, autoSend)
+            } else if let searchQuery = prompt, !searchQuery.isEmpty {
+                openSearchAction(searchQuery)
+            } else {
+                return
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                action()
+            }
+        }
+    }
+
+}
+
+private struct OnboardingQueryField: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.backgroundColor = .clear
+        textView.isScrollEnabled = false
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
+        textView.font = .daxBodyRegular()
+        textView.textColor = UIColor(designSystemColor: .textPrimary)
+        textView.delegate = context.coordinator
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        context.coordinator.placeholderLabel.text = placeholder
+        context.coordinator.placeholderLabel.font = textView.font
+        context.coordinator.placeholderLabel.textColor = UIColor(designSystemColor: .textSecondary)
+        context.coordinator.placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+        textView.addSubview(context.coordinator.placeholderLabel)
+        NSLayoutConstraint.activate([
+            context.coordinator.placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
+            context.coordinator.placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor)
+        ])
+
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        if context.coordinator.placeholderLabel.text != placeholder {
+            context.coordinator.placeholderLabel.text = placeholder
+        }
+        context.coordinator.placeholderLabel.isHidden = !text.isEmpty
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        @Binding private var text: String
+        let placeholderLabel = UILabel()
+
+        init(text: Binding<String>) {
+            _text = text
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            text = textView.text ?? ""
+            placeholderLabel.isHidden = !text.isEmpty
+        }
+    }
+}
+
+private struct OnboardingSearchTextField: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    let onSubmit: () -> Void
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.backgroundColor = .clear
+        textField.borderStyle = .none
+        textField.contentVerticalAlignment = .center
+        textField.font = .daxBodyRegular()
+        textField.textColor = UIColor(designSystemColor: .textPrimary)
+        textField.placeholder = placeholder
+        textField.autocapitalizationType = .none
+        textField.autocorrectionType = .no
+        textField.spellCheckingType = .no
+        textField.clearButtonMode = .never
+        textField.returnKeyType = .search
+        textField.delegate = context.coordinator
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textField.addTarget(context.coordinator, action: #selector(Coordinator.textFieldDidChange(_:)), for: .editingChanged)
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        if uiView.placeholder != placeholder {
+            uiView.placeholder = placeholder
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onSubmit: onSubmit)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        @Binding private var text: String
+        private let onSubmit: () -> Void
+
+        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+            _text = text
+            self.onSubmit = onSubmit
+        }
+
+        @objc
+        func textFieldDidChange(_ textField: UITextField) {
+            text = textField.text ?? ""
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            onSubmit()
+            return false
+        }
+    }
 }
 
 // MARK: - View State
@@ -275,6 +607,7 @@ extension OnboardingView.ViewState.Intro {
         case chooseAppIconDialog
         case chooseAddressBarPositionDialog
         case chooseSearchExperienceDialog
+        case duckAIQueryExperimentDialog(defaultSelection: Bool)
     }
 
     struct StepInfo: Equatable {
@@ -284,6 +617,16 @@ extension OnboardingView.ViewState.Intro {
         static let hidden = StepInfo(currentStep: 0, totalSteps: 0)
     }
 
+}
+
+private extension OnboardingView.ViewState.Intro.IntroType {
+    var isExperimentSearchScreen: Bool {
+        if case .duckAIQueryExperimentDialog = self {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 // MARK: - Metrics
@@ -301,13 +644,13 @@ private enum Metrics {
 
 private extension View {
 
-    func onboardingProgressIndicator(currentStep: Int, totalSteps: Int) -> some View {
+    func onboardingProgressIndicator(currentStep: Int, totalSteps: Int, isVisible: Bool = true) -> some View {
         overlay(alignment: .topTrailing) {
             OnboardingProgressIndicator(stepInfo: .init(currentStep: currentStep, totalSteps: totalSteps))
                 .padding(.trailing, Metrics.progressBarTrailingPadding)
                 .padding(.top, Metrics.progressBarTopPadding)
                 .transition(.identity)
-                .visibility(totalSteps == 0 ? .invisible : .visible)
+                .visibility(totalSteps == 0 || !isVisible ? .invisible : .visible)
         }
     }
 

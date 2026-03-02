@@ -162,7 +162,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         let query = "hello world"
 
         // When
-        let url = handler.buildQueryURL(query: query, autoSend: false, tools: nil)
+        let url = handler.buildQueryURL(query: query, autoSend: false, onboardingConsentType: .default, tools: nil)
 
         // Then
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
@@ -179,7 +179,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         let autoSend = true
 
         // When
-        let url = handler.buildQueryURL(query: "test", autoSend: autoSend, tools: nil)
+        let url = handler.buildQueryURL(query: "test", autoSend: autoSend, onboardingConsentType: .default, tools: nil)
 
         // Then
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
@@ -191,12 +191,29 @@ final class AIChatContentHandlerTests: XCTestCase {
         XCTAssertEqual(autoSendItem?.value, AIChatURLParameters.autoSubmitPromptQueryValue)
     }
 
+    func testBuildQueryURLWithOnboardingConsentType() throws {
+        // Given
+        let consentType: AIChatOnboardingConsentType = .deferUntilFirstQuery
+
+        // When
+        let url = handler.buildQueryURL(query: "test", autoSend: false, onboardingConsentType: consentType, tools: nil)
+
+        // Then
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            XCTFail("Invalid URL components")
+            return
+        }
+
+        let consentTypeItem = components.queryItems?.first { $0.name == AIChatURLParameters.consentTypeQueryName }
+        XCTAssertEqual(consentTypeItem?.value, consentType.queryValue)
+    }
+
     func testBuildQueryURLWithTools() throws {
         // Given
         let tools: [AIChatRAGTool] = [.webSearch, .newsSearch]
 
         // When
-        let url = handler.buildQueryURL(query: "test", autoSend: false, tools: tools)
+        let url = handler.buildQueryURL(query: "test", autoSend: false, onboardingConsentType: .default, tools: tools)
 
         // Then
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
@@ -215,7 +232,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         let emptyQuery = ""
 
         // When
-        let url = handler.buildQueryURL(query: emptyQuery, autoSend: false, tools: nil)
+        let url = handler.buildQueryURL(query: emptyQuery, autoSend: false, onboardingConsentType: .default, tools: nil)
 
         // Then
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
@@ -232,7 +249,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         let nilQuery: String? = nil
 
         // When
-        let url = handler.buildQueryURL(query: nilQuery, autoSend: false, tools: nil)
+        let url = handler.buildQueryURL(query: nilQuery, autoSend: false, onboardingConsentType: .default, tools: nil)
 
         // Then
         XCTAssertEqual(url, mockSettings.aiChatURL)
@@ -244,8 +261,8 @@ final class AIChatContentHandlerTests: XCTestCase {
         let secondQuery = "second"
 
         // When
-        let url1 = handler.buildQueryURL(query: firstQuery, autoSend: false, tools: nil)
-        let url2 = handler.buildQueryURL(query: secondQuery, autoSend: false, tools: nil)
+        let url1 = handler.buildQueryURL(query: firstQuery, autoSend: false, onboardingConsentType: .default, tools: nil)
+        let url2 = handler.buildQueryURL(query: secondQuery, autoSend: false, onboardingConsentType: .default, tools: nil)
 
         // Then - first URL contains first query
         guard let components1 = URLComponents(url: url1, resolvingAgainstBaseURL: false) else {

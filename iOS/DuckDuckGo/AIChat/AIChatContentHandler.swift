@@ -76,8 +76,8 @@ protocol AIChatContentHandling: AnyObject {
     /// Sets the initial payload data for the AIChat session.
     func setPayload(payload: Any?)
 
-    /// Builds a query URL with optional prompt, auto-submit, and RAG tools.
-    func buildQueryURL(query: String?, autoSend: Bool, tools: [AIChatRAGTool]?) -> URL
+    /// Builds a query URL with optional prompt, auto-submit, consent type and RAG tools.
+    func buildQueryURL(query: String?, autoSend: Bool, onboardingConsentType: AIChatOnboardingConsentType, tools: [AIChatRAGTool]?) -> URL
     
     /// Submits a prompt to the AI Chat with optional page context.
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData?)
@@ -106,6 +106,12 @@ extension AIChatContentHandling {
 }
 
 final class AIChatContentHandler: AIChatContentHandling {
+    private enum Constants {
+        // TODO: Temporary override for dev validation; remove once FE implementation is ready.
+#if DEBUG || ALPHA
+        static let onboardingConsentDemoURL = URL(string: "https://use-serp-dev-testing15.duck.ai/?duckai=4")
+#endif
+    }
     
     // MARK: - Dependencies
     private let aiChatSettings: AIChatSettingsProvider
@@ -158,10 +164,21 @@ final class AIChatContentHandler: AIChatContentHandling {
         payloadHandler.setData(payload)
     }
     
-    /// Builds a query URL with optional prompt, auto-submit, and RAG tools.
-    func buildQueryURL(query: String?, autoSend: Bool, tools: [AIChatRAGTool]?) -> URL {
-        guard let query, var components = URLComponents(url: aiChatSettings.aiChatURL, resolvingAgainstBaseURL: false) else {
+    /// Builds a query URL with optional prompt, auto-submit, consent type and RAG tools.
+    func buildQueryURL(query: String?, autoSend: Bool, onboardingConsentType: AIChatOnboardingConsentType = .default, tools: [AIChatRAGTool]?) -> URL {
+        let baseURL: URL = {
+            // TODO: Temporary override for dev validation; remove once FE implementation is ready.
+#if DEBUG || ALPHA
+            if onboardingConsentType.queryValue != nil,
+               let demoURL = Constants.onboardingConsentDemoURL {
+                return demoURL
+            }
+#endif
             return aiChatSettings.aiChatURL
+        }()
+
+        guard let query, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            return baseURL
         }
 
         var queryItems = components.queryItems ?? []
@@ -176,6 +193,13 @@ final class AIChatContentHandler: AIChatContentHandling {
             queryItems.append(URLQueryItem(name: AIChatURLParameters.autoSubmitPromptQueryName, value: AIChatURLParameters.autoSubmitPromptQueryValue))
         }
 
+        if let consentTypeValue = onboardingConsentType.queryValue {
+            queryItems.removeAll { $0.name == AIChatURLParameters.consentTypeQueryName }
+            queryItems.append(URLQueryItem(name: AIChatURLParameters.consentTypeQueryName, value: consentTypeValue))
+        } else {
+            queryItems.removeAll { $0.name == AIChatURLParameters.consentTypeQueryName }
+        }
+
         if let tools = tools, !tools.isEmpty {
             queryItems.removeAll { $0.name == AIChatURLParameters.toolChoiceName }
             for tool in tools {
@@ -184,7 +208,7 @@ final class AIChatContentHandler: AIChatContentHandling {
         }
 
         components.queryItems = queryItems
-        return components.url ?? aiChatSettings.aiChatURL
+        return components.url ?? baseURL
     }
     
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData? = nil) {
