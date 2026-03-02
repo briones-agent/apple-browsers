@@ -339,12 +339,14 @@ final class AIChatOmnibarController {
                 PixelKit.fire(AIChatPixel.aiChatAddressBarSubmitWithImage(imageCount: attachments.count), frequency: .dailyAndCount, includeAppVersionParameter: true)
             }
 
+            // Capture model ID before opening tab — openAIChatTab triggers omnibar cleanup which resets isImageGenerationMode
+            let modelId = self.currentModelId
+
             aiChatTabOpener.openAIChatTab(
                 with: .query(trimmedText, shouldAutoSubmit: true),
                 behavior: .currentTab
             )
             // Re-set prompt after tab opener to include images and model selection (tab opener overwrites with a plain query)
-            let modelId = self.currentModelId
             let prompt = AIChatNativePrompt.queryPrompt(trimmedText, autoSubmit: true, images: images, modelId: modelId)
             promptHandler.setData(prompt)
 
