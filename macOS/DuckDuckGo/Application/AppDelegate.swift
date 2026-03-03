@@ -378,9 +378,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var didFinishLaunching = false
 
     var updateController: UpdateController?
-#if SPARKLE
     var dockCustomization: DockCustomization?
-#endif
 
     @UserDefaultsWrapper(key: .firstLaunchDate, defaultValue: Date.monthAgo)
     static var firstLaunchDate: Date
@@ -1253,9 +1251,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // MARK: perform first time launch logic here
         }
 
-        #if SPARKLE
-        dockCustomization = DockCustomizer()
-        #endif
+        if StandardApplicationBuildType().isSparkleBuild {
+            dockCustomization = DockCustomizer()
+        }
 
         let statisticsLoader = AppVersion.runType.requiresEnvironment ? StatisticsLoader.shared : nil
         statisticsLoader?.load()
