@@ -1385,6 +1385,11 @@ extension Pixel {
         // MARK: WebView Error Page Shown
         case webViewErrorPageShown
 
+        // MARK: External Scheme Navigation
+        case webViewExternalSchemeNavigationXSafariHTTPSCancel
+        case webViewExternalSchemeNavigationXSafariHTTPSBrowse
+        case webViewExternalSchemeNavigationXSafariHTTPSContinue
+
         // MARK: Browsing
         case stopPageLoad
 
@@ -2906,6 +2911,11 @@ extension Pixel.Event {
             
         // MARK: - WebView Error Page shown
         case .webViewErrorPageShown: return "m_errorpageshown"
+
+        // MARK: - External Scheme Navigation
+        case .webViewExternalSchemeNavigationXSafariHTTPSCancel: return "m_webview_external-scheme-navigation_x-safari-https_cancel"
+        case .webViewExternalSchemeNavigationXSafariHTTPSBrowse: return "m_webview_external-scheme-navigation_x-safari-https_browse"
+        case .webViewExternalSchemeNavigationXSafariHTTPSContinue: return "m_webview_external-scheme-navigation_x-safari-https_continue"
 
         // MARK: - DuckPlayer FE Application Telemetry
         case .duckPlayerLandscapeLayoutImpressions: return "duckplayer_landscape_layout_impressions"

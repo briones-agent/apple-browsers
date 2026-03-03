@@ -2740,6 +2740,9 @@ https://duckduckgo.com/mac";
 /* Privacy Icon accessibility title */
 "privacy.icon.shield" = "Privacy Icon";
 
+/* Option to load the URL in the current browser instead of opening an external app */
+"prompt.custom.url.scheme.browse.here" = "Browse here";
+
 /* Deny action */
 "prompt.custom.url.scheme.dontopen" = "Cancel";
 

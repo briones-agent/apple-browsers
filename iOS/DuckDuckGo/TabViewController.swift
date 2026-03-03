@@ -1419,11 +1419,16 @@ class TabViewController: UIViewController {
     }
     
     func presentOpenInExternalAppAlert(url: URL) {
+        if url.scheme == "x-safari-https" {
+            presentXSafariHTTPSAlert(url: url)
+            return
+        }
+
         let title = UserText.customUrlSchemeTitle
         let message = UserText.customUrlSchemeMessage
         let open = UserText.customUrlSchemeOpen
         let dontOpen = UserText.customUrlSchemeDontOpen
-        
+
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: dontOpen, style: .cancel, handler: { _ in
             if self.webView.url == nil {
@@ -1435,6 +1440,38 @@ class TabViewController: UIViewController {
         alert.addAction(UIAlertAction(title: open, style: .destructive, handler: { _ in
             self.openExternally(url: url)
         }))
+        delegate?.tab(self, didRequestPresentingAlert: alert)
+    }
+
+    private func presentXSafariHTTPSAlert(url: URL) {
+        let title = UserText.customUrlSchemeTitle
+        let message = UserText.customUrlSchemeMessage
+
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+
+        alert.addAction(UIAlertAction(title: UserText.customUrlSchemeDontOpen, style: .cancel, handler: { _ in
+            Pixel.fire(pixel: .webViewExternalSchemeNavigationXSafariHTTPSCancel)
+            if self.webView.url == nil {
+                self.delegate?.tabDidRequestClose(self)
+            } else {
+                self.url = self.webView.url
+            }
+        }))
+
+        alert.addAction(UIAlertAction(title: UserText.customUrlSchemeBrowseHere, style: .default, handler: { _ in
+            Pixel.fire(pixel: .webViewExternalSchemeNavigationXSafariHTTPSBrowse)
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            components?.scheme = "https"
+            if let httpsURL = components?.url {
+                self.load(url: httpsURL)
+            }
+        }))
+
+        alert.addAction(UIAlertAction(title: UserText.customUrlSchemeOpen, style: .destructive, handler: { _ in
+            Pixel.fire(pixel: .webViewExternalSchemeNavigationXSafariHTTPSContinue)
+            self.openExternally(url: url)
+        }))
+
         delegate?.tab(self, didRequestPresentingAlert: alert)
     }
 

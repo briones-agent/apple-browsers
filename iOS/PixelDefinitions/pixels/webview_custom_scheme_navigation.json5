@@ -1,0 +1,12 @@
+{
+    // Pixels for x-safari-https external scheme navigation alert interactions
+    "m_webview_external-scheme-navigation_x-safari-https_cancel": {
+        "description": "Fired when the user taps Cancel on the x-safari-https external scheme alert"
+    },
+    "m_webview_external-scheme-navigation_x-safari-https_browse": {
+        "description": "Fired when the user taps Browse here on the x-safari-https external scheme alert"
+    },
+    "m_webview_external-scheme-navigation_x-safari-https_continue": {
+        "description": "Fired when the user taps Open on the x-safari-https external scheme alert"
+    }
+}
