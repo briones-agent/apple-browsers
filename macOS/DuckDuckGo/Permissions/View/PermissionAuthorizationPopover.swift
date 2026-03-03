@@ -98,3 +98,40 @@ extension PermissionAuthorizationPopover: NSPopoverDelegate {
     }
 
 }
+
+enum PermissionAuthorizationPopoverPresenter {
+
+    static func closeIfPossible(_ popover: PermissionAuthorizationPopover?) {
+        guard let popover, popover.isShown else { return }
+        guard !popover.viewController.isAuthorizationInProgress else { return }
+        popover.close()
+    }
+
+    static func configureQuery(_ query: PermissionAuthorizationQuery) {
+        if query.permissions.first?.isExternalScheme == true {
+            query.shouldShowAlwaysAllowCheckbox = true
+            query.shouldShowCancelInsteadOfDeny = true
+        }
+    }
+
+    static func present(
+        _ query: PermissionAuthorizationQuery,
+        in popover: PermissionAuthorizationPopover,
+        anchoredTo anchorView: NSView
+    ) {
+        if popover.isShown {
+            if popover.viewController.query === query {
+                return
+            }
+            if popover.viewController.isAuthorizationInProgress {
+                return
+            }
+            popover.close()
+        }
+
+        configureQuery(query)
+        popover.viewController.query = query
+        query.wasShownOnce = true
+        popover.show(positionedBelow: anchorView.bounds.insetFromLineOfDeath(flipped: anchorView.isFlipped), in: anchorView)
+    }
+}

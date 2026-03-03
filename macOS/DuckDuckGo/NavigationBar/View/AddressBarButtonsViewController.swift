@@ -784,7 +784,7 @@ final class AddressBarButtonsViewController: NSViewController {
             return
         }
         if let permissionAuthorizationPopover, permissionAuthorizationPopover.isShown {
-            permissionAuthorizationPopover.close()
+            PermissionAuthorizationPopoverPresenter.closeIfPossible(permissionAuthorizationPopover)
         }
 
     }
@@ -849,11 +849,7 @@ final class AddressBarButtonsViewController: NSViewController {
 
         // If no requested permissions, close popover if shown
         guard let (_, query) = requestedQueries.first else {
-            if let permissionAuthorizationPopover, permissionAuthorizationPopover.isShown {
-                // Don't close if authorization is still in progress (e.g., waiting for user to click Allow/Deny in two-step flow)
-                guard !permissionAuthorizationPopover.viewController.isAuthorizationInProgress else { return }
-                permissionAuthorizationPopover.close()
-            }
+            PermissionAuthorizationPopoverPresenter.closeIfPossible(permissionAuthorizationPopover)
             return
         }
 
@@ -1688,12 +1684,9 @@ final class AddressBarButtonsViewController: NSViewController {
 
     func openPermissionAuthorizationPopover(for query: PermissionAuthorizationQuery) {
         let button: AddressBarButton
-
-        lazy var popover: NSPopover = {
-            let popover = self.permissionAuthorizationPopoverCreatingIfNeeded()
-            popover.behavior = .applicationDefined
-            return popover
-        }()
+        let authorizationPopover = permissionAuthorizationPopoverCreatingIfNeeded()
+        var popover: NSPopover = authorizationPopover
+        var usesAuthorizationPopover = true
 
         if featureFlagger.isFeatureOn(.newPermissionView) {
             button = permissionCenterButton
@@ -1702,10 +1695,7 @@ final class AddressBarButtonsViewController: NSViewController {
             if query.permissions.first?.isPopups == true {
                 guard !query.wasShownOnce else { return }
                 popover = popupBlockedPopoverCreatingIfNeeded()
-            }
-            if query.permissions.first?.isExternalScheme == true {
-                query.shouldShowAlwaysAllowCheckbox = true
-                query.shouldShowCancelInsteadOfDeny = true
+                usesAuthorizationPopover = false
             }
         } else {
             if query.permissions.contains(.camera)
@@ -1722,10 +1712,9 @@ final class AddressBarButtonsViewController: NSViewController {
                     guard !query.wasShownOnce else { return }
                     button = popupsButton
                     popover = popupBlockedPopoverCreatingIfNeeded()
+                    usesAuthorizationPopover = false
                 case .externalScheme:
                     button = externalSchemeButton
-                    query.shouldShowAlwaysAllowCheckbox = true
-                    query.shouldShowCancelInsteadOfDeny = true
                 default:
                     assertionFailure("Unexpected permissions")
                     query.handleDecision(grant: false)
@@ -1737,9 +1726,12 @@ final class AddressBarButtonsViewController: NSViewController {
 
         button.backgroundColor = .buttonMouseDown
         button.mouseOverColor = .buttonMouseDown
-        (popover.contentViewController as? PermissionAuthorizationViewController)?.query = query
-        (popover.contentViewController as? PopupBlockedViewController)?.query = query
-        query.wasShownOnce = true
+        if usesAuthorizationPopover {
+            PermissionAuthorizationPopoverPresenter.configureQuery(query)
+        } else {
+            (popover.contentViewController as? PopupBlockedViewController)?.query = query
+            query.wasShownOnce = true
+        }
 
         // Wait for the button appearance animation to complete before showing popover
         DispatchQueue.main.asyncAfter(deadline: .now() + NSAnimationContext.current.duration) { [weak self] in
@@ -1751,7 +1743,11 @@ final class AddressBarButtonsViewController: NSViewController {
                 button.mouseOverColor = .buttonMouseOver
                 return
             }
-            popover.show(positionedBelow: button.bounds.insetFromLineOfDeath(flipped: button.isFlipped), in: button)
+            if usesAuthorizationPopover {
+                PermissionAuthorizationPopoverPresenter.present(query, in: authorizationPopover, anchoredTo: button)
+            } else {
+                popover.show(positionedBelow: button.bounds.insetFromLineOfDeath(flipped: button.isFlipped), in: button)
+            }
         }
     }
 

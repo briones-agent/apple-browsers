@@ -87,6 +87,7 @@ final class AIChatViewController: NSViewController {
     private var webViewContainer: WebViewContainerView!
     private var separator: NSView!
     private var topBar: NSView!
+    private var permissionAuthorizationPopover: PermissionAuthorizationPopover?
 
     private lazy var aiTab: Tab = Tab(content: .url(currentAIChatURL, source: .ui), burnerMode: burnerMode, isLoadedInSidebar: true)
 
@@ -155,6 +156,7 @@ final class AIChatViewController: NSViewController {
         updateWebViewMask()
         subscribeToURLChanges()
         subscribeToUserInteractionDialogChanges()
+        subscribeToPermissionAuthorizationQueryChanges()
         subscribeToThemeChanges()
     }
 
@@ -429,6 +431,30 @@ final class AIChatViewController: NSViewController {
                 )
             }
             .store(in: &cancellables)
+    }
+
+    private func subscribeToPermissionAuthorizationQueryChanges() {
+        aiTab.permissions.$authorizationQuery
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] query in
+                self?.showPermissionAuthorizationPopoverIfNeeded(query: query)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func showPermissionAuthorizationPopoverIfNeeded(query: PermissionAuthorizationQuery?) {
+        guard let query else {
+            PermissionAuthorizationPopoverPresenter.closeIfPossible(permissionAuthorizationPopover)
+            return
+        }
+
+        let popover = permissionAuthorizationPopover ?? PermissionAuthorizationPopover(featureFlagger: NSApp.delegateTyped.featureFlagger)
+        permissionAuthorizationPopover = popover
+
+        let anchorView = closeButton.isHidden ? attachButton : closeButton
+        guard let anchorView else { return }
+        PermissionAuthorizationPopoverPresenter.present(query, in: popover, anchoredTo: anchorView)
     }
 
     @objc private func openInNewTabButtonClicked() {
