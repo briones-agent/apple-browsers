@@ -60,7 +60,6 @@ final class SyncAutoRestoreDecisionStore: SyncAutoRestoreDecisionStoring {
         let data = Data([decision ? UInt8(1) : UInt8(0)])
 
         var query = baseQuery
-        query[kSecAttrSynchronizable as String] = false
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         query[kSecValueData as String] = data
 
@@ -103,7 +102,8 @@ final class SyncAutoRestoreDecisionStore: SyncAutoRestoreDecisionStoring {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: Constants.keychainAccount
+            kSecAttrAccount as String: Constants.keychainAccount,
+            kSecAttrSynchronizable as String: false
         ]
     }
 

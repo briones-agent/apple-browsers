@@ -40,12 +40,7 @@ final class SyncAutoRestoreDecisionManager: SyncAutoRestoreDecisionManaging {
     }
 
     var isAutoRestoreFeatureEnabled: Bool {
-        #if DEBUG
-        // Debug-only override to simplify local testing.
-        return true
-        #else
         return featureFlagger.isFeatureOn(.syncAutoRestore)
-        #endif
     }
 
     func existingDecision() -> Bool? {

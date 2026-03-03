@@ -33,6 +33,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
     var vc: SyncSettingsViewController!
     var errorHandler: CapturingSyncPausedStateManager!
     var ddgSyncing: MockDDGSyncing!
+    var syncAutoRestoreHandler: MockSyncAutoRestoreHandler!
     var testRecoveryCode = "eyJyZWNvdmVyeSI6eyJ1c2VyX2lkIjoiMDZGODhFNzEtNDFBRS00RTUxLUE2UkRtRkEwOTcwMDE5QkYwIiwicHJpbWFyeV9rZXkiOiI1QTk3U3dsQVI5RjhZakJaU09FVXBzTktnSnJEYnE3aWxtUmxDZVBWazgwPSJ9fQ=="
 
     @MainActor
@@ -64,6 +65,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
             secureVaultErrorReporter: MockSecureVaultReporting(),
             syncErrorHandler: CapturingAdapterErrorHandler())
         let featureFlagger = MockFeatureFlagger(enabledFeatureFlags: [.syncSeamlessAccountSwitching])
+        syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
         vc = SyncSettingsViewController(
             syncService: ddgSyncing,
             syncBookmarksAdapter: bookmarksAdapter,
@@ -71,7 +73,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
             syncCreditCardsAdapter: creditCardsAdapter,
             syncPausedStateManager: errorHandler,
             featureFlagger: featureFlagger,
-            syncAutoRestoreHandler: MockSyncAutoRestoreHandler()
+            syncAutoRestoreHandler: syncAutoRestoreHandler
         )
     }
 
@@ -79,6 +81,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         cancellables = nil
         errorHandler = nil
         vc = nil
+        syncAutoRestoreHandler = nil
         super.tearDown()
     }
 
@@ -190,6 +193,38 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         XCTAssertTrue(errorHandler.syncDidTurnOffCalled)
     }
 
+    @MainActor
+    func testWhenShowRecoveryPDFAndAutoRestoreFeatureEnabledAndNoExistingDecisionThenPersistsDefaultEnabledDecision() {
+        syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
+        syncAutoRestoreHandler.existingAutoRestoreDecision = nil
+
+        vc.showRecoveryPDF()
+
+        XCTAssertEqual(syncAutoRestoreHandler.persistedDecisions, [true])
+    }
+
+    @MainActor
+    func testWhenShowRecoveryPDFAndExistingAutoRestoreDecisionThenDoesNotPersistDefaultDecision() {
+        syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
+        syncAutoRestoreHandler.existingAutoRestoreDecision = false
+
+        vc.showRecoveryPDF()
+
+        XCTAssertTrue(syncAutoRestoreHandler.persistedDecisions.isEmpty)
+    }
+
+    @MainActor
+    func testWhenViewWillAppearThenAutoRestoreDecisionIsRefreshedFromHandler() {
+        syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
+        syncAutoRestoreHandler.existingAutoRestoreDecision = false
+        vc.loadViewIfNeeded()
+
+        syncAutoRestoreHandler.existingAutoRestoreDecision = true
+        vc.viewWillAppear(false)
+
+        XCTAssertEqual(vc.viewModel?.isAutoRestoreEnabled, true)
+    }
+
     func x_test_syncCodeEntered_accountAlreadyExists_oneDevice_disconnectsThenLogsInAgain() async {
         await setUpWithSingleDevice(id: "1")
 
@@ -276,23 +311,4 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         ddgSyncing.registeredDevices = [RegisteredDevice(id: id, name: "iPhone", type: "iPhone")]
         vc.viewModel?.devices = [SyncSettingsViewModel.Device(id: id, name: "iPhone", type: "iPhone", isThisDevice: true)]
     }
-}
-
-private struct MockSyncAutoRestoreHandler: SyncAutoRestoreHandling {
-    let isAutoRestoreFeatureEnabled: Bool = false
-
-    func existingDecision() -> Bool? {
-        nil
-    }
-
-    func persistDecision(_ decision: Bool) throws {
-    }
-
-    func clearDecision() {}
-
-    func isEligibleForAutoRestore() -> Bool {
-        false
-    }
-
-    func restoreFromPreservedAccount() async {}
 }
