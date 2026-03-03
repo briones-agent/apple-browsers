@@ -1436,9 +1436,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func fireDailyActiveUserPixels() {
         PixelKit.fire(GeneralPixel.dailyActiveUser, frequency: .legacyDaily, doNotEnforcePrefix: true)
         PixelKit.fire(GeneralPixel.dailyDefaultBrowser(isDefault: defaultBrowserPreferences.isDefault), frequency: .daily, doNotEnforcePrefix: true)
-#if SPARKLE
-        PixelKit.fire(GeneralPixel.dailyAddedToDock(isAddedToDock: DockCustomizer().isAddedToDock), frequency: .daily, doNotEnforcePrefix: true)
-#endif
+        if let dockCustomization {
+            PixelKit.fire(GeneralPixel.dailyAddedToDock(isAddedToDock: dockCustomization.isAddedToDock), frequency: .daily, doNotEnforcePrefix: true)
+        }
     }
 
     private func fireDailyFireWindowConfigurationPixels() {
