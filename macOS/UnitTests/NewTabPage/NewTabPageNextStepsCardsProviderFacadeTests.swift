@@ -252,13 +252,16 @@ final class NewTabPageNextStepsCardsProviderFacadeTests: XCTestCase {
 }
 
 private extension NewTabPageNextStepsCardsProviderFacadeTests {
-    func defaultCards(for provider: NewTabPageNextStepsSingleCardProvider) -> [NewTabPageDataModel.CardID] {
-        let cards = featureFlagger.isFeatureOn(.nextStepsListAdvancedCardOrdering) ? NewTabPageNextStepsSingleCardProvider.defaultAdvancedCards : NewTabPageNextStepsSingleCardProvider.defaultStandardCards
-#if APPSTORE
-        return cards.filter { $0 != .addAppToDockMac }
-#else
-        return cards
-#endif
+    func defaultCards(for _: NewTabPageNextStepsSingleCardProvider) -> [NewTabPageDataModel.CardID] {
+        let cards = featureFlagger.isFeatureOn(.nextStepsListAdvancedCardOrdering)
+            ? NewTabPageNextStepsSingleCardProvider.defaultAdvancedCards
+            : NewTabPageNextStepsSingleCardProvider.defaultStandardCards
+
+        if AppVersion.isSandboxed {
+            return cards.filter { $0 != .addAppToDockMac }
+        } else {
+            return cards
+        }
     }
 
     func createFacade(featureFlagger: FeatureFlagger) -> NewTabPageNextStepsCardsProviderFacade {
