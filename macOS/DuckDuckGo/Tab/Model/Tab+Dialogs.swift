@@ -39,11 +39,13 @@ typealias TextInputDialogRequest = UserDialogRequest<JSAlertParameters, String?>
 typealias AlertDialogRequest = UserDialogRequest<JSAlertParameters, Void>
 typealias BasicAuthDialogRequest = UserDialogRequest<URLProtectionSpace, AuthChallengeDisposition?>
 typealias PrintDialogRequest = UserDialogRequest<NSPrintOperation, Bool>
+typealias BeforeUnloadDialogRequest = UserDialogRequest<JSAlertParameters, Bool>
 
 enum JSAlertQuery: Equatable {
     case confirm(ConfirmDialogRequest)
     case textInput(TextInputDialogRequest)
     case alert(AlertDialogRequest)
+    case beforeUnload(BeforeUnloadDialogRequest)
 
     func cancel() {
         switch self {
@@ -53,6 +55,8 @@ enum JSAlertQuery: Equatable {
             return request.submit(false)
         case .textInput(let request):
             return request.submit(nil)
+        case .beforeUnload(let request):
+            return request.submit(false)
         }
     }
 
@@ -61,6 +65,7 @@ enum JSAlertQuery: Equatable {
         case .confirm(let r1): if case .confirm(let r2) = rhs { r1 === r2 } else { false }
         case .textInput(let r1): if case .textInput(let r2) = rhs { r1 === r2 } else { false }
         case .alert(let r1): if case .alert(let r2) = rhs { r1 === r2 } else { false }
+        case .beforeUnload(let r1): if case .beforeUnload(let r2) = rhs { r1 === r2 } else { false }
         }
     }
 }
@@ -102,6 +107,7 @@ extension Tab {
             case .jsDialog(.confirm(let request)): return request
             case .jsDialog(.textInput(let request)): return request
             case .jsDialog(.alert(let request)): return request
+            case .jsDialog(.beforeUnload(let request)): return request
             case .basicAuthenticationChallenge(let request): return request
             case .print(let request): return request
             }

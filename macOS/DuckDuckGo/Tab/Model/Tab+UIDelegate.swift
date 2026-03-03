@@ -254,6 +254,23 @@ extension Tab: WKUIDelegate {
         userInteractionDialog = UserDialog(sender: .page(domain: host), dialog: dialog)
     }
 
+    @objc(_webView:runBeforeUnloadConfirmPanelWithMessage:initiatedByFrame:completionHandler:)
+    func webView(_ webView: WKWebView,
+                 runBeforeUnloadConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (Bool) -> Void) {
+        createAlertDialog(initiatedByFrame: frame, prompt: "") { parameters in
+            .beforeUnload(.init(parameters, callback: { result in
+                switch result {
+                case .failure:
+                    completionHandler(false)
+                case .success(let shouldLeave):
+                    completionHandler(shouldLeave)
+                }
+            }))
+        }
+    }
+
     func webViewDidClose(_ webView: WKWebView) {
         delegate?.closeTab(self)
     }

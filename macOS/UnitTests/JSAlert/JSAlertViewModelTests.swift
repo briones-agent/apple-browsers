@@ -25,7 +25,8 @@ final class JSAlertViewModelTests: XCTestCase {
         let params: [JSAlertQuery.TestParameters] = [
             .init(type: .testAlert(), result: true),
             .init(type: .testConfirm(), result: false),
-            .init(type: .testTextInput(), result: false)
+            .init(type: .testTextInput(), result: false),
+            .init(type: .testBeforeUnload(), result: false)
         ]
         for param in params {
             let viewModel = JSAlertViewModel(query: param.type)
@@ -37,7 +38,8 @@ final class JSAlertViewModelTests: XCTestCase {
         let params: [JSAlertQuery.TestParameters] = [
             .init(type: .testAlert(), result: true),
             .init(type: .testConfirm(), result: true),
-            .init(type: .testTextInput(), result: false)
+            .init(type: .testTextInput(), result: false),
+            .init(type: .testBeforeUnload(), result: true)
         ]
 
         for param in params {
@@ -63,7 +65,8 @@ final class JSAlertViewModelTests: XCTestCase {
         let params: [JSAlertQuery.TestParameters] = [
             .init(type: .testAlert(parameters: .testData(domain: "duckduckgo.com")), result: UserText.alertTitle(from: "duckduckgo.com")),
             .init(type: .testConfirm(parameters: .testData(domain: "wikipedia.com")), result: UserText.alertTitle(from: "wikipedia.com")),
-            .init(type: .testTextInput(parameters: .testData(domain: "example.com")), result: UserText.alertTitle(from: "example.com"))
+            .init(type: .testTextInput(parameters: .testData(domain: "example.com")), result: UserText.alertTitle(from: "example.com")),
+            .init(type: .testBeforeUnload(parameters: .testData(domain: "forms.example.com")), result: UserText.beforeUnloadDialogTitle(from: "forms.example.com"))
         ]
 
         for param in params {
@@ -168,6 +171,47 @@ final class JSAlertViewModelTests: XCTestCase {
 
         XCTAssertNil(text)
     }
+
+    func testConfirmBeforeUnloadDialog() {
+        var shouldLeave: Bool?
+        let query = JSAlertQuery.testBeforeUnload { result in
+            shouldLeave = try? result.get()
+        }
+        let viewModel = JSAlertViewModel(query: query)
+        viewModel.confirm(text: "")
+
+        XCTAssertEqual(shouldLeave, true, "Expected confirm to submit true (leave page)")
+    }
+
+    func testCancelBeforeUnloadDialog() {
+        var shouldLeave: Bool?
+        let query = JSAlertQuery.testBeforeUnload { result in
+            switch result {
+            case .success(let value): shouldLeave = value
+            case .failure: break
+            }
+        }
+        let viewModel = JSAlertViewModel(query: query)
+        viewModel.cancel()
+
+        XCTAssertEqual(shouldLeave, false, "Expected cancel to submit false (stay on page)")
+    }
+
+    func testBeforeUnloadMessageText() {
+        let viewModel = JSAlertViewModel(query: .testBeforeUnload())
+        XCTAssertEqual(viewModel.messageText, UserText.beforeUnloadMessage)
+    }
+
+    func testBeforeUnloadButtonText() {
+        let viewModel = JSAlertViewModel(query: .testBeforeUnload())
+        XCTAssertEqual(viewModel.okButtonText, UserText.beforeUnloadLeaveButton)
+        XCTAssertEqual(viewModel.cancelButtonText, UserText.beforeUnloadStayButton)
+    }
+
+    func testBeforeUnloadMessageScrollViewNotHidden() {
+        let viewModel = JSAlertViewModel(query: .testBeforeUnload())
+        XCTAssertFalse(viewModel.isMessageScrollViewHidden, "Expected message scroll view to be visible for beforeUnload")
+    }
 }
 
 fileprivate extension JSAlertParameters {
@@ -192,5 +236,9 @@ fileprivate extension JSAlertQuery {
 
     static func testTextInput(parameters: JSAlertParameters = .testData(), callback: @escaping TextInputDialogRequest.Callback = { _ in }) -> Self {
         .textInput(TextInputDialogRequest(parameters, callback: callback))
+    }
+
+    static func testBeforeUnload(parameters: JSAlertParameters = .testData(), callback: @escaping BeforeUnloadDialogRequest.Callback = { _ in }) -> Self {
+        .beforeUnload(BeforeUnloadDialogRequest(parameters, callback: callback))
     }
 }

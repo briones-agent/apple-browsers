@@ -29,14 +29,14 @@ final class JSAlertViewModel {
         switch query {
         case .alert:
             return true
-        case .confirm, .textInput:
+        case .confirm, .textInput, .beforeUnload:
             return false
         }
     }
 
     var isTextFieldHidden: Bool {
         switch query {
-        case .alert, .confirm:
+        case .alert, .confirm, .beforeUnload:
             return true
         case .textInput:
             return false
@@ -44,23 +44,48 @@ final class JSAlertViewModel {
     }
 
     var isMessageScrollViewHidden: Bool {
-        return query.parameters.prompt.count == 0
+        switch query {
+        case .beforeUnload:
+            return false
+        default:
+            return query.parameters.prompt.count == 0
+        }
     }
 
     var okButtonText: String {
-        UserText.ok
+        switch query {
+        case .beforeUnload:
+            return UserText.beforeUnloadLeaveButton
+        default:
+            return UserText.ok
+        }
     }
 
     var cancelButtonText: String {
-        UserText.cancel
+        switch query {
+        case .beforeUnload:
+            return UserText.beforeUnloadStayButton
+        default:
+            return UserText.cancel
+        }
     }
 
     var titleText: String {
-        UserText.alertTitle(from: query.parameters.domain)
+        switch query {
+        case .beforeUnload:
+            return UserText.beforeUnloadDialogTitle(from: query.parameters.domain)
+        default:
+            return UserText.alertTitle(from: query.parameters.domain)
+        }
     }
 
     var messageText: String {
-        query.parameters.prompt
+        switch query {
+        case .beforeUnload:
+            return UserText.beforeUnloadMessage
+        default:
+            return query.parameters.prompt
+        }
     }
 
     var textFieldDefaultText: String {
@@ -75,6 +100,8 @@ final class JSAlertViewModel {
             request.submit(true)
         case .textInput(let request):
             request.submit(text)
+        case .beforeUnload(let request):
+            request.submit(true)
         }
     }
 
@@ -91,6 +118,8 @@ fileprivate extension JSAlertQuery {
         case .confirm(let request):
             return request.parameters
         case .textInput(let request):
+            return request.parameters
+        case .beforeUnload(let request):
             return request.parameters
         }
     }

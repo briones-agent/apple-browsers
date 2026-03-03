@@ -1823,6 +1823,25 @@ struct UserText {
         return String(format: localized, domain)
     }
 
+    static func beforeUnloadDialogTitle(from domain: String) -> String {
+        let localized = NSLocalizedString("alert.beforeUnload.title",
+            value: "From \"%@\":",
+            comment: "Title for beforeunload dialog, formatted with the page domain")
+        return String(format: localized, domain)
+    }
+
+    static let beforeUnloadMessage = NSLocalizedString("alert.beforeUnload.message",
+        value: "Are you sure you want to leave this page?",
+        comment: "Message in beforeunload dialog asking user to confirm navigation")
+
+    static let beforeUnloadLeaveButton = NSLocalizedString("alert.beforeUnload.leave",
+        value: "Leave Page",
+        comment: "Button to allow navigation in beforeunload dialog")
+
+    static let beforeUnloadStayButton = NSLocalizedString("alert.beforeUnload.stay",
+        value: "Stay on Page",
+        comment: "Button to cancel navigation in beforeunload dialog")
+
     static let noAccessToDownloadsFolderHeader = NSLocalizedString("no.access.to.downloads.folder.header", value: "DuckDuckGo needs permission to access your Downloads folder", comment: "Header of the alert dialog warning the user they need to give the browser permission to access the Downloads folder")
 
     private static let noAccessToDownloadsFolderLegacy = NSLocalizedString("no.access.to.downloads.folder.legacy", value: "Grant access in Security & Privacy preferences in System Settings.", comment: "Alert presented to user if the app doesn't have rights to access Downloads folder. This is used for macOS version 12 and below")

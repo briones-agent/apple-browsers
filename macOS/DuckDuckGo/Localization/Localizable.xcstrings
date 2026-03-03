@@ -3416,6 +3416,54 @@
         }
       }
     },
+    "alert.beforeUnload.leave" : {
+      "comment" : "Button to allow navigation in beforeunload dialog",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Leave Page"
+          }
+        }
+      }
+    },
+    "alert.beforeUnload.message" : {
+      "comment" : "Message in beforeunload dialog asking user to confirm navigation",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Are you sure you want to leave this page?"
+          }
+        }
+      }
+    },
+    "alert.beforeUnload.stay" : {
+      "comment" : "Button to cancel navigation in beforeunload dialog",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stay on Page"
+          }
+        }
+      }
+    },
+    "alert.beforeUnload.title" : {
+      "comment" : "Title for beforeunload dialog, formatted with the page domain",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From \"%@\":"
+          }
+        }
+      }
+    },
     "alert.sync-bookmarks-bad-data-error-description" : {
       "comment" : "Description for alert shown when sync error occurs because of bad data",
       "extractionState" : "extracted_with_value",
