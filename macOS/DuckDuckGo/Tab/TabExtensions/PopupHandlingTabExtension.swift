@@ -458,7 +458,7 @@ extension PopupHandlingTabExtension: NavigationResponder {
         case .currentTab:
             return .next
 
-        case .newTab, .newWindow:
+        case .newTab, .newWindow, .splitPane:
             let url = navigationAction.url
             // Save the link open behavior for the upcoming createWebViewWithConfiguration callback that will follow the loadInNewWindow call
             self.onNewWindow = { [isBurner] newWindowNavigationAction -> NewWindowPolicyDecision? in

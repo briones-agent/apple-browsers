@@ -154,8 +154,12 @@ final class NavigationBarViewController: NSViewController {
     private var allowsUserInteraction: Bool = true
     private var isAutoFillAutosaveMessageVisible: Bool = false
 
+    /// Set by MainViewController to enable split view navigation bar integration.
+    weak var browserTabViewController: BrowserTabViewController?
+
     private var urlCancellable: AnyCancellable?
     private var selectedTabViewModelCancellable: AnyCancellable?
+    private var splitViewFocusCancellable: AnyCancellable?
     private var credentialsToSaveCancellable: AnyCancellable?
     private var vpnToggleCancellable: AnyCancellable?
     private var feedbackFormCancellable: AnyCancellable?
@@ -1203,10 +1207,32 @@ final class NavigationBarViewController: NSViewController {
     private func subscribeToSelectedTabViewModel() {
         guard selectedTabViewModelCancellable == nil else { return }
         selectedTabViewModelCancellable = tabCollectionViewModel.$selectedTabViewModel.receive(on: DispatchQueue.main).sink { [weak self] _ in
-            self?.subscribeToNavigationActionFlags()
-            self?.subscribeToCredentialsToSave()
-            self?.subscribeToTabContent()
+            guard let self else { return }
+            // When split view is visible, nav bar bindings are driven by the focused pane instead
+            guard self.browserTabViewController?.isSplitViewVisible != true else { return }
+            self.subscribeToNavigationActionFlags()
+            self.subscribeToCredentialsToSave()
+            self.subscribeToTabContent()
         }
+
+        subscribeSplitViewFocusChanges()
+    }
+
+    private func subscribeSplitViewFocusChanges() {
+        splitViewFocusCancellable = browserTabViewController?.$splitViewFocusedTabViewModel
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] focusedTabViewModel in
+                guard let self else { return }
+                guard focusedTabViewModel != nil else {
+                    // Split view was deactivated; rebind to the normal selected tab
+                    self.subscribeToNavigationActionFlags()
+                    self.subscribeToCredentialsToSave()
+                    self.subscribeToTabContent()
+                    return
+                }
+                self.subscribeToNavigationActionFlagsForSplitView()
+                self.subscribeToTabContentForSplitView()
+            }
     }
 
     private func subscribeToTabContent() {
@@ -1318,6 +1344,57 @@ final class NavigationBarViewController: NSViewController {
             .store(in: &navigationButtonsCancellables)
     }
 
+    /// The effective tab view model: split view focused pane when active, otherwise normal selected tab.
+    var effectiveTabViewModel: TabViewModel? {
+        browserTabViewController?.splitViewFocusedTabViewModel ?? tabCollectionViewModel.selectedTabViewModel
+    }
+
+    private func subscribeToNavigationActionFlagsForSplitView() {
+        navigationButtonsCancellables.removeAll()
+        guard let focusedTabViewModel = browserTabViewController?.splitViewFocusedTabViewModel else { return }
+
+        focusedTabViewModel.$canGoBack
+            .removeDuplicates()
+            .assign(to: \.isEnabled, onWeaklyHeld: goBackButton)
+            .store(in: &navigationButtonsCancellables)
+
+        focusedTabViewModel.$canGoForward
+            .removeDuplicates()
+            .assign(to: \.isEnabled, onWeaklyHeld: goForwardButton)
+            .store(in: &navigationButtonsCancellables)
+
+        Publishers.CombineLatest(focusedTabViewModel.$canReload, focusedTabViewModel.$isLoading)
+            .map({
+                $0.canReload || $0.isLoading
+            } as ((canReload: Bool, isLoading: Bool)) -> Bool)
+            .removeDuplicates()
+            .assign(to: \.isEnabled, onWeaklyHeld: refreshOrStopButton)
+            .store(in: &navigationButtonsCancellables)
+
+        focusedTabViewModel.$isLoading
+            .removeDuplicates()
+            .sink { [weak refreshOrStopButton] isLoading in
+                refreshOrStopButton?.image = isLoading ? .stop : .refresh
+                refreshOrStopButton?.setAccessibilityTitle(isLoading ? UserText.mainMenuViewStop : UserText.reloadPage)
+                refreshOrStopButton?.toolTip = isLoading ? ShortcutTooltip.stopLoading.value : ShortcutTooltip.reload.value
+            }
+            .store(in: &navigationButtonsCancellables)
+
+        focusedTabViewModel.$canShare
+            .removeDuplicates()
+            .assign(to: \.isEnabled, onWeaklyHeld: shareButton)
+            .store(in: &navigationButtonsCancellables)
+    }
+
+    private func subscribeToTabContentForSplitView() {
+        guard let focusedTab = browserTabViewController?.splitViewFocusedTabViewModel?.tab else { return }
+        urlCancellable = focusedTab.$content
+            .receive(on: DispatchQueue.main)
+            .sink(receiveValue: { [weak self] _ in
+                self?.updatePasswordManagementButton()
+            })
+    }
+
     private func setupAccessibility() {
         view.setAccessibilityIdentifier("NavigationBar")
         view.setAccessibilityRole(.toolbar) // AXToolbar
@@ -1337,22 +1414,22 @@ final class NavigationBarViewController: NSViewController {
     }
 
     @IBAction func goBackAction(_ sender: NSButton) {
-        guard let selectedTabViewModel = tabCollectionViewModel.selectedTabViewModel else {
+        guard let activeTabViewModel = effectiveTabViewModel else {
             Logger.navigation.error("Selected tab view model is nil")
             return
         }
-        if !openBackForwardHistoryItemInNewTabIfNeeded(with: selectedTabViewModel.tab.webView.backForwardList.backItem?.url) {
-            selectedTabViewModel.tab.goBack()
+        if !openBackForwardHistoryItemInNewTabIfNeeded(with: activeTabViewModel.tab.webView.backForwardList.backItem?.url) {
+            activeTabViewModel.tab.goBack()
         }
     }
 
     @IBAction func goForwardAction(_ sender: NSButton) {
-        guard let selectedTabViewModel = tabCollectionViewModel.selectedTabViewModel else {
+        guard let activeTabViewModel = effectiveTabViewModel else {
             Logger.navigation.error("Selected tab view model is nil")
             return
         }
-        if !openBackForwardHistoryItemInNewTabIfNeeded(with: selectedTabViewModel.tab.webView.backForwardList.forwardItem?.url) {
-            selectedTabViewModel.tab.goForward()
+        if !openBackForwardHistoryItemInNewTabIfNeeded(with: activeTabViewModel.tab.webView.backForwardList.forwardItem?.url) {
+            activeTabViewModel.tab.goForward()
         }
     }
 
@@ -1379,6 +1456,8 @@ final class NavigationBarViewController: NSViewController {
             tabCollectionViewModel.insert(tab, selected: selected)
         case .newWindow(let selected):
             WindowsManager.openNewWindow(with: tab, showWindow: selected)
+        case .splitPane:
+            tabCollectionViewModel.insert(tab, selected: false)
         }
         return true
     }
@@ -1427,6 +1506,8 @@ final class NavigationBarViewController: NSViewController {
             tabCollectionViewModel.insert(tab, selected: selected)
         case .newWindow(let selected):
             WindowsManager.openNewWindow(with: tab, showWindow: selected)
+        case .splitPane:
+            tabCollectionViewModel.insert(tab, selected: false)
         }
     }
 

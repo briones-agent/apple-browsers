@@ -27,11 +27,13 @@ enum LinkOpenBehavior: Equatable {
     case currentTab
     case newTab(selected: Bool)
     case newWindow(selected: Bool)
+    case splitPane
 
     var shouldSelectNewTab: Bool {
         switch self {
         case .currentTab: false
         case .newTab(selected: let selected), .newWindow(selected: let selected): selected
+        case .splitPane: false
         }
     }
 
@@ -62,6 +64,13 @@ enum LinkOpenBehavior: Equatable {
     ///       e.g., ⌘⇧-click will make the tab non-selected if `switchToNewTabWhenOpenedPreference` is `true`.
     init(button: NSEvent.Button? = nil, modifierFlags: NSEvent.ModifierFlags? = nil, switchToNewTabWhenOpenedPreference: Bool, canOpenLinkInCurrentTab: Bool = true, shouldSelectNewTab: Bool = false) {
         let modifierFlags = modifierFlags ?? []
+
+        // ⌥+click (without ⌘): Open in split pane
+        if modifierFlags.contains(.option) && !modifierFlags.contains(.command) && button != .middle {
+            self = .splitPane
+            return
+        }
+
         // ⌘+click or middle click: New Tab/Window modifier
         let shouldOpenNewTab = button == .middle || modifierFlags.contains(.command)
         let isShiftPressed = modifierFlags.contains(.shift)
@@ -98,6 +107,7 @@ extension LinkOpenBehavior: CustomStringConvertible {
         case .currentTab: return "currentTab"
         case .newTab(selected: let selected): return "newTab" + (selected ? " (selected)" : "")
         case .newWindow(selected: let selected): return "newWindow" + (selected ? " (selected)" : "")
+        case .splitPane: return "splitPane"
         }
     }
 }

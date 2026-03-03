@@ -111,6 +111,11 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         }()
     }
     let tabCollectionViewModel: TabCollectionViewModel
+
+    /// Set by MainViewController to enable split view visual indicators on tab bar items.
+    weak var browserTabViewController: BrowserTabViewController?
+    private var splitViewTabsCancellable: AnyCancellable?
+
     var isInteractionPrevented: Bool = false {
         didSet {
             addNewTabButtonFooter?.isEnabled = !isInteractionPrevented
@@ -336,6 +341,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         // https://app.asana.com/0/1177771139624306/1202033879471339
         addMouseMonitors()
         addTabBarRemoteMessageListener()
+        subscribeSplitViewTabs()
     }
 
     override func viewDidAppear() {
@@ -432,6 +438,24 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
             .sink { [weak self] _ in
                 self?.updateDuckAIChromeSegmentedControlState()
             }
+    }
+
+    private func subscribeSplitViewTabs() {
+        splitViewTabsCancellable = browserTabViewController?.$splitViewTabs
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] splitTabIds in
+                self?.updateSplitViewIndicators(splitTabIds)
+            }
+    }
+
+    private func updateSplitViewIndicators(_ splitTabIds: Set<ObjectIdentifier>) {
+        guard let collectionView else { return }
+        let tabs = tabCollectionViewModel.tabCollection.tabs
+        for index in 0..<tabs.count {
+            let indexPath = IndexPath(item: index, section: 0)
+            guard let item = collectionView.item(at: indexPath) as? TabBarViewItem else { continue }
+            item.isInSplitView = splitTabIds.contains(ObjectIdentifier(tabs[index]))
+        }
     }
 
     private func subscribeToPinnedTabsSettingChanged() {
@@ -2587,6 +2611,23 @@ extension TabBarViewController: TabBarViewItemDelegate {
         } else {
             tabCollectionViewModel.suspendTab(at: tabIndex)
         }
+    }
+
+    func tabBarViewItemOpenInSplitView(_ tabBarViewItem: TabBarViewItem) {
+        let isPinned = tabBarViewItem.tabViewModel?.isPinned == true
+        let collectionView = isPinned ? pinnedTabsCollectionView : self.collectionView
+        let tabCollection = isPinned ? tabCollectionViewModel.pinnedTabsCollection : tabCollectionViewModel.tabCollection
+
+        guard let indexPath = collectionView?.indexPath(for: tabBarViewItem),
+              let tab = tabCollection?.tabs[safe: indexPath.item]
+        else {
+            assertionFailure("TabBarViewController: Failed to get tab from tab bar view item")
+            return
+        }
+
+        // Dispatch to MainViewController via responder chain
+        guard let mainVC = view.window?.contentViewController as? MainViewController else { return }
+        mainVC.browserTabViewController.enterSplitView(with: tab)
     }
 
     func tabBarViewItem(_ tabBarViewItem: TabBarViewItem, replaceContentWithDroppedStringValue stringValue: String) {

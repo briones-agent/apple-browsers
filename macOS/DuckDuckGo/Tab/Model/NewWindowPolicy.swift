@@ -23,8 +23,14 @@ enum NewWindowPolicy: Equatable {
     case tab(selected: Bool, burner: Bool, contextMenuInitiated: Bool = false)
     case popup(origin: NSPoint?, size: NSSize?)
     case window(active: Bool, burner: Bool)
+    case splitPane(burner: Bool)
 
     init(_ windowFeatures: WKWindowFeatures, linkOpenBehavior: LinkOpenBehavior, isBurner: Bool, preferTabsToWindows: Bool, contextMenuInitiated: Bool = false) {
+
+        if case .splitPane = linkOpenBehavior {
+            self = .splitPane(burner: isBurner)
+            return
+        }
 
         if case .newWindow(let selected) = linkOpenBehavior {
             self = .window(active: selected, burner: isBurner)
@@ -97,6 +103,8 @@ extension NewWindowPolicy: CustomStringConvertible {
             (\([active ? "active" : "", burner ? "burner" : ""]
             .filter { !$0.isEmpty }.joined(separator: ", "))
             """ : "")
+        case .splitPane(burner: let burner):
+            return "splitPane" + (burner ? "(burner)" : "")
         }
     }
 }

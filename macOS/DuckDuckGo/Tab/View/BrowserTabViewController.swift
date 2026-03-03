@@ -81,6 +81,25 @@ final class BrowserTabViewController: NSViewController {
     weak var delegate: BrowserTabViewControllerDelegate?
     private(set) var tabViewModel: TabViewModel?
 
+    // MARK: - Split View
+
+    /// All split view groups. Each group is an independent set of side-by-side panes.
+    private var splitViewGroups: [SplitViewGroup] = []
+
+    /// The currently visible split view group (nil when a standalone tab is shown).
+    private(set) var activeSplitViewGroup: SplitViewGroup?
+
+    /// Cancellables for split view state observation.
+    private var splitViewCancellables = Set<AnyCancellable>()
+
+    /// Published focused tab view model for split view mode.
+    /// Other components (navigation bar) subscribe to this to reflect the focused pane.
+    @Published private(set) var splitViewFocusedTabViewModel: TabViewModel?
+
+    /// The set of tabs currently in ANY split view group.
+    /// Used by the tab bar to visually mark split-group tabs.
+    @Published private(set) var splitViewTabs: Set<ObjectIdentifier> = []
+
     private let tabCollectionViewModel: TabCollectionViewModel
     private let bookmarkManager: BookmarkManager
     private let bookmarkDragDropManager: BookmarkDragDropManager
@@ -347,6 +366,9 @@ final class BrowserTabViewController: NSViewController {
 
     @objc
     private func windowWillClose(_ notification: NSNotification) {
+        if isSplitViewActive {
+            tearDownAllGroups()
+        }
         self.removeWebViewFromHierarchy()
         _newTabPageWebViewModel?.removeUserScripts()
     }
@@ -463,6 +485,24 @@ final class BrowserTabViewController: NSViewController {
             .sink { [weak self] selectedTabViewModel in
                 guard let self else { return }
 
+                if isSplitViewActive, let selectedTab = selectedTabViewModel?.tab {
+                    if let group = splitViewGroup(for: selectedTab),
+                       let pane = group.state.pane(for: selectedTab) {
+                        // Selected tab is in a split group: show that group and focus the pane
+                        if activeSplitViewGroup !== group {
+                            switchToGroup(group)
+                        } else if group.nsSplitView.isHidden {
+                            // Switching from standalone tab back to a split group
+                            removeAllTabContent(includingWebView: true)
+                            showGroup(group)
+                        }
+                        focusSplitPane(withId: pane.id, in: group)
+                        return
+                    }
+                    // Selected tab is not in any group: hide the active group
+                    hideSplitView()
+                }
+
                 tabViewModelCancellables.removeAll(keepingCapacity: true)
                 removeExistingDialog()
 
@@ -494,6 +534,7 @@ final class BrowserTabViewController: NSViewController {
             .sink { [weak self] tabs in
                 guard let self else { return }
                 removeDataBrokerViewIfNecessary(for: tabs)
+                handleSplitViewTabRemoval(currentTabs: tabs)
             }
             .store(in: &cancellables)
 
@@ -1460,6 +1501,10 @@ extension BrowserTabViewController: TabDelegate {
             WindowsManager.openNewWindow(with: childTab, showWindow: active)
         case .tab(selected: let selected, _, _):
             self.tabCollectionViewModel.insert(childTab, after: parentTab, selected: selected)
+        case .splitPane:
+            // Add the tab to the tab collection (not selected) and open it in a split pane
+            self.tabCollectionViewModel.insert(childTab, after: parentTab, selected: false)
+            self.enterSplitView(with: childTab)
         }
     }
 
@@ -1870,6 +1915,320 @@ extension BrowserTabViewController {
             webViewSnapshot?.removeFromSuperview()
         }
     }
+
+    // MARK: - Split View
+
+    /// Whether any split view group exists.
+    var isSplitViewActive: Bool {
+        !splitViewGroups.isEmpty
+    }
+
+    /// Whether a split view group is currently visible.
+    var isSplitViewVisible: Bool {
+        activeSplitViewGroup != nil && activeSplitViewGroup?.nsSplitView.isHidden == false
+    }
+
+    /// Find the split view group that contains the given tab.
+    private func splitViewGroup(for tab: Tab) -> SplitViewGroup? {
+        splitViewGroups.first { $0.contains(tab: tab) }
+    }
+
+    /// Enter split view mode by displaying the current tab alongside a second tab.
+    /// If the currently visible group is active, adds the second tab as a new pane.
+    /// Otherwise creates a new group from the current tab + second tab.
+    func enterSplitView(with secondTab: Tab) {
+        // If secondTab is already in a group, don't add it again
+        guard splitViewGroup(for: secondTab) == nil else { return }
+
+        // If there's a visible group, add the pane to it
+        if let activeGroup = activeSplitViewGroup, activeGroup.nsSplitView.isHidden == false {
+            addSplitPane(with: secondTab, to: activeGroup)
+            return
+        }
+
+        // Determine the "current" tab to pair with
+        let currentTab: Tab
+        let currentTabVM: TabViewModel
+        if let activeGroup = activeSplitViewGroup {
+            // Split is active but hidden; use its focused tab
+            guard let tab = activeGroup.state.focusedTab, let vm = activeGroup.state.focusedTabViewModel else { return }
+            currentTab = tab
+            currentTabVM = vm
+        } else if let vm = tabViewModel, let tab = vm.tab as Tab? {
+            currentTab = tab
+            currentTabVM = vm
+        } else {
+            return
+        }
+
+        guard secondTab !== currentTab else { return }
+
+        // If the current tab is already in a group, add the second tab to that group
+        if let existingGroup = splitViewGroup(for: currentTab) {
+            switchToGroup(existingGroup)
+            addSplitPane(with: secondTab, to: existingGroup)
+            return
+        }
+
+        // Create a brand new group
+        let secondTabViewModel = TabViewModel(tab: secondTab)
+        let pane1 = SplitViewState.Pane(tab: currentTab, tabViewModel: currentTabVM)
+        let pane2 = SplitViewState.Pane(tab: secondTab, tabViewModel: secondTabViewModel)
+        let state = SplitViewState(panes: [pane1, pane2])
+
+        // Hide any currently visible group
+        activeSplitViewGroup?.nsSplitView.isHidden = true
+
+        // Remove single-tab content BEFORE creating the group,
+        // because WebViewContainerView.removeFromSuperview() removes
+        // webView.tabContentView from wherever it is — if the group
+        // was created first, this would yank the web view out of the new pane.
+        removeAllTabContent(includingWebView: true)
+
+        let group = createSplitViewGroup(with: state)
+        splitViewGroups.append(group)
+        activeSplitViewGroup = group
+
+        // Show the new group
+        group.nsSplitView.isHidden = false
+        focusSplitPane(withId: pane1.id, in: group)
+
+        updateSplitViewTabs()
+        subscribeSplitViewFocusChanges(state)
+    }
+
+    /// Add a new split pane to an existing group.
+    private func addSplitPane(with tab: Tab, to group: SplitViewGroup) {
+        guard group.state.pane(for: tab) == nil else { return }
+
+        let newTabViewModel = TabViewModel(tab: tab)
+        let newPane = SplitViewState.Pane(tab: tab, tabViewModel: newTabViewModel)
+        let insertionIndex = group.state.addPane(newPane)
+
+        addPaneViewToSplitView(newPane, group: group, at: insertionIndex)
+        focusSplitPane(withId: newPane.id, in: group)
+        distributeEqualPaneWidths(in: group.nsSplitView)
+        updateSplitViewTabs()
+    }
+
+    /// Create a new NSSplitView and SplitViewGroup, adding it to the view hierarchy.
+    private func createSplitViewGroup(with state: SplitViewState) -> SplitViewGroup {
+        let nsSplitView = NSSplitView()
+        nsSplitView.isVertical = true
+        nsSplitView.dividerStyle = .thin
+        nsSplitView.translatesAutoresizingMaskIntoConstraints = false
+        nsSplitView.delegate = self
+
+        let group = SplitViewGroup(state: state, nsSplitView: nsSplitView)
+
+        for pane in state.panes {
+            addPaneViewToSplitView(pane, group: group)
+        }
+
+        // Add to hierarchy (hidden initially)
+        nsSplitView.isHidden = true
+        view.addSubview(nsSplitView, positioned: .below, relativeTo: hoverLabelContainer)
+
+        NSLayoutConstraint.activate([
+            nsSplitView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            nsSplitView.topAnchor.constraint(equalTo: view.topAnchor),
+            nsSplitView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            nsSplitView.trailingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor)
+        ])
+
+        distributeEqualPaneWidths(in: nsSplitView)
+        return group
+    }
+
+    /// Show a specific group's NSSplitView.
+    private func showGroup(_ group: SplitViewGroup) {
+        group.nsSplitView.isHidden = false
+        activeSplitViewGroup = group
+    }
+
+    /// Switch from the current view to a different group.
+    private func switchToGroup(_ group: SplitViewGroup) {
+        activeSplitViewGroup?.nsSplitView.isHidden = true
+        // Remove single-tab content (safe: only removes self.webViewContainer)
+        removeAllTabContent(includingWebView: true)
+        showGroup(group)
+        subscribeSplitViewFocusChanges(group.state)
+    }
+
+    /// Force all panes to have equal width.
+    private func distributeEqualPaneWidths(in nsSplitView: NSSplitView) {
+        let subviews = nsSplitView.arrangedSubviews
+        guard subviews.count > 0 else { return }
+        let dividerThickness = nsSplitView.dividerThickness
+        let totalDividers = CGFloat(subviews.count - 1)
+        let availableWidth = nsSplitView.bounds.width - (totalDividers * dividerThickness)
+        let paneWidth = floor(availableWidth / CGFloat(subviews.count))
+
+        var x: CGFloat = 0
+        for (index, subview) in subviews.enumerated() {
+            // Last pane takes remaining width to avoid rounding gaps
+            let width = (index == subviews.count - 1) ? nsSplitView.bounds.width - x : paneWidth
+            subview.frame = NSRect(x: x, y: 0, width: width, height: nsSplitView.bounds.height)
+            x += width + dividerThickness
+        }
+    }
+
+    /// Helper to create a SplitPaneView and add it to a group's NSSplitView.
+    private func addPaneViewToSplitView(_ pane: SplitViewState.Pane, group: SplitViewGroup, at index: Int? = nil) {
+        let paneView = SplitPaneView(paneId: pane.id)
+        paneView.onFocused = { [weak self] id in
+            self?.focusSplitPane(withId: id)
+        }
+        group.paneViews[pane.id] = paneView
+
+        if let index {
+            group.nsSplitView.insertArrangedSubview(paneView, at: index)
+        } else {
+            group.nsSplitView.addArrangedSubview(paneView)
+        }
+
+        let container = WebViewContainerView(tab: pane.tab, webView: pane.tab.webView, frame: view.bounds)
+        paneView.setWebViewContainer(container)
+    }
+
+    /// Exit split view for the currently active group.
+    /// The focused pane's tab becomes the active tab.
+    func exitSplitView() {
+        guard let group = activeSplitViewGroup else { return }
+
+        let tabToSelect = group.state.focusedTab
+        tearDownGroup(group)
+
+        if let tabToSelect {
+            tabCollectionViewModel.select(tab: tabToSelect)
+        }
+    }
+
+    /// Exit ALL split view groups and restore single-tab display.
+    func exitAllSplitViews() {
+        let tabToSelect = activeSplitViewGroup?.state.focusedTab
+        tearDownAllGroups()
+        if let tabToSelect {
+            tabCollectionViewModel.select(tab: tabToSelect)
+        }
+    }
+
+    /// Tear down a single group.
+    private func tearDownGroup(_ group: SplitViewGroup) {
+        splitViewCancellables.removeAll()
+
+        for pane in group.state.panes {
+            group.paneViews[pane.id]?.removeWebViewContainer()
+        }
+        group.nsSplitView.removeFromSuperview()
+        group.paneViews.removeAll()
+
+        splitViewGroups.removeAll { $0 === group }
+        if activeSplitViewGroup === group {
+            activeSplitViewGroup = nil
+            splitViewFocusedTabViewModel = nil
+            webView = nil
+        }
+        updateSplitViewTabs()
+    }
+
+    /// Tear down all groups.
+    private func tearDownAllGroups() {
+        splitViewCancellables.removeAll()
+        for group in splitViewGroups {
+            for pane in group.state.panes {
+                group.paneViews[pane.id]?.removeWebViewContainer()
+            }
+            group.nsSplitView.removeFromSuperview()
+            group.paneViews.removeAll()
+        }
+        splitViewGroups.removeAll()
+        activeSplitViewGroup = nil
+        splitViewFocusedTabViewModel = nil
+        splitViewTabs = []
+        webView = nil
+    }
+
+    private func focusSplitPane(withId id: UUID) {
+        guard let group = activeSplitViewGroup else { return }
+        focusSplitPane(withId: id, in: group)
+    }
+
+    private func focusSplitPane(withId id: UUID, in group: SplitViewGroup) {
+        group.state.focusPane(withId: id)
+
+        for (paneId, paneView) in group.paneViews {
+            paneView.isFocused = (paneId == id)
+        }
+
+        splitViewFocusedTabViewModel = group.state.focusedTabViewModel
+        webView = group.state.focusedTab?.webView
+    }
+
+    /// Hide the active split view without destroying it.
+    private func hideSplitView() {
+        activeSplitViewGroup?.nsSplitView.isHidden = true
+        activeSplitViewGroup = nil
+        splitViewFocusedTabViewModel = nil
+    }
+
+    /// When a tab is closed, check all groups and remove the corresponding pane.
+    private func handleSplitViewTabRemoval(currentTabs: [Tab]) {
+        guard !splitViewGroups.isEmpty else { return }
+
+        let currentTabSet = Set(currentTabs.map { ObjectIdentifier($0) })
+
+        // Iterate over a copy since tearDownGroup mutates the array
+        for group in Array(splitViewGroups) {
+            let removedPanes = group.state.panes.filter { !currentTabSet.contains(ObjectIdentifier($0.tab)) }
+            guard !removedPanes.isEmpty else { continue }
+
+            for removedPane in removedPanes {
+                if let paneView = group.paneViews[removedPane.id] {
+                    paneView.removeWebViewContainer()
+                    paneView.removeFromSuperview()
+                    group.paneViews.removeValue(forKey: removedPane.id)
+                }
+                group.state.removePane(withId: removedPane.id)
+            }
+
+            if group.state.panes.count <= 1 {
+                let remainingTab = group.state.panes.first?.tab
+                tearDownGroup(group)
+                if let remainingTab, activeSplitViewGroup == nil {
+                    tabCollectionViewModel.select(tab: remainingTab)
+                }
+            } else {
+                distributeEqualPaneWidths(in: group.nsSplitView)
+                if activeSplitViewGroup === group, let focusedId = group.state.focusedPane?.id {
+                    focusSplitPane(withId: focusedId, in: group)
+                }
+            }
+        }
+        updateSplitViewTabs()
+    }
+
+    private func updateSplitViewTabs() {
+        var allTabs = Set<ObjectIdentifier>()
+        for group in splitViewGroups {
+            for pane in group.state.panes {
+                allTabs.insert(ObjectIdentifier(pane.tab))
+            }
+        }
+        splitViewTabs = allTabs
+    }
+
+    private func subscribeSplitViewFocusChanges(_ state: SplitViewState) {
+        splitViewCancellables.removeAll()
+
+        state.$focusedPaneId
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.splitViewFocusedTabViewModel = self.activeSplitViewGroup?.state.focusedTabViewModel
+            }
+            .store(in: &splitViewCancellables)
+    }
 }
 
 @available(macOS 14.0, *)
@@ -1898,6 +2257,37 @@ extension BrowserTabViewController {
     func selectTab(with tabID: TabIdentifier) {
         guard let tabIndex = tabCollectionViewModel.indexInAllTabs(where: { $0.uuid == tabID }) else { return }
         tabCollectionViewModel.select(at: tabIndex)
+    }
+}
+
+// MARK: - NSSplitViewDelegate
+
+extension BrowserTabViewController: NSSplitViewDelegate {
+
+    func splitView(_ splitView: NSSplitView, constrainMinCoordinate proposedMinimumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+        return max(proposedMinimumPosition, 200)
+    }
+
+    func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+        return min(proposedMaximumPosition, splitView.bounds.width - 200)
+    }
+
+    func splitView(_ splitView: NSSplitView, resizeSubviewsWithOldSize oldSize: NSSize) {
+        let dividerThickness = splitView.dividerThickness
+        let paneCount = CGFloat(splitView.arrangedSubviews.count)
+        guard paneCount > 0 else { return }
+        let totalDividers = max(paneCount - 1, 0)
+        let availableWidth = splitView.bounds.width - (totalDividers * dividerThickness)
+        let paneWidth = availableWidth / paneCount
+
+        var x: CGFloat = 0
+        for (index, subview) in splitView.arrangedSubviews.enumerated() {
+            subview.frame = NSRect(x: x, y: 0, width: paneWidth, height: splitView.bounds.height)
+            x += paneWidth
+            if index < splitView.arrangedSubviews.count - 1 {
+                x += dividerThickness
+            }
+        }
     }
 }
 

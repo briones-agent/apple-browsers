@@ -583,6 +583,13 @@ extension AIChatViewController: TabDelegate {
                 let tabCollectionViewModel = parentWindowController.mainViewController.tabCollectionViewModel
                 tabCollectionViewModel.insertOrAppend(tab: childTab, selected: selected)
             }
+        case .splitPane:
+            // Fallback to opening in a new tab from sidebar context
+            if let parentWindowController = Application.appDelegate.windowControllersManager.lastKeyMainWindowController {
+                let tabCollectionViewModel = parentWindowController.mainViewController.tabCollectionViewModel
+                tabCollectionViewModel.insertOrAppend(tab: childTab, selected: false)
+                parentWindowController.mainViewController.browserTabViewController.enterSplitView(with: childTab)
+            }
         }
     }
 

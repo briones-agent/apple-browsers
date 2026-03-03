@@ -116,6 +116,8 @@ final class MainMenu: NSMenu {
         .withImage(DesignSystemImages.Glyphs.Size12.close)
     let reloadMenuItem = NSMenuItem(title: UserText.mainMenuViewReloadPage, action: #selector(MainViewController.reloadPage), keyEquivalent: "r")
         .withImage(DesignSystemImages.Glyphs.Size12.reloadSmall)
+    let toggleSplitViewMenuItem = NSMenuItem(title: "Split View", action: #selector(MainViewController.toggleSplitView), keyEquivalent: [.shift, .command, "d"])
+    let addSplitPaneMenuItem = NSMenuItem(title: "Add Split Pane", action: #selector(MainViewController.addSplitPane), keyEquivalent: [.shift, .command, .option, "d"])
 
     let toggleFullscreenMenuItem = NSMenuItem(title: UserText.mainMenuViewEnterFullScreen, action: #selector(NSWindow.toggleFullScreen), keyEquivalent: [.control, .command, "f"])
     let actualSizeMenuItem = NSMenuItem(title: UserText.mainMenuViewActualSize, action: #selector(MainViewController.actualSize), keyEquivalent: "0")
@@ -447,6 +449,8 @@ final class MainMenu: NSMenu {
 
             NSMenuItem(title: UserText.mainMenuViewHome, action: #selector(MainViewController.home), keyEquivalent: "H")
                 .withImage(DesignSystemImages.Glyphs.Size12.home)
+            toggleSplitViewMenuItem
+            addSplitPaneMenuItem
             NSMenuItem.separator()
 
             toggleDuckAIChromeButtonMenuItem

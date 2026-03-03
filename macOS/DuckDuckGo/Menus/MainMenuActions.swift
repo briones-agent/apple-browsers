@@ -1753,6 +1753,31 @@ extension MainViewController {
         window.makeKeyAndOrderFront(nil)
     }
 
+    // MARK: - Split View
+
+    @objc func toggleSplitView(_ sender: Any?) {
+        if browserTabViewController.isSplitViewActive {
+            browserTabViewController.exitSplitView()
+        } else {
+            // Create a new tab for the second pane
+            let newTab = Tab(content: .newtab,
+                             shouldLoadInBackground: true,
+                             burnerMode: tabCollectionViewModel.burnerMode,
+                             webViewSize: browserTabViewController.view.frame.size)
+            tabCollectionViewModel.append(tab: newTab, selected: false)
+            browserTabViewController.enterSplitView(with: newTab)
+        }
+    }
+
+    @objc func addSplitPane(_ sender: Any?) {
+        let newTab = Tab(content: .newtab,
+                         shouldLoadInBackground: true,
+                         burnerMode: tabCollectionViewModel.burnerMode,
+                         webViewSize: browserTabViewController.view.frame.size)
+        tabCollectionViewModel.append(tab: newTab, selected: false)
+        browserTabViewController.enterSplitView(with: newTab)
+    }
+
     // MARK: - Developer Tools
 
     @objc func toggleDeveloperTools(_ sender: Any?) {
@@ -1832,6 +1857,17 @@ extension MainViewController: NSMenuItemValidation {
              #selector(MainViewController.showManageBookmarks(_:)),
             #selector(MainViewController.toggleBookmarksBarFromMenu(_:)):
             return allowsUserInteraction
+
+        // Split View
+        case #selector(MainViewController.toggleSplitView(_:)):
+            if browserTabViewController.isSplitViewActive {
+                menuItem.title = "Exit Split View"
+            } else {
+                menuItem.title = "Split View"
+            }
+            return allowsUserInteraction && tabCollectionViewModel.selectedTabViewModel != nil
+        case #selector(MainViewController.addSplitPane(_:)):
+            return allowsUserInteraction && browserTabViewController.isSplitViewActive
 
         // New Tabs
         case #selector(MainViewController.newTab(_:)):
