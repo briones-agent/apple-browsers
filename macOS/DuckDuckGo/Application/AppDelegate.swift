@@ -20,6 +20,7 @@ import AIChat
 import AppUpdaterShared
 import AttributedMetric
 import AutoconsentStats
+import BWManagementShared
 import Bookmarks
 import BrokenSitePrompt
 import BrowserServicesKit
@@ -146,6 +147,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let bookmarkDragDropManager: BookmarkDragDropManager
     let historyCoordinator: HistoryCoordinator
     let fireproofDomains: FireproofDomains
+    let bitwardenManager: BWManagement?
+    let passwordManagerCoordinator: PasswordManagerCoordinator
     let webCacheManager: WebCacheManager
     let tld = TLD()
     let privacyFeatures: AnyPrivacyFeatures
@@ -1077,6 +1080,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             atbProvider: { LocalStatisticsStore().atb }
         )
 
+        bitwardenManager = BWManagerProvider.makeManager()
+        passwordManagerCoordinator = PasswordManagerCoordinator(bitwardenManagement: bitwardenManager)
+
         // AttributedMetric initialisation
 
         let errorHandler = AttributedMetricErrorHandler(pixelKit: PixelKit.shared)
@@ -1264,7 +1270,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let urlEventHandlerResult = urlEventHandler.applicationDidFinishLaunching()
 
         setUpAutoClearHandler()
-        BWManager.shared.initCommunication()
+        bitwardenManager?.initCommunication()
 
         if case .normal = AppVersion.runType,
            !urlEventHandlerResult.willOpenWindows && WindowsManager.windows.first(where: { $0 is MainWindow }) == nil {
@@ -1958,7 +1964,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func subscribeToUpdateControllerChanges() {
         guard AppVersion.runType != .uiTests,
-              let sparkleUpdateController = updateController as? any SparkleUpdateController else { return }
+              let sparkleUpdateController = updateController as? any SparkleUpdateControlling else { return }
 
         updateProgressCancellable = sparkleUpdateController.updateProgressPublisher
             .sink { [weak sparkleUpdateController] progress in
@@ -2027,7 +2033,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     PixelKit.fire(GeneralPixel.autofillIdentitiesStacked, withAdditionalParameters: params)
                 }
             },
-            passwordManager: PasswordManagerCoordinator.shared,
+            passwordManager: passwordManagerCoordinator,
             installDate: AppDelegate.firstLaunchDate)
 
         _ = NotificationCenter.default.addObserver(forName: .autofillUserSettingsDidChange,
