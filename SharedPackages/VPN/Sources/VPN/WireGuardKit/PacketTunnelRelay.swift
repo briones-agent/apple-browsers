@@ -23,24 +23,32 @@ import os.log
 /// Bridges `NEPacketTunnelFlow` and WireGuard via direct CGo buffer passing.
 ///
 /// Instead of a socketpair (PoC v1), Swift pushes packets directly into Go via
-/// `wgReceivePacket` and Go pushes packets back via a registered callback.
-/// This eliminates 4 syscalls per packet round-trip.
+/// `wgReceivePackets` (batched) and Go pushes packets back via a registered callback.
+/// This eliminates N CGo transitions per readPackets batch and N writePackets calls per flush.
 ///
 /// ```
-/// OUTBOUND: packetFlow.readPackets() → wgReceivePacket [CGo] → Go channel → WireGuard encrypt
-/// INBOUND:  WireGuard decrypt → tun.Write() → callback → packetFlow.writePackets()
+/// OUTBOUND: packetFlow.readPackets() → pack batch → wgReceivePackets [1 CGo call] → Go channels → WireGuard encrypt
+/// INBOUND:  WireGuard decrypt → tun.Write() batches → Flush() → callback → unpack → packetFlow.writePackets()
 /// ```
 final class PacketTunnelRelay: TunnelFileDescriptorProviding {
 
-    /// Function signature matching `wgReceivePacket(handle, buf, len) -> status`.
-    typealias ReceivePacketFunc = (Int32, UnsafeRawPointer, Int32) -> Int32
+    /// Function signature matching `wgReceivePackets(handle, buf, totalLen) -> count`.
+    typealias ReceivePacketsFunc = (Int32, UnsafeRawPointer, Int32) -> Int32
 
     /// Function signature matching `wgSetPacketCallback(handle, context, callback)`.
-    typealias SetPacketCallbackFunc = (Int32, UnsafeMutableRawPointer?, (@convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer?, Int32) -> Void)?) -> Void
+    /// Callback is batch: `(context, buf, totalLen, count) -> Void`.
+    typealias SetPacketCallbackFunc = (Int32, UnsafeMutableRawPointer?, (@convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer?, Int32, Int32) -> Void)?) -> Void
 
     private var tunnelHandle: Int32 = -1
     private var isRunning = false
     private var packetFlowContext: Unmanaged<NEPacketTunnelFlow>?
+
+    /// Reusable buffer for packing outbound batches (avoids allocation per readPackets callback).
+    private var outboundBuffer = Data()
+
+    // Pre-allocated NSNumber constants for AF_INET/AF_INET6 (avoid per-packet allocation).
+    private static let afInet = NSNumber(value: UInt32(AF_INET))
+    private static let afInet6 = NSNumber(value: UInt32(AF_INET6))
 
     // MARK: - TunnelFileDescriptorProviding
 
@@ -53,14 +61,17 @@ final class PacketTunnelRelay: TunnelFileDescriptorProviding {
 
     func start(packetFlow: NEPacketTunnelFlow,
                tunnelHandle: Int32,
-               receivePacket: @escaping ReceivePacketFunc,
+               receivePackets: @escaping ReceivePacketsFunc,
                setPacketCallback: @escaping SetPacketCallbackFunc) {
+        // Release any previous context on reconnection
+        stop()
+
         self.tunnelHandle = tunnelHandle
         self.isRunning = true
-        Logger.networkProtection.log("🦆 [Relay] Starting packet relay (channel mode, handle=\(tunnelHandle))")
+        Logger.networkProtection.log("🦆 [Relay] Starting packet relay (batch channel mode, handle=\(tunnelHandle))")
 
         startIncomingRelay(packetFlow: packetFlow, tunnelHandle: tunnelHandle, setPacketCallback: setPacketCallback)
-        startOutgoingRelay(packetFlow: packetFlow, tunnelHandle: tunnelHandle, receivePacket: receivePacket)
+        startOutgoingRelay(packetFlow: packetFlow, tunnelHandle: tunnelHandle, receivePackets: receivePackets)
     }
 
     func stop() {
@@ -70,34 +81,36 @@ final class PacketTunnelRelay: TunnelFileDescriptorProviding {
         packetFlowContext = nil
     }
 
-    // MARK: - Outgoing (packetFlow → wgReceivePacket → WireGuard)
+    // MARK: - Outgoing (packetFlow → wgReceivePackets → WireGuard)
 
     private func startOutgoingRelay(packetFlow: NEPacketTunnelFlow,
                                     tunnelHandle: Int32,
-                                    receivePacket: @escaping ReceivePacketFunc) {
+                                    receivePackets: @escaping ReceivePacketsFunc) {
         func readLoop() {
             packetFlow.readPackets { [weak self] packets, _ in
                 guard let self, self.isRunning else { return }
+                guard !packets.isEmpty else {
+                    readLoop()
+                    return
+                }
+
+                // Calculate total size needed: 2 bytes length prefix per packet + packet data
+                let totalSize = packets.reduce(0) { $0 + 2 + $1.count }
+                self.outboundBuffer.count = 0
+                self.outboundBuffer.reserveCapacity(totalSize)
 
                 for packet in packets {
-                    // Log UDP packets
-                    if packet.count >= 20 && packet[9] == 17 {
-                        let srcIP = "\(packet[12]).\(packet[13]).\(packet[14]).\(packet[15])"
-                        let dstIP = "\(packet[16]).\(packet[17]).\(packet[18]).\(packet[19])"
-                        let ihl = Int(packet[0] & 0x0F) * 4
-                        var dstPort: UInt16 = 0
-                        if packet.count >= ihl + 4 {
-                            dstPort = UInt16(packet[ihl + 2]) << 8 | UInt16(packet[ihl + 3])
-                        }
-                        Logger.networkProtection.log("🦆 [Relay→WG] UDP: \(srcIP, privacy: .public) -> \(dstIP, privacy: .public):\(dstPort, privacy: .public)")
-                    }
-
-                    // Push raw IP packet directly into Go (no AF header needed)
-                    packet.withUnsafeBytes { buf in
-                        guard let baseAddress = buf.baseAddress else { return }
-                        _ = receivePacket(tunnelHandle, baseAddress, Int32(packet.count))
-                    }
+                    // Append 2-byte little-endian length prefix
+                    var len = UInt16(packet.count)
+                    withUnsafeBytes(of: &len) { self.outboundBuffer.append(contentsOf: $0) }
+                    self.outboundBuffer.append(packet)
                 }
+
+                self.outboundBuffer.withUnsafeBytes { buf in
+                    guard let baseAddress = buf.baseAddress else { return }
+                    _ = receivePackets(tunnelHandle, baseAddress, Int32(buf.count))
+                }
+
                 readLoop()
             }
         }
@@ -114,17 +127,39 @@ final class PacketTunnelRelay: TunnelFileDescriptorProviding {
         packetFlowContext = retained
         let context = retained.toOpaque()
 
-        setPacketCallback(tunnelHandle, context) { ctx, buf, len in
-            guard let ctx, let buf, len > 0 else { return }
+        setPacketCallback(tunnelHandle, context) { ctx, buf, totalLen, count in
+            guard let ctx, let buf, totalLen > 0, count > 0 else { return }
 
             let flow = Unmanaged<NEPacketTunnelFlow>.fromOpaque(ctx).takeUnretainedValue()
-            let packet = Data(bytes: buf, count: Int(len))
 
-            // Determine AF from IP version header
-            let ipVersion = packet[0] >> 4
-            let afNumber: UInt32 = (ipVersion == 6) ? UInt32(AF_INET6) : UInt32(AF_INET)
+            var packets = [Data]()
+            var protocols = [NSNumber]()
+            packets.reserveCapacity(Int(count))
+            protocols.reserveCapacity(Int(count))
 
-            flow.writePackets([packet], withProtocols: [NSNumber(value: afNumber)])
+            var offset = 0
+            let total = Int(totalLen)
+            let ptr = buf.assumingMemoryBound(to: UInt8.self)
+
+            while offset + 2 <= total {
+                let packetLen = Int(ptr[offset]) | (Int(ptr[offset + 1]) << 8) // LE uint16
+                offset += 2
+
+                guard offset + packetLen <= total else { break } // corruption guard
+
+                let packet = Data(bytes: ptr + offset, count: packetLen)
+                offset += packetLen
+
+                // Determine AF from IP version header
+                let ipVersion = packet[0] >> 4
+                let afNumber = (ipVersion == 6) ? PacketTunnelRelay.afInet6 : PacketTunnelRelay.afInet
+                packets.append(packet)
+                protocols.append(afNumber)
+            }
+
+            if !packets.isEmpty {
+                flow.writePackets(packets, withProtocols: protocols)
+            }
         }
     }
 }

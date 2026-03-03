@@ -19,7 +19,8 @@ public protocol WireGuardGoInterface {
     func disableSomeRoamingForBrokenMobileSemantics(handle: Int32)
     func setLogger(context: UnsafeMutableRawPointer?, logFunction: (@convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?) -> Void)?)
     func receivePacket(handle: Int32, buf: UnsafeRawPointer, len: Int32) -> Int32
-    func setPacketCallback(handle: Int32, context: UnsafeMutableRawPointer?, callback: (@convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer?, Int32) -> Void)?)
+    func receivePackets(handle: Int32, buf: UnsafeRawPointer, totalLen: Int32) -> Int32
+    func setPacketCallback(handle: Int32, context: UnsafeMutableRawPointer?, callback: (@convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer?, Int32, Int32) -> Void)?)
 }
 
 // MARK: - WireGuard Adapter

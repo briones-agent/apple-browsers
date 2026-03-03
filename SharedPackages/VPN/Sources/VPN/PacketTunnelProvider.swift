@@ -1469,7 +1469,7 @@ open class PacketTunnelProvider: NEPacketTunnelProvider {
         packetRelay.start(
             packetFlow: packetFlow,
             tunnelHandle: tunnelHandle,
-            receivePacket: { wgInterface.receivePacket(handle: $0, buf: $1, len: $2) },
+            receivePackets: { wgInterface.receivePackets(handle: $0, buf: $1, totalLen: $2) },
             setPacketCallback: { wgInterface.setPacketCallback(handle: $0, context: $1, callback: $2) }
         )
 

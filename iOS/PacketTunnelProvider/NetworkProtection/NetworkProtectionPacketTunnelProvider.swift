@@ -760,7 +760,11 @@ final class DefaultWireGuardInterface: WireGuardGoInterface {
         wgReceivePacket(handle, buf, len)
     }
 
-    func setPacketCallback(handle: Int32, context: UnsafeMutableRawPointer?, callback: (@convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer?, Int32) -> Void)?) {
+    func receivePackets(handle: Int32, buf: UnsafeRawPointer, totalLen: Int32) -> Int32 {
+        wgReceivePackets(handle, buf, totalLen)
+    }
+
+    func setPacketCallback(handle: Int32, context: UnsafeMutableRawPointer?, callback: (@convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer?, Int32, Int32) -> Void)?) {
         wgSetPacketCallback(handle, context, callback)
     }
 }
