@@ -46,6 +46,7 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
     /// Currently visible promos.
     var visiblePromosPublisher: AnyPublisher<[Promo], Never> {
         visiblePromoIds
+            .receive(on: stateQueue)
             .map { [weak self] ids in
                 ids.compactMap { id in self?.promos.first { $0.id == id } }
             }
