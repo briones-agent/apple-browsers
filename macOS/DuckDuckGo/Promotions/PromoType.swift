@@ -153,7 +153,7 @@ enum DefaultPromoType {
                 .inlineMessage,
                 .emptyStateMessage,
                 .settingsRecommendedAction:
-            return .none
+            return .noChange
         }
     }
 }
