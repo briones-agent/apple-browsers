@@ -255,7 +255,7 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
     /// Defers trigger evaluation for a short window after app activation, giving the URL event handler time to deliver its Apple Event and set the external activation flag.
     private func deferEvaluation() {
         dispatchPrecondition(condition: .onQueue(stateQueue))
-        triggerEvaluationDeferral.set() { [weak self] in
+        triggerEvaluationDeferral.set { [weak self] in
             self?.processBufferedTriggersIfReady()
         }
     }
@@ -272,9 +272,9 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
             return
         }
 
-        registrationTimeout.set(onClear: { [weak self] in
+        registrationTimeout.set { [weak self] in
             self?.completeRegistration()
-        })
+        }
     }
 
     private func completeRegistration() {
