@@ -122,9 +122,9 @@ public struct SyncSettingsView: View {
             .environmentObject(model)
             .alert(isPresented: $model.shouldShowPasscodeRequiredAlert) {
                 Alert(
-                    title: Text("Secure Your Device to Use Sync & Backup"),
-                    message: Text("A device password is required to use Sync & Backup."),
-                    dismissButton: .default(Text("Go to Settings"), action: {
+                    title: Text(UserText.syncPasscodeRequiredAlertTitle),
+                    message: Text(UserText.syncPasscodeRequiredAlertMessage),
+                    dismissButton: .default(Text(UserText.syncPasscodeRequiredAlertGoToSettingsButton), action: {
                         UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
                         model.shouldShowPasscodeRequiredAlert = false
                     })

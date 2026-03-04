@@ -21,6 +21,7 @@ import SwiftUI
 import DuckUI
 import DesignResourcesKit
 import LocalAuthentication
+import UIKit
 
 public struct AutoRestoreReadyView: View {
 
@@ -99,5 +100,15 @@ public struct AutoRestoreReadyView: View {
             }
         }
         .background(Color(designSystemColor: .backgroundSheets))
+        .alert(isPresented: $model.shouldShowPasscodeRequiredAlert) {
+            Alert(
+                title: Text(UserText.syncPasscodeRequiredAlertTitle),
+                message: Text(UserText.syncPasscodeRequiredAlertMessage),
+                dismissButton: .default(Text(UserText.syncPasscodeRequiredAlertGoToSettingsButton), action: {
+                    UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
+                    model.shouldShowPasscodeRequiredAlert = false
+                })
+            )
+        }
     }
 }

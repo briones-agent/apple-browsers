@@ -313,6 +313,15 @@
 /* Sync Menu Path */
 "sync.menu.path" = "Settings > Sync & Backup > Sync With Another Device";
 
+/* Sync passcode required alert - button */
+"sync.passcode.required.alert.go.to.settings.button" = "Go to Settings";
+
+/* Sync passcode required alert - message */
+"sync.passcode.required.alert.message" = "A device password is required to use Sync & Backup.";
+
+/* Sync passcode required alert - title */
+"sync.passcode.required.alert.title" = "Secure Your Device to Use Sync & Backup";
+
 /* Sync & Backup Title */
 "sync.title" = "Sync & Backup";
 

@@ -35,6 +35,9 @@ public struct UserText {
     static let syncAndBackUpThisDeviceLink = NSLocalizedString("sync.and.backup.this.device.link", bundle: Bundle.module, value: "Sync and Back Up This Device", comment: "Link label for syncing and backing up the device")
     static let recoverSyncedDataLink = NSLocalizedString("recover.synced.data.link", bundle: Bundle.module, value: "Recover Synced Data", comment: "Link label for recovering synced data")
     static let otherOptionsSectionHeader = NSLocalizedString("other.options.section.header", bundle: Bundle.module, value: "Other Options", comment: "Section header for other syncing options")
+    static let syncPasscodeRequiredAlertTitle = NSLocalizedString("sync.passcode.required.alert.title", bundle: Bundle.module, value: "Secure Your Device to Use Sync & Backup", comment: "Sync passcode required alert - title")
+    static let syncPasscodeRequiredAlertMessage = NSLocalizedString("sync.passcode.required.alert.message", bundle: Bundle.module, value: "A device password is required to use Sync & Backup.", comment: "Sync passcode required alert - message")
+    static let syncPasscodeRequiredAlertGoToSettingsButton = NSLocalizedString("sync.passcode.required.alert.go.to.settings.button", bundle: Bundle.module, value: "Go to Settings", comment: "Sync passcode required alert - button")
     // Other Platforms
     static let syncGetOnOtherDevices = NSLocalizedString("sync.get.other.devices", bundle: Bundle.module, value: "Get DuckDuckGo on Other Devices", comment: "Button to get DuckDuckGo on other devices")
 
