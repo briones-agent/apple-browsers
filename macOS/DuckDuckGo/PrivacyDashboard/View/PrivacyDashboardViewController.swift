@@ -57,8 +57,7 @@ final class PrivacyDashboardViewController: NSViewController {
             PixelKit.fire(GeneralPixel.protectionToggledOffBreakageReport,
                           withAdditionalParameters: parameters,
                           withEncodedParameters: encodedParameters,
-                          allowedQueryReservedCharacters: BrokenSiteReport.allowedQueryReservedCharacters,
-                          doNotEnforcePrefix: true)
+                          allowedQueryReservedCharacters: BrokenSiteReport.allowedQueryReservedCharacters)
         }, keyValueStoring: UserDefaults.standard)
     }()
 
