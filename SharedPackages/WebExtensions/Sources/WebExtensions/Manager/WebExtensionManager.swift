@@ -239,6 +239,19 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         }
     }
 
+    @MainActor
+    public func reloadExtension(identifier: String) async throws {
+        Logger.webExtensions.debug("🔄 Reloading extension '\(identifier)'")
+
+        try loader.unloadExtension(identifier: identifier, from: controller)
+        unregisterHandlers(for: identifier)
+
+        _ = try await loader.loadWebExtension(identifier: identifier, into: controller)
+
+        Logger.webExtensions.info("✅ Reloaded extension '\(identifier)'")
+        notifyUpdate()
+    }
+
     // MARK: - Loading
 
     @MainActor

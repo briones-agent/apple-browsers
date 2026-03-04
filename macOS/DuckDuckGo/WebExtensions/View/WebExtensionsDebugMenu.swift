@@ -56,7 +56,14 @@ final class WebExtensionsDebugMenu: NSMenu {
             for identifier in webExtensionManager.webExtensionIdentifiers {
                 let name = webExtensionManager.extensionName(for: identifier)
                 let version = webExtensionManager.extensionVersion(for: identifier)
-                let menuItem = WebExtensionMenuItem(identifier: identifier, webExtensionName: name, version: version)
+                let extensionType = webExtensionManager.context(for: identifier)?.duckDuckGoWebExtensionType
+                let menuItem = WebExtensionMenuItem(
+                    identifier: identifier,
+                    webExtensionName: name,
+                    version: version,
+                    extensionType: extensionType,
+                    substitutionSubmenuProvider: makeSubstitutionSubmenu
+                )
                 self.addItem(menuItem)
             }
         }
@@ -70,6 +77,20 @@ final class WebExtensionsDebugMenu: NSMenu {
         submenu.addItem(browseItem)
 
         submenu.addItem(.separator())
+
+        return submenu
+    }
+
+    private func makeSubstitutionSubmenu() -> NSMenu {
+        let submenu = NSMenu()
+
+        let catItem = NSMenuItem(title: "Change to cat", action: #selector(changeSubstitutionToCat))
+        catItem.target = self
+        submenu.addItem(catItem)
+
+        let dogItem = NSMenuItem(title: "Change to dog", action: #selector(changeSubstitutionToDog))
+        dogItem.target = self
+        submenu.addItem(dogItem)
 
         return submenu
     }
@@ -107,6 +128,45 @@ final class WebExtensionsDebugMenu: NSMenu {
         let path = webExtensionManager.extensionsDirectory.path
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
     }
+
+    @objc func changeSubstitutionToCat() {
+        swapEmojiMap(to: "emojiMap-cat.js")
+    }
+
+    @objc func changeSubstitutionToDog() {
+        swapEmojiMap(to: "emojiMap-dog.js")
+    }
+
+    private func swapEmojiMap(to sourceFileName: String) {
+        guard let installed = webExtensionManager.installedEmbeddedExtension(for: .substitution) else {
+            Logger.webExtensions.error("Substitution extension not installed")
+            return
+        }
+
+        guard let extensionPath = webExtensionManager.installedExtensionPath(for: .substitution) else {
+            Logger.webExtensions.error("Substitution extension path not found")
+            return
+        }
+
+        let emojiMapsFolder = extensionPath.appendingPathComponent("emoji-maps")
+        let sourceFile = emojiMapsFolder.appendingPathComponent(sourceFileName)
+        let destinationFile = extensionPath.appendingPathComponent("emojiMap.js")
+
+        do {
+            if FileManager.default.fileExists(atPath: destinationFile.path) {
+                try FileManager.default.removeItem(at: destinationFile)
+            }
+            try FileManager.default.copyItem(at: sourceFile, to: destinationFile)
+            Logger.webExtensions.info("Swapped emojiMap.js to \(sourceFileName)")
+
+            Task {
+                try await webExtensionManager.reloadExtension(identifier: installed.uniqueIdentifier)
+                await Application.appDelegate.windowControllersManager.selectedTab?.reload()
+            }
+        } catch {
+            Logger.webExtensions.error("Failed to swap emoji map: \(error.localizedDescription)")
+        }
+    }
 }
 
 @available(macOS 15.4, *)
@@ -116,13 +176,21 @@ final class WebExtensionMenuItem: NSMenuItem {
         fatalError("init(coder:) has not been implemented")
     }
 
-    init(identifier: String, webExtensionName: String?, version: String?) {
+    init(identifier: String,
+         webExtensionName: String?,
+         version: String?,
+         extensionType: DuckDuckGoWebExtensionType?,
+         substitutionSubmenuProvider: (() -> NSMenu)?) {
         let displayName = webExtensionName ?? identifier
         let title = version.map { "\(displayName) v\($0)" } ?? displayName
         super.init(title: title,
                    action: nil,
                    keyEquivalent: "")
-        submenu = WebExtensionSubMenu(extensionIdentifier: identifier)
+        submenu = WebExtensionSubMenu(
+            extensionIdentifier: identifier,
+            extensionType: extensionType,
+            substitutionSubmenuProvider: substitutionSubmenuProvider
+        )
     }
 
 }
@@ -136,13 +204,23 @@ final class WebExtensionSubMenu: NSMenu {
         fatalError("init(coder:) has not been implemented")
     }
 
-    init(extensionIdentifier: String) {
+    init(extensionIdentifier: String,
+         extensionType: DuckDuckGoWebExtensionType?,
+         substitutionSubmenuProvider: (() -> NSMenu)?) {
         self.extensionIdentifier = extensionIdentifier
         super.init(title: "")
 
-        buildItems {
-            NSMenuItem(title: "Remove the extension", action: #selector(uninstallExtension), target: self)
+        if extensionType == .substitution, let substitutionSubmenu = substitutionSubmenuProvider?() {
+            for item in substitutionSubmenu.items {
+                let itemCopy = item.copy() as! NSMenuItem
+                addItem(itemCopy)
+            }
+            addItem(.separator())
         }
+
+        let uninstallItem = NSMenuItem(title: "Remove the extension", action: #selector(uninstallExtension), keyEquivalent: "")
+        uninstallItem.target = self
+        addItem(uninstallItem)
     }
 
     @objc func uninstallExtension() {
