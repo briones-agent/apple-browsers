@@ -30,6 +30,18 @@ public enum DuckDuckGoWebExtensionType: String, Codable {
     case embedded = "com.duckduckgo.web-extension.embedded"
     case darkReader = "org.duckduckgo.web-extension.darkreader"
     case substitution = "com.duckduckgo.web-extension.substitution"
+
+    /// Whether this extension type requires extraction from zip during installation.
+    /// Most extensions can be loaded directly from zip by WebKit, but some (like substitution)
+    /// need their contents extracted to disk.
+    public var requiresExtraction: Bool {
+        switch self {
+        case .substitution:
+            return true
+        case .embedded, .darkReader:
+            return false
+        }
+    }
 }
 
 /// Metadata extracted from a web extension without loading it into a controller.

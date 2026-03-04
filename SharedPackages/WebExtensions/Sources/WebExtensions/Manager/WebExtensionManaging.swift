@@ -38,6 +38,10 @@ public protocol WebExtensionManaging: AnyObject {
     @available(macOS 15.4, iOS 18.4, *)
     var eventsListener: WebExtensionEventsListening { get }
 
+    /// The base directory where extensions are stored on disk.
+    @available(macOS 15.4, iOS 18.4, *)
+    var extensionsDirectory: URL { get }
+
     /// An async stream that yields when extensions are updated.
     @available(macOS 15.4, iOS 18.4, *)
     var extensionUpdates: AsyncStream<Void> { get }

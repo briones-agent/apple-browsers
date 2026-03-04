@@ -107,6 +107,10 @@ open class WebExtensionManager: NSObject, WebExtensionManaging {
         controller.extensionContexts
     }
 
+    public var extensionsDirectory: URL {
+        storageProvider.extensionsDirectory
+    }
+
     /// Whether the embedded autoconsent web extension is loaded and active.
     public var isAutoconsentExtensionLoaded: Bool {
         contexts.contains { $0.duckDuckGoWebExtensionType == .embedded }
