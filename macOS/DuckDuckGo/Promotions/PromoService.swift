@@ -219,7 +219,7 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
                 if !isDelegateRegistrationComplete || triggerEvaluationDeferral.isSet {
                     bufferedTriggers.insert(trigger)
                 } else {
-                    evaluateTrigger(trigger)
+                    evaluateTriggers([trigger])
                 }
             }
             .store(in: &cancellables)
@@ -287,6 +287,9 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
         processBufferedTriggersIfReady()
     }
 
+    /// Processes buffered triggers after all delegates are registered, if the deferral window has ended,
+    /// and if not currently suppressing promos for external activation.
+    /// Buffered triggers are intentionally discarded if the app was externally activated.
     private func processBufferedTriggersIfReady() {
         dispatchPrecondition(condition: .onQueue(stateQueue))
         guard isDelegateRegistrationComplete, !triggerEvaluationDeferral.isSet else { return }
@@ -295,9 +298,7 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
         bufferedTriggers.removeAll()
         guard !buffered.isEmpty, !externalActivationSuppression.isSet else { return }
 
-        for trigger in buffered {
-            evaluateTrigger(trigger)
-        }
+        evaluateTriggers(buffered)
     }
 
     // MARK: - Trigger Evaluation
@@ -322,16 +323,17 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
         }
     }
 
-    private func evaluateTrigger(_ trigger: PromoTrigger) {
+    /// Evaluates triggers by finding promos matching the providing trigger(s), refreshing their eligibility,
+    /// and showing any that are newly eligible. Triggers are evaluated in promo priority order.
+    private func evaluateTriggers(_ triggers: Set<PromoTrigger>) {
         dispatchPrecondition(condition: .onQueue(stateQueue))
-        let matchingPromos = promos.filter { $0.triggers.contains(trigger) }
+        let matchingPromos = promos.filter { $0.triggers.contains(where: triggers.contains) }
         matchingPromos.forEach { $0.delegate?.refreshEligibility() }
 
         for promo in matchingPromos {
-            guard activeSessions[promo.id] == nil else { continue }
-            guard let delegate = promo.delegate else { continue }
-            let passesRules = checkRules(for: promo)
-            guard passesRules else { continue }
+            guard activeSessions[promo.id] == nil,
+                  let delegate = promo.delegate,
+                  checkRules(for: promo) else { continue }
 
             let record = historyStore.record(for: promo.id)
             guard !record.isPermanentlyDismissed, record.isEligible(asOf: currentDate) else { continue }
