@@ -27,6 +27,7 @@ final class WebExtensionsDebugMenu: NSMenu {
 
     private let installExtensionMenuItem = NSMenuItem(title: "Install web extension", action: nil)
     private let uninstallAllExtensionsMenuItem = NSMenuItem(title: "Uninstall all extensions", action: #selector(WebExtensionsDebugMenu.uninstallAllExtensions))
+    private let openExtensionsFolderMenuItem = NSMenuItem(title: "Open Extensions Folder in Finder", action: #selector(WebExtensionsDebugMenu.openExtensionsFolderInFinder))
 
     init(webExtensionManager: WebExtensionManaging) {
         self.webExtensionManager = webExtensionManager
@@ -36,6 +37,8 @@ final class WebExtensionsDebugMenu: NSMenu {
         installExtensionMenuItem.isEnabled = true
         uninstallAllExtensionsMenuItem.target = self
         uninstallAllExtensionsMenuItem.isEnabled = true
+        openExtensionsFolderMenuItem.target = self
+        openExtensionsFolderMenuItem.isEnabled = true
 
         addItems()
     }
@@ -45,6 +48,8 @@ final class WebExtensionsDebugMenu: NSMenu {
 
         addItem(installExtensionMenuItem)
         addItem(uninstallAllExtensionsMenuItem)
+        addItem(.separator())
+        addItem(openExtensionsFolderMenuItem)
 
         if !webExtensionManager.webExtensionIdentifiers.isEmpty {
             addItem(.separator())
@@ -96,6 +101,11 @@ final class WebExtensionsDebugMenu: NSMenu {
 
     @objc func uninstallAllExtensions() {
         webExtensionManager.uninstallAllExtensions()
+    }
+
+    @objc func openExtensionsFolderInFinder() {
+        let path = webExtensionManager.extensionsDirectory.path
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
     }
 }
 
