@@ -39,6 +39,11 @@ struct OnboardingView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject private var model: OnboardingIntroViewModel
+    @State private var showExperimentExitOverlay = false
+    @State private var experimentExitToDuckAI = false
+    @State private var experimentExitOverlayOpacity: CGFloat = 0
+    @State private var experimentChromeVisible = false
+    @State private var isExperimentDialogFadingOut = false
 
     init(model: OnboardingIntroViewModel) {
         self.model = model
@@ -64,16 +69,31 @@ struct OnboardingView: View {
                     }
 #endif
             }
+
+            if showExperimentExitOverlay {
+                experimentExitOverlay
+                    .transition(.opacity)
+            }
         }
     }
 
     private func onboardingDialogView(state: ViewState.Intro) -> some View {
         GeometryReader { geometry in
+            let verticalOffset = state.type.isExperimentSearchScreen
+            ? Metrics.experimentDialogTopOffset
+            : geometry.size.height * Metrics.dialogVerticalOffsetPercentage.build(v: verticalSizeClass, h: horizontalSizeClass)
+            let contentInsets: EdgeInsets = state.type.isExperimentSearchScreen
+            ? .init(top: 24, leading: 24, bottom: 10, trailing: 24)
+            : .init(top: 24, leading: 24, bottom: 24, trailing: 24)
+
             VStack(alignment: .center) {
                 DaxDialogView(
                     logoPosition: .top,
                     matchLogoAnimation: (Self.daxGeometryEffectID, animationNamespace),
                     showDialogBox: $model.introState.showDaxDialogBox,
+                    showLogo: !state.type.isExperimentSearchScreen,
+                    showBubbleArrow: !state.type.isExperimentSearchScreen,
+                    contentInsets: contentInsets,
                     onTapGesture: {
                         withAnimation {
                             model.tapped()
@@ -106,9 +126,13 @@ struct OnboardingView: View {
                     isVisible: !state.type.isExperimentSearchScreen
                 )
             }
+            .opacity(isExperimentDialogFadingOut && state.type.isExperimentSearchScreen ? 0 : 1)
             .frame(width: geometry.size.width, alignment: .center)
-            .offset(y: geometry.size.height * Metrics.dialogVerticalOffsetPercentage.build(v: verticalSizeClass, h: horizontalSizeClass))
+            .offset(y: verticalOffset)
             .onAppear {
+                if state.type.isExperimentSearchScreen {
+                    resetExperimentExitTransition()
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.daxDialogVisibilityDelay) {
                     model.introState.showDaxDialogBox = true
                     model.introState.animateIntroText = true
@@ -227,9 +251,59 @@ struct OnboardingView: View {
             action: model.selectDuckAIQueryExperimentAction,
             openAIChatAction: model.openAIChatFromOnboarding,
             openSearchAction: model.searchFromOnboarding,
-            measureQuerySubmissionAction: model.measureDuckAIQueryExperimentQuerySubmission
+            measureQuerySubmissionAction: model.measureDuckAIQueryExperimentQuerySubmission,
+            startExitTransitionAction: { isDuckAISelected in
+                beginExperimentExitTransition(isDuckAISelected: isDuckAISelected)
+            }
         )
         .onboardingDaxDialogStyle()
+    }
+
+    private var experimentExitOverlay: some View {
+        GeometryReader { geometry in
+            ZStack {
+                let backgroundColor = experimentExitToDuckAI
+                ? Color(designSystemColor: .surface)
+                : Color(uiColor: .systemBackground)
+
+                backgroundColor
+                    .opacity(experimentExitOverlayOpacity)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    Color(uiColor: .secondarySystemBackground)
+                        .frame(height: Metrics.chromeTopHeight)
+                        .offset(y: experimentChromeVisible ? 0 : -Metrics.chromeTopHeight)
+                    Spacer()
+                    Color(uiColor: .secondarySystemBackground)
+                        .frame(height: Metrics.chromeBottomHeight)
+                        .offset(y: experimentChromeVisible ? 0 : Metrics.chromeBottomHeight)
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .ignoresSafeArea()
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func beginExperimentExitTransition(isDuckAISelected: Bool) {
+        experimentExitToDuckAI = isDuckAISelected
+        showExperimentExitOverlay = true
+        withAnimation(.easeInOut(duration: 0.18)) {
+            isExperimentDialogFadingOut = true
+            experimentExitOverlayOpacity = 1
+        }
+        withAnimation(.interpolatingSpring(mass: 0.7, stiffness: 180, damping: 18, initialVelocity: 0.15).delay(0.05)) {
+            experimentChromeVisible = true
+        }
+    }
+
+    private func resetExperimentExitTransition() {
+        showExperimentExitOverlay = false
+        experimentExitToDuckAI = false
+        experimentExitOverlayOpacity = 0
+        experimentChromeVisible = false
+        isExperimentDialogFadingOut = false
     }
 
     private func animateBrowserComparisonViewState(isResumingOnboarding: Bool) {
@@ -263,10 +337,20 @@ struct OnboardingView: View {
         private let openAIChatAction: (String?, Bool) -> Void
         private let openSearchAction: (String) -> Void
         private let measureQuerySubmissionAction: (Bool, DuckAIQueryExperimentPromptSource) -> Void
+        private let startExitTransitionAction: (Bool) -> Void
         @StateObject private var pickerViewModel: ImageSegmentedPickerViewModel
 
         @State private var query = ""
         @State private var isDuckAISelected: Bool
+        @State private var isKeyboardVisible = false
+        @State private var isInputFocused = false
+        @State private var visibleSuggestionCount = 0
+        @State private var suggestionTimerID = UUID()
+        @State private var didRunInitialToggleAnimation = false
+        @State private var isTransitioningOut = false
+        private let defaultDuckAISelection: Bool
+        private let suggestionRevealDelay: TimeInterval = 4
+        private let suggestionStaggerDelay: TimeInterval = 0.5
         
         private static let pickerItems: [ImageSegmentedPickerItem] = [
             ImageSegmentedPickerItem(
@@ -286,19 +370,22 @@ struct OnboardingView: View {
             action: @escaping () -> Void,
             openAIChatAction: @escaping (String?, Bool) -> Void,
             openSearchAction: @escaping (String) -> Void,
-            measureQuerySubmissionAction: @escaping (Bool, DuckAIQueryExperimentPromptSource) -> Void
+            measureQuerySubmissionAction: @escaping (Bool, DuckAIQueryExperimentPromptSource) -> Void,
+            startExitTransitionAction: @escaping (Bool) -> Void
         ) {
             self.action = action
             self.openAIChatAction = openAIChatAction
             self.openSearchAction = openSearchAction
             self.measureQuerySubmissionAction = measureQuerySubmissionAction
-            _isDuckAISelected = State(initialValue: defaultSelection)
-            let initialSelection = defaultSelection ? Self.pickerItems[1] : Self.pickerItems[0]
+            self.startExitTransitionAction = startExitTransitionAction
+            self.defaultDuckAISelection = defaultSelection
+            let initialSelection = defaultSelection ? Self.pickerItems[0] : Self.pickerItems[1]
+            _isDuckAISelected = State(initialValue: !defaultSelection)
             _pickerViewModel = StateObject(wrappedValue: ImageSegmentedPickerViewModel(
                 items: Self.pickerItems,
                 selectedItem: initialSelection,
                 configuration: ImageSegmentedPickerConfiguration(),
-                scrollProgress: defaultSelection ? 1 : 0,
+                scrollProgress: defaultSelection ? 0 : 1,
                 isScrollProgressDriven: false
             ))
         }
@@ -307,13 +394,17 @@ struct OnboardingView: View {
             VStack(spacing: 16) {
                 Text(UserText.Onboarding.DuckAIQueryExperiment.title)
                     .font(Font(UIFont.daxTitle3()))
-                    .multilineTextAlignment(.center)
+                    .multilineTextAlignment(.leading)
                     .foregroundColor(Color(designSystemColor: .textPrimary))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 ImageSegmentedPickerView(viewModel: pickerViewModel)
                     .frame(width: 216, height: 38)
                     .onChange(of: pickerViewModel.selectedItem) { selectedItem in
-                        isDuckAISelected = selectedItem == Self.pickerItems[1]
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            isDuckAISelected = selectedItem == Self.pickerItems[1]
+                        }
                     }
                     .onChange(of: isDuckAISelected) { isSelected in
                         let selection = isSelected ? Self.pickerItems[1] : Self.pickerItems[0]
@@ -321,32 +412,55 @@ struct OnboardingView: View {
                             pickerViewModel.selectItem(selection)
                         }
                         pickerViewModel.updateScrollProgress(isSelected ? 1 : 0)
+                        isInputFocused = true
                     }
                     .padding(.top, 10)
                     .padding(.bottom, 3.67)
 
                 queryField
-                    .padding(.bottom, 24)
-                suggestionChips
+                    .padding(.top, -12)
+                    .padding(.bottom, 8)
+                if visibleSuggestionCount > 0 {
+                    suggestionChips
+                }
             }
+            .opacity(isTransitioningOut ? 0 : 1)
+            .onAppear {
+                isInputFocused = false
+                registerEngagement()
+
+                if !didRunInitialToggleAnimation {
+                    didRunInitialToggleAnimation = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            isDuckAISelected = defaultDuckAISelection
+                            isInputFocused = true
+                        }
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                isKeyboardVisible = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                isKeyboardVisible = false
+            }
+            .animation(suggestionAppearanceAnimation, value: visibleSuggestionCount)
+            .animation(.easeInOut(duration: 0.2), value: isTransitioningOut)
         }
 
         private var queryField: some View {
             HStack(alignment: .bottom, spacing: 8) {
-                if isDuckAISelected {
-                    OnboardingQueryField(
-                        text: $query,
-                        placeholder: UserText.Onboarding.DuckAIQueryExperiment.aiPlaceholder
-                    )
-                    .frame(minHeight: 44, maxHeight: 84, alignment: .topLeading)
-                } else {
-                    OnboardingSearchTextField(
-                        text: $query,
-                        placeholder: UserText.Onboarding.DuckAIQueryExperiment.searchPlaceholder,
-                        onSubmit: handlePrimaryAction
-                    )
-                    .frame(height: 26, alignment: .center)
-                }
+                OnboardingQueryField(
+                    text: $query,
+                    placeholder: isDuckAISelected
+                    ? UserText.Onboarding.DuckAIQueryExperiment.aiPlaceholder
+                    : UserText.Onboarding.DuckAIQueryExperiment.searchPlaceholder,
+                    isFocused: $isInputFocused,
+                    isSingleLine: !isDuckAISelected,
+                    onSubmit: handlePrimaryAction
+                )
+                .frame(height: isDuckAISelected ? 56 : 26, alignment: isDuckAISelected ? .topLeading : .center)
 
                 Button(action: handlePrimaryAction) {
                     Image(
@@ -357,18 +471,19 @@ struct OnboardingView: View {
                         .renderingMode(.template)
                         .font(Font(UIFont.daxBodyBold()))
                         .foregroundColor(Color(designSystemColor: .iconsSecondary))
-                        .opacity(0.3)
+                        .opacity(isPrimaryActionEnabled ? 1 : 0.3)
                         .frame(width: 28, height: 28)
                         .offset(y: 1)
                 }
                 .buttonStyle(.plain)
+                .disabled(!isPrimaryActionEnabled)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color(designSystemColor: .surface))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color(designSystemColor: .lines), lineWidth: 0.6)
+                    .stroke(Color(designSystemColor: .accent), lineWidth: 1.5)
             )
             .cornerRadius(14)
             .frame(width: 310.67)
@@ -379,10 +494,42 @@ struct OnboardingView: View {
 
         private var suggestionChips: some View {
             VStack(spacing: 8) {
-                suggestionChip(UserText.Onboarding.DuckAIQueryExperiment.suggestionOption1, promptSource: .option1, icon: DesignSystemImages.Glyphs.Size16.aiChat)
-                suggestionChip(UserText.Onboarding.DuckAIQueryExperiment.suggestionOption2, promptSource: .option2, icon: DesignSystemImages.Glyphs.Size16.aiChat)
-                suggestionChip(UserText.Onboarding.DuckAIQueryExperiment.suggestionSurpriseMe, promptSource: .option3, icon: DesignSystemImages.Glyphs.Size16.wand)
+                if visibleSuggestionCount >= 1 {
+                    suggestionChip(
+                        UserText.Onboarding.DuckAIQueryExperiment.suggestionOption1,
+                        promptSource: .option1,
+                        icon: DesignSystemImages.Glyphs.Size16.aiChat
+                    )
+                    .transition(suggestionTransition)
+                }
+                if visibleSuggestionCount >= 2 {
+                    suggestionChip(
+                        UserText.Onboarding.DuckAIQueryExperiment.suggestionOption2,
+                        promptSource: .option2,
+                        icon: DesignSystemImages.Glyphs.Size16.aiChat
+                    )
+                    .transition(suggestionTransition)
+                }
+                if visibleSuggestionCount >= 3 {
+                    suggestionChip(
+                        UserText.Onboarding.DuckAIQueryExperiment.suggestionSurpriseMe,
+                        promptSource: .option3,
+                        icon: DesignSystemImages.Glyphs.Size16.wand
+                    )
+                    .transition(suggestionTransition)
+                }
             }
+        }
+
+        private var suggestionTransition: AnyTransition {
+            .asymmetric(
+                insertion: .scale(scale: 0.96, anchor: .top).combined(with: .opacity),
+                removal: .opacity
+            )
+        }
+
+        private var suggestionAppearanceAnimation: Animation {
+            .interpolatingSpring(mass: 0.7, stiffness: 180, damping: 14, initialVelocity: 0.25)
         }
 
         private func suggestionChip(_ title: String, promptSource: DuckAIQueryExperimentPromptSource, icon: UIImage) -> some View {
@@ -402,6 +549,7 @@ struct OnboardingView: View {
                 .foregroundColor(Color(designSystemColor: .accent))
                 .padding(.horizontal, 14)
                 .frame(width: 317.33, height: 46.33)
+                .contentShape(Rectangle())
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color(designSystemColor: .accent), lineWidth: 1)
@@ -416,6 +564,7 @@ struct OnboardingView: View {
         }
 
         private func handlePrimaryAction() {
+            guard isPrimaryActionEnabled else { return }
             let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
             openSelectedExperience(
                 prompt: trimmedQuery.isEmpty ? nil : trimmedQuery,
@@ -431,6 +580,11 @@ struct OnboardingView: View {
             )
         }
 
+        private var isPrimaryActionEnabled: Bool {
+            let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            return isDuckAISelected || !trimmed.isEmpty
+        }
+
         private func openSelectedExperience(prompt: String?, autoSend: Bool, promptSource: DuckAIQueryExperimentPromptSource) {
             storeSelection()
 
@@ -438,17 +592,51 @@ struct OnboardingView: View {
                 measureQuerySubmissionAction(isDuckAISelected, promptSource)
             }
 
-            if isDuckAISelected {
-                openAIChatAction(prompt, autoSend)
-            } else if let searchQuery = prompt, !searchQuery.isEmpty {
-                openSearchAction(searchQuery)
-            } else {
-                return
+            isInputFocused = false
+            dismissKeyboard()
+            startExitTransitionAction(isDuckAISelected)
+
+            withAnimation(.easeOut(duration: 0.2)) {
+                isTransitioningOut = true
             }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                action()
+            DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.submitTransitionDelay) {
+                if isDuckAISelected {
+                    openAIChatAction(prompt, autoSend)
+                    action()
+                } else if let searchQuery = prompt, !searchQuery.isEmpty {
+                    openSearchAction(searchQuery)
+                    action()
+                } else {
+                    isTransitioningOut = false
+                }
             }
+        }
+
+        private func registerEngagement() {
+            guard !isTransitioningOut else { return }
+            let token = UUID()
+            suggestionTimerID = token
+            visibleSuggestionCount = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + suggestionRevealDelay) {
+                guard suggestionTimerID == token else { return }
+                revealSuggestionsSequentially(token: token)
+            }
+        }
+
+        private func revealSuggestionsSequentially(token: UUID) {
+            for index in 1...3 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + suggestionStaggerDelay * Double(index - 1)) {
+                    guard suggestionTimerID == token else { return }
+                    withAnimation(suggestionAppearanceAnimation) {
+                        visibleSuggestionCount = index
+                    }
+                }
+            }
+        }
+
+        private func dismissKeyboard() {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
 
@@ -457,6 +645,9 @@ struct OnboardingView: View {
 private struct OnboardingQueryField: UIViewRepresentable {
     @Binding var text: String
     let placeholder: String
+    @Binding var isFocused: Bool
+    let isSingleLine: Bool
+    let onSubmit: () -> Void
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -468,6 +659,7 @@ private struct OnboardingQueryField: UIViewRepresentable {
         textView.textColor = UIColor(designSystemColor: .textPrimary)
         textView.delegate = context.coordinator
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.returnKeyType = .search
 
         context.coordinator.placeholderLabel.text = placeholder
         context.coordinator.placeholderLabel.font = textView.font
@@ -490,81 +682,77 @@ private struct OnboardingQueryField: UIViewRepresentable {
             context.coordinator.placeholderLabel.text = placeholder
         }
         context.coordinator.placeholderLabel.isHidden = !text.isEmpty
+        context.coordinator.isSingleLine = isSingleLine
+        uiView.returnKeyType = isSingleLine ? .search : .go
+        uiView.textContainer.maximumNumberOfLines = isSingleLine ? 1 : 0
+        uiView.textContainer.lineBreakMode = isSingleLine ? .byTruncatingTail : .byWordWrapping
+
+        if isFocused {
+            if !uiView.isFirstResponder {
+                uiView.becomeFirstResponder()
+            }
+        } else if uiView.isFirstResponder {
+            uiView.resignFirstResponder()
+        }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text)
+        Coordinator(text: $text, isFocused: $isFocused, isSingleLine: isSingleLine, onSubmit: onSubmit)
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         @Binding private var text: String
+        @Binding private var isFocused: Bool
+        var isSingleLine: Bool
+        private let onSubmit: () -> Void
         let placeholderLabel = UILabel()
 
-        init(text: Binding<String>) {
+        init(text: Binding<String>, isFocused: Binding<Bool>, isSingleLine: Bool, onSubmit: @escaping () -> Void) {
             _text = text
+            _isFocused = isFocused
+            self.isSingleLine = isSingleLine
+            self.onSubmit = onSubmit
         }
 
         func textViewDidChange(_ textView: UITextView) {
             text = textView.text ?? ""
             placeholderLabel.isHidden = !text.isEmpty
         }
-    }
-}
 
-private struct OnboardingSearchTextField: UIViewRepresentable {
-    @Binding var text: String
-    let placeholder: String
-    let onSubmit: () -> Void
-
-    func makeUIView(context: Context) -> UITextField {
-        let textField = UITextField()
-        textField.backgroundColor = .clear
-        textField.borderStyle = .none
-        textField.contentVerticalAlignment = .center
-        textField.font = .daxBodyRegular()
-        textField.textColor = UIColor(designSystemColor: .textPrimary)
-        textField.placeholder = placeholder
-        textField.autocapitalizationType = .none
-        textField.autocorrectionType = .no
-        textField.spellCheckingType = .no
-        textField.clearButtonMode = .never
-        textField.returnKeyType = .search
-        textField.delegate = context.coordinator
-        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        textField.addTarget(context.coordinator, action: #selector(Coordinator.textFieldDidChange(_:)), for: .editingChanged)
-        return textField
-    }
-
-    func updateUIView(_ uiView: UITextField, context: Context) {
-        if uiView.text != text {
-            uiView.text = text
-        }
-        if uiView.placeholder != placeholder {
-            uiView.placeholder = placeholder
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onSubmit: onSubmit)
-    }
-
-    final class Coordinator: NSObject, UITextFieldDelegate {
-        @Binding private var text: String
-        private let onSubmit: () -> Void
-
-        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
-            _text = text
-            self.onSubmit = onSubmit
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            isFocused = true
         }
 
-        @objc
-        func textFieldDidChange(_ textField: UITextField) {
-            text = textField.text ?? ""
+        func textViewDidEndEditing(_ textView: UITextView) {
+            if isFocused {
+                DispatchQueue.main.async {
+                    textView.becomeFirstResponder()
+                }
+            } else {
+                isFocused = false
+            }
         }
 
-        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            onSubmit()
-            return false
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText replacement: String) -> Bool {
+            if replacement == "\n" {
+                onSubmit()
+                return false
+            }
+
+            guard isSingleLine else {
+                return true
+            }
+
+            if replacement.contains("\n"), let currentText = textView.text, let swiftRange = Range(range, in: currentText) {
+                let normalizedReplacement = replacement.replacingOccurrences(of: "\n", with: " ")
+                let updated = currentText.replacingCharacters(in: swiftRange, with: normalizedReplacement)
+                textView.text = updated
+                text = updated
+                placeholderLabel.isHidden = !updated.isEmpty
+                return false
+            }
+
+            return true
         }
     }
 }
@@ -635,7 +823,12 @@ private enum Metrics {
     static let daxDialogDelay: TimeInterval = 2.0
     static let daxDialogVisibilityDelay: TimeInterval = 0.5
     static let comparisonChartAnimationDuration = 0.25
+    static let submitTransitionDelay: TimeInterval = 0.42
     static let dialogVerticalOffsetPercentage = MetricBuilder<CGFloat>(default: 0.1).iPhoneSmallScreen(0.01)
+    // Calibrated so experiment container top sits ~98pt below notch.
+    static let experimentDialogTopOffset: CGFloat = -22
+    static let chromeTopHeight: CGFloat = 58
+    static let chromeBottomHeight: CGFloat = 92
     static let progressBarTrailingPadding: CGFloat = 16.0
     static let progressBarTopPadding: CGFloat = 12.0
 }

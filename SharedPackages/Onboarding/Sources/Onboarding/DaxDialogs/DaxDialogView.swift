@@ -49,8 +49,11 @@ public struct DaxDialogView<Content: View>: View {
 
     private let matchLogoAnimation: (id: String, namespace: Namespace.ID)?
     private let showDialogBox: Binding<Bool>
+    private let showLogo: Bool
+    private let showBubbleArrow: Bool
     private let cornerRadius: CGFloat
     private let arrowSize: CGSize
+    private let contentInsets: EdgeInsets
     private let onTapGesture: (() -> Void)?
     private let onManualDismiss: (() -> Void)?
     private let content: Content
@@ -59,8 +62,11 @@ public struct DaxDialogView<Content: View>: View {
         logoPosition: DaxDialogLogoPosition,
         matchLogoAnimation: (String, Namespace.ID)? = nil,
         showDialogBox: Binding<Bool> = .constant(true),
+        showLogo: Bool = true,
+        showBubbleArrow: Bool = true,
         cornerRadius: CGFloat = 16.0,
         arrowSize: CGSize = .init(width: 16.0, height: 8.0),
+        contentInsets: EdgeInsets = .init(top: 24, leading: 24, bottom: 24, trailing: 24),
         onTapGesture: (() -> Void)? = nil,
         onManualDismiss: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
@@ -68,8 +74,11 @@ public struct DaxDialogView<Content: View>: View {
         _logoPosition = State(initialValue: logoPosition)
         self.matchLogoAnimation = matchLogoAnimation
         self.showDialogBox = showDialogBox
+        self.showLogo = showLogo
+        self.showBubbleArrow = showBubbleArrow
         self.cornerRadius = cornerRadius
         self.arrowSize = arrowSize
+        self.contentInsets = contentInsets
         self.onTapGesture = onTapGesture
         self.onManualDismiss = onManualDismiss
         self.content = content()
@@ -91,8 +100,10 @@ public struct DaxDialogView<Content: View>: View {
 
     private var topLogoViewContentView: some View {
         VStack(alignment: .leading, spacing: stackSpacing) {
-            daxLogo
-                .padding(.leading, DaxDialogMetrics.DaxLogo.horizontalPadding)
+            if showLogo {
+                daxLogo
+                    .padding(.leading, DaxDialogMetrics.DaxLogo.horizontalPadding)
+            }
 
             wrappedContent
                 .visibility(showDialogBox.wrappedValue ? .visible : .invisible)
@@ -101,7 +112,9 @@ public struct DaxDialogView<Content: View>: View {
 
     private var leftLogoContentView: some View {
         HStack(alignment: .top, spacing: stackSpacing) {
-            daxLogo
+            if showLogo {
+                daxLogo
+            }
 
             wrappedContent
                 .visibility(showDialogBox.wrappedValue ? .visible : .invisible)
@@ -110,7 +123,7 @@ public struct DaxDialogView<Content: View>: View {
     }
 
     private var stackSpacing: CGFloat {
-        DaxDialogMetrics.stackSpacing + arrowSize.height
+        DaxDialogMetrics.stackSpacing + (showBubbleArrow ? arrowSize.height : 0)
     }
 
     @ViewBuilder
@@ -139,19 +152,20 @@ public struct DaxDialogView<Content: View>: View {
         : (.black.opacity(0.20), .black.opacity(0.16))
 
         let styledContent = content
-            .padding(.all, DaxDialogMetrics.contentPadding)
+            .padding(contentInsets)
             .background(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .shadow(color: shadowColors.0, radius: 16, x: 0, y: 8)
             .shadow(color: shadowColors.1, radius: 6, x: 0, y: 2)
-            .overlay(
-                Triangle()
-                    .frame(width: arrowSize.width, height: arrowSize.height)
-                    .foregroundColor(backgroundColor)
-                    .rotationEffect(Angle(degrees: logoPosition == .top ? 0 : -90), anchor: .bottom)
-                    .offset(arrowOffset),
-                alignment: .topLeading
-            )
+            .overlay(alignment: .topLeading) {
+                if showBubbleArrow {
+                    Triangle()
+                        .frame(width: arrowSize.width, height: arrowSize.height)
+                        .foregroundColor(backgroundColor)
+                        .rotationEffect(Angle(degrees: logoPosition == .top ? 0 : -90), anchor: .bottom)
+                        .offset(arrowOffset)
+                }
+            }
 
         if #available(macOS 12.0, iOS 15.0, *) {
             styledContent

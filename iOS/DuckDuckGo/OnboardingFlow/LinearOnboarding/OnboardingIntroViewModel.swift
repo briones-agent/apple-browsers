@@ -24,7 +24,6 @@ import Foundation
 import Onboarding
 import SystemSettingsPiPTutorial
 import SetDefaultBrowserCore
-import AIChat
 import PrivacyConfig
 
 @MainActor
@@ -87,7 +86,7 @@ final class OnboardingIntroViewModel: ObservableObject {
 
     let copy: Copy
     var onCompletingOnboardingIntro: (() -> Void)?
-    var onOpenAIChatFromOnboarding: ((String?, Bool, AIChatOnboardingConsentType) -> Void)?
+    var onOpenAIChatFromOnboarding: ((String?, Bool) -> Void)?
     var onSearchFromOnboarding: ((String) -> Void)?
     private var introSteps: [OnboardingIntroStep]
     private var currentIntroStep: OnboardingIntroStep
@@ -233,7 +232,7 @@ final class OnboardingIntroViewModel: ObservableObject {
     }
 
     func openAIChatFromOnboarding(prompt: String?, autoSend: Bool) {
-        onOpenAIChatFromOnboarding?(prompt, autoSend, onboardingConsentTypeForURLParameter())
+        onOpenAIChatFromOnboarding?(prompt, autoSend)
     }
 
     func searchFromOnboarding(query: String) {
@@ -260,6 +259,18 @@ final class OnboardingIntroViewModel: ObservableObject {
 private extension OnboardingIntroViewModel {
 
     func makeInitialViewState() {
+#if DEBUG || ALPHA
+        // TODO: Temporary override for local validation builds; remove before shipping.
+        UserDefaults.app.set("false", forKey: LaunchOptionsHandler.isOnboardingCompleted)
+#endif
+        // TODO: Temporary override for build validation; remove before shipping.
+        // if !introSteps.contains(where: {
+        //     if case .duckAIQueryExperimentSelection = $0 { return true }
+        //     return false
+        // }) {
+        //     introSteps.insert(.duckAIQueryExperimentSelection(defaultSelection: true), at: 0)
+        // }
+        // currentIntroStep = .duckAIQueryExperimentSelection(defaultSelection: true)
         setViewState(introStep: currentIntroStep)
     }
 
@@ -355,21 +366,7 @@ private extension OnboardingIntroViewModel {
         guard featureFlagger.isFeatureOn(.duckAIQueryExperiment) else { return nil }
         // TODO: Temporary override for dev validation; remove once remote cohort mapping is finalized.
         // return featureFlagger.resolveCohort(for: FeatureFlag.duckAIQueryExperiment) as? FeatureFlag.DuckAIQueryExperimentCohort
-        return .control
-    }
-
-    func onboardingConsentTypeForURLParameter() -> AIChatOnboardingConsentType {
-        guard case .duckAIQueryExperimentSelection = currentIntroStep else { return .default }
-        guard let cohort = resolveDuckAIQueryExperimentCohortID() else { return .default }
-
-        switch cohort {
-        case .treatmentA:
-            return .deferUntilFirstQuery
-        case .treatmentB:
-            return .deferUntilFirstQuery
-        default:
-            return .default
-        }
+        return .treatmentA
     }
 
 }

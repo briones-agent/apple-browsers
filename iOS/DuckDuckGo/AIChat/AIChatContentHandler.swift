@@ -106,13 +106,6 @@ extension AIChatContentHandling {
 }
 
 final class AIChatContentHandler: AIChatContentHandling {
-    private enum Constants {
-        // TODO: Temporary override for dev validation; remove once FE implementation is ready.
-#if DEBUG || ALPHA
-        static let onboardingConsentDemoURL = URL(string: "https://use-serp-dev-testing15.duck.ai/?duckai=4")
-#endif
-    }
-    
     // MARK: - Dependencies
     private let aiChatSettings: AIChatSettingsProvider
     private var payloadHandler: AIChatPayloadHandler
@@ -166,16 +159,7 @@ final class AIChatContentHandler: AIChatContentHandling {
     
     /// Builds a query URL with optional prompt, auto-submit, consent type and RAG tools.
     func buildQueryURL(query: String?, autoSend: Bool, onboardingConsentType: AIChatOnboardingConsentType = .default, tools: [AIChatRAGTool]?) -> URL {
-        let baseURL: URL = {
-            // TODO: Temporary override for dev validation; remove once FE implementation is ready.
-#if DEBUG || ALPHA
-            if onboardingConsentType.queryValue != nil,
-               let demoURL = Constants.onboardingConsentDemoURL {
-                return demoURL
-            }
-#endif
-            return aiChatSettings.aiChatURL
-        }()
+        let baseURL = aiChatSettings.aiChatURL
 
         guard let query, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             return baseURL
