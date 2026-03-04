@@ -343,7 +343,7 @@ struct OnboardingView_Previews: PreviewProvider {
         func disableContextualDaxDialogs() {}
     }
 
-    class MockSyncAutoRestoreHandler: SyncAutoRestoreHandling {
+    final class MockSyncAutoRestoreHandler: SyncAutoRestoreHandling {
         var isAutoRestoreFeatureEnabled: Bool {
             false
         }
@@ -374,7 +374,10 @@ struct OnboardingView_Previews: PreviewProvider {
                         eventMapper: SystemSettingsPiPTutorialPixelHandler(),
                     ),
                     daxDialogsManager: MockDaxDialogDisabling(),
-                    syncAutoRestoreHandler: MockSyncAutoRestoreHandler()
+                    restorePromptHandler: OnboardingRestorePromptHandler(
+                        configuration: .disabled,
+                        syncAutoRestoreHandler: MockSyncAutoRestoreHandler()
+                    )
                 )
             )
             .preferredColorScheme($0)
