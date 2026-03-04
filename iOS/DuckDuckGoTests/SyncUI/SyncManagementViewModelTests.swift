@@ -158,8 +158,8 @@ class SyncManagementViewModelTests: XCTestCase, SyncManagementViewModelDelegate 
     }
 
 
-    func testWhenRecoverSyncDataPressed_RecoverDataViewShown() {
-        model.recoverSyncDataPressed()
+    func testWhenStartRecoveryCodeEntry_RecoverDataViewShown() {
+        model.startRecoveryCodeEntry()
         waitForInvocation()
 
         // You can either test one individual call was made x number of times or check for a whole number of calls
@@ -167,7 +167,7 @@ class SyncManagementViewModelTests: XCTestCase, SyncManagementViewModelDelegate 
         monitor.assert(#selector(authenticateUser).description.dropping(suffix: "WithCompletionHandler:"), calls: 1)
         monitor.assertCalls([
             #selector(authenticateUser).description.dropping(suffix: "WithCompletionHandler:"): 1,
-            #selector(showRecoverData).description: 1
+            #selector(showRecoveryCodeEntry).description: 1
         ])
     }
     // MARK: Delegate functions
@@ -185,7 +185,19 @@ class SyncManagementViewModelTests: XCTestCase, SyncManagementViewModelDelegate 
         capturedOptionModel = optionsViewModel
     }
 
-    func showRecoverData() {
+    func showRecoveryCodeEntry() {
+        monitor.incrementCalls(function: #function.cleaningFunctionName())
+    }
+
+    func isEligibleForAutoRestore() -> Bool {
+        false
+    }
+
+    func showAutoRestoreReady() {
+        monitor.incrementCalls(function: #function.cleaningFunctionName())
+    }
+
+    func showRecoveringDataAutoRestore() {
         monitor.incrementCalls(function: #function.cleaningFunctionName())
     }
 
