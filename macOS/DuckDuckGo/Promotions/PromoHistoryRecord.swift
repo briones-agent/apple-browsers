@@ -30,11 +30,12 @@ struct PromoHistoryRecord: Codable, Equatable {
         nextEligibleDate == .distantFuture
     }
 
+    /// Whether the promo is now eligible to be shown, e.g. after a cooldown.
     var isEligible: Bool {
-        guard let nextEligibleDate else { return true }
-        return nextEligibleDate <= Date()
+        isEligible(asOf: Date())
     }
 
+    /// Debug: Whether the promo is eligible as of a specified (simulated) date.
     func isEligible(asOf date: Date) -> Bool {
         guard let nextEligibleDate else { return true }
         return nextEligibleDate <= date

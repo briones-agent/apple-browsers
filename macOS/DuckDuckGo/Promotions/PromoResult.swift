@@ -31,5 +31,5 @@ enum PromoResult {
 
     /// Promo retracted itself or encountered an error.
     /// No state change recorded; eligible again on next trigger.
-    case none
+    case noChange
 }

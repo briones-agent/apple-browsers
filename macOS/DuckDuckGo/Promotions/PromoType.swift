@@ -19,7 +19,7 @@
 import Foundation
 
 /// The UI treatment for a promo.
-/// Default timeout behavior can be overriden with custom settings, if needed.
+/// Default timeout behavior can be overridden with custom settings, if needed.
 struct PromoType {
     private let type: DefaultPromoType
     private let customTimeoutInterval: TimeInterval?

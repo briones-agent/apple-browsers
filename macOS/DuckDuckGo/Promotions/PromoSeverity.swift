@@ -16,7 +16,7 @@
 //  limitations under the License.
 //
 
-/// How interruption a promo is.
+/// How interruptive a promo is.
 enum PromoSeverity: Comparable {
     /// Low interruption:
     /// - Doesn't get in the way of another action
