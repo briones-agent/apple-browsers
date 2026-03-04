@@ -66,6 +66,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
             syncErrorHandler: CapturingAdapterErrorHandler())
         let featureFlagger = MockFeatureFlagger(enabledFeatureFlags: [.syncSeamlessAccountSwitching])
         syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
+        syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
         vc = SyncSettingsViewController(
             syncService: ddgSyncing,
             syncBookmarksAdapter: bookmarksAdapter,
