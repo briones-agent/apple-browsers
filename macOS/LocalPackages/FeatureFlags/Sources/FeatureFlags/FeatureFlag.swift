@@ -273,6 +273,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// Private Process Name Flag
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213442286513425
     case privateProcessName
+
+    /// Gates the Suspend Tab / Resume Tab context menu actions for debugging purposes
+    /// https://app.asana.com/1/137249556945/project/72649045549333/task/1213528425856806
+    case tabSuspensionDebugging
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -392,7 +396,8 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .supportsSyncChatsDeletion,
                 .aiChatSidebarResizable,
                 .startupMetrics,
-                .privateProcessName:
+                .privateProcessName,
+                .tabSuspensionDebugging:
             return true
         case .freemiumDBP,
                 .contextualOnboarding,
@@ -563,6 +568,8 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .startupMetrics:
             return .internalOnly()
         case .privateProcessName:
+            return .disabled
+        case .tabSuspensionDebugging:
             return .disabled
         }
     }
