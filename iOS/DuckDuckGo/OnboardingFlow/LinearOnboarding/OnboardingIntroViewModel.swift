@@ -366,7 +366,7 @@ private extension OnboardingIntroViewModel {
         guard featureFlagger.isFeatureOn(.duckAIQueryExperiment) else { return nil }
         // TODO: Temporary override for dev validation; remove once remote cohort mapping is finalized.
         // return featureFlagger.resolveCohort(for: FeatureFlag.duckAIQueryExperiment) as? FeatureFlag.DuckAIQueryExperimentCohort
-        return .treatmentA
+        return .control
     }
 
 }
