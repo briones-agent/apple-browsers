@@ -92,8 +92,8 @@ extension SyncSettingsView {
 
             Button {
                 Task { @MainActor in
-                    if model.delegate?.isEligibleForAutoRestore() == true {
-                        model.delegate?.showAutoRestoreReady()
+                    if model.isEligibleForAutoRestore() {
+                        model.showAutoRestoreReady()
                     } else if await model.commonAuthenticate() {
                         isRecoverSyncedDataSheetVisible = true
                     }

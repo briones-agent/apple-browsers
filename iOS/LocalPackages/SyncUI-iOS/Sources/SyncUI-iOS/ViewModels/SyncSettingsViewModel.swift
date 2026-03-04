@@ -261,6 +261,15 @@ public class SyncSettingsViewModel: ObservableObject {
         }
     }
 
+    func isEligibleForAutoRestore() -> Bool {
+        delegate?.isEligibleForAutoRestore() == true
+    }
+
+    @MainActor
+    func showAutoRestoreReady() {
+        delegate?.showAutoRestoreReady()
+    }
+
     func recoverSyncedData() {
         Task { @MainActor in
             if await commonAuthenticate() {
