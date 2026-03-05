@@ -52,6 +52,7 @@ final class SafariRedirectHandler: SafariRedirectHandling {
         var redirectCount: Int = 0
         var stayEnabled: Bool = false
         var alertShown: Bool = false
+        var loopAlertShown: Bool = false
     }
 
     private let tld: TLD
@@ -105,10 +106,12 @@ final class SafariRedirectHandler: SafariRedirectHandling {
         var state = hostStates[host, default: HostState()]
         state.redirectCount += 1
         hostStates[host] = state
-        if state.redirectCount > 2 {
+        if state.redirectCount > 2 && !state.loopAlertShown {
+            state.loopAlertShown = true
+            hostStates[host] = state
             DailyPixel.fireDailyAndCount(pixel: .webViewExternalSchemeNavigationXSafariHTTPSLoopDetected, error: nil, withAdditionalParameters: [:])
             showLoopAlert(url: url, host: host)
-        } else {
+        } else if state.redirectCount <= 2 {
             convertAndLoad(url: url)
         }
         return true

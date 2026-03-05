@@ -121,6 +121,24 @@ final class SafariRedirectHandlerTests: XCTestCase {
         XCTAssertEqual(delegate.presentedAlerts.last?.title, UserText.xSafariHTTPSLoopTitle)
     }
 
+    func testRedirectsWhileLoopAlertShowingAreConsumedSilently() {
+        _ = handler.handleRedirect(to: xSafariURL)
+        delegate.tapAlertAction(at: 0, ofAlert: 0) // Stay
+
+        _ = handler.handleRedirect(to: xSafariURL) // count 1
+        _ = handler.handleRedirect(to: xSafariURL) // count 2
+        _ = handler.handleRedirect(to: xSafariURL) // count 3 → loop alert
+
+        XCTAssertEqual(delegate.presentedAlerts.count, 2)
+
+        // Additional redirects while loop alert is showing should be consumed silently
+        XCTAssertTrue(handler.handleRedirect(to: xSafariURL))
+        XCTAssertTrue(handler.handleRedirect(to: xSafariURL))
+
+        XCTAssertEqual(delegate.presentedAlerts.count, 2) // No extra alerts
+        XCTAssertEqual(delegate.loadedURLs.count, 3) // No extra loads (1 from Stay + 2 silent converts)
+    }
+
     // MARK: - "Open in Safari" flow
 
     func testOpenInSafariDelegatesExternalOpen() {
