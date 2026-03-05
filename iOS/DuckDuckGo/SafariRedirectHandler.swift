@@ -161,8 +161,8 @@ final class SafariRedirectHandler: SafariRedirectHandling {
 
         alert.addAction(UIAlertAction(title: UserText.xSafariHTTPSOpenInSafari, style: .default, handler: { [weak self] _ in
             guard let self else { return }
-            self.hostStates[host]?.alertShown = false
             DailyPixel.fireDaily(.webViewExternalSchemeNavigationXSafariHTTPSLoopOpenInSafari)
+            self.hostStates[host] = HostState()
             self.delegate?.safariRedirectHandler(self, didRequestOpenExternallyURL: url)
         }))
 

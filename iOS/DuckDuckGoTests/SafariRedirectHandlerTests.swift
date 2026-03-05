@@ -177,6 +177,22 @@ final class SafariRedirectHandlerTests: XCTestCase {
         XCTAssertEqual(delegate.openedExternallyURLs.count, 1)
     }
 
+    func testLoopAlertOpenInSafariResetsStateForFreshAlert() {
+        _ = handler.handleRedirect(to: xSafariURL)
+        delegate.tapAlertAction(at: 0, ofAlert: 0) // Stay
+        _ = handler.handleRedirect(to: xSafariURL)
+        _ = handler.handleRedirect(to: xSafariURL)
+        _ = handler.handleRedirect(to: xSafariURL) // Loop alert
+
+        delegate.tapAlertAction(at: 1, ofAlert: 1) // "Open in Safari"
+
+        // Next redirect should show Alert 1 again, not loop alert
+        _ = handler.handleRedirect(to: xSafariURL)
+        XCTAssertEqual(delegate.presentedAlerts.count, 3)
+        XCTAssertEqual(delegate.presentedAlerts.last?.title, UserText.xSafariHTTPSTryOpenTitle)
+        XCTAssertFalse(handler.isAfterSuppressedXSafariRedirect(for: httpsURL))
+    }
+
     // MARK: - Suppress branch loop detection
 
     func testSuppressBranchDetectsLoopWhenAlertDismissedWithoutStay() {
