@@ -303,7 +303,7 @@ extension DebugScreensViewModel {
 
         return .view(title: "Web Extensions") { d in
             if let manager = d.webExtensionManager {
-                WebExtensionsDebugView(webExtensionManager: manager)
+                WebExtensionsDebugView(webExtensionManager: manager, tabManager: d.tabManager)
             } else {
                 Text("Web Extensions not available")
             }

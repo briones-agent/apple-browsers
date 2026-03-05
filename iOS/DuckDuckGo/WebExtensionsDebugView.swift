@@ -26,6 +26,7 @@ import WebKit
 struct WebExtensionsDebugView: View {
 
     let webExtensionManager: WebExtensionManaging
+    let tabManager: TabManager?
 
     @State private var installedExtensions: [InstalledExtension] = []
     @State private var showDocumentPicker = false
@@ -87,6 +88,8 @@ struct WebExtensionsDebugView: View {
 
             darkReaderSection
 
+            substitutionSection
+
             if !installedExtensions.isEmpty {
                 Section {
                     Button(role: .destructive) {
@@ -130,6 +133,22 @@ struct WebExtensionsDebugView: View {
                 }
             } header: {
                 Text("Dark Reader Excluded Domains (\(denied.count))")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var substitutionSection: some View {
+        if webExtensionManager.installedEmbeddedExtension(for: .substitution) != nil {
+            Section {
+                Button("Change to cat") {
+                    swapEmojiMap(to: "emojiMap-cat.js")
+                }
+                Button("Change to dog") {
+                    swapEmojiMap(to: "emojiMap-dog.js")
+                }
+            } header: {
+                Text("Substitution Extension")
             }
         }
     }
@@ -195,6 +214,38 @@ struct WebExtensionsDebugView: View {
             }
         } else {
             completion()
+        }
+    }
+
+    private func swapEmojiMap(to sourceFileName: String) {
+        guard let installed = webExtensionManager.installedEmbeddedExtension(for: .substitution) else {
+            errorMessage = "Substitution extension not installed"
+            return
+        }
+
+        guard let extensionPath = webExtensionManager.installedExtensionPath(for: .substitution) else {
+            errorMessage = "Substitution extension path not found"
+            return
+        }
+
+        let emojiMapsFolder = extensionPath.appendingPathComponent("emoji-maps")
+        let sourceFile = emojiMapsFolder.appendingPathComponent(sourceFileName)
+        let destinationFile = extensionPath.appendingPathComponent("emojiMap.js")
+
+        do {
+            if FileManager.default.fileExists(atPath: destinationFile.path) {
+                try FileManager.default.removeItem(at: destinationFile)
+            }
+            try FileManager.default.copyItem(at: sourceFile, to: destinationFile)
+
+            Task {
+                try await webExtensionManager.reloadExtension(identifier: installed.uniqueIdentifier)
+                await MainActor.run {
+                    tabManager?.current()?.reload()
+                }
+            }
+        } catch {
+            errorMessage = "Failed to swap emoji map: \(error.localizedDescription)"
         }
     }
 }
