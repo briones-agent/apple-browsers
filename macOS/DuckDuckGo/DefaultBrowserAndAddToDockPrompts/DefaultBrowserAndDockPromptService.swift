@@ -21,16 +21,19 @@ import PrivacyConfig
 import Persistence
 
 final class DefaultBrowserAndDockPromptService {
+    let coordinator: DefaultBrowserAndDockPromptCoordinator
     let presenter: DefaultBrowserAndDockPromptPresenting
     let featureFlagger: DefaultBrowserAndDockPromptFeatureFlagger
     let store: DefaultBrowserAndDockPromptKeyValueStore
     let userActivityManager: DefaultBrowserAndDockPromptUserActivityManager
     let notificationPresenter: DefaultBrowserAndDockPromptNotificationPresenting
+    let uiHosting: () -> DefaultBrowserAndDockPromptUIHosting?
 
     init(
         privacyConfigManager: PrivacyConfigurationManaging,
         keyValueStore: ThrowingKeyValueStoring,
         notificationPresenter: DefaultBrowserAndDockPromptNotificationPresenting,
+        uiHosting: @escaping () -> DefaultBrowserAndDockPromptUIHosting?,
         isOnboardingCompletedProvider: @escaping () -> Bool
     ) {
 
@@ -63,15 +66,17 @@ final class DefaultBrowserAndDockPromptService {
             installDateProvider: defaultBrowserAndDockInstallDateProvider,
             dateProvider: defaultBrowserAndDockPromptDateProvider
         )
-        let coordinator = DefaultBrowserAndDockPromptCoordinator(
+        coordinator = DefaultBrowserAndDockPromptCoordinator(
             promptTypeDecider: defaultBrowserAndDockPromptDecider,
             store: store,
             notificationPresenter: notificationPresenter,
+            featureFlagger: featureFlagger,
             isOnboardingCompleted: isOnboardingCompletedProvider,
             dateProvider: defaultBrowserAndDockPromptDateProvider
         )
         let statusUpdateNotifier = DefaultBrowserAndDockPromptStatusUpdateNotifier()
         let uiProvider = DefaultBrowserAndDockPromptUIProvider()
+        self.uiHosting = uiHosting
 
         presenter = DefaultBrowserAndDockPromptPresenter(coordinator: coordinator, statusUpdateNotifier: statusUpdateNotifier, uiProvider: uiProvider)
     }

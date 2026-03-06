@@ -17,6 +17,8 @@
 //
 
 import PersistenceTestingUtils
+import PrivacyConfig
+import PrivacyConfigTestsUtils
 import RemoteMessagingTestsUtils
 import XCTest
 @testable import DuckDuckGo_Privacy_Browser
@@ -75,6 +77,29 @@ final class PromoServiceFactoryTests: XCTestCase {
         XCTAssertTrue(promo.coexistingPromoIDs.contains("remote-message-ntp"), "next-steps-cards must coexist with remote-message-ntp")
     }
 
+    func testFactoryCreatesDefaultBrowserAndDockPromosWithCorrectConfiguration() async {
+        let popoverPromo = await PromoServiceFactory.defaultBrowserAndDockPopover(dependencies: dependencies)
+        let bannerPromo = await PromoServiceFactory.defaultBrowserAndDockBanner(dependencies: dependencies)
+        let inactiveModalPromo = await PromoServiceFactory.defaultBrowserAndDockInactiveModal(dependencies: dependencies)
+
+        for promo in [popoverPromo, bannerPromo, inactiveModalPromo] {
+            XCTAssertEqual(promo.triggers, [.windowBecameKey, .appLaunched])
+            XCTAssertEqual(promo.initiated, .app)
+            XCTAssertEqual(promo.context, .global)
+            XCTAssertTrue(promo.respectsGlobalCooldown)
+            XCTAssertTrue(promo.setsGlobalCooldown)
+            XCTAssertTrue(promo.coexistingPromoIDs.isEmpty)
+            XCTAssertNotNil(promo.delegate)
+        }
+
+        XCTAssertEqual(popoverPromo.id, "default-browser-and-dock-popover")
+        XCTAssertEqual(popoverPromo.promoType.severity, .medium)
+        XCTAssertEqual(bannerPromo.id, "default-browser-and-dock-banner")
+        XCTAssertEqual(bannerPromo.promoType.severity, .medium)
+        XCTAssertEqual(inactiveModalPromo.id, "default-browser-and-dock-inactive-modal")
+        XCTAssertEqual(inactiveModalPromo.promoType.severity, .high)
+    }
+
 }
 
 extension PromoServiceFactoryTests {
@@ -87,10 +112,18 @@ extension PromoServiceFactoryTests {
             navigateToPIRHandler: { },
             navigateToSoftwareUpdateHandler: { }
         )
+        let defaultBrowserAndDockPromptService = DefaultBrowserAndDockPromptService(
+            privacyConfigManager: MockPrivacyConfigurationManager(),
+            keyValueStore: InMemoryThrowingKeyValueStore(),
+            notificationPresenter: MockDefaultBrowserAndDockPromptNotificationPresenter(),
+            uiHosting: { nil },
+            isOnboardingCompletedProvider: { true }
+        )
         return PromoDependencies(
             keyValueStore: InMemoryThrowingKeyValueStore(),
             isExternallyActivated: false,
-            activeRemoteMessageModel: activeRemoteMessageModel
+            activeRemoteMessageModel: activeRemoteMessageModel,
+            defaultBrowserAndDockPromptService: defaultBrowserAndDockPromptService
         )
     }
 }

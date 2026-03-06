@@ -68,6 +68,7 @@ final class DefaultBrowserAndDockPromptCoordinatorTests: XCTestCase {
             promptTypeDecider: promptTypeDeciderMock,
             store: storeMock,
             notificationPresenter: notificationPresenterMock,
+            featureFlagger: MockDefaultBrowserAndDockPromptFeatureFlagger(),
             isOnboardingCompleted: { self.isOnboardingCompleted },
             dockCustomization: dockCustomizerMock,
             defaultBrowserProvider: defaultBrowserProviderMock,

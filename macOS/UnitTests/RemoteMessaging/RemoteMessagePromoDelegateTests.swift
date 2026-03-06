@@ -85,7 +85,14 @@ final class RemoteMessagePromoDelegateTests: XCTestCase {
         PromoDependencies(
             keyValueStore: InMemoryThrowingKeyValueStore(),
             isExternallyActivated: false,
-            activeRemoteMessageModel: activeRemoteMessageModel
+            activeRemoteMessageModel: activeRemoteMessageModel,
+            defaultBrowserAndDockPromptService: DefaultBrowserAndDockPromptService(
+                privacyConfigManager: MockPrivacyConfigurationManaging(),
+                keyValueStore: InMemoryThrowingKeyValueStore(),
+                notificationPresenter: MockDefaultBrowserAndDockPromptNotificationPresenter(),
+                uiHosting: { nil },
+                isOnboardingCompletedProvider: { true }
+            )
         )
     }
 

@@ -16,9 +16,11 @@
 //  limitations under the License.
 //
 
+import AppKit
 import SwiftUIExtensions
 import Combine
 import BrowserServicesKit
+import Common
 import FeatureFlags
 import Utilities
 
@@ -27,6 +29,10 @@ protocol DefaultBrowserAndDockPromptPresenting {
     ///
     /// This is used, for example, to close the banner in all windows when it gets closed in one.
     var bannerDismissedPublisher: AnyPublisher<Void, Never> { get }
+
+    /// Dismisses the provided prompt type. Call from PromoDelegate.hide().
+    @MainActor
+    func dismissPrompt(_ type: DefaultBrowserAndDockPromptPresentationType) async
 
     /// Attempts to show the SAD/ATT prompt to the user, either as a popover or a banner, based on the user's eligibility for the experiment.
     ///
@@ -80,6 +86,18 @@ final class DefaultBrowserAndDockPromptPresenter: DefaultBrowserAndDockPromptPre
 
     var bannerDismissedPublisher: AnyPublisher<Void, Never> {
         bannerDismissedSubject.eraseToAnyPublisher()
+    }
+
+    @MainActor
+    func dismissPrompt(_ type: DefaultBrowserAndDockPromptPresentationType) async {
+        switch type {
+        case .active(.banner):
+            dismissBanner()
+        case .active(.popover):
+            popover?.close()
+        case .inactive:
+            await dismissInactiveUserModal()
+        }
     }
 
     /// **PROMPT ORCHESTRATOR**
