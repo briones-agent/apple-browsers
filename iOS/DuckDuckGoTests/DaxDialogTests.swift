@@ -957,6 +957,58 @@ final class DaxDialog: XCTestCase {
         XCTAssertNotEqual(result, .subscriptionPromotion)
     }
 
+    // MARK: - Skip Onboarding + Subscription Promotion
+
+    func testWhenSkipUserShouldDisplayAndHasNotSeenPromotion_OnNextHomeScreenMessageNew_ReturnsSubscriptionPromotion() {
+        // GIVEN
+        let settings = MockDaxDialogsSettings()
+        settings.isDismissed = true
+        settings.subscriptionPromotionDialogShown = false
+        let mockOnboardingPromotionHelper = MockOnboardingSubscriptionPromotionHelper()
+        mockOnboardingPromotionHelper.shouldDisplayValue = true
+        let sut = makeSUT(settings: settings, onboardingSubscriptionPromotionHelper: mockOnboardingPromotionHelper)
+
+        // WHEN
+        let result = sut.nextHomeScreenMessageNew()
+
+        // THEN
+        XCTAssertEqual(result, .subscriptionPromotion)
+    }
+
+    func testWhenSkipUserShouldDisplayButAlreadySeenPromotion_OnNextHomeScreenMessageNew_DoesNotReturnSubscriptionPromotion() {
+        // GIVEN
+        let settings = MockDaxDialogsSettings()
+        settings.isDismissed = true
+        settings.subscriptionPromotionDialogShown = true
+        let mockOnboardingPromotionHelper = MockOnboardingSubscriptionPromotionHelper()
+        mockOnboardingPromotionHelper.shouldDisplayValue = true
+        let sut = makeSUT(settings: settings, onboardingSubscriptionPromotionHelper: mockOnboardingPromotionHelper)
+
+        // WHEN
+        let result = sut.nextHomeScreenMessageNew()
+
+        // THEN
+        XCTAssertNil(result)
+    }
+
+    func testWhenSkipUserShouldNotDisplay_OnNextHomeScreenMessageNew_ReturnsNil() {
+        // GIVEN
+        let settings = MockDaxDialogsSettings()
+        settings.isDismissed = true
+        settings.subscriptionPromotionDialogShown = false
+        let mockOnboardingPromotionHelper = MockOnboardingSubscriptionPromotionHelper()
+        mockOnboardingPromotionHelper.shouldDisplayValue = false
+        let sut = makeSUT(settings: settings, onboardingSubscriptionPromotionHelper: mockOnboardingPromotionHelper)
+
+        // WHEN
+        let result = sut.nextHomeScreenMessageNew()
+
+        // THEN
+        XCTAssertNil(result)
+    }
+
+    // MARK: - Subscription Promotion Dialog Seen
+
     func testWhenSubscriptionPromotionDialogSeenIsSet_ThenSettingsValueIsUpdated() {
         // GIVEN
         let settings = MockDaxDialogsSettings()
