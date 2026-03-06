@@ -926,6 +926,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         defaultBrowserAndDockPromptService = DefaultBrowserAndDockPromptService(privacyConfigManager: privacyConfigurationManager,
                                                                                 keyValueStore: keyValueStore,
                                                                                 notificationPresenter: notificationPresenter,
+                                                                                uiHosting: { windowControllersManager.activeViewController },
                                                                                 isOnboardingCompletedProvider: { onboardingManager.state == .onboardingCompleted })
 
         if AppVersion.runType.requiresEnvironment {
@@ -1269,7 +1270,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let dependencies = PromoDependencies(
                 keyValueStore: keyValueStore,
                 isExternallyActivated: urlEventHandlerResult.willOpenWindows,
-                activeRemoteMessageModel: activeRemoteMessageModel)
+                activeRemoteMessageModel: activeRemoteMessageModel,
+                defaultBrowserAndDockPromptService: defaultBrowserAndDockPromptService)
             promoService = PromoServiceFactory.makePromoService(dependencies: dependencies)
             NotificationCenter.default.post(name: .promoServiceAppLaunched, object: nil)
         }

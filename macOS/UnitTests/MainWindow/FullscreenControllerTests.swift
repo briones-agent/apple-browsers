@@ -100,13 +100,21 @@ final class MainViewControllerDefaultBrowserPromptTests: XCTestCase, MainViewCon
 }
 
 private final class DefaultBrowserAndDockPromptPresentingMock: DefaultBrowserAndDockPromptPresenting {
-
     private let bannerSubject = PassthroughSubject<Void, Never>()
+    private let promptDismissedSubject = PassthroughSubject<(DefaultBrowserAndDockPromptPresentationType, PromoResult), Never>()
     private(set) var tryToShowPromptCallCount = 0
 
     var bannerDismissedPublisher: AnyPublisher<Void, Never> {
         bannerSubject.eraseToAnyPublisher()
     }
+
+    var promptDismissedPublisher: AnyPublisher<(DefaultBrowserAndDockPromptPresentationType, PromoResult), Never> {
+        promptDismissedSubject.eraseToAnyPublisher()
+    }
+
+    func dismissPrompt(_ type: DuckDuckGo_Privacy_Browser.DefaultBrowserAndDockPromptPresentationType) async {}
+
+    func dismissPrompts() {}
 
     func tryToShowPrompt(popoverAnchorProvider: @escaping () -> NSView?,
                          bannerViewHandler: @escaping (BannerMessageViewController) -> Void,

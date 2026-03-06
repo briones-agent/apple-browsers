@@ -1,5 +1,5 @@
 //
-//  PromoDependencies.swift
+//  DefaultBrowserAndDockPromptUIHosting.swift
 //
 //  Copyright © 2026 DuckDuckGo. All rights reserved.
 //
@@ -16,15 +16,17 @@
 //  limitations under the License.
 //
 
-import Foundation
-import Persistence
-import RemoteMessaging
+import AppKit
 
-/// Centralized dependencies required to build promo delegates.
-/// Add new fields as promo groups require them (e.g. subscriptionManager, onboardingState).
-struct PromoDependencies {
-    let keyValueStore: ThrowingKeyValueStoring
-    let isExternallyActivated: Bool
-    let activeRemoteMessageModel: ActiveRemoteMessageModel
-    let defaultBrowserAndDockPromptService: DefaultBrowserAndDockPromptService
+/// Protocol for view controllers that can host default browser/dock prompts.
+/// Used by the presenter's async show methods when driven by PromoService.
+protocol DefaultBrowserAndDockPromptUIHosting: AnyObject {
+    /// Anchor view for the popover (address bar or bookmarks bar).
+    func providePopoverAnchor() -> NSView?
+
+    /// Adds the banner to this view controller's view hierarchy.
+    func addSetAsDefaultBanner(_ banner: BannerMessageViewController)
+
+    /// Window to present the inactive user modal sheet over.
+    func provideModalAnchor() -> NSWindow?
 }

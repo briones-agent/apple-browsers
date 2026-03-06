@@ -40,9 +40,12 @@ struct PromoServiceFactory {
     private static func makeAllPromos(dependencies: PromoDependencies) -> [Promo] {
         var promos: [Promo] = [
             remoteMessageNewTabPage(model: dependencies.activeRemoteMessageModel),
-            remoteMessageTabBar(model: dependencies.activeRemoteMessageModel)
-            nextSteps
-    ]
+            remoteMessageTabBar(model: dependencies.activeRemoteMessageModel),
+            nextSteps,
+            defaultBrowserAndDockPopover(service: dependencies.defaultBrowserAndDockPromptService),
+            defaultBrowserAndDockBanner(service: dependencies.defaultBrowserAndDockPromptService),
+            defaultBrowserAndDockInactiveModal(service: dependencies.defaultBrowserAndDockPromptService)
+        ]
 
 #if DEBUG || REVIEW
         promos.append(contentsOf: testPromos)
