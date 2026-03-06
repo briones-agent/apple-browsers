@@ -43,6 +43,7 @@ final class PromoDebugMenu: NSMenu {
     private var cancellables = Set<AnyCancellable>()
     private var cachedHistory: [String: PromoHistoryRecord] = [:]
     private var simulatedDate: Date?
+    private var promos: [Promo] = []
 
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
@@ -72,8 +73,7 @@ final class PromoDebugMenu: NSMenu {
             addItem(item)
             return
         }
-
-        let promos = promoService.promos
+        promos = promoService.promos
 
         if promos.isEmpty {
             let item = NSMenuItem(title: "No promos registered", action: nil)
@@ -99,14 +99,16 @@ final class PromoDebugMenu: NSMenu {
 #endif
 
         for promo in promos {
-            let status = statusString(for: promo, promoService: promoService)
+            let status = statusString(for: promo)
             let parentItem = NSMenuItem(title: "\(promo.id)  \(status)", action: nil)
 
             let submenu = NSMenu()
-            let forceShowItem = NSMenuItem(title: "Force Show", action: #selector(forceShowPromo(_:)), keyEquivalent: "")
-            forceShowItem.representedObject = promo.id
-            forceShowItem.target = self
-            submenu.addItem(forceShowItem)
+            if promo.delegate is PromoDelegate {
+                let forceShowItem = NSMenuItem(title: "Force Show", action: #selector(forceShowPromo(_:)), keyEquivalent: "")
+                forceShowItem.representedObject = promo.id
+                forceShowItem.target = self
+                submenu.addItem(forceShowItem)
+            }
 
             let undismissItem = NSMenuItem(title: "Undismiss", action: #selector(undismissPromo(_:)), keyEquivalent: "")
             undismissItem.representedObject = promo.id
@@ -148,7 +150,7 @@ final class PromoDebugMenu: NSMenu {
         addItem(resetItem)
     }
 
-    private func statusString(for promo: Promo, promoService: PromoService) -> String {
+    private func statusString(for promo: Promo) -> String {
         let now = simulatedDate ?? Date()
         let record = cachedHistory[promo.id]
 
@@ -163,7 +165,7 @@ final class PromoDebugMenu: NSMenu {
         }
 
         // Global cooldown (from another promo with same PromoInitiated)
-        if let (_, globalEnd) = globalCooldownStatus(for: promo, now: now, promoService: promoService) {
+        if let (_, globalEnd) = globalCooldownStatus(for: promo, now: now) {
             if let existing = cooldownEnd {
                 cooldownEnd = max(existing, globalEnd)
             } else {
@@ -181,10 +183,10 @@ final class PromoDebugMenu: NSMenu {
     }
 
     /// Returns (isOnCooldown, cooldownEndDate) if promo is blocked by PromoInitiated global cooldown.
-    private func globalCooldownStatus(for promo: Promo, now: Date, promoService: PromoService) -> (Bool, Date)? {
+    private func globalCooldownStatus(for promo: Promo, now: Date) -> (Bool, Date)? {
         guard promo.respectsGlobalCooldown, promo.promoType.severity >= .medium else { return nil }
 
-        let cooldownTypePromos = promoService.promos.filter { other in
+        let cooldownTypePromos = promos.filter { other in
             other.initiated == promo.initiated && other.setsGlobalCooldown && other.promoType.severity >= .medium
         }
         let lastDismissedForType = cooldownTypePromos
