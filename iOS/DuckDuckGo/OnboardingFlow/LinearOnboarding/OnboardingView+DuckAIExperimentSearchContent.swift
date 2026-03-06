@@ -27,7 +27,7 @@ import UIComponents
 
 extension OnboardingView {
     private enum Metrics {
-        static let entryFadeAnimationDuration: TimeInterval = 0.35
+        static let initialToggleStartDelay: TimeInterval = 0.35
         static let suggestionInitialRevealDelay: TimeInterval = 4
         static let suggestionRevealFallbackDelayAfterFocus: TimeInterval = 0.4
         static let pickerSelectionAnimationDuration: TimeInterval = 0.22
@@ -49,12 +49,10 @@ extension OnboardingView {
         @State private var isDuckAISelected: Bool
         @State private var isInputFocused = false
         @State private var visibleSuggestionCount = 0
-        @State private var suggestionTimerID = UUID()
         @State private var didRunInitialToggleAnimation = false
         @State private var isTransitioningOut = false
         @State private var isRunningInitialSelectionAnimation = false
         @State private var suggestionSequenceStarted = false
-        @State private var hasCompletedEntryFadeAnimation = false
         private let defaultDuckAISelection: Bool
 
         private static let pickerItems: [ImageSegmentedPickerItem] = [
@@ -141,17 +139,11 @@ extension OnboardingView {
                     suggestionChips
                 }
             }
-            .opacity(isTransitioningOut ? 0 : (hasCompletedEntryFadeAnimation ? 1 : 0))
+            .opacity(isTransitioningOut ? 0 : 1)
             .onAppear {
                 isInputFocused = false
                 suggestionSequenceStarted = false
-                hasCompletedEntryFadeAnimation = false
-
-                withAnimation(.easeInOut(duration: Metrics.entryFadeAnimationDuration)) {
-                    hasCompletedEntryFadeAnimation = true
-                } completion: {
-                    startInitialSelectionAnimationIfNeeded()
-                }
+                startInitialSelectionAnimationIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
                 startSuggestionSequenceIfNeeded()
@@ -161,21 +153,22 @@ extension OnboardingView {
         }
 
         private func startInitialSelectionAnimationIfNeeded() {
-            guard hasCompletedEntryFadeAnimation else { return }
-
             if !didRunInitialToggleAnimation {
                 didRunInitialToggleAnimation = true
-                // Short intro animation: move from initial picker state to experiment default.
-                // Focus is chained from animation completion so timing follows animation speed.
-                isRunningInitialSelectionAnimation = true
-                withAnimation(.easeInOut(duration: Metrics.pickerSelectionAnimationDuration)) {
-                    isDuckAISelected = defaultDuckAISelection
-                } completion: {
-                    isRunningInitialSelectionAnimation = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.initialToggleStartDelay) {
+                    guard didRunInitialToggleAnimation else { return }
+                    // Short intro animation: move from initial picker state to experiment default.
+                    // Start keyboard focus together with toggle animation for near-simultaneous motion.
+                    isRunningInitialSelectionAnimation = true
                     isInputFocused = true
-                    // Fallback for hardware keyboard / no keyboard animation callback.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
-                        startSuggestionSequenceIfNeeded()
+                    withAnimation(.easeInOut(duration: Metrics.pickerSelectionAnimationDuration)) {
+                        isDuckAISelected = defaultDuckAISelection
+                    } completion: {
+                        isRunningInitialSelectionAnimation = false
+                        // Fallback for hardware keyboard / no keyboard animation callback.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
+                            startSuggestionSequenceIfNeeded()
+                        }
                     }
                 }
             }
@@ -345,28 +338,25 @@ extension OnboardingView {
             guard !suggestionSequenceStarted else { return }
             suggestionSequenceStarted = true
             DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionInitialRevealDelay) {
-                guard suggestionSequenceStarted else { return }
+                guard suggestionSequenceStarted, !isTransitioningOut else { return }
                 startSuggestionRevealSequence()
             }
         }
 
         private func startSuggestionRevealSequence() {
-            guard !isTransitioningOut else { return }
-            let token = UUID()
-            suggestionTimerID = token
+            guard suggestionSequenceStarted, !isTransitioningOut else { return }
             visibleSuggestionCount = 0
-            revealSuggestionsSequentially(token: token, nextIndex: 1)
+            revealSuggestionsSequentially(nextIndex: 1)
         }
 
-        private func revealSuggestionsSequentially(token: UUID, nextIndex: Int) {
-            guard suggestionTimerID == token else { return }
+        private func revealSuggestionsSequentially(nextIndex: Int) {
+            guard suggestionSequenceStarted, !isTransitioningOut else { return }
             guard nextIndex <= 3 else { return }
 
             withAnimation(suggestionAppearanceAnimation) {
                 visibleSuggestionCount = nextIndex
             } completion: {
-                guard suggestionTimerID == token else { return }
-                revealSuggestionsSequentially(token: token, nextIndex: nextIndex + 1)
+                revealSuggestionsSequentially(nextIndex: nextIndex + 1)
             }
         }
 
