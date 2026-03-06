@@ -50,9 +50,12 @@ final class SafariRedirectHandler: SafariRedirectHandling {
 
     private struct HostState {
         var redirectCount: Int = 0
-        var stayEnabled: Bool = false
+        var isSafariRedirectSuppressed: Bool = false
         var alertShown: Bool = false
         var loopAlertShown: Bool = false
+
+        var isAwaitingInitialChoice: Bool { !isSafariRedirectSuppressed && !alertShown }
+
     }
 
     private let tld: TLD
@@ -68,22 +71,22 @@ final class SafariRedirectHandler: SafariRedirectHandling {
 
     func isAfterSuppressedXSafariRedirect(for url: URL) -> Bool {
         guard let domain = domain(for: url) else { return false }
-        return hostStates[domain]?.stayEnabled == true
+        return hostStates[domain]?.isSafariRedirectSuppressed == true
     }
 
     func handleRedirect(to url: URL) -> Bool {
-        guard featureFlagger.isFeatureOn(.customXSafariRedirectHandling) else { return false }
-        guard url.scheme == Constants.safariRedirectScheme else { return false }
+        guard url.scheme == Constants.safariRedirectScheme,
+              featureFlagger.isFeatureOn(.customXSafariRedirectHandling) else { return false }
 
         guard let host = domain(for: url) else { return false }
         var state = hostStates[host, default: HostState()]
 
-        if !state.stayEnabled && !state.alertShown {
+        if state.isAwaitingInitialChoice {
             state.alertShown = true
             hostStates[host] = state
             showTryOpenAlert(url: url, host: host)
             return true
-        } else if state.stayEnabled {
+        } else if state.isSafariRedirectSuppressed {
             return handleSubsequentRedirect(url: url, host: host)
         } else {
             // Alert is shown but user hasn't responded yet — consume the redirect silently
@@ -135,7 +138,7 @@ final class SafariRedirectHandler: SafariRedirectHandling {
         alert.addAction(UIAlertAction(title: UserText.xSafariHTTPSStayInDDG, style: .cancel, handler: { [weak self] _ in
             guard let self else { return }
             DailyPixel.fireDaily(.webViewExternalSchemeNavigationXSafariHTTPSStay)
-            self.hostStates[host] = HostState(stayEnabled: true, alertShown: true)
+            self.hostStates[host] = HostState(isSafariRedirectSuppressed: true, alertShown: true)
             self.convertAndLoad(url: url)
         }))
 
