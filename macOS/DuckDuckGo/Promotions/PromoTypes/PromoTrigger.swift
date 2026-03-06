@@ -33,7 +33,7 @@ enum PromoTrigger {
 #endif
 
     /// Triggers for promotions, mapped to `PromoTrigger` values.
-    static var triggerPublisher: AnyPublisher<PromoTrigger, Never> = {
+    static let triggerPublisher: AnyPublisher<PromoTrigger, Never> = {
         let triggers = Publishers.Merge3(
             NotificationCenter.default.publisher(for: .promoServiceAppLaunched)
                 .map { _ in PromoTrigger.appLaunched },

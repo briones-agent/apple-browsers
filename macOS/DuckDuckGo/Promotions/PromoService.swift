@@ -104,7 +104,11 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
                 Logger.general.warning("PromoService: unknown promo ID \(promoId)")
                 return
             }
+            let previousDelegate = promos[index].delegate
             promos[index].delegate = delegate
+            if let previousDelegate, (previousDelegate as AnyObject) !== (delegate as AnyObject) {
+                externalSubscriptions.removeValue(forKey: promoId)?.cancel()
+            }
             subscribeToExternalDelegateIfNeeded(promoId: promoId, delegate: delegate)
 
             if isStarted && !isDelegateRegistrationComplete && allDelegatesReady {
