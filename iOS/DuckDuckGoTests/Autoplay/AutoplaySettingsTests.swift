@@ -26,8 +26,6 @@ import PersistenceTestingUtils
 @Suite
 struct AutoplaySettingsTests {
 
-    // MARK: - Helpers
-
     private func makeSettings() -> (store: InMemoryKeyValueStore, settings: DefaultAutoplaySettings) {
         let store = InMemoryKeyValueStore()
         let storage: any KeyedStoring<AutoplaySettingKeys> = store.keyedStoring()
@@ -35,9 +33,7 @@ struct AutoplaySettingsTests {
         return (store, settings)
     }
 
-    // MARK: - Tests
-
-    @Test
+    @Test("When no value is stored then default is block audio")
     func whenNoValueStoredThenDefaultIsBlockAudio() {
         // GIVEN
         let (_, settings) = makeSettings()
@@ -46,7 +42,7 @@ struct AutoplaySettingsTests {
         #expect(settings.currentAutoplayBlockingMode == .blockAudio)
     }
 
-    @Test
+    @Test("When mode is set then it is persisted")
     func whenModeIsSetThenItIsPersisted() {
         // GIVEN
         let (_, settings) = makeSettings()
@@ -58,7 +54,7 @@ struct AutoplaySettingsTests {
         #expect(settings.currentAutoplayBlockingMode == .blockAll)
     }
 
-    @Test
+    @Test("When stored value is invalid then block audio is returned")
     func whenStoredValueIsInvalidThenBlockAudioIsReturned() {
         // GIVEN
         let (store, settings) = makeSettings()
