@@ -1112,6 +1112,14 @@ struct UserText {
     static let autoplayModeAllowAll = NSLocalizedString("preferences.autoplay.mode.allow-all", value: "Video and audio", comment: "Autoplay mode: allow all media to autoplay")
     static let autoplayModeBlockAudio = NSLocalizedString("preferences.autoplay.mode.block-audio", value: "Video with audio muted", comment: "Autoplay mode: allow video but block audio autoplay (default)")
     static let autoplayModeBlockAll = NSLocalizedString("preferences.autoplay.mode.block-all", value: "Never", comment: "Autoplay mode: block all media autoplay")
+    static let autoplayExceptionsTitle = NSLocalizedString("autoplay.exceptions.title", value: "Autoplay Exceptions", comment: "Title of the autoplay exceptions management sheet")
+    static let autoplayExceptionsEmpty = NSLocalizedString("autoplay.exceptions.empty", value: "No exceptions. Sites will use the default autoplay setting.", comment: "Empty state label in the autoplay exceptions sheet")
+    static let autoplayExceptionsAddWebsite = NSLocalizedString("autoplay.exceptions.add.website", value: "Add Website", comment: "Button to begin adding a new autoplay exception")
+    static let autoplayExceptionsDone = NSLocalizedString("autoplay.exceptions.done", value: "Done", comment: "Button to dismiss the autoplay exceptions sheet")
+    static let autoplayExceptionsDomainPlaceholder = NSLocalizedString("autoplay.exceptions.domain.placeholder", value: "example.com", comment: "Placeholder text for the domain entry field in autoplay exceptions")
+    static let autoplayExceptionsAdd = NSLocalizedString("autoplay.exceptions.add", value: "Add", comment: "Button to confirm adding a new autoplay exception domain")
+    static let autoplayExceptionsCancel = NSLocalizedString("autoplay.exceptions.cancel", value: "Cancel", comment: "Button to cancel adding a new autoplay exception domain")
+    static let autoplayExceptionsManage = NSLocalizedString("autoplay.exceptions.manage", value: "Manage…", comment: "Button label to open the autoplay exceptions sheet")
 
     static let privacyDashboardPopupsAlwaysAsk = NSLocalizedString("dashboard.popups.ask", value: "Notify", comment: "Make pop-up windows always request permission for the current domain")
 
