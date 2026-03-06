@@ -34,6 +34,7 @@ extension Preferences {
         @ObservedObject var tabsModel: TabsPreferences
         @ObservedObject var dataClearingModel: DataClearingPreferences
         @ObservedObject var maliciousSiteDetectionModel: MaliciousSiteProtectionPreferences
+        @ObservedObject var autoplayModel: AutoplayPreferences
         @State private var showingCustomHomePageSheet = false
         @State private var isAddedToDock = false
         let dockCustomizer: DockCustomization?
@@ -295,6 +296,19 @@ extension Preferences {
                                 .accessibilityIdentifier("PreferencesGeneralView.warnBeforeQuitting")
                             ToggleMenuItem(UserText.settingsConfirmCloseCheckbox, isOn: $tabsModel.warnBeforeClosingPinnedTabs)
                                 .accessibilityIdentifier("PreferencesGeneralView.warnBeforeClosingPinnedTabs")
+                        }
+                    }
+                }
+
+                // SECTION: Permissions
+                PreferencePaneSection(UserText.permissionsSection) {
+                    PreferencePaneSubSection {
+                        HStack {
+                            Picker(UserText.autoplayLabel, selection: $autoplayModel.autoplayBlockingMode) {
+                                ForEach(AutoplayBlockingMode.allCases, id: \.self) { mode in
+                                    Text(mode.description).tag(mode)
+                                }
+                            }
                         }
                     }
                 }
