@@ -27,11 +27,11 @@ extension PromoServiceFactory {
         let delegate = RemoteMessagePromoDelegate(activeRemoteMessageModel: model, surface: .newTabPage)
         return Promo(
             id: "remote-message-ntp",
-            triggers: [.remoteMessageChanged, .appLaunched],
+            triggers: [], // External promo (RemoteMessage) so no internal triggers
             initiated: .app,
             promoType: PromoType(.remoteMessage),
             context: .newTabPage,
-            coexistingPromoIDs: ["remote-message-tabbar", "next-steps-cards"],
+            coexistingPromoIDs: ["remote-message-tabbar"],
             respectsGlobalCooldown: false,
             setsGlobalCooldown: true,
             delegate: delegate
@@ -44,11 +44,11 @@ extension PromoServiceFactory {
         let delegate = RemoteMessagePromoDelegate(activeRemoteMessageModel: model, surface: .tabBar)
         return Promo(
             id: "remote-message-tabbar",
-            triggers: [.remoteMessageChanged, .appLaunched],
+            triggers: [], // External promo (RemoteMessage) so no internal triggers
             initiated: .app,
             promoType: PromoType(.remoteMessage),
             context: .global,
-            coexistingPromoIDs: ["remote-message-ntp", "next-steps-cards"],
+            coexistingPromoIDs: ["remote-message-ntp"],
             respectsGlobalCooldown: false,
             setsGlobalCooldown: true,
             delegate: delegate

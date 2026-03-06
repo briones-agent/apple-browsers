@@ -3811,6 +3811,8 @@
 		CC199E8A2F4E182C009646FB /* PromoHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199E802F4E182C009646F1 /* PromoHistoryStoreTests.swift */; };
 		CC199E8B2F4E182C009646FC /* PromoServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199E812F4E182C009646F2 /* PromoServiceTests.swift */; };
 		CC199E8C2F4E182C009646FD /* MockPromoDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199E822F4E182C009646F3 /* MockPromoDelegate.swift */; };
+		CC199EB12F4E182C00964731 /* MockExternalPromoDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199EB02F4E182C00964730 /* MockExternalPromoDelegate.swift */; };
+		CC199EB22F4E182C00964732 /* MockExternalPromoDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199EB02F4E182C00964730 /* MockExternalPromoDelegate.swift */; };
 		CC199E8D2F4E182C009646FE /* MockPromoHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199E832F4E182C009646F4 /* MockPromoHistoryStore.swift */; };
 		CC199E8E2F4E182C009646FF /* PromoTestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199E842F4E182C009646F5 /* PromoTestHelpers.swift */; };
 		CC199E962F4E182C00964711 /* PromoDebugMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC199E952F4E182C00964710 /* PromoDebugMenu.swift */; };
@@ -6406,6 +6408,7 @@
 		CC199E802F4E182C009646F1 /* PromoHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoHistoryStoreTests.swift; sourceTree = "<group>"; };
 		CC199E812F4E182C009646F2 /* PromoServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoServiceTests.swift; sourceTree = "<group>"; };
 		CC199E822F4E182C009646F3 /* MockPromoDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPromoDelegate.swift; sourceTree = "<group>"; };
+		CC199EB02F4E182C00964730 /* MockExternalPromoDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockExternalPromoDelegate.swift; sourceTree = "<group>"; };
 		CC199E832F4E182C009646F4 /* MockPromoHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPromoHistoryStore.swift; sourceTree = "<group>"; };
 		CC199E842F4E182C009646F5 /* PromoTestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoTestHelpers.swift; sourceTree = "<group>"; };
 		CC199E952F4E182C00964710 /* PromoDebugMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoDebugMenu.swift; sourceTree = "<group>"; };
@@ -12277,6 +12280,7 @@
 			isa = PBXGroup;
 			children = (
 				CC199E822F4E182C009646F3 /* MockPromoDelegate.swift */,
+				CC199EB02F4E182C00964730 /* MockExternalPromoDelegate.swift */,
 				CC199E832F4E182C009646F4 /* MockPromoHistoryStore.swift */,
 			);
 			path = Mocks;
@@ -15521,6 +15525,7 @@
 				CC199E862F4E182C009646F7 /* PromoServiceTests.swift in Sources */,
 				CC199EA62F4E182C00964723 /* PromoRegistryTests.swift in Sources */,
 				CC199E872F4E182C009646F8 /* MockPromoDelegate.swift in Sources */,
+				CC199EB12F4E182C00964731 /* MockExternalPromoDelegate.swift in Sources */,
 				CC199E882F4E182C009646F9 /* MockPromoHistoryStore.swift in Sources */,
 				CC199E892F4E182C009646FA /* PromoTestHelpers.swift in Sources */,
 				BB9851932E3102ED00FED56A /* NetworkProtectionNavBarButtonModelTests.swift in Sources */,
@@ -17699,6 +17704,7 @@
 				CC199E8B2F4E182C009646FC /* PromoServiceTests.swift in Sources */,
 				CC199EAA2F4E182C00964727 /* PromoRegistryTests.swift in Sources */,
 				CC199E8C2F4E182C009646FD /* MockPromoDelegate.swift in Sources */,
+				CC199EB22F4E182C00964732 /* MockExternalPromoDelegate.swift in Sources */,
 				CC199E8D2F4E182C009646FE /* MockPromoHistoryStore.swift in Sources */,
 				CC199E8E2F4E182C009646FF /* PromoTestHelpers.swift in Sources */,
 				CC26B6192F0BE26E00D380B6 /* NewTabPageNextStepsCardsPixelHandlerTests.swift in Sources */,

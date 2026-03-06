@@ -45,29 +45,4 @@ final class PromoRegistryTests: XCTestCase {
         let uniqueIds = Set(ids)
         XCTAssertEqual(ids.count, uniqueIds.count, "Promo IDs must be unique. Duplicates: \(ids.filter { id in ids.filter { $0 == id }.count > 1 })")
     }
-
-    func testWhenPromoServiceCreated_ThenRMFCoexistenceIsSymmetric() async {
-        let store = MockRemoteMessagingStore()
-        let model = ActiveRemoteMessageModel(
-            remoteMessagingStore: store,
-            remoteMessagingAvailabilityProvider: MockRemoteMessagingAvailabilityProvider(),
-            openURLHandler: { _ in },
-            navigateToFeedbackHandler: { },
-            navigateToPIRHandler: { },
-            navigateToSoftwareUpdateHandler: { }
-        )
-        let dependencies = PromoDependencies(
-            keyValueStore: InMemoryThrowingKeyValueStore(),
-            isExternallyActivated: false,
-            activeRemoteMessageModel: model)
-        let promoService = PromoServiceFactory.makePromoService(dependencies: dependencies)
-
-        let ntpPromo = promoService.promos.first { $0.id == "remote-message-ntp" }
-        let tabBarPromo = promoService.promos.first { $0.id == "remote-message-tabbar" }
-
-        XCTAssertNotNil(ntpPromo)
-        XCTAssertNotNil(tabBarPromo)
-        XCTAssertTrue(ntpPromo?.coexistingPromoIDs.contains("remote-message-tabbar") ?? false, "remote-message-ntp must coexist with remote-message-tabbar")
-        XCTAssertTrue(tabBarPromo?.coexistingPromoIDs.contains("remote-message-ntp") ?? false, "remote-message-tabbar must coexist with remote-message-ntp")
-    }
 }

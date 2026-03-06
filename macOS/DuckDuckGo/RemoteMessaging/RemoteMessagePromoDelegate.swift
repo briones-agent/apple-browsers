@@ -21,30 +21,26 @@ import Foundation
 import RemoteMessaging
 
 /// Promo delegate for remote messages on a specific surface (NTP or tab bar).
-/// Observes ActiveRemoteMessageModel and reports eligibility to PromoService.
-/// The result flows through show() when the user dismisses or the message disappears.
-final class RemoteMessagePromoDelegate: PromoDelegate {
+/// Observes ActiveRemoteMessageModel and publishes visibility to PromoService.
+/// External promo: PromoService subscribes to isVisiblePublisher and applies fixed result on dismiss.
+final class RemoteMessagePromoDelegate: ExternalPromoDelegate {
 
     private let activeRemoteMessageModel: ActiveRemoteMessageModel
     private let surface: RemoteMessageSurfaceType
 
-    private let eligibilitySubject: CurrentValueSubject<Bool, Never>
+    private let visibilitySubject: CurrentValueSubject<Bool, Never>
     private var cancellables = Set<AnyCancellable>()
 
-    /// When set, the Combine subscriber will resume the continuation with .ignored(cooldown: 0)
-    /// and skip the eligibility update, ensuring show() returns before eligibility-loss path.
-    private var userDidDismissFlag = false
+    var isVisible: Bool { visibilitySubject.value }
+    var isVisiblePublisher: AnyPublisher<Bool, Never> { visibilitySubject.eraseToAnyPublisher() }
 
-    /// Continuation for show(). Resumed by Combine subscriber (user dismiss) or hide() (natural disappearance).
-    private var continuation: CheckedContinuation<PromoResult, Never>?
-
-    var isEligible: Bool { eligibilitySubject.value }
-    var isEligiblePublisher: AnyPublisher<Bool, Never> { eligibilitySubject.eraseToAnyPublisher() }
+    /// When the remote message is dismissed, treat as temporarily dismissed (eligible again when RMF shows another message).
+    var resultWhenHidden: PromoResult { .ignored(cooldown: 0) }
 
     init(activeRemoteMessageModel: ActiveRemoteMessageModel, surface: RemoteMessageSurfaceType) {
         self.activeRemoteMessageModel = activeRemoteMessageModel
         self.surface = surface
-        self.eligibilitySubject = CurrentValueSubject(false)
+        self.visibilitySubject = CurrentValueSubject(false)
 
         let messagePublisher: AnyPublisher<RemoteMessageModel?, Never> = {
             switch surface {
@@ -64,61 +60,13 @@ final class RemoteMessagePromoDelegate: PromoDelegate {
             }
             .store(in: &cancellables)
 
-        refreshEligibility()
-    }
-
-    /// Called by ActiveRemoteMessageModel before clearing remoteMessage on user dismiss.
-    /// Sets a flag so the Combine subscriber resumes with .ignored(cooldown: 0) instead of updating eligibility.
-    func userDidDismiss() {
-        userDidDismissFlag = true
-    }
-
-    func refreshEligibility() {
-        let message = surface == .newTabPage
+        handleMessageChange(surface == .newTabPage
             ? activeRemoteMessageModel.newTabPageRemoteMessage
-            : activeRemoteMessageModel.tabBarRemoteMessage
-        let eligible = message != nil && (message?.content?.isSupported == true)
-        eligibilitySubject.send(eligible)
-    }
-
-    @MainActor
-    /// Note that Remote Messages are unique promos in that they don't wait for this method to show them.
-    /// Instead, this method is a "wait for dismissal" hook for the promo that is already visible.
-    func show(history: PromoHistoryRecord) async -> PromoResult {
-        // handleMessageChange may have already fired before show() ran (e.g. in tests)
-        if userDidDismissFlag {
-            userDidDismissFlag = false
-            return .ignored(cooldown: 0)
-        }
-        return await withCheckedContinuation { cont in
-            continuation = cont
-        }
-    }
-
-    @MainActor
-    func hide() {
-        guard let cont = continuation else { return }
-        continuation = nil
-        userDidDismissFlag = false
-        cont.resume(returning: .noChange)
+            : activeRemoteMessageModel.tabBarRemoteMessage)
     }
 
     private func handleMessageChange(_ message: RemoteMessageModel?) {
-        let eligible = message != nil && (message?.content?.isSupported == true)
-
-        if userDidDismissFlag {
-            if let cont = continuation {
-                userDidDismissFlag = false
-                continuation = nil
-                cont.resume(returning: .ignored(cooldown: 0))
-            } else {
-                // No continuation yet: show() hasn't run. Keep the flag so show() can return .ignored(cooldown: 0).
-                // Still update eligibility so isEligible reflects that the message is gone.
-                eligibilitySubject.send(eligible)
-            }
-            return
-        }
-
-        eligibilitySubject.send(eligible)
+        let visible = message != nil && (message?.content?.isSupported == true)
+        visibilitySubject.send(visible)
     }
 }

@@ -28,22 +28,19 @@ enum PromoTrigger {
     case appLaunched
     case windowBecameKey
     case newTabPageAppeared
-    case remoteMessageChanged
 #if DEBUG || REVIEW
     case testTriggered
 #endif
 
     /// Triggers for promotions, mapped to `PromoTrigger` values.
     static var triggerPublisher: AnyPublisher<PromoTrigger, Never> = {
-        let triggers = Publishers.Merge4(
+        let triggers = Publishers.Merge3(
             NotificationCenter.default.publisher(for: .promoServiceAppLaunched)
                 .map { _ in PromoTrigger.appLaunched },
             NotificationCenter.default.publisher(for: .newTabPageWebViewDidAppear)
                 .map { _ in PromoTrigger.newTabPageAppeared },
             NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)
-                .map { _ in PromoTrigger.windowBecameKey },
-            NotificationCenter.default.publisher(for: .remoteMessageDidChange)
-                .map { _ in PromoTrigger.remoteMessageChanged }
+                .map { _ in PromoTrigger.windowBecameKey }
         ).eraseToAnyPublisher()
 #if DEBUG || REVIEW
         return Publishers.Merge(triggers,
