@@ -96,6 +96,9 @@ extension Tab: NavigationResponder {
             // New Tab Page
             .weak(nullable: self.newTabPage),
 
+            // Per-site autoplay mode enforcement
+            .weak(nullable: self.autoplay),
+
             // should be the last, for Unit Tests navigation events tracking
             .struct(nullable: testsClosureNavigationResponder)
             // !! don‘t add Tab Extensions here !!

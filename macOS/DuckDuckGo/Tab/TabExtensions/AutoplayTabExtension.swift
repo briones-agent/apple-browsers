@@ -86,9 +86,9 @@ extension AutoplayTabExtension: NavigationResponder {
 
 // MARK: - TabExtension
 
-// Empty protocol — serves as a type-erasing boundary for `TabExtensions.autoplay`.
-// Extend this if external callers ever need to interact with the extension.
-protocol AutoplayExtensionProtocol: AnyObject {}
+// Must inherit NavigationResponder so `TabExtensions.autoplay` can be passed to
+// `DistributedNavigationDelegate.setResponders` in `Tab+Navigation.swift`.
+protocol AutoplayExtensionProtocol: AnyObject, NavigationResponder {}
 
 extension AutoplayTabExtension: TabExtension, AutoplayExtensionProtocol {
     func getPublicProtocol() -> AutoplayExtensionProtocol { self }
