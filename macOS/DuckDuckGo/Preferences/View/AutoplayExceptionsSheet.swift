@@ -123,14 +123,16 @@ struct AutoplayExceptionsSheet: View {
 
             Button(UserText.autoplayExceptionsCancel) {
                 isAddingDomain = false
+                newDomainMode = .allowAll
             }
         }
     }
 
     private var normalizedDomain: String {
         var d = newDomain.trimmingCharacters(in: .whitespaces).lowercased()
-        if d.hasPrefix("www.") { d = String(d.dropFirst(4)) }
+        // Strip scheme before www. so "https://www.example.com" is handled correctly.
         if let range = d.range(of: "://") { d = String(d[range.upperBound...]) }
+        if d.hasPrefix("www.") { d = String(d.dropFirst(4)) }
         d = d.components(separatedBy: "/").first ?? d
         return d
     }
