@@ -144,6 +144,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                      tunnelController: NetworkProtectionIPCTunnelController? = TunnelControllerProvider.shared.tunnelController,
                      maliciousSiteDetector: MaliciousSiteDetecting = MaliciousSiteProtectionManager.shared,
                      tabsPreferences: TabsPreferences? = nil,
+                     autoplayPreferences: AutoplayPreferences? = nil,
                      webTrackingProtectionPreferences: WebTrackingProtectionPreferences? = nil,
                      onboardingPixelReporter: OnboardingAddressBarReporting = OnboardingPixelReporter(),
                      pageRefreshMonitor: PageRefreshMonitoring = PageRefreshMonitor(onDidDetectRefreshPattern: PageRefreshMonitor.onDidDetectRefreshPattern),
@@ -209,6 +210,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                   tunnelController: tunnelController,
                   maliciousSiteDetector: maliciousSiteDetector,
                   tabsPreferences: tabsPreferences ?? NSApp.delegateTyped.tabsPreferences,
+                  autoplayPreferences: autoplayPreferences ?? NSApp.delegateTyped.autoplayPreferences,
                   webTrackingProtectionPreferences: webTrackingProtectionPreferences ?? NSApp.delegateTyped.webTrackingProtectionPreferences,
                   onboardingPixelReporter: onboardingPixelReporter,
                   pageRefreshMonitor: pageRefreshMonitor,
@@ -259,6 +261,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
          tunnelController: NetworkProtectionIPCTunnelController?,
          maliciousSiteDetector: MaliciousSiteDetecting,
          tabsPreferences: TabsPreferences,
+         autoplayPreferences: AutoplayPreferences,
          webTrackingProtectionPreferences: WebTrackingProtectionPreferences,
          onboardingPixelReporter: OnboardingAddressBarReporting,
          pageRefreshMonitor: PageRefreshMonitoring,
@@ -298,6 +301,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                                                  burnerMode: burnerMode,
                                                  privateProcessName: featureFlagger.isFeatureOn(.privateProcessName),
                                                  earlyAccessHandlers: specialPagesUserScript.map { [$0] } ?? [])
+        configuration.mediaTypesRequiringUserActionForPlayback = autoplayPreferences.autoplayBlockingMode.mediaTypesRequiringUserAction
         self.webViewConfiguration = configuration
         let userContentController = configuration.userContentController as? UserContentController
         assert(userContentController != nil)
