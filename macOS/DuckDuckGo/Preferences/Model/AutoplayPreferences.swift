@@ -18,6 +18,7 @@
 
 import Foundation
 import PixelKit
+import WebKit
 
 enum AutoplayBlockingMode: String, CaseIterable, CustomStringConvertible {
     case allowAll
@@ -64,4 +65,15 @@ final class AutoplayPreferences: ObservableObject {
     }
 
     private var persistor: AutoplayPreferencesPersistor
+}
+
+extension AutoplayBlockingMode {
+
+    var mediaTypesRequiringUserAction: WKAudiovisualMediaTypes {
+        switch self {
+        case .allowAll: return []
+        case .blockAudio: return .audio
+        case .blockAll: return .all
+        }
+    }
 }
