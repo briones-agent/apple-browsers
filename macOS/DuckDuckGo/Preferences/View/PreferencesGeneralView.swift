@@ -36,6 +36,7 @@ extension Preferences {
         @ObservedObject var maliciousSiteDetectionModel: MaliciousSiteProtectionPreferences
         @ObservedObject var autoplayModel: AutoplayPreferences
         @State private var showingCustomHomePageSheet = false
+        @State private var showingAutoplayExceptions = false
         @State private var isAddedToDock = false
         let dockCustomizer: DockCustomization?
         let featureFlagger = NSApp.delegateTyped.featureFlagger
@@ -310,7 +311,16 @@ extension Preferences {
                                 }
                             }
                         }
+                        HStack {
+                            Text(UserText.autoplayExceptionsTitle)
+                            Spacer()
+                            Button(UserText.autoplayExceptionsManage) {
+                                showingAutoplayExceptions = true
+                            }
+                        }
                     }
+                }.sheet(isPresented: $showingAutoplayExceptions) {
+                    AutoplayExceptionsSheet(autoplayModel: autoplayModel)
                 }
             }
         }
