@@ -50,6 +50,7 @@ final class MainWindowController: NSWindowController {
          fireViewModel: FireViewModel,
          themeManager: ThemeManaging) {
 
+        SignposterFactory.shared.postSign("##### MainWindowController.init Start")
         // Compute initial window frame
         let frame = InitialWindowFrameProvider.initialFrame()
 
@@ -84,6 +85,7 @@ final class MainWindowController: NSWindowController {
         if #available(macOS 15.4, *), let webExtensionManager = NSApp.delegateTyped.webExtensionManager {
             webExtensionManager.eventsListener.didOpenWindow(self)
         }
+        SignposterFactory.shared.postSign("##### MainWindowController.init End")
     }
 
     required init?(coder: NSCoder) {

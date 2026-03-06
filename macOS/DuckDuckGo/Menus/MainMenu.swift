@@ -160,6 +160,7 @@ final class MainMenu: NSMenu {
          pinningManager: PinningManager,
          subscriptionManager: any SubscriptionManager) {
 
+        SignposterFactory.shared.postSign("##### MainMenu.init Start")
         self.featureFlagger = featureFlagger
         self.internalUserDecider = internalUserDecider
         self.appearancePreferences = appearancePreferences
@@ -193,6 +194,7 @@ final class MainMenu: NSMenu {
 
         setupAIChatMenu()
         subscribeToAIChatPreferences(aiChatMenuConfig: aiChatMenuConfig)
+        SignposterFactory.shared.postSign("##### MainMenu.init End")
     }
 
     func buildDuckDuckGoMenu() -> NSMenuItem {

@@ -173,6 +173,7 @@ final class TabCollectionViewModel: NSObject {
         windowControllersManager: WindowControllersManagerProtocol? = nil,
         dataClearingPixelsReporter: DataClearingPixelsReporter = .init()
     ) {
+        SignposterFactory.shared.postSign("##### TabCollectionViewModel.init Start")
         assert(!tabCollection.isPopup || windowControllersManager != nil, "Cannot create TabCollectionViewModel with a popup tab collection without a window controllers manager")
         self.tabCollection = tabCollection
         self.pinnedTabsManagerProvider = pinnedTabsManagerProvider
@@ -193,6 +194,7 @@ final class TabCollectionViewModel: NSObject {
             appendNewTab(with: homePage)
         }
         self.selectionIndex = selectionIndex
+        SignposterFactory.shared.postSign("##### TabCollectionViewModel.init End")
     }
 
     convenience init(tabCollection: TabCollection,

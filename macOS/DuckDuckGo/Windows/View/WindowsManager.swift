@@ -73,6 +73,7 @@ final class WindowsManager {
                              isMiniaturized: Bool = false,
                              isMaximized: Bool = false,
                              isFullscreen: Bool = false) -> NSWindow? {
+        SignposterFactory.shared.postSign("##### WindowsManager.openNewWindow Start")
         // Determine effective burner mode based on user preference
         let effectiveBurnerMode = burnerModeForNewWindow(burnerMode: burnerMode)
         assert(tabCollectionViewModel == nil || tabCollectionViewModel!.isPopup == popUp)
@@ -120,6 +121,7 @@ final class WindowsManager {
             mainWindowController.mainViewController.tabCollectionViewModel.setUpLazyLoadingIfNeeded()
         }
 
+        SignposterFactory.shared.postSign("##### WindowsManager.openNewWindow End")
         return mainWindowController.window
     }
 
@@ -254,6 +256,7 @@ final class WindowsManager {
                                      autofillPopoverPresenter: AutofillPopoverPresenter,
                                      fireCoordinator: FireCoordinator,
                                      aiChatSessionStore: AIChatSessionStoring) -> MainWindowController {
+        SignposterFactory.shared.postSign("##### WindowsManager.makeNewWindow Start")
         assert(tabCollectionViewModel == nil || tabCollectionViewModel!.isPopup == popUp)
         let mainViewController = MainViewController(
             tabCollectionViewModel: tabCollectionViewModel ?? TabCollectionViewModel(isPopup: popUp, burnerMode: burnerMode),
@@ -267,12 +270,14 @@ final class WindowsManager {
                 $0.mainViewController.tabCollectionViewModel.burnerMode == burnerMode
             })?.fireWindowSession ?? FireWindowSession()
         } else { FireWindowSession?.none }
-        return MainWindowController(
+        let controller = MainWindowController(
             mainViewController: mainViewController,
             fireWindowSession: fireWindowSession,
             fireViewModel: fireCoordinator.fireViewModel,
             themeManager: NSApp.delegateTyped.themeManager
         )
+        SignposterFactory.shared.postSign("##### WindowsManager.makeNewWindow End")
+        return controller
     }
 
 }

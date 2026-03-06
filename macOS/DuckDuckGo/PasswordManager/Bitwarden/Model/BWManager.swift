@@ -40,9 +40,11 @@ final class BWManager: BWManagement, ObservableObject {
     private lazy var communicator: NativeMessagingCommunication = NativeMessagingCommunicator(appPath: Self.applicationPath, arguments: Self.arguments)
 
     func initCommunication() {
+        SignposterFactory.shared.postSign("##### BWManager.initCommunication Start")
         communicator.delegate = self
 
         connectToBitwardenProcess()
+        SignposterFactory.shared.postSign("##### BWManager.initCommunication End")
     }
 
     func cancelCommunication() {

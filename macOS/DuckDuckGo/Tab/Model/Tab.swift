@@ -271,6 +271,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
          tabCrashAggregator: TabCrashAggregator,
          themeManager: ThemeManaging
     ) {
+        SignposterFactory.shared.postSign("##### Tab.init Start")
         self._id = id
         self.uuid = uuid ?? UUID().uuidString
         self.content = content
@@ -424,6 +425,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
             .sink { [weak self] theme in
                 self?.refreshErrorHTMLIfNeeded(themeName: theme.name)
             }
+        SignposterFactory.shared.postSign("##### Tab.init End")
     }
 
 #if DEBUG

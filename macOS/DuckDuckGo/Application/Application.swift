@@ -38,6 +38,7 @@ final class Application: NSApplication, WarnBeforeQuitManagerDelegate {
 
     override init() {
         super.init()
+        SignposterFactory.shared.postSign("##### Application.init Start")
 
         // swizzle `startAccessingSecurityScopedResource` and `stopAccessingSecurityScopedResource`
         // methods to accurately reflect the current number of start and stop calls
@@ -89,6 +90,7 @@ final class Application: NSApplication, WarnBeforeQuitManagerDelegate {
         self.helpMenu = mainMenu.helpMenu
         self.windowsMenu = mainMenu.windowsMenu
         self.servicesMenu = mainMenu.servicesMenu
+        SignposterFactory.shared.postSign("##### Application.init End")
     }
 
     required init?(coder: NSCoder) {

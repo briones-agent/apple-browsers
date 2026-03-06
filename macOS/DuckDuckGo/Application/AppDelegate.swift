@@ -416,10 +416,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     // swiftlint:disable cyclomatic_complexity
     init(dockCustomization: DockCustomization?) {
+SignposterFactory.shared.postSign("##### AppDelegate Init Start")
         let startupProfiler = StartupProfiler()
+NSLog("##### AppDelegate Init Start")
         let profilerToken = startupProfiler.startMeasuring(.appDelegateInit)
         defer {
             profilerToken.stop()
+NSLog("##### AppDelegate Init End")
+SignposterFactory.shared.postSign("##### AppDelegate Init End")
         }
 
         self.startupProfiler = startupProfiler
@@ -1169,8 +1173,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // swiftlint:enable cyclomatic_complexity
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+NSLog("##### AppDelegate willFinishLaunching Start")
+        SignposterFactory.shared.postSign("##### AppDelegate willFinishLaunching Start")
         let profilerToken = startupProfiler.startMeasuring(.appWillFinishLaunching)
         defer {
+NSLog("##### AppDelegate willFinishLaunching Stop")
+            SignposterFactory.shared.postSign("##### AppDelegate willFinishLaunching Stop")
             profilerToken.stop()
         }
 
@@ -1223,8 +1231,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+NSLog("##### AppDelegate didFinishLaunching Start")
+        SignposterFactory.shared.postSign("##### AppDelegate didFinishLaunching Start")
         guard AppVersion.runType.requiresEnvironment else { return }
         defer {
+NSLog("##### AppDelegate didFinishLaunching Stop")
+            SignposterFactory.shared.postSign("##### AppDelegate didFinishLaunching Stop")
             didFinishLaunching = true
         }
 
@@ -1241,7 +1253,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         privacyFeatures.httpsUpgrade.loadDataAsync()
+
+let start = Date()
         bookmarkManager.loadBookmarks()
+NSLog("#### Bookmarks Delta \(start.timeIntervalSinceNow)")
 
         // Force use of .mainThread to prevent high WindowServer Usage
         // Pending Fix with newer Lottie versions
@@ -1818,6 +1833,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Sync
 
     @MainActor private func startupSync() {
+        SignposterFactory.shared.postSign("##### startupSync Start")
 #if DEBUG
         let defaultEnvironment = ServerEnvironment.development
 #else
@@ -1878,6 +1894,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         subscribeSyncQueueToScreenLockedNotifications()
         subscribeToSyncFeatureFlags(syncService)
+        SignposterFactory.shared.postSign("##### startupSync End")
     }
 
     @UserDefaultsWrapper(key: .syncDidShowSyncPausedByFeatureFlagAlert, defaultValue: false)
@@ -2181,4 +2198,43 @@ private extension FeatureFlagLocalOverrides {
         }
     }
 
+}
+
+
+protocol SignposterProtocol {
+    func postSign(_ description: StaticString)
+}
+
+#if compiler(>=5.5)
+@available(macOS 12.0, *)
+class Signposter: SignposterProtocol {
+    static let shared: SignposterProtocol = Signposter()
+
+    let signposter = OSSignposter(subsystem: Bundle.main.bundleIdentifier ?? "com.duckduckgo.macos.browser", category: .pointsOfInterest)
+    var signpostID: OSSignpostID?
+
+    init() {
+        signpostID = signposter.makeSignpostID()
+    }
+
+    func postSign(_ description: StaticString) {
+        guard let signpostID else { return }
+        signposter.emitEvent(description, id: signpostID)
+    }
+}
+#endif
+
+class StubSignposter: SignposterProtocol {
+    func postSign(_ description: StaticString) {}
+}
+
+enum SignposterFactory {
+    static var shared: SignposterProtocol {
+        #if compiler(>=5.5)
+        if #available(macOS 12.0, *) {
+            return Signposter.shared
+        }
+        #endif
+        return StubSignposter()
+    }
 }

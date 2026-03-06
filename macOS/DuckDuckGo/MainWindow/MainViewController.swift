@@ -142,6 +142,7 @@ final class MainViewController: NSViewController {
          startupProfiler: StartupProfiler = NSApp.delegateTyped.startupProfiler
     ) {
 
+        SignposterFactory.shared.postSign("##### MainViewController.init Start")
         self.aiChatMenuConfig = aiChatMenuConfig
         self.tabCollectionViewModel = tabCollectionViewModel
         self.bookmarkManager = bookmarkManager
@@ -313,9 +314,11 @@ final class MainViewController: NSViewController {
         aiChatOmnibarController.delegate = self
         browserTabViewController.delegate = self
         findInPageViewController.delegate = self
+        SignposterFactory.shared.postSign("##### MainViewController.init End")
     }
 
     override func loadView() {
+        SignposterFactory.shared.postSign("##### MainViewController.loadView Start")
         view = mainView
 
         addAndLayoutChild(tabBarViewController, into: mainView.tabBarContainerView)
@@ -326,9 +329,11 @@ final class MainViewController: NSViewController {
         addAndLayoutChild(fireViewController, into: mainView.fireContainerView)
         addAndLayoutChild(aiChatOmnibarContainerViewController, into: mainView.aiChatOmnibarContainerView)
         addAndLayoutChild(aiChatOmnibarTextContainerViewController, into: mainView.aiChatOmnibarTextContainerView)
+        SignposterFactory.shared.postSign("##### MainViewController.loadView End")
     }
 
     override func viewDidLoad() {
+        SignposterFactory.shared.postSign("##### MainViewController.viewDidLoad Start")
         super.viewDidLoad()
 
         listenToKeyDownEvents()
@@ -345,6 +350,7 @@ final class MainViewController: NSViewController {
         mainView.setupAIChatOmnibarContainerConstraints(addressBarStack: navigationBarViewController.addressBarStack)
 
         wireAIChatOmnibarUpdates()
+        SignposterFactory.shared.postSign("##### MainViewController.viewDidLoad End")
     }
 
     override func viewWillAppear() {
@@ -372,6 +378,7 @@ final class MainViewController: NSViewController {
     }
 
     override func viewDidAppear() {
+        SignposterFactory.shared.postSign("##### MainViewController.viewDidAppear Start")
         initPreloader()
 
         mainView.setMouseAboveWebViewTrackingAreaEnabled(true)
@@ -380,6 +387,7 @@ final class MainViewController: NSViewController {
         adjustFirstResponder(force: true)
 
         startupProfiler.measureOnce(.timeToInteractive, startStep: .appDelegateInit)
+        SignposterFactory.shared.postSign("##### MainViewController.viewDidAppear End")
     }
 
     var bookmarkBarPromptObserver: Any?

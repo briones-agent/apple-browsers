@@ -160,6 +160,7 @@ final class AppStateRestorationManager: NSObject, AppStateRestorationManaging {
     }
 
     func applicationDidFinishLaunching() {
+        SignposterFactory.shared.postSign("##### AppStateRestorationManager.applicationDidFinishLaunching Start")
         let isRelaunchingAutomatically = self.isRelaunchingAutomatically
         self.isRelaunchingAutomatically = false
         let restoreWindows = !service.isAppStateFileStale || isRelaunchingAutomatically
@@ -179,6 +180,7 @@ final class AppStateRestorationManager: NSObject, AppStateRestorationManaging {
             .sink { [weak self] _ in
                 self?.persistAppState()
             }
+        SignposterFactory.shared.postSign("##### AppStateRestorationManager.applicationDidFinishLaunching End")
     }
 
     func applicationWillTerminate() {
