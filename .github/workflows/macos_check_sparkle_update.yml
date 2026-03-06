@@ -53,22 +53,32 @@ jobs:
           labels: dependencies,macOS${{ steps.check.outputs.bump_type == 'major' && ',breaking' || '' }}
           draft: false
 
+      - name: Get Asana user ID for CODEOWNERS
+        id: asana-user
+        if: steps.create-pr.outputs.pull-request-url
+        uses: duckduckgo/apple-toolbox/actions/asana-get-user-id-for-github-handle@main
+        with:
+          access-token: ${{ secrets.ASANA_ACCESS_TOKEN }}
+          github-handle: diegoreymendez
+
       - name: Create Asana subtask
         if: steps.create-pr.outputs.pull-request-url
         env:
           ASANA_ACCESS_TOKEN: ${{ secrets.ASANA_ACCESS_TOKEN }}
         run: |
+          assignee_field=""
+          if [[ -n "${{ steps.asana-user.outputs.user-id }}" ]]; then
+            assignee_field="\"assignee\": \"${{ steps.asana-user.outputs.user-id }}\","
+          fi
           curl -fLSs "https://app.asana.com/api/1.0/tasks" \
             --header "Accept: application/json" \
             --header "Authorization: Bearer ${ASANA_ACCESS_TOKEN}" \
             --header "Content-Type: application/json" \
-            --data "$(cat <<EOF
-          {
-            "data": {
-              "parent": "1212461351428211",
-              "name": "Update Sparkle to ${{ steps.check.outputs.latest_version }}",
-              "notes": "Automated PR: ${{ steps.create-pr.outputs.pull-request-url }}\n\nUpdate type: ${{ steps.check.outputs.bump_type }}\nFrom: ${{ steps.check.outputs.current_version }}\nTo: ${{ steps.check.outputs.latest_version }}"
-            }
-          }
-          EOF
-          )"
+            --data "{
+              \"data\": {
+                ${assignee_field}
+                \"parent\": \"1212461351428211\",
+                \"name\": \"Update Sparkle to ${{ steps.check.outputs.latest_version }}\",
+                \"notes\": \"Automated PR: ${{ steps.create-pr.outputs.pull-request-url }}\n\nUpdate type: ${{ steps.check.outputs.bump_type }}\nFrom: ${{ steps.check.outputs.current_version }}\nTo: ${{ steps.check.outputs.latest_version }}\"
+              }
+            }"
