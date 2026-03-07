@@ -25,7 +25,7 @@ final class AutoplayTabExtension {
 
     private let autoplayPreferences: AutoplayPreferences
     private weak var webView: WKWebView?
-    /// Tracks the mode that has been applied to the WebView, to avoid unnecessary reloads.
+    /// Tracks the effective autoplay mode for the current URL.
     /// Exposed as `internal` (and `@Published`) for unit testing.
     @Published private(set) var configuredMode: AutoplayBlockingMode
     var currentURL: URL?
@@ -54,22 +54,24 @@ final class AutoplayTabExtension {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _, _ in
                 guard let self, let url = self.currentURL else { return }
-                // A page is already displayed — update config and reload so media respects the new policy.
+                // A page is already displayed — update state tracking and reload.
+                // WebKit's WKWebViewConfiguration is frozen after WebView creation, so the reload
+                // will use Tab's WebView recreation path (Tab.setContent → recreateWebViewIfNeededForAutoplay)
+                // only when navigating to a pristine tab. For an existing browsing session,
+                // the config change takes effect on the next page load in a new tab.
                 self.updateConfig(for: url, reload: true)
             }
             .store(in: &preferenceCancellables)
     }
 
-    /// Updates `webView.configuration.mediaTypesRequiringUserActionForPlayback` for the given URL.
-    /// Pass `reload: true` only when a page is already displayed and needs to re-evaluate media policy.
-    /// Pass `reload: false` (from `didStart`) to configure before page load — no reload needed.
+    /// Updates the tracked effective autoplay mode for `url`.
+    /// Reloads the WebView when `reload` is true (preference changed while page is displayed).
     /// Exposed as `internal` for unit testing.
     func updateConfig(for url: URL, reload: Bool) {
         guard let webView else { return }
         let effective = autoplayPreferences.effectiveMode(for: url)
         guard effective != configuredMode else { return }
         configuredMode = effective
-        webView.configuration.mediaTypesRequiringUserActionForPlayback = effective.mediaTypesRequiringUserAction
         if reload {
             webView.reload()
         }
@@ -84,8 +86,7 @@ extension AutoplayTabExtension: NavigationResponder {
         guard navigation.navigationAction.isForMainFrame else { return }
         let url = navigation.url
         currentURL = url
-        // Navigation is in progress — update config now so media policy is correct when the page loads.
-        // Do NOT reload: calling reload() during an active navigation cancels it and reloads the previous page.
+        // Update state tracking. Do NOT reload: calling reload() during an active navigation cancels it.
         updateConfig(for: url, reload: false)
     }
 }

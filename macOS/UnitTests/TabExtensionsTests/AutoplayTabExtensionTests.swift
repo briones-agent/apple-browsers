@@ -24,9 +24,9 @@ import XCTest
 // MARK: - Spy WebView
 
 /// A WKWebView subclass that records reload() calls.
-/// `WKWebView.configuration.mediaTypesRequiringUserActionForPlayback` cannot be
-/// mutated after the WebView is initialised (WebKit freezes the config), so tests
-/// assert on `configuredMode` (the extension's internal state) and `reloadCount`.
+/// `WKWebView.configuration` returns a frozen copy after WebView creation — setters are
+/// silently ignored.  The correct mode is applied once in `Tab.init`.  Tests therefore
+/// assert on `configuredMode` (the extension's state-tracking) and `reloadCount`.
 private final class SpyWKWebView: WKWebView {
     var reloadCount = 0
 

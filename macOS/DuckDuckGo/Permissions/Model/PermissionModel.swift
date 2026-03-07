@@ -56,7 +56,9 @@ final class PermissionModel {
     weak var webView: WKWebView? {
         didSet {
             guard let webView = webView else { return }
-            assert(oldValue == nil)
+            // Clear existing subscriptions before re-subscribing — this allows the WebView to be
+            // replaced (e.g. for a per-site autoplay config change) without hitting the old assertion.
+            cancellables.removeAll()
             self.subscribe(to: webView)
             self.subscribe(to: permissionManager)
         }

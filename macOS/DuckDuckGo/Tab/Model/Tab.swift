@@ -88,6 +88,13 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     let pinnedTabsManagerProvider: PinnedTabsManagerProviding
 
     private let webViewConfiguration: WKWebViewConfiguration
+    private let autoplayPreferences: AutoplayPreferences
+    /// The autoplay blocking mode that the current `webView` was initialized with.
+    /// Updated whenever the WebView is recreated.
+    private var currentWebViewAutoplayMode: AutoplayBlockingMode
+    /// Sends the current WebView to subscribers whenever the WebView is created or recreated.
+    /// Using a PassthroughSubject (rather than a one-shot Future) allows recreation.
+    private let webViewSubject = PassthroughSubject<WKWebView, Never>()
 
     let startupPreferences: StartupPreferences
     let tabsPreferences: TabsPreferences
@@ -306,8 +313,19 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                                                  burnerMode: burnerMode,
                                                  privateProcessName: featureFlagger.isFeatureOn(.privateProcessName),
                                                  earlyAccessHandlers: specialPagesUserScript.map { [$0] } ?? [])
-        configuration.mediaTypesRequiringUserActionForPlayback = autoplayPreferences.autoplayBlockingMode.mediaTypesRequiringUserAction
+        // Apply the effective autoplay mode for this tab's initial URL (if known), otherwise the global
+        // default. The correct per-site mode for address-bar navigation is applied in setContent by
+        // recreating the WebView for pristine tabs; AutoplayTabExtension handles reloads on pref changes.
+        let initialAutoplayMode: AutoplayBlockingMode
+        if case .url(let url, _, _) = content {
+            initialAutoplayMode = autoplayPreferences.effectiveMode(for: url)
+        } else {
+            initialAutoplayMode = autoplayPreferences.autoplayBlockingMode
+        }
+        configuration.mediaTypesRequiringUserActionForPlayback = initialAutoplayMode.mediaTypesRequiringUserAction
         self.webViewConfiguration = configuration
+        self.autoplayPreferences = autoplayPreferences
+        self.currentWebViewAutoplayMode = initialAutoplayMode
         let userContentController = configuration.userContentController as? UserContentController
         assert(userContentController != nil)
         self.userContentController = userContentController
@@ -335,10 +353,10 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
             .map { $0?.userScripts as? UserScripts }
             .eraseToAnyPublisher()
 
-        let webViewPromise = Future<WKWebView, Never>.promise()
-        let interactionEventsPublisher = webViewPromise.future
+        let interactionEventsPublisher = webViewSubject
             .compactMap { $0 as? WebView }
-            .flatMap { $0.interactionEventsPublisher }
+            .map { $0.interactionEventsPublisher }
+            .switchToLatest()
             .eraseToAnyPublisher()
         var tabGetter: () -> Tab? = { nil }
         let extensionDependencies = ExtensionDependencies(privacyFeatures: privacyFeatures,
@@ -377,7 +395,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                                                                             inheritedAttribution: parentTab?.adClickAttribution?.currentAttributionState,
                                                                             userContentControllerFuture: userContentControllerPromise.future,
                                                                             permissionModel: permissions,
-                                                                            webViewFuture: webViewPromise.future,
+                                                                            webViewFuture: webViewSubject.eraseToAnyPublisher(),
                                                                             interactionEventsPublisher: interactionEventsPublisher,
                                                                             tabsPreferences: tabsPreferences,
                                                                             burnerMode: burnerMode,
@@ -396,7 +414,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                                 args: tabExtensionsBuilderArguments)
         userContentController?.delegate = self
         setupWebView(shouldLoadInBackground: shouldLoadInBackground)
-        webViewPromise.fulfill(webView)
+        webViewSubject.send(webView)
 
         faviconCancellable = extensions.favicons?.faviconPublisher.assign(to: \.favicon, onWeaklyHeld: self)
         if favicon == nil {
@@ -438,8 +456,16 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         let webViewValue = NSValue(nonretainedObject: webView)
 
         webView.onDeinit { [weak self] in
-            // Tab should deallocate with the WebView
-            self?.ensureObjectDeallocated(after: 1.0, do: .interrupt)
+            // Tab should deallocate with the WebView — unless the WebView was intentionally
+            // replaced (e.g. for a per-site autoplay config change on a pristine tab).
+            // Compare pointer values: if Tab's current webView is a DIFFERENT object than the
+            // one that just deallocated, the old WebView was intentionally replaced.
+            if let self {
+                let currentWebViewPointer = NSValue(nonretainedObject: self.webView)
+                if currentWebViewPointer == webViewValue {
+                    self.ensureObjectDeallocated(after: 1.0, do: .interrupt)
+                }
+            }
 
             // unregister WebView from the ProcessPool
             processPool.webViewsUsingProcessPool.remove(webViewValue)
@@ -566,7 +592,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
 
     // MARK: - Properties
 
-    let webView: WebView
+    private(set) var webView: WebView
 
     var audioState: WebView.AudioState {
         webView.audioState
@@ -631,6 +657,14 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
 
         // reload if content differs or user-entered
         guard newContent != self.content || newContent.isUserEnteredUrl else { return nil }
+
+        // Recreate the WebView with the correct autoplay config before navigating to a URL whose
+        // effective autoplay mode differs from the current WebView's frozen config. WebKit copies
+        // mediaTypesRequiringUserActionForPlayback into the WebProcess once at WKWebView.init and
+        // never re-reads it, so recreation is the only way to change it.
+        if case .url(let url, _, _) = newContent {
+            recreateWebViewIfNeededForAutoplay(url: url)
+        }
 
         self.content = newContent
 
@@ -1169,6 +1203,42 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     private var emailDidSignOutCancellable: AnyCancellable?
     private var faviconCancellable: AnyCancellable?
     private var tabCrashRecoveryCancellable: AnyCancellable?
+
+    /// Recreates the WebView with the correct autoplay config for `url` when the current
+    /// WebView is pristine (no URL loaded yet).  `WKWebViewConfiguration` is frozen after
+    /// `WKWebView.init`, so this is the only way to apply a per-site autoplay exception for
+    /// a new navigation.
+    ///
+    /// `WKWebViewConfiguration.copy()` produces a shallow copy: the `userContentController`,
+    /// `websiteDataStore`, and `processPool` are shared with the original, so scripts, cookies,
+    /// and extensions continue to work correctly on the new WebView.
+    private func recreateWebViewIfNeededForAutoplay(url: URL) {
+        let effective = autoplayPreferences.effectiveMode(for: url)
+        guard effective != currentWebViewAutoplayMode else { return }
+        guard let newConfig = webViewConfiguration.copy() as? WKWebViewConfiguration else { return }
+        newConfig.mediaTypesRequiringUserActionForPlayback = effective.mediaTypesRequiringUserAction
+
+        let newWebView = WebView(frame: webView.frame,
+                                 configuration: newConfig,
+                                 featureFlagger: featureFlagger,
+                                 privacyConfig: privacyFeatures.contentBlocking.privacyConfigurationManager.privacyConfig)
+        newWebView.allowsLinkPreview = webView.allowsLinkPreview
+        newWebView.addsVisitedLinks = true
+        newWebView.setAccessibilityIdentifier("WebView")
+
+        currentWebViewAutoplayMode = effective
+        // Hold a strong reference to the old WebView so its ARC count stays above 0 during the
+        // assignment below. Without this, the old WebView deallocates inside the setter while Swift
+        // still holds an exclusive write lock on `self.webView`, causing a simultaneous-access crash
+        // when the onDeinit closure tries to read `self.webView`. By keeping oldWebView alive until
+        // after the assignment, `self.webView` already returns `newWebView` when the deinit fires.
+        let oldWebView = webView
+        webView = newWebView
+        _ = oldWebView // explicit retain until here; dealloc fires after self.webView == newWebView
+        setupWebView(shouldLoadInBackground: false)
+        addDeallocationChecks(for: newWebView)
+        webViewSubject.send(newWebView)
+    }
 
     private func setupWebView(shouldLoadInBackground: Bool) {
         webView.navigationDelegate = navigationDelegate

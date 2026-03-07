@@ -10065,6 +10065,102 @@
         }
       }
     },
+    "autoplay.exceptions.add" : {
+      "comment" : "Button to confirm adding a new autoplay exception domain",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.add.website" : {
+      "comment" : "Button to begin adding a new autoplay exception",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add Website"
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.cancel" : {
+      "comment" : "Button to cancel adding a new autoplay exception domain",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.domain.placeholder" : {
+      "comment" : "Placeholder text for the domain entry field in autoplay exceptions",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "example.com"
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.done" : {
+      "comment" : "Button to dismiss the autoplay exceptions sheet",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.empty" : {
+      "comment" : "Empty state label in the autoplay exceptions sheet",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No exceptions. Sites will use the default autoplay setting."
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.manage" : {
+      "comment" : "Button label to open the autoplay exceptions sheet",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Manage…"
+          }
+        }
+      }
+    },
+    "autoplay.exceptions.title" : {
+      "comment" : "Title of the autoplay exceptions management sheet",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Autoplay Exceptions"
+          }
+        }
+      }
+    },
     "badge.new" : {
       "comment" : "Copy of badge used to indicate a new item",
       "extractionState" : "extracted_with_value",
