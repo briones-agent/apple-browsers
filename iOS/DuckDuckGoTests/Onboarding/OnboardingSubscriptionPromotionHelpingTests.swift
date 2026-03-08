@@ -210,41 +210,112 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
 
     // MARK: - Pixel Firing Tests
 
-    func testFireImpressionPixel() {
+    func testFireImpressionPixelIncludesReturningUserAndFreeTrialParams() {
+        // Given
+        mockStatisticsStore.variant = VariantIOS.returningUser.name
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+
         // When
         sut.fireImpressionPixel()
 
         // Then
         XCTAssertEqual(PixelFiringMock.allPixelsFired.count, 1)
         XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.pixelName, Pixel.Event.subscriptionOnboardingPromotionImpression.name)
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.returningUser], "true")
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial], "true")
     }
 
-    func testFireTapPixel() {
+    func testFireImpressionPixelForNewUserNotEligibleForFreeTrial() {
+        // Given
+        mockStatisticsStore.variant = nil
+        mockSubscriptionManager.isEligibleForFreeTrialResult = false
+
+        // When
+        sut.fireImpressionPixel()
+
+        // Then
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.count, 1)
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.returningUser], "false")
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial], "false")
+    }
+
+    func testFireTapPixelIncludesReturningUserAndFreeTrialParams() {
+        // Given
+        mockStatisticsStore.variant = nil
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+
         // When
         sut.fireTapPixel()
 
         // Then
         XCTAssertEqual(PixelFiringMock.allPixelsFired.count, 1)
         XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.pixelName, Pixel.Event.subscriptionOnboardingPromotionTap.name)
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.returningUser], "false")
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial], "true")
     }
 
-    func testFireDismissPixel() {
+    func testFireDismissPixelDoesNotIncludeNewParams() {
         // When
         sut.fireDismissPixel()
 
         // Then
         XCTAssertEqual(PixelFiringMock.allPixelsFired.count, 1)
         XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.pixelName, Pixel.Event.subscriptionOnboardingPromotionDismiss.name)
+        XCTAssertNil(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.returningUser])
+        XCTAssertNil(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial])
     }
 
     // MARK: - Redirect URL Tests
 
-    func testRedirectURLComponents() {
+    func testRedirectURLReturningUserFreeTrial() {
+        // Given
+        mockStatisticsStore.variant = VariantIOS.returningUser.name
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+
         // When
         let components = sut.redirectURLComponents()
 
         // Then
         XCTAssertNotNil(components)
-        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "origin" })?.value, OnboardingSubscriptionPromotionHelper.Constants.origin)
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "origin" })?.value, SubscriptionFunnelOrigin.onboardingReinstallFreeTrial.rawValue)
+    }
+
+    func testRedirectURLReturningUserSubscribe() {
+        // Given
+        mockStatisticsStore.variant = VariantIOS.returningUser.name
+        mockSubscriptionManager.isEligibleForFreeTrialResult = false
+
+        // When
+        let components = sut.redirectURLComponents()
+
+        // Then
+        XCTAssertNotNil(components)
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "origin" })?.value, SubscriptionFunnelOrigin.onboardingReinstallSubscribe.rawValue)
+    }
+
+    func testRedirectURLNewUserFreeTrial() {
+        // Given
+        mockStatisticsStore.variant = nil
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+
+        // When
+        let components = sut.redirectURLComponents()
+
+        // Then
+        XCTAssertNotNil(components)
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "origin" })?.value, SubscriptionFunnelOrigin.onboardingNewInstallFreeTrial.rawValue)
+    }
+
+    func testRedirectURLNewUserSubscribe() {
+        // Given
+        mockStatisticsStore.variant = nil
+        mockSubscriptionManager.isEligibleForFreeTrialResult = false
+
+        // When
+        let components = sut.redirectURLComponents()
+
+        // Then
+        XCTAssertNotNil(components)
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "origin" })?.value, SubscriptionFunnelOrigin.onboardingNewInstallSubscribe.rawValue)
     }
 }

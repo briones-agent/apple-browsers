@@ -62,10 +62,14 @@ protocol OnboardingSubscriptionPromotionHelping {
 /// as well as handling experiment tracking and pixel firing.
 struct OnboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHelping {
 
-    /// Constants used by the helper.
-    enum Constants {
-        /// The origin parameter value for this Subscriptionpromotion funnel.
-        static let origin = "funnel_onboarding_ios"
+    /// Whether the user is a returning user (reinstall) based on the `ru` variant in the statistics store.
+    var isReturningUser: Bool {
+        statisticsStore.variant == VariantIOS.returningUser.name
+    }
+
+    /// Whether the user is eligible for a free trial offer.
+    var isFreeTrialEligible: Bool {
+        subscriptionManager.isUserEligibleForFreeTrial()
     }
 
     /// The number of days after install before showing the promotion to users who skipped onboarding.
@@ -134,23 +138,38 @@ struct OnboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHel
 
     /// Provides the URL components for redirecting as part of the onboarding promotion experiment.
     ///
+    /// The origin encodes the user's returning/new status and free trial eligibility for attribution.
+    ///
     /// - Returns: URL components for the experiment, or `nil` if not applicable.
     func redirectURLComponents() -> URLComponents? {
-        SubscriptionURL.purchaseURLComponentsWithOrigin(SubscriptionFunnelOrigin.onboarding.rawValue)
+        let origin: SubscriptionFunnelOrigin = switch (isReturningUser, isFreeTrialEligible) {
+        case (true, true): .onboardingReinstallFreeTrial
+        case (true, false): .onboardingReinstallSubscribe
+        case (false, true): .onboardingNewInstallFreeTrial
+        case (false, false): .onboardingNewInstallSubscribe
+        }
+        return SubscriptionURL.purchaseURLComponentsWithOrigin(origin.rawValue)
     }
 
     /// Fires a pixel when the onboarding promotion is shown to the user.
     func fireImpressionPixel() {
-        pixelFiring.fire(.subscriptionOnboardingPromotionImpression, withAdditionalParameters: [:])
+        pixelFiring.fire(.subscriptionOnboardingPromotionImpression, withAdditionalParameters: promotionPixelParameters)
     }
 
     /// Fires a pixel when the onboarding promotion is tapped by the user.
     func fireTapPixel() {
-        pixelFiring.fire(.subscriptionOnboardingPromotionTap, withAdditionalParameters: [:])
+        pixelFiring.fire(.subscriptionOnboardingPromotionTap, withAdditionalParameters: promotionPixelParameters)
     }
 
     /// Fires a pixel when the onboarding promotion is dismissed by the user.
     func fireDismissPixel() {
         pixelFiring.fire(.subscriptionOnboardingPromotionDismiss, withAdditionalParameters: [:])
+    }
+
+    private var promotionPixelParameters: [String: String] {
+        [
+            PixelParameters.returningUser: isReturningUser ? "true" : "false",
+            PixelParameters.freeTrial: isFreeTrialEligible ? "true" : "false"
+        ]
     }
 }
