@@ -245,7 +245,8 @@ class TabManager: TabManaging, TrackerAnimationSuppressing {
                                                               sharedSecureVault: sharedSecureVault,
                                                               privacyStats: privacyStats,
                                                               voiceSearchHelper: voiceSearchHelper,
-                                                              darkReaderFeatureSettings: darkReaderFeatureSettings)
+                                                              darkReaderFeatureSettings: darkReaderFeatureSettings,
+                                                              autoplaySettings: autoplaySettings)
         controller.applyInheritedAttribution(inheritedAttribution)
         controller.attachWebView(configuration: configuration,
                                  interactionStateData: interactionState,
@@ -372,7 +373,8 @@ class TabManager: TabManaging, TrackerAnimationSuppressing {
                                                               sharedSecureVault: sharedSecureVault,
                                                               privacyStats: privacyStats,
                                                               voiceSearchHelper: voiceSearchHelper,
-                                                              darkReaderFeatureSettings: darkReaderFeatureSettings)
+                                                              darkReaderFeatureSettings: darkReaderFeatureSettings,
+                                                              autoplaySettings: autoplaySettings)
         controller.attachWebView(configuration: configCopy,
                                  andLoadRequest: request,
                                  consumeCookies: !model.hasActiveTabs,

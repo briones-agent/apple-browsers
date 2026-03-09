@@ -21,7 +21,7 @@ import DesignResourcesKit
 import DesignResourcesKitIcons
 
 /// A generalised view for picking items from a list with checkmark selection.
-public struct ListBasedPicker<T: Hashable>: View {
+struct ListBasedPicker<T: Hashable>: View {
 
     let title: String
     let options: [T]
@@ -31,7 +31,7 @@ public struct ListBasedPicker<T: Hashable>: View {
     let sectionHeader: String?
     let sectionFooter: String?
 
-    public init(title: String,
+    init(title: String,
                 options: [T],
                 selectedOption: Binding<T>,
                 descriptionForOption: @escaping (T) -> String,
@@ -47,7 +47,7 @@ public struct ListBasedPicker<T: Hashable>: View {
         self.sectionFooter = sectionFooter
     }
 
-    public var body: some View {
+    var body: some View {
         List {
             Section {
                 ForEach(options, id: \.self) { option in

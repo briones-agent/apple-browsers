@@ -19,7 +19,6 @@
 
 import Core
 import SwiftUI
-import UIComponents
 
 struct SettingsAutoplayView: View {
 
@@ -34,6 +33,7 @@ struct SettingsAutoplayView: View {
             sectionHeader: UserText.settingsAutoplayLabel,
             sectionFooter: UserText.settingsAutoplayFooter
         )
+        .applySettingsListModifiers(title: "", displayMode: .inline, viewModel: viewModel)
         .onFirstAppear {
             Pixel.fire(pixel: .settingsAutoplayOpen)
         }

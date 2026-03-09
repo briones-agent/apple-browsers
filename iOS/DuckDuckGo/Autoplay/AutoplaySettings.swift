@@ -21,13 +21,12 @@ import Foundation
 import Persistence
 
 enum AutoplayStorageKeys: String, StorageKeyDescribing {
-    case autoplayBlockingMode = "com.duckduckgo.ios.autoplayBlockingMode"
+    case autoplayBlockingMode = "com-duckduckgo-ios-autoplayBlockingMode"
 }
 
 struct AutoplaySettingKeys: StoringKeys {
     let autoplayBlockingMode = StorageKey<AutoplayBlockingMode>(
-        AutoplayStorageKeys.autoplayBlockingMode,
-        assertionHandler: { _ in }
+        AutoplayStorageKeys.autoplayBlockingMode
     )
 }
 

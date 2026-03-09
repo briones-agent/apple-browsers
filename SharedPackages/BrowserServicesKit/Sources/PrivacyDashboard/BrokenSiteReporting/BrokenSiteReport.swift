@@ -107,6 +107,7 @@ public struct BrokenSiteReport {
     let pageLoadTiming: WKPageLoadTiming?
     let detectorMetrics: [String: String]?
     let isForceDarkModeEnabled: Bool?
+    let autoplayBlockingMode: String?
 #if os(iOS)
     let siteType: SiteType
     let atb: String
@@ -144,6 +145,7 @@ public struct BrokenSiteReport {
         privacyExperiments: String,
         isPirEnabled: Bool?,
         isForceDarkModeEnabled: Bool?,
+        autoplayBlockingMode: String? = nil,
         pageLoadTiming: WKPageLoadTiming?,
         detectorMetrics: [String: String]? = nil
     ) {
@@ -175,6 +177,7 @@ public struct BrokenSiteReport {
         self.privacyExperiments = privacyExperiments
         self.isPirEnabled = isPirEnabled
         self.isForceDarkModeEnabled = isForceDarkModeEnabled
+        self.autoplayBlockingMode = autoplayBlockingMode
         self.pageLoadTiming = pageLoadTiming
         self.detectorMetrics = detectorMetrics
     }
@@ -214,6 +217,7 @@ public struct BrokenSiteReport {
         privacyExperiments: String,
         isPirEnabled: Bool?,
         isForceDarkModeEnabled: Bool?,
+        autoplayBlockingMode: String? = nil,
         pageLoadTiming: WKPageLoadTiming? = nil,
         detectorMetrics: [String: String]? = nil
     ) {
@@ -251,6 +255,7 @@ public struct BrokenSiteReport {
         self.pageLoadTiming = pageLoadTiming
         self.detectorMetrics = detectorMetrics
         self.isForceDarkModeEnabled = isForceDarkModeEnabled
+        self.autoplayBlockingMode = autoplayBlockingMode
     }
 #endif
 
@@ -333,6 +338,10 @@ public struct BrokenSiteReport {
 
         if let isForceDarkModeEnabled {
             result["isForceDarkModeEnabled"] = isForceDarkModeEnabled.description
+        }
+
+        if let autoplayBlockingMode {
+            result["autoplayBlockingMode"] = autoplayBlockingMode
         }
 #if os(iOS)
         result["siteType"] = siteType.rawValue
