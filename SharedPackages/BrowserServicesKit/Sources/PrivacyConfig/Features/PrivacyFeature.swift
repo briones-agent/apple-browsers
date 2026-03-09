@@ -243,6 +243,8 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213557229772465?focus=true
     case autoplayBlocking
+    
+    case customXSafariRedirectHandling
 }
 
 public enum TabManagerSubfeature: String, PrivacySubfeature {
@@ -629,7 +631,7 @@ public enum PopupBlockingSubfeature: String, PrivacySubfeature {
 public enum WebExtensionsSubfeature: String, PrivacySubfeature {
     public var parent: PrivacyFeature { .webExtensions }
 
-    case embeddedExtension
+    case embeddedExtension = "embedded"
 }
 
 public enum ForceDarkModeOnWebsitesSubfeature: String, PrivacySubfeature {

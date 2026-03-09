@@ -288,6 +288,7 @@ extension PrivacyDashboardViewController {
         let breakageReportingSubfeature: BreakageReportingSubfeature?
         let isForceDarkModeEnabled: Bool?
         let autoplayBlockingMode: String?
+        let isAfterSuppressedXSafariRedirect: Bool
     }
     
     enum BrokenSiteReportError: Error {
@@ -364,6 +365,7 @@ extension PrivacyDashboardViewController {
                                 isPirEnabled: nil,
                                 isForceDarkModeEnabled: breakageAdditionalInfo.isForceDarkModeEnabled,
                                 autoplayBlockingMode: breakageAdditionalInfo.autoplayBlockingMode,
+                                isAfterSuppressedXSafariRedirect: breakageAdditionalInfo.isAfterSuppressedXSafariRedirect,
                                 detectorMetrics: detectorMetrics)
     }
 

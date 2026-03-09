@@ -352,6 +352,9 @@ public enum FeatureFlag: String {
 
     /// https://app.asana.com/1/137249556945/project/1202500774821704/task/1212559012504218
     case autoplayBlocking
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213554455515126?focus=true
+    case customXSafariRedirectHandling
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -381,7 +384,8 @@ extension FeatureFlag: FeatureFlagDescribing {
              .tabSwitcherTrackerCount,
              .iPadDuckaiOnTab,
              .suppressTrackerAnimationOnColdStart,
-             .autoplayBlocking:
+             .autoplayBlocking,
+             .customXSafariRedirectHandling:
             true
         default:
             false
@@ -487,7 +491,8 @@ extension FeatureFlag: FeatureFlagDescribing {
              .supportsSyncChatsDeletion,
              .fireMode,
              .suppressTrackerAnimationOnColdStart,
-             .autoplayBlocking:
+             .autoplayBlocking,
+             .customXSafariRedirectHandling:
             return true
         case .showSettingsCompleteSetupSection:
             if #available(iOS 18.2, *) {
@@ -749,6 +754,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.suppressTrackerAnimationOnColdStart))
         case .autoplayBlocking:
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.autoplayBlocking))
+        case .customXSafariRedirectHandling:
+            return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.customXSafariRedirectHandling))
         }
     }
 }
