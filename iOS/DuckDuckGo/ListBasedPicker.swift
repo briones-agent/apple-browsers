@@ -32,12 +32,12 @@ struct ListBasedPicker<T: Hashable>: View {
     let sectionFooter: String?
 
     init(title: String,
-                options: [T],
-                selectedOption: Binding<T>,
-                descriptionForOption: @escaping (T) -> String,
-                iconProvider: ((T) -> Image?)? = nil,
-                sectionHeader: String? = nil,
-                sectionFooter: String? = nil) {
+         options: [T],
+         selectedOption: Binding<T>,
+         descriptionForOption: @escaping (T) -> String,
+         iconProvider: ((T) -> Image?)? = nil,
+         sectionHeader: String? = nil,
+         sectionFooter: String? = nil) {
         self.title = title
         self.options = options
         self._selectedOption = selectedOption
