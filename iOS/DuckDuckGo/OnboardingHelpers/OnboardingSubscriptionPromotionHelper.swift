@@ -129,8 +129,12 @@ struct OnboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHel
         featureFlagger.isFeatureOn(for: FeatureFlag.privacyProOnboardingPromotion, allowOverride: true) && subscriptionManager.hasAppStoreProductsAvailable
     }
 
+    var isReinstallerPromoEnabled: Bool {
+        featureFlagger.isFeatureOn(for: FeatureFlag.subscriptionPromoForReinstallers, allowOverride: true)
+    }
+
     var shouldDisplay: Bool {
-        guard isFeatureEnabled, tutorialSettings.hasSkippedOnboarding else { return false }
+        guard isFeatureEnabled, isReinstallerPromoEnabled, tutorialSettings.hasSkippedOnboarding else { return false }
         guard let installDate = statisticsStore.installDate else { return false }
         let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: currentDateProvider()).day ?? 0
         return daysSinceInstall >= Self.skipOnboardingCooldownDays

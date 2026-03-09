@@ -127,7 +127,7 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
 
     func testShouldNotDisplayAfterSkipWhenInstallDateIsNil() {
         // Given
-        mockFeatureFlagger.enabledFeatureFlags = [FeatureFlag.privacyProOnboardingPromotion]
+        mockFeatureFlagger.enabledFeatureFlags = [.privacyProOnboardingPromotion, .subscriptionPromoForReinstallers]
         mockSubscriptionManager.hasAppStoreProductsAvailable = true
         mockTutorialSettings.hasSkippedOnboarding = true
         mockStatisticsStore.installDate = nil
@@ -141,7 +141,7 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
 
     func testShouldNotDisplayAfterSkipWhenInstalledLessThan7DaysAgo() {
         // Given
-        mockFeatureFlagger.enabledFeatureFlags = [FeatureFlag.privacyProOnboardingPromotion]
+        mockFeatureFlagger.enabledFeatureFlags = [.privacyProOnboardingPromotion, .subscriptionPromoForReinstallers]
         mockSubscriptionManager.hasAppStoreProductsAvailable = true
         mockTutorialSettings.hasSkippedOnboarding = true
         mockStatisticsStore.installDate = Calendar.current.date(byAdding: .day, value: -6, to: currentDate)
@@ -155,7 +155,7 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
 
     func testShouldDisplayAfterSkipWhenInstalledExactly7DaysAgo() {
         // Given
-        mockFeatureFlagger.enabledFeatureFlags = [FeatureFlag.privacyProOnboardingPromotion]
+        mockFeatureFlagger.enabledFeatureFlags = [.privacyProOnboardingPromotion, .subscriptionPromoForReinstallers]
         mockSubscriptionManager.hasAppStoreProductsAvailable = true
         mockTutorialSettings.hasSkippedOnboarding = true
         mockStatisticsStore.installDate = Calendar.current.date(byAdding: .day, value: -7, to: currentDate)
@@ -169,7 +169,7 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
 
     func testShouldDisplayAfterSkipWhenInstalledMoreThan7DaysAgo() {
         // Given
-        mockFeatureFlagger.enabledFeatureFlags = [FeatureFlag.privacyProOnboardingPromotion]
+        mockFeatureFlagger.enabledFeatureFlags = [.privacyProOnboardingPromotion, .subscriptionPromoForReinstallers]
         mockSubscriptionManager.hasAppStoreProductsAvailable = true
         mockTutorialSettings.hasSkippedOnboarding = true
         mockStatisticsStore.installDate = Calendar.current.date(byAdding: .day, value: -14, to: currentDate)
@@ -183,9 +183,23 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
 
     func testShouldNotDisplayAfterSkipWhenNotSkipped() {
         // Given
-        mockFeatureFlagger.enabledFeatureFlags = [FeatureFlag.privacyProOnboardingPromotion]
+        mockFeatureFlagger.enabledFeatureFlags = [.privacyProOnboardingPromotion, .subscriptionPromoForReinstallers]
         mockSubscriptionManager.hasAppStoreProductsAvailable = true
         mockTutorialSettings.hasSkippedOnboarding = false
+
+        // When
+        let result = sut.shouldDisplay
+
+        // Then
+        XCTAssertFalse(result)
+    }
+
+    func testShouldNotDisplayAfterSkipWhenReinstallerPromoFlagDisabled() {
+        // Given
+        mockFeatureFlagger.enabledFeatureFlags = [.privacyProOnboardingPromotion]
+        mockSubscriptionManager.hasAppStoreProductsAvailable = true
+        mockTutorialSettings.hasSkippedOnboarding = true
+        mockStatisticsStore.installDate = Calendar.current.date(byAdding: .day, value: -30, to: currentDate)
 
         // When
         let result = sut.shouldDisplay
