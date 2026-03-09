@@ -271,7 +271,7 @@
         "owners": ["jozsef-vesza"],
         "triggers": ["user_submitted"],
         "suffixes": ["platform", "form_factor"],
-        "parameters": ["appVersion"]
+        "parameters": ["appVersion", "returningUser", "freeTrial"]
     },
 
     // Free Trial Journey Pixels

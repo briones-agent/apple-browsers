@@ -167,7 +167,7 @@ struct OnboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHel
 
     /// Fires a pixel when the onboarding promotion is dismissed by the user.
     func fireDismissPixel() {
-        pixelFiring.fire(.subscriptionOnboardingPromotionDismiss, withAdditionalParameters: [:])
+        pixelFiring.fire(.subscriptionOnboardingPromotionDismiss, withAdditionalParameters: promotionPixelParameters)
     }
 
     private var promotionPixelParameters: [String: String] {

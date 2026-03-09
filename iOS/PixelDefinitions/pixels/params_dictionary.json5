@@ -298,14 +298,12 @@
     },
     "returningUser": {
         "key": "ru",
-        "type": "string",
-        "description": "Whether the user is a returning user (reinstall)",
-        "enum": ["true", "false"]
+        "type": "boolean",
+        "description": "Whether the user is a returning user (reinstall)"
     },
     "freeTrial": {
         "key": "free_trial",
-        "type": "string",
-        "description": "Whether the user is eligible for a free trial",
-        "enum": ["true", "false"]
+        "type": "boolean",
+        "description": "Whether the user is eligible for a free trial"
     }
 }

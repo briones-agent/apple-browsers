@@ -268,15 +268,19 @@ final class OnboardingSubscriptionPromotionHelpingTests: XCTestCase {
         XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial], "true")
     }
 
-    func testFireDismissPixelDoesNotIncludeNewParams() {
+    func testFireDismissPixelIncludesReturningUserAndFreeTrialParams() {
+        // Given
+        mockStatisticsStore.variant = VariantIOS.returningUser.name
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+
         // When
         sut.fireDismissPixel()
 
         // Then
         XCTAssertEqual(PixelFiringMock.allPixelsFired.count, 1)
         XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.pixelName, Pixel.Event.subscriptionOnboardingPromotionDismiss.name)
-        XCTAssertNil(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.returningUser])
-        XCTAssertNil(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial])
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.returningUser], "true")
+        XCTAssertEqual(PixelFiringMock.allPixelsFired.first?.params?[PixelParameters.freeTrial], "true")
     }
 
     // MARK: - Redirect URL Tests
