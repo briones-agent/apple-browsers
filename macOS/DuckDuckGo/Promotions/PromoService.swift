@@ -583,9 +583,9 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
 
         activeSessions.removeValue(forKey: promoId)
 
-        let delegate = session.delegate as? PromoDelegate
+        let delegate = session.delegate
         Task { @MainActor in
-            delegate?.hide()
+            delegate.hide()
         }
     }
 
