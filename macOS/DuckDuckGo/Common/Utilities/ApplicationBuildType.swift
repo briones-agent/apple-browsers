@@ -40,7 +40,7 @@ struct StandardApplicationBuildType: ApplicationBuildType {
 #endif
     }
 
-    let isReviewBuild: Bool = Bundle.main.bundleIdentifier?.hasSuffix(".review") ?? false
-    let isAlphaBuild: Bool = Bundle.main.bundleIdentifier?.hasSuffix(".alpha") ?? false
+    let isReviewBuild: Bool = Bundle.main.bundleIdentifier?.contains(".review") ?? false
+    let isAlphaBuild: Bool = Bundle.main.bundleIdentifier?.contains(".alpha") ?? false
 
 }
