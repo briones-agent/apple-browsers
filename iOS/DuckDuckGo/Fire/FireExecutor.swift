@@ -501,7 +501,7 @@ class FireExecutor: FireExecuting {
 
         if case .success(let afterSuggestions) = afterResult {
             let after = afterSuggestions.pinned.count + afterSuggestions.recent.count
-            if after == before {
+            if after != before {
                 Pixel.fire(pixel: .aiChatClearedWithSettingOff)
             }
         }
