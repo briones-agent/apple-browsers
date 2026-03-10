@@ -250,11 +250,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private(set) lazy var sessionRestorePromptCoordinator = SessionRestorePromptCoordinator(pixelFiring: PixelKit.shared)
 
-#if DEBUG || REVIEW
     // MARK: - Automation Server
     private var automationServer: AutomationServer?
     private let launchOptionsHandler = LaunchOptionsHandler()
-#endif
 
     // MARK: - Freemium DBP
     public let freemiumDBPFeature: FreemiumDBPFeature
@@ -515,10 +513,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let privacyConfigurationManager: PrivacyConfigurationManager
+        let buildType = StandardApplicationBuildType()
 
-#if DEBUG || REVIEW
         // When TEST_PRIVACY_CONFIG_PATH is set, skip cached config to use the test config from embedded data provider
-        let useTestConfig = ProcessInfo.processInfo.environment[AppPrivacyConfigurationDataProvider.EnvironmentKeys.testPrivacyConfigPath] != nil
+        let useTestConfig = (buildType.isDebugBuild || buildType.isReviewBuild) && ProcessInfo.processInfo.environment[AppPrivacyConfigurationDataProvider.EnvironmentKeys.testPrivacyConfigPath] != nil
         let fetchedEtag: String? = useTestConfig ? nil : configurationStore.loadEtag(for: .privacyConfiguration)
         let fetchedData: Data? = useTestConfig ? nil : configurationStore.loadData(for: .privacyConfiguration)
 
@@ -545,16 +543,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 internalUserDecider: internalUserDecider
             )
         }
-#else
-        privacyConfigurationManager = PrivacyConfigurationManager(
-            fetchedETag: configurationStore.loadEtag(for: .privacyConfiguration),
-            fetchedData: configurationStore.loadData(for: .privacyConfiguration),
-            embeddedDataProvider: AppPrivacyConfigurationDataProvider(),
-            localProtection: LocalUnprotectedDomains(database: database.db),
-            errorReporting: AppContentBlocking.debugEvents,
-            internalUserDecider: internalUserDecider
-        )
-#endif
 
         let featureFlagger: FeatureFlagger
         if [.unitTests, .integrationTests, .xcPreviews].contains(AppVersion.runType)  {
@@ -1633,8 +1621,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Automation Server
 
     private func startAutomationServerIfNeeded() {
-#if DEBUG || REVIEW
-        guard let port = launchOptionsHandler.automationPort else {
+        let buildType = StandardApplicationBuildType()
+        guard buildType.isDebugBuild || buildType.isReviewBuild,
+              let port = launchOptionsHandler.automationPort else {
             return
         }
         Task { @MainActor in
@@ -1644,7 +1633,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 port: port
             )
         }
-#endif
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
