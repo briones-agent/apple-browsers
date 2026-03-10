@@ -95,7 +95,7 @@
 // - `bannerShownOccurrences`: Number of times banner shown
 // - `inactiveUserModalShownDate`: TimeInterval when inactive user modal was shown
 // - `isBannerPermanentlyDismissed`: User clicked "Never Ask Again"
-// - `debugSetDefaultAndAddToDockPromptCurrentDateKey`: Simulated date override (debug only)
+// - `DebugSimulatedDateStore`: Shared simulated date override (debug only, KeyValueStore)
 
 import Combine
 import SwiftUI

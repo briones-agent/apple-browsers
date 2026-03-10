@@ -31,12 +31,24 @@ struct PromoServiceFactory {
         let promos = makeAllPromos(dependencies: dependencies)
         let stateQueue = DispatchQueue(label: "com.duckduckgo.promoService.state")
         let historyStore = PromoHistoryStore(store: dependencies.keyValueStore, queue: stateQueue)
+
+#if DEBUG || REVIEW
+        let debugSimulatedDateStore = DebugSimulatedDateStore(keyValueStore: dependencies.keyValueStore)
+        let dateProvider: () -> Date = { debugSimulatedDateStore.simulatedDate ?? Date() }
+        let resetDebugDate: (() -> Void)? = { debugSimulatedDateStore.reset() }
+#else
+        let dateProvider: () -> Date = Date.init
+        let resetDebugDate: (() -> Void)? = nil
+#endif
+
         return PromoService(
             promos: promos,
             historyStore: historyStore,
             triggerPublisher: PromoTrigger.triggerPublisher,
             initialExternalActivation: dependencies.isExternallyActivated,
-            stateQueue: stateQueue
+            stateQueue: stateQueue,
+            dateProvider: dateProvider,
+            resetDebugDate: resetDebugDate
         )
     }
 

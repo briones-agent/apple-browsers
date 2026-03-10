@@ -20,6 +20,7 @@ import AppKit
 import BrowserServicesKit
 import Combine
 import Foundation
+import Persistence
 import Utilities
 
 /// **DEBUG MENU for Promo Queue**
@@ -42,8 +43,11 @@ final class PromoDebugMenu: NSMenu {
 
     private var cancellables = Set<AnyCancellable>()
     private var cachedHistory: [String: PromoHistoryRecord] = [:]
-    private var simulatedDate: Date?
     private var promos: [Promo] = []
+
+    private var debugSimulatedDateStore: DebugSimulatedDateStore {
+        DebugSimulatedDateStore(keyValueStore: Application.appDelegate.keyValueStore)
+    }
 
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
@@ -138,7 +142,7 @@ final class PromoDebugMenu: NSMenu {
 
         let resetDateItem = NSMenuItem(title: "Reset Simulated Date", action: #selector(resetSimulatedDate), keyEquivalent: "")
         resetDateItem.target = self
-        resetDateItem.isEnabled = simulatedDate != nil
+        resetDateItem.isEnabled = debugSimulatedDateStore.simulatedDate != nil
         resetDateItem.setAccessibilityIdentifier(AccessibilityIdentifiers.PromoQueue.resetSimulatedDate)
         addItem(resetDateItem)
 
@@ -151,7 +155,7 @@ final class PromoDebugMenu: NSMenu {
     }
 
     private func statusString(for promo: Promo) -> String {
-        let now = simulatedDate ?? Date()
+        let now = debugSimulatedDateStore.simulatedDate ?? Date()
         let record = cachedHistory[promo.id]
 
         if let rec = record, rec.isPermanentlyDismissed { return "dismissed" }
@@ -228,17 +232,16 @@ final class PromoDebugMenu: NSMenu {
     }
 
     private func advanceSimulatedDate(by interval: TimeInterval) {
-        simulatedDate = (simulatedDate ?? Date()).addingTimeInterval(interval)
-        NSApp.delegateTyped.promoService?.setDebugSimulatedDate(simulatedDate)
+        debugSimulatedDateStore.advance(by: interval)
     }
 
     @objc private func resetSimulatedDate() {
-        simulatedDate = nil
-        NSApp.delegateTyped.promoService?.setDebugSimulatedDate(nil)
+        debugSimulatedDateStore.reset()
     }
 
     @objc private func resetAllPromoState() {
-        simulatedDate = nil
+        debugSimulatedDateStore.reset()
         NSApp.delegateTyped.promoService?.resetDebugState()
+        NSApp.delegateTyped.defaultBrowserAndDockPromptService.resetDebugState()
     }
 }

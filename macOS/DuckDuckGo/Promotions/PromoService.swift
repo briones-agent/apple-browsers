@@ -119,29 +119,24 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
 
     // MARK: - Debug / Testing
 
-    /// Debug: simulated "now" for cooldown and eligibility checks.
-    /// In-memory only; nil in production.
-    private var debugSimulatedDate: Date?
+    /// Provides "now" for cooldown and eligibility checks. In DEBUG/REVIEW may read from shared DebugSimulatedDateStore.
+    private let dateProvider: () -> Date
+
+    /// Optional callback to clear the shared debug date when resetting. Set in DEBUG/REVIEW.
+    private let resetDebugDate: (() -> Void)?
 
     private var currentDate: Date {
-        debugSimulatedDate ?? Date()
+        dateProvider()
     }
 
     /// Test-only accessor for draining the state queue. Use `drainStateQueue()` in tests.
     var testQueue: DispatchQueue { stateQueue }
 
-    /// Debug: Set a simulated "now" for cooldown and eligibility checks. In-memory only; does not persist across app launches.
-    func setDebugSimulatedDate(_ date: Date?) {
-        stateQueue.async { [weak self] in
-            self?.debugSimulatedDate = date
-        }
-    }
-
     /// Clears debug date override and all promo history. For debug reset.
     func resetDebugState() {
         stateQueue.async { [weak self] in
             guard let self else { return }
-            debugSimulatedDate = nil
+            resetDebugDate?()
             for (_, session) in activeSessions {
                 session.showTask?.cancel()
                 session.timeout?.cancel()
@@ -266,12 +261,16 @@ final class PromoService: @unchecked Sendable, PromoHistoryProviding {
         stateQueue: DispatchQueue = DispatchQueue(label: "com.duckduckgo.promoService.state"),
         evaluationDeferralWindow: TimeInterval = 0.5,
         registrationFallbackTimeout: TimeInterval = 1.0,
-        externalActivationWindow: TimeInterval = 5.0
+        externalActivationWindow: TimeInterval = 5.0,
+        dateProvider: @escaping () -> Date = Date.init,
+        resetDebugDate: (() -> Void)? = nil
     ) {
         self.promos = promos
         self.historyStore = historyStore
         self.triggerPublisher = triggerPublisher
         self.stateQueue = stateQueue
+        self.dateProvider = dateProvider
+        self.resetDebugDate = resetDebugDate
         self.registrationTimeout = TimedFlag(queue: stateQueue, clearAfter: registrationFallbackTimeout)
         self.triggerEvaluationDeferral = TimedFlag(queue: stateQueue, clearAfter: evaluationDeferralWindow)
         self.externalActivationSuppression = TimedFlag(queue: stateQueue, clearAfter: externalActivationWindow)
