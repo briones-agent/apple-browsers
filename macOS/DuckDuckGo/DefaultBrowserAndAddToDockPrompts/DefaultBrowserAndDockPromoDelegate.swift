@@ -64,8 +64,8 @@ final class DefaultBrowserAndDockPromoDelegate: PromoDelegate {
     }
 
     @MainActor
-    func show(history: PromoHistoryRecord) async -> PromoResult {
-        guard isEligible, let uiHosting = uiHosting() else {
+    func show(history: PromoHistoryRecord, force: Bool) async -> PromoResult {
+        guard let uiHosting = uiHosting(), (isEligible || force) else {
             return .noChange
         }
 
@@ -75,7 +75,8 @@ final class DefaultBrowserAndDockPromoDelegate: PromoDelegate {
             presenter.tryToShowPrompt(
                 popoverAnchorProvider: { uiHosting.providePopoverAnchor() },
                 bannerViewHandler: { uiHosting.addSetAsDefaultBanner($0) },
-                inactiveUserModalWindowProvider: { uiHosting.provideModalAnchor() }
+                inactiveUserModalWindowProvider: { uiHosting.provideModalAnchor() },
+                forceShowType: force ? type : nil
             )
 
             coordinator.promptDismissedPublisher
