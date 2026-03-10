@@ -223,10 +223,20 @@ fileprivate extension URL {
     enum EnvironmentParameter {
         static let name = "environment"
         static let staging = "staging"
+        static let stagingHost = "staging.duckduckgo.com"
+        static let productionHost = "duckduckgo.com"
     }
 
     func forStaging() -> URL {
-        self.appendingParameter(name: EnvironmentParameter.name, value: EnvironmentParameter.staging)
+        var result = self
+        if var components = URLComponents(url: self, resolvingAgainstBaseURL: false),
+           components.host == EnvironmentParameter.productionHost {
+            components.host = EnvironmentParameter.stagingHost
+            if let updated = components.url {
+                result = updated
+            }
+        }
+        return result.appendingParameter(name: EnvironmentParameter.name, value: EnvironmentParameter.staging)
     }
 
 }
@@ -236,6 +246,10 @@ extension URL {
     public func forComparison() -> URL {
         guard var components = URLComponents(url: self, resolvingAgainstBaseURL: false) else {
             return self
+        }
+
+        if components.host == "staging.duckduckgo.com" {
+            components.host = "duckduckgo.com"
         }
 
         if let queryItems = components.queryItems, !queryItems.isEmpty {

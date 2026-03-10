@@ -35,7 +35,7 @@ final class SubscriptionURLTests: XCTestCase {
 
     func testExpectedDefaultBaseSubscriptionURLForStaging() throws {
         // Given
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions?environment=staging")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions?environment=staging")!
 
         // When
         let url = SubscriptionURL.baseURL.subscriptionURL(environment: .staging)
@@ -86,7 +86,8 @@ final class SubscriptionURLTests: XCTestCase {
 
             // Then
             let environmentParameter = url.getParameter(named: "environment")
-            XCTAssertEqual (environmentParameter, "staging", "Wrong environment parameter for \(url.absoluteString)")
+            XCTAssertEqual(environmentParameter, "staging", "Wrong environment parameter for \(url.absoluteString)")
+            XCTAssertEqual(url.host, "staging.duckduckgo.com", "Wrong host for \(url.absoluteString)")
         }
     }
 
@@ -114,7 +115,7 @@ final class SubscriptionURLTests: XCTestCase {
 
     func testPlansURLForStaging() throws {
         // Given
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions/plans?environment=staging")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions/plans?environment=staging")!
 
         // When
         let url = SubscriptionURL.plans.subscriptionURL(environment: .staging)
@@ -161,7 +162,7 @@ final class SubscriptionURLTests: XCTestCase {
 
     func testUpgradeToTierURLForStaging() throws {
         // Given
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions/plans?tier=plus&environment=staging")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions/plans?tier=plus&environment=staging")!
 
         // When
         let url = SubscriptionURL.upgradeToTier("plus").subscriptionURL(environment: .staging)
@@ -197,7 +198,7 @@ final class SubscriptionURLTests: XCTestCase {
     }
 
     func testURLForComparisonRemovingEnvironment() throws {
-        let url = URL(string: "https://duckduckgo.com/subscriptions?environment=staging")!
+        let url = URL(string: "https://staging.duckduckgo.com/subscriptions?environment=staging")!
         let expectedURL = URL(string: "https://duckduckgo.com/subscriptions")!
 
         XCTAssertEqual(url.forComparison(), expectedURL)
@@ -211,14 +212,14 @@ final class SubscriptionURLTests: XCTestCase {
     }
 
     func testURLForComparisonRemovesEnvironmentAndOrigin() throws {
-        let url = URL(string: "https://duckduckgo.com/subscriptions?environment=staging&origin=test")!
+        let url = URL(string: "https://staging.duckduckgo.com/subscriptions?environment=staging&origin=test")!
         let expectedURL = URL(string: "https://duckduckgo.com/subscriptions")!
 
         XCTAssertEqual(url.forComparison(), expectedURL)
     }
 
     func testURLForComparisonRemovesEnvironmentAndOriginButRetainsOtherParameters() throws {
-        let url = URL(string: "https://duckduckgo.com/subscriptions?environment=staging&foo=bar&origin=test")!
+        let url = URL(string: "https://staging.duckduckgo.com/subscriptions?environment=staging&foo=bar&origin=test")!
         let expectedURL = URL(string: "https://duckduckgo.com/subscriptions?foo=bar")!
 
         XCTAssertEqual(url.forComparison(), expectedURL)
@@ -275,7 +276,7 @@ final class SubscriptionURLTests: XCTestCase {
     func testPurchaseURLComponentsWithOriginForStaging() throws {
         // Given
         let origin = "funnel_appsettings_ios"
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions?environment=staging&origin=funnel_appsettings_ios")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions?environment=staging&origin=funnel_appsettings_ios")!
 
         // When
         let components = SubscriptionURL.purchaseURLComponentsWithOrigin(origin, environment: .staging)
@@ -316,7 +317,7 @@ final class SubscriptionURLTests: XCTestCase {
         // Given
         let origin = "funnel_appsettings_ios"
         let featurePage = "duckai"
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions?environment=staging&origin=funnel_appsettings_ios&featurePage=duckai")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions?environment=staging&origin=funnel_appsettings_ios&featurePage=duckai")!
 
         // When
         let components = SubscriptionURL.purchaseURLComponentsWithOriginAndFeaturePage(origin: origin, featurePage: featurePage, environment: .staging)
@@ -396,7 +397,7 @@ final class SubscriptionURLTests: XCTestCase {
     func testPlansURLComponentsForStaging() throws {
         // Given
         let origin = "funnel_appsettings_ios"
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions/plans?environment=staging&origin=funnel_appsettings_ios")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions/plans?environment=staging&origin=funnel_appsettings_ios")!
 
         // When
         let components = SubscriptionURL.plansURLComponents(origin, environment: .staging)
@@ -422,7 +423,7 @@ final class SubscriptionURLTests: XCTestCase {
     func testPlansURLComponentsWithTierForStaging() throws {
         // Given
         let origin = "funnel_appsettings_ios"
-        let expectedURL = URL(string: "https://duckduckgo.com/subscriptions/plans?environment=staging&origin=funnel_appsettings_ios&tier=pro")!
+        let expectedURL = URL(string: "https://staging.duckduckgo.com/subscriptions/plans?environment=staging&origin=funnel_appsettings_ios&tier=pro")!
 
         // When
         let components = SubscriptionURL.plansURLComponents(origin, tier: "pro", environment: .staging)
