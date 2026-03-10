@@ -70,9 +70,9 @@ final class PromoServiceFactoryTests: XCTestCase {
     }
 
     func testFactoryCreatesDefaultBrowserAndDockPromosWithCorrectConfiguration() async {
-        let popoverPromo = await PromoServiceFactory.defaultBrowserAndDockPopover(dependencies: dependencies)
-        let bannerPromo = await PromoServiceFactory.defaultBrowserAndDockBanner(dependencies: dependencies)
-        let inactiveModalPromo = await PromoServiceFactory.defaultBrowserAndDockInactiveModal(dependencies: dependencies)
+        let popoverPromo = await PromoServiceFactory.defaultBrowserAndDockPopover(service: dependencies.defaultBrowserAndDockPromptService)
+        let bannerPromo = await PromoServiceFactory.defaultBrowserAndDockBanner(service: dependencies.defaultBrowserAndDockPromptService)
+        let inactiveModalPromo = await PromoServiceFactory.defaultBrowserAndDockInactiveModal(service: dependencies.defaultBrowserAndDockPromptService)
 
         for promo in [popoverPromo, bannerPromo, inactiveModalPromo] {
             XCTAssertEqual(promo.triggers, [.windowBecameKey, .appLaunched])
