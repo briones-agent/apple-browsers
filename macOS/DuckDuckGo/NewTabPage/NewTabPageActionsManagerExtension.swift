@@ -140,16 +140,9 @@ extension NewTabPageActionsManager {
             getLegacyIsViewExpandedSetting: UserDefaultsWrapper<Bool>(key: .homePageShowAllFavorites, defaultValue: true).wrappedValue
         )
 
-        let themePopoverPersistor = ThemePopoverUserDefaultsPersistor(keyValueStore: keyValueStore)
-        let themePopoverDecider = ThemePopoverDecider(appearancePreferences: appearancePreferences,
-                                                      featureFlagger: featureFlagger,
-                                                      firstLaunchDate: AppDelegate.firstLaunchDate,
-                                                      persistor: themePopoverPersistor)
-
         let customizationProvider = NewTabPageCustomizationProvider(
             customizationModel: customizationModel,
-            appearancePreferences: appearancePreferences,
-            themePopoverDecider: themePopoverDecider
+            appearancePreferences: appearancePreferences
         )
         let freemiumDBPBannerProvider = NewTabPageFreemiumDBPBannerProvider(model: freemiumDBPPromotionViewCoordinator)
         let winBackOfferBannerProvider = NewTabPageWinBackOfferBannerProvider(model: winBackOfferPromotionViewCoordinator)
@@ -188,7 +181,19 @@ extension NewTabPageActionsManager {
         )
         let omnibarConfigProvider = NewTabPageOmnibarConfigProvider(
             keyValueStore: keyValueStore,
-            aiChatShortcutSettingProvider: newTabPageAIChatShortcutSettingProvider
+            aiChatShortcutSettingProvider: newTabPageAIChatShortcutSettingProvider,
+            featureFlagger: featureFlagger
+        )
+        let aiChatsProvider = NewTabPageOmnibarAiChatsProvider(
+            featureFlagger: featureFlagger,
+            configProvider: omnibarConfigProvider,
+            suggestionsReader: AIChatSuggestionsReader(
+                suggestionsReader: SuggestionsReader(
+                    featureFlagger: featureFlagger,
+                    privacyConfig: contentBlocking.privacyConfigurationManager
+                ),
+                historySettings: AIChatHistorySettings(privacyConfig: contentBlocking.privacyConfigurationManager)
+            )
         )
         let stateProvider = NewTabPageStateProvider(
             windowControllersManager: windowControllersManager,
@@ -240,6 +245,7 @@ extension NewTabPageActionsManager {
             NewTabPageRecentActivityClient(model: recentActivityModel),
             NewTabPageOmnibarClient(configProvider: omnibarConfigProvider,
                                     suggestionsProvider: suggestionsProvider,
+                                    aiChatsProvider: aiChatsProvider,
                                     actionHandler: omnibarActionHandler),
             NewTabPageWinBackOfferClient(provider: winBackOfferBannerProvider)
         ])

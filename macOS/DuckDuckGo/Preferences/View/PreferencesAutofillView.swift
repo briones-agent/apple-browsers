@@ -17,9 +17,11 @@
 //
 
 import PreferencesUI_macOS
+import BWManagementShared
 import SwiftUI
 import SwiftUIExtensions
 import PixelKit
+import Combine
 
 fileprivate extension Preferences.Const {
     static let autoLockWarningOffset: CGFloat = {
@@ -35,7 +37,8 @@ extension Preferences {
 
     struct AutofillView: View {
         @ObservedObject var model: AutofillPreferencesModel
-        @ObservedObject var bitwardenManager = BWManager.shared
+        private let bitwardenManager = Application.appDelegate.bitwardenManager
+        @State private var bitwardenStatus: BWStatus = Application.appDelegate.bitwardenManager?.status ?? .disabled
         @State private var showingResetNeverPromptSitesSheet = false
 
         var passwordManagerBinding: Binding<PasswordManager> {
@@ -120,7 +123,7 @@ extension Preferences {
                             Text(UserText.autofillPasswordManagerBitwarden).tag(PasswordManager.bitwarden)
                         }
                         if model.passwordManager == .bitwarden && !model.isBitwardenSetupFlowPresented {
-                            bitwardenStatusView(for: bitwardenManager.status)
+                            bitwardenStatusView(for: bitwardenStatus)
                         }
                     }
 
@@ -189,6 +192,17 @@ extension Preferences {
                     .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
                     TextMenuItemCaption(UserText.autofillNeverLockWarning)
                 }
+
+                if Application.appDelegate.featureFlagger.isFeatureOn(.autofillPasswordsStatusBar) {
+                    // SECTION 5: Menu Bar
+                    PreferencePaneSection {
+                        TextMenuItemHeader(UserText.passwordsMenuBarSection)
+                        ToggleMenuItem(UserText.showPasswordsInMenuBar, isOn: $model.showInMenuBar)
+                    }
+                }
+            }
+            .onReceive(bitwardenStatusPublisher) { status in
+                bitwardenStatus = status
             }
         }
 
@@ -213,6 +227,13 @@ extension Preferences {
 
         private var shouldShowImportExportButtons: Bool {
             return model.passwordManager == .duckduckgo
+        }
+
+        private var bitwardenStatusPublisher: AnyPublisher<BWStatus, Never> {
+            if let bitwardenManager {
+                return bitwardenManager.statusPublisher.eraseToAnyPublisher()
+            }
+            return Just(.disabled).eraseToAnyPublisher()
         }
 
         @ViewBuilder private func bitwardenStatusView(for status: BWStatus) -> some View {
