@@ -119,6 +119,7 @@ struct SettingsGeneralView: View {
                         SettingsCellView(label: UserText.settingsAutoplayLabel,
                                          accessory: .rightDetail(viewModel.state.autoplayBlockingMode.description))
                     }
+                    .listRowBackground(Color(designSystemColor: .surface)) // This is needed because of the combination of ConditionalContent + NavigationLink wrappers. This line should be removed when cleaning up the feature flag.
                 }
             }
 
