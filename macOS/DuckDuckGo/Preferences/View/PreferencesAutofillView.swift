@@ -217,14 +217,6 @@ extension Preferences {
 
         // MARK: - Password Manager Availability Methods
 
-        private var shouldShowBitwardenNativeOption: Bool {
-            #if !APPSTORE
-            return true
-            #else
-            return false
-            #endif
-        }
-
         private var shouldShowImportExportButtons: Bool {
             return model.passwordManager == .duckduckgo
         }

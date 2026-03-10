@@ -424,7 +424,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.startupProfiler = startupProfiler
         self.dockCustomization = dockCustomization
 
-        if [.unitTests, .integrationTests, .xcPreviews].contains(AppVersion.runType) {
+        if [.unitTests, .integrationTests].contains(AppVersion.runType) {
             keyStore = (NSClassFromString("MockEncryptionKeyStore") as? EncryptionKeyStoring.Type)!.init()
         } else {
             keyStore = EncryptionKeyStore()
