@@ -26,15 +26,18 @@ import Persistence
 /// On app background, saves the current chat count.
 /// On app foreground, if 7+ days have passed, compares the saved count
 /// with the current count and fires a pixel if chats have disappeared.
+///
+/// Callers use the synchronous `resume()` / `suspend()` entry points;
+/// the validator manages its own async execution internally.
 protocol AIChatDisappearanceValidating {
-    @MainActor func saveChatSnapshot() async
-    @MainActor func checkForUnexpectedDeletion() async
+    func resume()
+    func suspend()
 }
 
 struct AIChatDisappearanceValidator: AIChatDisappearanceValidating {
 
     private let storage: ThrowingKeyValueStoring
-    private let suggestionsReaderProvider: @MainActor () -> SuggestionsReading
+    private let suggestionsReaderProvider: @MainActor @Sendable () -> SuggestionsReading
     private let pixelFiring: PixelFiring.Type
 
     enum Keys {
@@ -45,14 +48,42 @@ struct AIChatDisappearanceValidator: AIChatDisappearanceValidating {
     static let sevenDaysInSeconds: TimeInterval = 7 * 24 * 60 * 60
 
     init(storage: ThrowingKeyValueStoring,
-         suggestionsReaderProvider: @escaping @MainActor () -> SuggestionsReading,
+         suggestionsReaderProvider: @escaping @MainActor @Sendable () -> SuggestionsReading,
          pixelFiring: PixelFiring.Type = Pixel.self) {
         self.storage = storage
         self.suggestionsReaderProvider = suggestionsReaderProvider
         self.pixelFiring = pixelFiring
     }
 
-    /// Saves the current chat count. Call when the app enters background.
+    // MARK: - Synchronous entry points
+
+    /// Call when the app enters foreground. Internally schedules async check.
+    func resume() {
+        let storage = storage
+        let readerProvider = suggestionsReaderProvider
+        let pixelFiring = pixelFiring
+        Task { @MainActor in
+            let validator = AIChatDisappearanceValidator(storage: storage,
+                                                         suggestionsReaderProvider: readerProvider,
+                                                         pixelFiring: pixelFiring)
+            await validator.checkForUnexpectedDeletion()
+        }
+    }
+
+    /// Call when the app enters background. Internally schedules async snapshot.
+    func suspend() {
+        let storage = storage
+        let readerProvider = suggestionsReaderProvider
+        Task { @MainActor in
+            let validator = AIChatDisappearanceValidator(storage: storage,
+                                                         suggestionsReaderProvider: readerProvider)
+            await validator.saveChatSnapshot()
+        }
+    }
+
+    // MARK: - Async implementation
+
+    /// Saves the current chat count.
     @MainActor
     func saveChatSnapshot() async {
         let reader = suggestionsReaderProvider()
@@ -68,7 +99,6 @@ struct AIChatDisappearanceValidator: AIChatDisappearanceValidating {
 
     /// Checks if chats have unexpectedly disappeared since the last snapshot.
     /// Only runs if 7+ days have passed since the last save.
-    /// Call when the app enters foreground.
     @MainActor
     func checkForUnexpectedDeletion() async {
         guard let savedCount = try? storage.object(forKey: Keys.savedChatCount) as? Int,

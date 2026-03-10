@@ -19,7 +19,6 @@
 
 import UIKit
 import Core
-import AIChat
 import Persistence
 
 private extension BoolFileMarker.Name {
@@ -163,25 +162,6 @@ struct Foreground: ForegroundHandling {
         appDependencies.mainCoordinator.onForeground(isFirstForeground: isFirstForeground)
 
         appDependencies.backgroundTaskManager.endBackgroundTask()
-
-        let switchBarRetentionMetrics = SwitchBarRetentionMetrics(aiChatSettings: appDependencies.aiChatSettings)
-        switchBarRetentionMetrics.checkDailyAndSendPixelIfApplicable()
-
-        checkForDisappearedChats()
-    }
-
-    private func checkForDisappearedChats() {
-        guard appDependencies.featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics) else { return }
-        let store = appDependencies.services.keyValueFileStoreService.keyValueFilesStore
-        let featureFlagger = appDependencies.featureFlagger
-        let privacyConfig = appDependencies.services.contentBlockingService.common.privacyConfigurationManager
-        Task {
-            let validator = AIChatDisappearanceValidator(
-                storage: store,
-                suggestionsReaderProvider: { SuggestionsReader(featureFlagger: featureFlagger, privacyConfig: privacyConfig) }
-            )
-            await validator.checkForUnexpectedDeletion()
-        }
     }
 
     private func configureAppearance() {

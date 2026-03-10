@@ -276,7 +276,10 @@ struct Launching: LaunchingHandling {
                                systemSettingsPiPTutorialService: systemSettingsPiPTutorialService,
                                inactivityNotificationSchedulerService: inactivityNotificationSchedulerService,
                                wideEventService: wideEventService,
-                               aiChatService: AIChatService(aiChatSettings: aiChatSettings)
+                               aiChatService: AIChatService(aiChatSettings: aiChatSettings,
+                                                             featureFlagger: featureFlagger,
+                                                             storage: appKeyValueFileStoreService.keyValueFilesStore,
+                                                             privacyConfigurationManager: contentBlockingService.common.privacyConfigurationManager)
         )
 
         // Clean up wide event data at launch

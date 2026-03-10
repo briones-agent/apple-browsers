@@ -107,6 +107,7 @@ class FireExecutor: FireExecuting {
     private let appSettings: AppSettings
     private let privacyStats: PrivacyStatsProviding?
     private let aiChatSyncCleaner: AIChatSyncCleaning
+    private let suggestionsReaderProvider: SuggestionsReaderProvider
 
     weak var delegate: FireExecutorDelegate?
     private var burnInProgress = false

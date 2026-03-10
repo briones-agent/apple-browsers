@@ -19,7 +19,6 @@
 
 import UIKit
 import Core
-import AIChat
 import Persistence
 
 /// Represents the state where the app is in the background and not visible to the user.
@@ -56,8 +55,6 @@ struct Background: BackgroundHandling {
         try? lastBackgroundDateStorage.set(Date(), for: \.lastBackgroundDate)
         appDependencies.backgroundTaskManager.startBackgroundTask()
 
-        saveChatSnapshot()
-
         services.dbpService.onBackground()
         services.vpnService.suspend()
         services.aiChatService.suspend()
@@ -70,20 +67,6 @@ struct Background: BackgroundHandling {
         appDependencies.mainCoordinator.onBackground()
 
         updateApplicationShortcutItems()
-    }
-
-    private func saveChatSnapshot() {
-        guard appDependencies.featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics) else { return }
-        let store = appDependencies.services.keyValueFileStoreService.keyValueFilesStore
-        let featureFlagger = appDependencies.featureFlagger
-        let privacyConfig = appDependencies.services.contentBlockingService.common.privacyConfigurationManager
-        Task { @MainActor in
-            let validator = AIChatDisappearanceValidator(
-                storage: store,
-                suggestionsReaderProvider: { SuggestionsReader(featureFlagger: featureFlagger, privacyConfig: privacyConfig) }
-            )
-            await validator.saveChatSnapshot()
-        }
     }
 
     private func updateApplicationShortcutItems() {

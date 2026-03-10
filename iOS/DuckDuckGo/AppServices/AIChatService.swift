@@ -20,12 +20,25 @@
 import UIKit
 import Core
 import AIChat
+import Persistence
+import protocol PrivacyConfig.FeatureFlagger
+import protocol PrivacyConfig.PrivacyConfigurationManaging
 
 final class AIChatService: NSObject {
 
     private let aiChatSettings: AIChatSettingsProvider
-    init(aiChatSettings: AIChatSettingsProvider) {
+    private let featureFlagger: FeatureFlagger
+    private let storage: ThrowingKeyValueStoring
+    private let privacyConfigurationManager: PrivacyConfigurationManaging
+
+    init(aiChatSettings: AIChatSettingsProvider,
+         featureFlagger: FeatureFlagger,
+         storage: ThrowingKeyValueStoring,
+         privacyConfigurationManager: PrivacyConfigurationManaging) {
         self.aiChatSettings = aiChatSettings
+        self.featureFlagger = featureFlagger
+        self.storage = storage
+        self.privacyConfigurationManager = privacyConfigurationManager
         super.init()
     }
 
@@ -33,14 +46,32 @@ final class AIChatService: NSObject {
 
     @MainActor
     func resume() {
-        // No-op
+        let switchBarRetentionMetrics = SwitchBarRetentionMetrics(aiChatSettings: aiChatSettings)
+        switchBarRetentionMetrics.checkDailyAndSendPixelIfApplicable()
+
+        guard featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics) else { return }
+        disappearanceValidator().resume()
     }
 
     // MARK: - Suspend
 
     func suspend() {
-        // No-op
+        guard featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics) else { return }
+        disappearanceValidator().suspend()
     }
+
+    // MARK: - Disappearance Diagnostics
+
+    private func disappearanceValidator() -> AIChatDisappearanceValidator {
+        let featureFlagger = featureFlagger
+        let privacyConfig = privacyConfigurationManager
+        return AIChatDisappearanceValidator(
+            storage: storage,
+            suggestionsReaderProvider: { SuggestionsReader(featureFlagger: featureFlagger, privacyConfig: privacyConfig) }
+        )
+    }
+
+    // MARK: - Shortcut Items
 
     func shortcutItem() -> UIApplicationShortcutItem? {
         aiChatSettings.isAIChatEnabled ?
