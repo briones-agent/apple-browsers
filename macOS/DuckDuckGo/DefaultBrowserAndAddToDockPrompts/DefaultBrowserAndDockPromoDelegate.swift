@@ -72,6 +72,7 @@ final class DefaultBrowserAndDockPromoDelegate: PromoDelegate {
         }
 
         return await withCheckedContinuation { continuation in
+            cancellables.removeAll()
             showContinuation = continuation
 
             func resumeWithNoChange() {
@@ -89,9 +90,10 @@ final class DefaultBrowserAndDockPromoDelegate: PromoDelegate {
             )
 
             coordinator.promptDismissedPublisher
-                .filter { $0.0 == self.type }
+                .filter { [weak self] (dismissedType, _) in
+                    dismissedType == self?.type
+                }
                 .first()
-                .receive(on: DispatchQueue.main)
                 .sink { [weak self] _, result in
                     self?.showContinuation?.resume(returning: result)
                     self?.showContinuation = nil

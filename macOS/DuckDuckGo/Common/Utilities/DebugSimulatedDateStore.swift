@@ -16,8 +16,6 @@
 //  limitations under the License.
 //
 
-#if DEBUG || REVIEW
-
 import Foundation
 import Persistence
 
@@ -59,5 +57,3 @@ final class DebugSimulatedDateStore {
         try? keyValueStore.removeObject(forKey: Key.simulatedDate.rawValue)
     }
 }
-
-#endif
