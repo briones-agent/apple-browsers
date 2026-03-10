@@ -1,3 +1,9 @@
+/* TEST: Remove before merging - scoped upload validation */
+"smartling.test.scoped.upload" = "This is a test string for validating scoped Smartling uploads";
+
+/* TEST: Remove before merging - second test string */
+"smartling.test.scoped.upload.second" = "Second test string to verify multiple new units are detected";
+
 /* Buton label for Edit action */
 "action.generic.edit" = "Edit";
 
