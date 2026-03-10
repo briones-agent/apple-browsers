@@ -18,10 +18,8 @@
 
 import BWManagementShared
 import Combine
-import Common
 import PixelKit
 import PreferencesUI_macOS
-import BWManagementShared
 import SwiftUI
 import SwiftUIExtensions
 
@@ -98,8 +96,8 @@ extension Preferences {
                         .foregroundColor(.textSecondary)
                 }
 
-                // SECTION 1: Password Manager
                 if !NSApp.isSandboxed {
+                    // SECTION 1: Password Manager
                     PreferencePaneSection(UserText.autofillPasswordManager) {
                         VStack(alignment: .leading, spacing: 6) {
                             passwordManagerPicker(passwordManagerBinding) {
@@ -119,9 +117,16 @@ extension Preferences {
                             .padding(.leading, 15)
                             .padding(.bottom, 4)
                         }
-                        if model.passwordManager == .bitwarden && !model.isBitwardenSetupFlowPresented {
-                            bitwardenStatusView(for: bitwardenStatus)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            passwordManagerPicker(passwordManagerBinding) {
+                                Text(UserText.autofillPasswordManagerBitwarden).tag(PasswordManager.bitwarden)
+                            }
+                            if model.passwordManager == .bitwarden && !model.isBitwardenSetupFlowPresented {
+                                bitwardenStatusView(for: bitwardenStatus)
+                            }
                         }
+
                     }
                 }
 
@@ -213,7 +218,11 @@ extension Preferences {
         // MARK: - Password Manager Availability Methods
 
         private var shouldShowBitwardenNativeOption: Bool {
-            !NSApp.isSandboxed
+            #if !APPSTORE
+            return true
+            #else
+            return false
+            #endif
         }
 
         private var shouldShowImportExportButtons: Bool {
