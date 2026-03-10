@@ -1196,6 +1196,7 @@ final class DaxDialog: XCTestCase {
 
 final class MockOnboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHelping {
 
+    var promoTitle = ""
     var proceedButtonText = ""
 
     var isFeatureEnabledValue: Bool = false

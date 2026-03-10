@@ -2547,6 +2547,8 @@ https://duckduckgo.com/mac";
 
 /* Title for the returning-user restore prompt */
 "onboarding.restore.prompt.title" = "Let’s pick up where you left off";
+/* The title of the delayed subscription promotion dialog shown to users who skipped onboarding */
+"onboarding.privacypro.promo.title.delayed" = "Did you know?";
 
 /* The title of the button to skip the onboarding and start browsing. */
 "onboarding.skip.cta.confirmSkip" = "Start Browsing";

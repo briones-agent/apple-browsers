@@ -29,6 +29,9 @@ import Subscription
 /// as well as utilities for experiment tracking and pixel firing related to the promotion.
 protocol OnboardingSubscriptionPromotionHelping {
 
+    /// Title to display on the promotion dialog
+    var promoTitle: String { get }
+
     /// Text to display on the promotion proceed button
     var proceedButtonText: String { get }
 
@@ -118,6 +121,13 @@ struct OnboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHel
         self.currentDateProvider = currentDateProvider
     }
     
+    /// Title to display on the promotion dialog
+    ///
+    /// Returns "Did you know?" for the delayed promo (skipped onboarding), or "Oh, before I forget..." for the standard post-onboarding promo.
+    var promoTitle: String {
+        shouldDisplayForSkippedOnboarding ? UserText.SubscriptionPromotionOnboarding.Promo.delayedTitle : UserText.SubscriptionPromotionOnboarding.Promo.title
+    }
+
     /// Text to display on the promotion proceed button
     ///
     /// This property checks if the user is eligible for a free trial and returns a suitable string to match their free trial eligibility.
