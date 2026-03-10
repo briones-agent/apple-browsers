@@ -1476,6 +1476,8 @@ class TabViewController: UIViewController {
             return nil
         }
 
+        let autoplayBlockingMode = featureFlagger.isFeatureOn(.autoplayBlocking) ? autoplaySettings.currentAutoplayBlockingMode.rawValue : nil
+
         return PrivacyDashboardViewController.BreakageAdditionalInfo(currentURL: currentURL,
                                                                      httpsForced: httpsForced,
                                                                      ampURLString: linkProtection.lastAMPURLString ?? "",
@@ -1488,7 +1490,7 @@ class TabViewController: UIViewController {
                                                                      userRefreshCount: refreshCountSinceLoad,
                                                                      breakageReportingSubfeature: breakageReportingSubfeature,
                                                                      isForceDarkModeEnabled: darkReaderFeatureSettings.isForceDarkModeEnabled,
-                                                                     autoplayBlockingMode: autoplaySettings.currentAutoplayBlockingMode.rawValue,
+                                                                     autoplayBlockingMode: autoplayBlockingMode,
                                                                      isAfterSuppressedXSafariRedirect: safariRedirectHandler.isAfterSuppressedXSafariRedirect(for: currentURL))
     }
 
