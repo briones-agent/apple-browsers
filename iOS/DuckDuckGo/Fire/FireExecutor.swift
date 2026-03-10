@@ -219,7 +219,7 @@ class FireExecutor: FireExecuting {
         _ = await (dataTask, aiTask)
         
         // Check if chats disappeared while the setting was OFF
-        await fireClearedWithSettingOffPixelIfNeeded(chatCountBefore: chatCountBefore, trigger: request.trigger)
+        await fireClearedWithSettingOffPixelIfNeeded(chatCountBefore: chatCountBefore)
         // Notify delegate that we finished
         await didFinishBurning(fireRequest: request)
         
@@ -494,7 +494,7 @@ class FireExecutor: FireExecuting {
     /// After a successful clear, fetches chat count again and fires a diagnostic pixel
     /// if chats were deleted while the autoClearAIChatHistory setting was OFF.
     @MainActor
-    private func fireClearedWithSettingOffPixelIfNeeded(chatCountBefore: Int?, trigger: FireRequest.Trigger) async {
+    private func fireClearedWithSettingOffPixelIfNeeded(chatCountBefore: Int?) async {
         guard let before = chatCountBefore, before > 0 else { return }
 
         let reader = suggestionsReaderProvider()
