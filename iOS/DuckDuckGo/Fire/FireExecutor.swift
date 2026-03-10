@@ -191,8 +191,10 @@ class FireExecutor: FireExecuting {
         let shouldBurnData = request.options.contains(.data)
         let shouldBurnAIChats = shouldBurnAIHistory(request)
 
-        // Snapshot chat count before burning when the setting is OFF
-        let chatCountBefore = await fetchChatCountIfSettingOff()
+        // Snapshot chat count before burning when the setting is OFF (diagnostics only)
+        let chatCountBefore: Int? = featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics)
+            ? await fetchChatCountIfSettingOff()
+            : nil
 
         // Pre-fetch domains once for tab scope when tabs or data burning is needed
         let domains: [String]?

@@ -352,6 +352,9 @@ public enum FeatureFlag: String {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213554455515126?focus=true
     case customXSafariRedirectHandling
+
+    /// Temporary diagnostic pixel to detect unexpected Duck.ai chat disappearances
+    case aiChatDisappearanceDiagnostics
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -380,6 +383,7 @@ extension FeatureFlag: FeatureFlagDescribing {
              .tabSwitcherTrackerCount,
              .iPadDuckaiOnTab,
              .suppressTrackerAnimationOnColdStart,
+             .aiChatDisappearanceDiagnostics,
              .customXSafariRedirectHandling:
             true
         default:
@@ -486,7 +490,8 @@ extension FeatureFlag: FeatureFlagDescribing {
              .supportsSyncChatsDeletion,
              .fireMode,
              .suppressTrackerAnimationOnColdStart,
-             .customXSafariRedirectHandling:
+             .customXSafariRedirectHandling,
+             .aiChatDisappearanceDiagnostics:
             return true
         case .showSettingsCompleteSetupSection:
             if #available(iOS 18.2, *) {
@@ -748,6 +753,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.suppressTrackerAnimationOnColdStart))
         case .customXSafariRedirectHandling:
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.customXSafariRedirectHandling))
+        case .aiChatDisappearanceDiagnostics:
+            return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.aiChatDisappearanceDiagnostics))
         }
     }
 }

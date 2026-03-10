@@ -171,15 +171,16 @@ struct Foreground: ForegroundHandling {
     }
 
     private func checkForDisappearedChats() {
+        guard appDependencies.featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics) else { return }
         let store = appDependencies.services.keyValueFileStoreService.keyValueFilesStore
         let featureFlagger = appDependencies.featureFlagger
         let privacyConfig = appDependencies.services.contentBlockingService.common.privacyConfigurationManager
         Task {
-            let monitor = AIChatDisappearanceValidator(
+            let validator = AIChatDisappearanceValidator(
                 storage: store,
                 suggestionsReaderProvider: { SuggestionsReader(featureFlagger: featureFlagger, privacyConfig: privacyConfig) }
             )
-            await monitor.checkForUnexpectedDeletion()
+            await validator.checkForUnexpectedDeletion()
         }
     }
 

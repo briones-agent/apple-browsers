@@ -73,15 +73,16 @@ struct Background: BackgroundHandling {
     }
 
     private func saveChatSnapshot() {
+        guard appDependencies.featureFlagger.isFeatureOn(.aiChatDisappearanceDiagnostics) else { return }
         let store = appDependencies.services.keyValueFileStoreService.keyValueFilesStore
         let featureFlagger = appDependencies.featureFlagger
         let privacyConfig = appDependencies.services.contentBlockingService.common.privacyConfigurationManager
         Task { @MainActor in
-            let monitor = AIChatDisappearanceValidator(
+            let validator = AIChatDisappearanceValidator(
                 storage: store,
                 suggestionsReaderProvider: { SuggestionsReader(featureFlagger: featureFlagger, privacyConfig: privacyConfig) }
             )
-            await monitor.saveChatSnapshot()
+            await validator.saveChatSnapshot()
         }
     }
 

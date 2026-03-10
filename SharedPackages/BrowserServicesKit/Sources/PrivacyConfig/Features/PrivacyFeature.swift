@@ -238,6 +238,8 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     case suppressTrackerAnimationOnColdStart
 
     case customXSafariRedirectHandling
+
+    case aiChatDisappearanceDiagnostics
 }
 
 public enum TabManagerSubfeature: String, PrivacySubfeature {
