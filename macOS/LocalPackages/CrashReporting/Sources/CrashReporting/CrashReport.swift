@@ -26,7 +26,6 @@ protocol CrashReport: CrashReportPresenting {
     static var fileExtension: String { get }
 
     var url: URL { get }
-    var content: String? { get }
     var contentData: Data? { get }
     var appVersion: String? { get }
     var bundleID: String? { get }
@@ -69,6 +68,7 @@ final class LegacyCrashReport: CrashReport {
             })
             .joined(separator: "\n") else { return nil }
 
+        // prepend crash log message if loaded
         let pid = fileContents.firstMatch(of: Self.pidRegex)?.range(at: 1, in: fileContents).flatMap { pid_t(fileContents[$0]) }
         let timestamp = fileContents.firstMatch(of: Self.timestampRegex)?.range(at: 1, in: fileContents).flatMap {
             Self.dateFormatter.date(from: String(fileContents[$0]))
@@ -126,6 +126,7 @@ final class JSONCrashReport: CrashReport {
             fileContents = fileContents.replacingOccurrences(of: patternToReplace, with: redactedKeyValuePair, options: .regularExpression)
         }
 
+        // append crash log message and stack trace if loaded
         let pid = fileContents.firstMatch(of: Self.pidRegex)?.range(at: 1, in: fileContents).flatMap { pid_t(fileContents[$0]) }
         let timestamp = fileContents.firstMatch(of: Self.timestampRegex)?.range(at: 1, in: fileContents).flatMap {
             Self.dateFormatter.date(from: String(fileContents[$0]))
