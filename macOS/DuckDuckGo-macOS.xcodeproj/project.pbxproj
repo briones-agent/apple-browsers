@@ -3909,8 +3909,12 @@
 		CC951ADC2EB524930047E245 /* DefaultBrowserAndDockPromptUserActivityManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC951ADA2EB524930047E245 /* DefaultBrowserAndDockPromptUserActivityManagerTests.swift */; };
 		CC951AEB2EB528490047E245 /* DefaultBrowserAndDockPromptService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC951AEA2EB528410047E245 /* DefaultBrowserAndDockPromptService.swift */; };
 		CC951AEC2EB528490047E245 /* DefaultBrowserAndDockPromptService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC951AEA2EB528410047E245 /* DefaultBrowserAndDockPromptService.swift */; };
+		CC99999B2EB9999B0047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9999972EB999970047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift */; };
+		CC99999C2EB9999C0047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9999972EB999970047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift */; };
 		CC9B678C2E607AD9003353C3 /* SessionRestorePromptPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9B678B2E607AD1003353C3 /* SessionRestorePromptPixel.swift */; };
 		CC9B678D2E607AD9003353C3 /* SessionRestorePromptPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9B678B2E607AD1003353C3 /* SessionRestorePromptPixel.swift */; };
+		CCA029942F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA029932F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift */; };
+		CCA029952F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA029932F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift */; };
 		CCA0EB212EBBCD56006944CF /* DefaultBrowserAndDockPromptInactiveUserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA0EB202EBBCD56006944CF /* DefaultBrowserAndDockPromptInactiveUserView.swift */; };
 		CCA0EB222EBBCD56006944CF /* DefaultBrowserAndDockPromptInactiveUserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA0EB202EBBCD56006944CF /* DefaultBrowserAndDockPromptInactiveUserView.swift */; };
 		CCAA80142F5B132200BB58F4 /* PromoServiceFactoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA80132F5B132200BB58F4 /* PromoServiceFactoryTests.swift */; };
@@ -6468,7 +6472,9 @@
 		CC951AD72EB5241B0047E245 /* MockDefaultBrowserAndDockPromptUserActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDefaultBrowserAndDockPromptUserActivityStore.swift; sourceTree = "<group>"; };
 		CC951ADA2EB524930047E245 /* DefaultBrowserAndDockPromptUserActivityManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserAndDockPromptUserActivityManagerTests.swift; sourceTree = "<group>"; };
 		CC951AEA2EB528410047E245 /* DefaultBrowserAndDockPromptService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserAndDockPromptService.swift; sourceTree = "<group>"; };
+		CC9999972EB999970047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserAndDockPromoDelegateTests.swift; sourceTree = "<group>"; };
 		CC9B678B2E607AD1003353C3 /* SessionRestorePromptPixel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRestorePromptPixel.swift; sourceTree = "<group>"; };
+		CCA029932F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserAndDockPromptPresentingMock.swift; sourceTree = "<group>"; };
 		CCA0EB202EBBCD56006944CF /* DefaultBrowserAndDockPromptInactiveUserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserAndDockPromptInactiveUserView.swift; sourceTree = "<group>"; };
 		CCAA80132F5B132200BB58F4 /* PromoServiceFactoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoServiceFactoryTests.swift; sourceTree = "<group>"; };
 		CCAA80322F5B290400BB58F4 /* DefaultBrowserAndDockPromptUIHosting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBrowserAndDockPromptUIHosting.swift; sourceTree = "<group>"; };
@@ -9985,6 +9991,7 @@
 		9F15567C2DDC3F8300A35DBA /* Mocks */ = {
 			isa = PBXGroup;
 			children = (
+				CCA029932F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift */,
 				CCD899FA2ECDCF72008E738B /* MockDefaultBrowserAndDockPromptNotificationPresenter.swift */,
 				CC438E222EBCEB50008537AD /* MockDefaultBrowserAndDockPromptUIProvider.swift */,
 				CCAED3582EB8E0BE00C7368E /* MockDefaultBrowserAndDockPromptUserActivityProvider.swift */,
@@ -11979,6 +11986,7 @@
 				9FB4AF522DED8BFF00BE416F /* DefaultBrowserAndDockPromptPixelEventTests.swift */,
 				CC951AC32EB51FE90047E245 /* DefaultBrowserAndDockPromptUserActivityStoreTests.swift */,
 				CC951ADA2EB524930047E245 /* DefaultBrowserAndDockPromptUserActivityManagerTests.swift */,
+				CC9999972EB999970047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift */,
 				CCD899FD2ECDD222008E738B /* DefaultBrowserAndDockPromptServiceTests.swift */,
 				CCD89A122ECE2C01008E738B /* DefaultBrowserAndDockPromptNotificationPresenterTests.swift */,
 			);
@@ -15591,6 +15599,7 @@
 				3706FDF1293F661700E42796 /* AtbAndVariantCleanupTests.swift in Sources */,
 				9FFBEE802DDF0AC90058B11A /* DefaultBrowserAndDockPromptStatusUpdateNotifierTests.swift in Sources */,
 				1D1C36E729FB019C001FA40C /* HistoryTabExtensionTests.swift in Sources */,
+				CCA029942F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift in Sources */,
 				1D9FDEBB2B9B5E090040B78C /* WebTrackingProtectionPreferencesTests.swift in Sources */,
 				CC26B6782F0D28DF00D380B6 /* MockNewTabPageNextStepsCardsActionHandler.swift in Sources */,
 				3706FDF3293F661700E42796 /* ChromiumLoginReaderTests.swift in Sources */,
@@ -15911,6 +15920,7 @@
 				37918CFA2D6F341A00250F1A /* HistoryViewActionsHandlerTests.swift in Sources */,
 				9F1556812DDC41E600A35DBA /* MockDefaultBrowserAndDockPromptStorage.swift in Sources */,
 				CCD899FF2ECDD222008E738B /* DefaultBrowserAndDockPromptServiceTests.swift in Sources */,
+				CC99999B2EB9999B0047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift in Sources */,
 				1D9FDEBE2B9B5F0F0040B78C /* CookiePopupProtectionPreferencesTests.swift in Sources */,
 				EEBBEF372CC145BA000CAAF1 /* AutofillCredentialsImportManagerTests.swift in Sources */,
 				028904212A7B25770028369C /* AppConfigurationURLProviderTests.swift in Sources */,
@@ -17724,6 +17734,7 @@
 				9FAD623A2BCFDB32007F3A65 /* WebsiteInfoHelpers.swift in Sources */,
 				9F1556792DDC3B0600A35DBA /* DefaultBrowserAndDockPromptTypeDeciderTests.swift in Sources */,
 				CCD899FE2ECDD222008E738B /* DefaultBrowserAndDockPromptServiceTests.swift in Sources */,
+				CC99999C2EB9999C0047E246 /* DefaultBrowserAndDockPromoDelegateTests.swift in Sources */,
 				56A054282C201D04007D8FAB /* MockSchemeTask.swift in Sources */,
 				CC26B6792F0D28DF00D380B6 /* MockNewTabPageNextStepsCardsActionHandler.swift in Sources */,
 				CC8E70D72F0EC71E008C8070 /* MockNewTabPageNextStepsCardsPersistor.swift in Sources */,
@@ -17812,6 +17823,7 @@
 				84AECC522DFBFADC00438ACC /* AutoClearHandlerTests.swift in Sources */,
 				CD3301292C887B1C009AA127 /* URLTokenValidatorTests.swift in Sources */,
 				AAC9C01C24CB594C00AD1325 /* TabViewModelTests.swift in Sources */,
+				CCA029952F5F385D0039B81E /* DefaultBrowserAndDockPromptPresentingMock.swift in Sources */,
 				842303DF2ED075340025F26B /* WindowsManagerPopupTests.swift in Sources */,
 				567DA93F29E8045D008AC5EE /* MockEmailStorage.swift in Sources */,
 				37CD54B727F1B28A00F1F7B9 /* DefaultBrowserPreferencesTests.swift in Sources */,

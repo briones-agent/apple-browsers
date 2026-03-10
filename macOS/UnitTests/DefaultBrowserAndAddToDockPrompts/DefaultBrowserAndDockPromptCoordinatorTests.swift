@@ -16,6 +16,7 @@
 //  limitations under the License.
 //
 
+import Combine
 import XCTest
 import BrowserServicesKit
 import FeatureFlags
@@ -23,6 +24,7 @@ import PixelKitTestingUtilities
 @testable import DuckDuckGo_Privacy_Browser
 
 final class DefaultBrowserAndDockPromptCoordinatorTests: XCTestCase {
+    private var cancellables = Set<AnyCancellable>()
     private var promptTypeDeciderMock: MockDefaultBrowserAndDockPromptTypeDecider!
     private var defaultBrowserProviderMock: DefaultBrowserProviderMock!
     private var dockCustomizerMock: DockCustomizerMock!
@@ -47,6 +49,7 @@ final class DefaultBrowserAndDockPromptCoordinatorTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        cancellables.removeAll()
         promptTypeDeciderMock = nil
         defaultBrowserProviderMock = nil
         dockCustomizerMock = nil
@@ -1026,6 +1029,256 @@ final class DefaultBrowserAndDockPromptCoordinatorTests: XCTestCase {
 
         // THEN
         pixelKitMock.verifyExpectations(file: #file, line: #line)
+    }
+
+    // MARK: - evaluateEligibility() tests
+
+    func testWhenEvaluateEligibilityCalledAndOnboardingNotCompletedThenSendsNil() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        isOnboardingCompleted = false
+        let sut = makeSUT()
+
+        // WHEN
+        sut.evaluateEligibility()
+
+        // THEN
+        XCTAssertNil(sut.eligiblePrompt.value)
+    }
+
+    func testWhenEvaluateEligibilityCalledAndAlreadyDefaultAndInDockThenSendsNil() {
+        // GIVEN
+        applicationBuildTypeMock.isSparkleBuild = true
+        defaultBrowserProviderMock.isDefault = true
+        dockCustomizerMock.dockStatus = true
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        let sut = makeSUT()
+
+        // WHEN
+        sut.evaluateEligibility()
+
+        // THEN
+        XCTAssertNil(sut.eligiblePrompt.value)
+    }
+
+    func testWhenEvaluateEligibilityCalledAndNoActivePromptThenUsesDecider() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        let sut = makeSUT()
+
+        // WHEN
+        sut.evaluateEligibility()
+
+        // THEN
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
+    }
+
+    func testWhenEvaluateEligibilityCalledAndActivePromptExistsThenResendsSamePrompt() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        let sut = makeSUT()
+        _ = sut.getPromptType() // Sets activePrompt to .active(.banner)
+        promptTypeDeciderMock.promptTypeToReturn = .active(.popover) // Decider would now return different type
+
+        // WHEN
+        sut.evaluateEligibility()
+
+        // THEN - active prompt stays eligible, decider not used for type
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
+    }
+
+    // MARK: - activePrompt + getPromptType() tests
+
+    func testWhenGetPromptTypeReturnsBannerThenPromptEligibilitySendsBanner() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        let sut = makeSUT()
+
+        // WHEN
+        _ = sut.getPromptType()
+
+        // THEN
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
+    }
+
+    func testWhenGetPromptTypeReturnsNilThenPromptEligibilitySendsNil() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = true
+        dockCustomizerMock.dockStatus = true
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        let sut = makeSUT()
+
+        // WHEN
+        _ = sut.getPromptType()
+
+        // THEN
+        XCTAssertNil(sut.eligiblePrompt.value)
+    }
+
+    // MARK: - dismissAction() promptEligibility tests
+
+    func testWhenDismissActionCalledThenPromptEligibilityNotCleared() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        let sut = makeSUT()
+        _ = sut.getPromptType() // Sets activePrompt
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
+
+        // WHEN
+        sut.dismissAction(.userInput(prompt: .active(.banner), shouldHidePermanently: false))
+
+        // THEN
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
+    }
+
+    // MARK: - promptDismissedPublisher tests
+
+    func testWhenConfirmActionCalledThenPromptDismissedPublisherEmitsActioned() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        let sut = makeSUT()
+        var received: (type: DefaultBrowserAndDockPromptPresentationType, result: PromoResult)?
+        let expectation = expectation(description: "promptDismissedPublisher")
+        sut.promptDismissedPublisher
+            .sink { type, result in
+                received = (type, result)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        // WHEN
+        sut.confirmAction(for: .active(.popover))
+
+        // THEN
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(received?.type, .active(.popover))
+        XCTAssertEqual(received?.result, .actioned)
+    }
+
+    func testWhenDismissActionUserInputForBannerNonPermanentThenEmitsIgnoredWithCooldown() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        let sut = makeSUT()
+        var received: (type: DefaultBrowserAndDockPromptPresentationType, result: PromoResult)?
+        let expectation = expectation(description: "promptDismissedPublisher")
+        sut.promptDismissedPublisher
+            .sink { type, result in
+                received = (type, result)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        // WHEN
+        sut.dismissAction(.userInput(prompt: .active(.banner), shouldHidePermanently: false))
+
+        // THEN
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(received?.type, .active(.banner))
+        XCTAssertEqual(received?.result, .ignored(cooldown: .days(14)))
+    }
+
+    func testWhenDismissActionUserInputForBannerPermanentThenEmitsIgnored() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        let sut = makeSUT()
+        var received: (type: DefaultBrowserAndDockPromptPresentationType, result: PromoResult)?
+        let expectation = expectation(description: "promptDismissedPublisher")
+        sut.promptDismissedPublisher
+            .sink { type, result in
+                received = (type, result)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        // WHEN
+        sut.dismissAction(.userInput(prompt: .active(.banner), shouldHidePermanently: true))
+
+        // THEN
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(received?.type, .active(.banner))
+        XCTAssertEqual(received?.result, .ignored())
+    }
+
+    func testWhenDismissActionUserInputForPopoverThenEmitsIgnored() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        let sut = makeSUT()
+        var received: (type: DefaultBrowserAndDockPromptPresentationType, result: PromoResult)?
+        let expectation = expectation(description: "promptDismissedPublisher")
+        sut.promptDismissedPublisher
+            .sink { type, result in
+                received = (type, result)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        // WHEN
+        sut.dismissAction(.userInput(prompt: .active(.popover), shouldHidePermanently: false))
+
+        // THEN
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(received?.type, .active(.popover))
+        XCTAssertEqual(received?.result, .ignored())
+    }
+
+    func testWhenDismissActionUserInputForInactiveThenEmitsIgnored() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        let sut = makeSUT()
+        var received: (type: DefaultBrowserAndDockPromptPresentationType, result: PromoResult)?
+        let expectation = expectation(description: "promptDismissedPublisher")
+        sut.promptDismissedPublisher
+            .sink { type, result in
+                received = (type, result)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        // WHEN
+        sut.dismissAction(.userInput(prompt: .inactive, shouldHidePermanently: false))
+
+        // THEN
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(received?.type, .inactive)
+        XCTAssertEqual(received?.result, .ignored())
+    }
+
+    func testWhenDismissActionStatusUpdateThenEmitsNoChange() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        let sut = makeSUT()
+        var received: (type: DefaultBrowserAndDockPromptPresentationType, result: PromoResult)?
+        let expectation = expectation(description: "promptDismissedPublisher")
+        sut.promptDismissedPublisher
+            .sink { type, result in
+                received = (type, result)
+                expectation.fulfill()
+            }
+            .store(in: &cancellables)
+
+        // WHEN
+        sut.dismissAction(.statusUpdate(prompt: .active(.banner)))
+
+        // THEN
+        wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(received?.type, .active(.banner))
+        XCTAssertEqual(received?.result, .noChange)
     }
 
 }
