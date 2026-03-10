@@ -94,6 +94,10 @@ final class MainMenu: NSMenu {
     var aiChatMenu = NSMenuItem(title: UserText.newAIChatMenuItem, action: #selector(AppDelegate.newAIChat), keyEquivalent: [.option, .command, "n"])
     let toggleNetworkProtectionShortcutMenuItem = NSMenuItem(title: UserText.showNetworkProtectionShortcut, action: #selector(MainViewController.toggleNetworkProtectionShortcut), keyEquivalent: "")
 
+    // MARK: Duck.ai
+    @MainActor
+    private(set) var duckAIMenu: DuckAIMenu!
+
     // MARK: Window
     let windowsMenu = NSMenu(title: UserText.mainMenuWindow)
 
@@ -169,6 +173,7 @@ final class MainMenu: NSMenu {
         self.defaultBrowserPreferences = defaultBrowserPreferences
         self.aiChatMenuConfig = aiChatMenuConfig
         self.historyMenu = HistoryMenu(historyGroupingDataSource: historyCoordinator, recentlyClosedCoordinator: recentlyClosedCoordinator, featureFlagger: featureFlagger)
+        self.duckAIMenu = DuckAIMenu(featureFlagger: featureFlagger, aiChatMenuConfig: aiChatMenuConfig)
         self.configurationURLProvider = configurationURLProvider
         self.contentScopePreferences = contentScopePreferences
         self.quitSurveyPersistor = quitSurveyPersistor
@@ -183,6 +188,7 @@ final class MainMenu: NSMenu {
             buildViewMenu()
             buildHistoryMenu()
             buildBookmarksMenu()
+            buildDuckAIMenu()
             buildWindowMenu()
             buildDebugMenu(featureFlagger: featureFlagger, historyCoordinator: historyCoordinator)
             buildHelpMenu()
@@ -407,6 +413,12 @@ final class MainMenu: NSMenu {
             })
     }
 
+    @MainActor
+    func buildDuckAIMenu() -> NSMenuItem {
+        NSMenuItem(title: UserText.duckAIMenuTitle)
+            .submenu(duckAIMenu)
+    }
+
     func buildWindowMenu() -> NSMenuItem {
         NSMenuItem(title: UserText.mainMenuWindow)
             .submenu(windowsMenu.buildItems {
@@ -604,7 +616,9 @@ final class MainMenu: NSMenu {
         aiChatCancellable = aiChatMenuConfig.valuesChangedPublisher
             .receive(on: DispatchQueue.main)
             .sink(receiveValue: { [weak self] in
-                self?.setupAIChatMenu()
+                MainActor.assumeMainThread {
+                    self?.setupAIChatMenu()
+                }
             })
     }
 
@@ -1076,8 +1090,11 @@ final class MainMenu: NSMenu {
         return menu
     }
 
+    @MainActor
     private func setupAIChatMenu() {
-        aiChatMenu.isHidden = !aiChatMenuConfig.shouldDisplayApplicationMenuShortcut
+        let isVisible = aiChatMenuConfig.shouldDisplayApplicationMenuShortcut
+        aiChatMenu.isHidden = !isVisible
+        duckAIMenu?.supermenu?.items.first(where: { $0.submenu === duckAIMenu })?.isHidden = !isVisible
     }
 
     private func updateInternalUserItem() {

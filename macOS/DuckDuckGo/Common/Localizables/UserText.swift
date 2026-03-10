@@ -681,6 +681,18 @@ struct UserText {
     static let aiChatOpenInSidebarOption = NSLocalizedString("duckai.open-in-sidebar.option", value: "Sidebar", comment: "Option to open Duck.ai chats in sidebar")
     static let aiChatOpenInFullPageOption = NSLocalizedString("duckai.open-in-full-page.option", value: "Full page", comment: "Option to open Duck.ai chats in full page")
 
+    // Duck.ai Menu
+    static let duckAIMenuTitle = NSLocalizedString("duckai.menu.title", value: "Duck.ai", comment: "Title for the Duck.ai top-level menu in the menu bar")
+    static let duckAIMenuNewVoiceChat = NSLocalizedString("duckai.menu.new-voice-chat", value: "New Voice Chat", comment: "Menu item to start a new voice chat")
+    static let duckAIMenuGenerateImage = NSLocalizedString("duckai.menu.generate-image", value: "Generate Image", comment: "Menu item to generate an image with AI")
+    static let duckAIMenuOpenDuckAI = NSLocalizedString("duckai.menu.open-duckai", value: "Open Duck.ai", comment: "Menu item to open Duck.ai in a new tab")
+    static let duckAIMenuRecentChats = NSLocalizedString("duckai.menu.recent-chats", value: "Recent Chats", comment: "Submenu title for recent AI chats")
+    static let duckAIMenuNoRecentChats = NSLocalizedString("duckai.menu.no-recent-chats", value: "No Recent Chats", comment: "Placeholder shown when there are no recent AI chats")
+    static let duckAIMenuToggleSidebar = NSLocalizedString("duckai.menu.toggle-sidebar", value: "Toggle Sidebar", comment: "Menu item to toggle the Duck.ai sidebar")
+    static let duckAIMenuDetachSidebar = NSLocalizedString("duckai.menu.detach-sidebar", value: "Detach Sidebar to Window", comment: "Menu item to detach the Duck.ai sidebar into a floating window")
+    static let duckAIMenuAttachSidebar = NSLocalizedString("duckai.menu.attach-sidebar", value: "Attach Sidebar Back", comment: "Menu item to dock the floating Duck.ai window back into the sidebar")
+    static let duckAIMenuSettings = NSLocalizedString("duckai.menu.settings", value: "AI Features Settings…", comment: "Menu item to open AI Features settings")
+
     // Duck.ai Disable Dialog
     static let aiChatDisableDialogTitle = NSLocalizedString("duckai.disable.dialog.title", value: "Disable Duck.ai?", comment: "Title for dialog asking to disable Duck.ai")
     static let aiChatDisableDialogMessage = NSLocalizedString("duckai.disable.dialog.message", value: "Duck.ai is private by design. Chats are anonymized by us and never used to train AI.\n\nDisabling Duck.ai will remove access from the New Tab Page, address bar, and browser menus.\n\nYou can re-enable it at any time.", comment: "Message explaining consequences of disabling Duck.ai")

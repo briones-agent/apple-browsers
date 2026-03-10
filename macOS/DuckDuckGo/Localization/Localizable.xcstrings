@@ -25591,6 +25591,42 @@
         }
       }
     },
+    "duckai.menu.attach-sidebar" : {
+      "comment" : "Menu item to dock the floating Duck.ai window back into the sidebar",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attach Sidebar Back"
+          }
+        }
+      }
+    },
+    "duckai.menu.detach-sidebar" : {
+      "comment" : "Menu item to detach the Duck.ai sidebar into a floating window",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detach Sidebar to Window"
+          }
+        }
+      }
+    },
+    "duckai.menu.generate-image" : {
+      "comment" : "Menu item to generate an image with AI",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Generate Image"
+          }
+        }
+      }
+    },
     "duckai.menu.new" : {
       "comment" : "Menu item to launch AI Chat",
       "extractionState" : "extracted_with_value",
@@ -25647,6 +25683,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Новый чат Duck.ai"
+          }
+        }
+      }
+    },
+    "duckai.menu.new-voice-chat" : {
+      "comment" : "Menu item to start a new voice chat",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Voice Chat"
+          }
+        }
+      }
+    },
+    "duckai.menu.no-recent-chats" : {
+      "comment" : "Placeholder shown when there are no recent AI chats",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No Recent Chats"
+          }
+        }
+      }
+    },
+    "duckai.menu.open-duckai" : {
+      "comment" : "Menu item to open Duck.ai in a new tab",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open Duck.ai"
+          }
+        }
+      }
+    },
+    "duckai.menu.recent-chats" : {
+      "comment" : "Submenu title for recent AI chats",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recent Chats"
+          }
+        }
+      }
+    },
+    "duckai.menu.settings" : {
+      "comment" : "Menu item to open AI Features settings",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "AI Features Settings…"
+          }
+        }
+      }
+    },
+    "duckai.menu.title" : {
+      "comment" : "Title for the Duck.ai top-level menu in the menu bar",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Duck.ai"
+          }
+        }
+      }
+    },
+    "duckai.menu.toggle-sidebar" : {
+      "comment" : "Menu item to toggle the Duck.ai sidebar",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Toggle Sidebar"
           }
         }
       }

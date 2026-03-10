@@ -291,6 +291,9 @@ final class MainViewController: NSViewController {
             suggestionsReader: SuggestionsReader(featureFlagger: featureFlagger, privacyConfig: contentBlocking.privacyConfigurationManager),
             historySettings: AIChatHistorySettings(privacyConfig: contentBlocking.privacyConfigurationManager)
         )
+        // Wire the suggestions reader to the Duck.ai menu for Recent Chats
+        (NSApp.mainMenu as? MainMenu)?.duckAIMenu?.setSuggestionsReader(suggestionsReader)
+
         let aiChatOmnibarController = AIChatOmnibarController(
             aiChatTabOpener: aiChatTabOpener,
             tabCollectionViewModel: tabCollectionViewModel,

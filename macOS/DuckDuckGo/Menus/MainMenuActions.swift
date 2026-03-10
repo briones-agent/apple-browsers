@@ -1241,6 +1241,51 @@ extension MainViewController {
         }
     }
 
+    // MARK: - Duck.ai Menu Actions
+
+    @objc func toggleAIChatSidebar(_ sender: Any?) {
+        aiChatCoordinator.toggleSidebar()
+    }
+
+    @objc func newVoiceChat(_ sender: Any?) {
+        let aiChatURL = AIChatRemoteSettings().aiChatURL
+            .appendingParameter(name: "tool", value: "voiceChat")
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(
+            with: .url(aiChatURL),
+            behavior: .newTab(selected: true)
+        )
+    }
+
+    @objc func generateImage(_ sender: Any?) {
+        let aiChatURL = AIChatRemoteSettings().aiChatURL
+            .appendingParameter(name: "tool", value: "generateImage")
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(
+            with: .url(aiChatURL),
+            behavior: .newTab(selected: true)
+        )
+    }
+
+    @objc func detachAIChatSidebar(_ sender: Any?) {
+        (aiChatCoordinator as? AIChatCoordinator)?.didClickDetachButton()
+    }
+
+    @objc func attachAIChatSidebar(_ sender: Any?) {
+        guard let tabID = tabCollectionViewModel.selectedTabViewModel?.tab.uuid else { return }
+        (aiChatCoordinator as? AIChatCoordinator)?.didClickAttachButton(for: tabID)
+    }
+
+    @objc func openRecentAIChat(_ sender: Any?) {
+        guard let chatId = (sender as? NSMenuItem)?.representedObject as? String else { return }
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(
+            with: .existingChat(chatId: chatId),
+            behavior: .newTab(selected: true)
+        )
+    }
+
+    @objc func openAIFeaturesSettings(_ sender: Any?) {
+        Application.appDelegate.windowControllersManager.showPreferencesTab(withSelectedPane: .aiChat)
+    }
+
     @objc func toggleDownloads(_ sender: Any) {
         var navigationBarViewController = self.navigationBarViewController
         if isInPopUpWindow {
@@ -1820,6 +1865,21 @@ extension MainViewController: NSMenuItemValidation {
 
         case #selector(MainViewController.summarize(_:)):
             return aiChatMenuConfig.shouldDisplaySummarizationMenuItem
+
+        case #selector(MainViewController.toggleAIChatSidebar(_:)),
+             #selector(MainViewController.newVoiceChat(_:)),
+             #selector(MainViewController.generateImage(_:)),
+             #selector(MainViewController.openRecentAIChat(_:)),
+             #selector(MainViewController.openAIFeaturesSettings(_:)):
+            return allowsUserInteraction
+
+        case #selector(MainViewController.detachAIChatSidebar(_:)):
+            guard let tabID = tabCollectionViewModel.selectedTabViewModel?.tab.uuid else { return false }
+            return aiChatCoordinator.isSidebarOpenForCurrentTab() && !aiChatCoordinator.isChatFloating(for: tabID)
+
+        case #selector(MainViewController.attachAIChatSidebar(_:)):
+            guard let tabID = tabCollectionViewModel.selectedTabViewModel?.tab.uuid else { return false }
+            return aiChatCoordinator.isChatFloating(for: tabID)
 
         default:
             return true

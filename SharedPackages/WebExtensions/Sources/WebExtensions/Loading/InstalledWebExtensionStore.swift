@@ -62,7 +62,7 @@ public final class InstalledWebExtensionStore: InstalledWebExtensionStoring {
     public func remove(uniqueIdentifier: String) {
         let identifiers = installedExtensions.map(\.uniqueIdentifier)
         guard identifiers.contains(uniqueIdentifier) else {
-            assertionFailure("Extension not found: \(uniqueIdentifier)")
+//            assertionFailure("Extension not found: \(uniqueIdentifier)")
             return
         }
 
