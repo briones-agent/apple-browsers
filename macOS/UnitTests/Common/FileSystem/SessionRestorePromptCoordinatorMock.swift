@@ -16,12 +16,18 @@
 //  limitations under the License.
 //
 
+import Combine
 @testable import DuckDuckGo_Privacy_Browser
 
 final class SessionRestorePromptCoordinatorMock: SessionRestorePromptCoordinating {
+    let stateSubject: CurrentValueSubject<SessionRestorePromptCoordinator.State, Never>
     var uiReady: Bool = false
     var sessionPromptShown: Bool = false
     var applicationWillTerminateCalled: Bool = false
+
+    init(initialState: SessionRestorePromptCoordinator.State = .initial) {
+        stateSubject = CurrentValueSubject(initialState)
+    }
 
     func markUIReady() {
         uiReady = true

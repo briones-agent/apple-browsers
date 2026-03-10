@@ -18,25 +18,38 @@
 
 import Foundation
 import BrowserServicesKit
+import Combine
 import PixelKit
 
 protocol SessionRestorePromptCoordinating {
+    /// Subject providing the Session Restore prompt's current state
+    var stateSubject: CurrentValueSubject<SessionRestorePromptCoordinator.State, Never> { get }
     func markUIReady()
     func showRestoreSessionPrompt(restoreAction: @escaping (Bool) -> Void)
     func applicationWillTerminate()
 }
 
 final class SessionRestorePromptCoordinator: SessionRestorePromptCoordinating {
-    private enum State {
+    enum State {
         case initial
         case restoreNeeded((Bool) -> Void)
         case uiReady
         case promptShown
         case promptDismissed
+
+        var isVisible: Bool {
+            switch self {
+            case .promptShown:
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     private let pixelFiring: PixelFiring?
-    private var state: State = .initial
+    private var state: State { stateSubject.value }
+    let stateSubject = CurrentValueSubject<State, Never>(.initial)
 
     init(pixelFiring: PixelFiring?) {
         self.pixelFiring = pixelFiring
@@ -45,7 +58,7 @@ final class SessionRestorePromptCoordinator: SessionRestorePromptCoordinating {
     func markUIReady() {
         switch state {
         case .initial:
-            state = .uiReady
+            stateSubject.send(.uiReady)
         case .restoreNeeded(let restoreAction):
             showPrompt(with: restoreAction)
         default:
@@ -56,7 +69,7 @@ final class SessionRestorePromptCoordinator: SessionRestorePromptCoordinating {
     func showRestoreSessionPrompt(restoreAction: @escaping (Bool) -> Void) {
         switch state {
         case .initial:
-            state = .restoreNeeded(restoreAction)
+            stateSubject.send(.restoreNeeded(restoreAction))
         case .uiReady:
             showPrompt(with: restoreAction)
         default:
@@ -71,9 +84,9 @@ final class SessionRestorePromptCoordinator: SessionRestorePromptCoordinating {
     }
 
     private func showPrompt(with restoreAction: @escaping (Bool) -> Void) {
-        state = .promptShown
+        stateSubject.send(.promptShown)
         let dismissPromptAction = { [weak self] restoreSession in
-            self?.state = .promptDismissed
+            self?.stateSubject.send(.promptDismissed)
             if restoreSession {
                 self?.pixelFiring?.fire(SessionRestorePromptPixel.promptDismissedWithRestore)
             } else {
