@@ -49,6 +49,7 @@ enum DebugScreen: Identifiable {
         let daxDialogManager: DaxDialogsManaging
         let databaseDelegate: DBPIOSInterface.DatabaseDelegate?
         let debuggingDelegate: DBPIOSInterface.DebuggingDelegate?
+        let continuedProcessingDelegate: DBPIOSInterface.ContinuedProcessingDelegate?
         let runPrequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?
         let subscriptionDataReporter: SubscriptionDataReporting
         let remoteMessagingDebugHandler: RemoteMessagingDebugHandling
