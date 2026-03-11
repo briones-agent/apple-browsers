@@ -47,12 +47,6 @@ final class DBPContinuedProcessingCoordinator {
         static let taskSubtitle = "In Progress"
     }
 
-    private enum CompletionReason: String {
-        case completedCleanly
-        case expired
-        case failed
-    }
-
     private weak var manager: DataBrokerProtectionIOSManager?
 
     private var taskIdentifier: String?
@@ -107,13 +101,12 @@ final class DBPContinuedProcessingCoordinator {
             "Continued processing: task expired for run \(self.logRunIdentifier(), privacy: .public) in phase \(String(describing: self.phase), privacy: .public)"
         )
         manager?.stopContinuedProcessingOperations()
-        finish(success: false, reason: .expired)
+        finish(success: false)
     }
 
-    private func finish(success: Bool, reason: CompletionReason? = nil) {
-        let completionReason = reason ?? (success ? .completedCleanly : .failed)
+    private func finish(success: Bool) {
         Logger.dataBrokerProtection.log(
-            "Continued processing: finishing run \(self.logRunIdentifier(), privacy: .public) elapsed=\(self.elapsedDescription(), privacy: .public) success=\(success, privacy: .public) reason=\(completionReason.rawValue, privacy: .public) phase=\(String(describing: self.phase), privacy: .public)"
+            "Continued processing: finishing run \(self.logRunIdentifier(), privacy: .public) elapsed=\(self.elapsedDescription(), privacy: .public) success=\(success, privacy: .public) phase=\(String(describing: self.phase), privacy: .public)"
         )
         manager?.continuedProcessingDelegate = nil
 
@@ -139,13 +132,13 @@ final class DBPContinuedProcessingCoordinator {
         guard let manager,
               let hasPendingInitialOptOuts = try? manager.hasPendingContinuedProcessingOptOuts() else {
             Logger.dataBrokerProtection.log("Continued processing: failed to determine pending opt-outs after scan phase for run \(self.logRunIdentifier(), privacy: .public)")
-            finish(success: false, reason: .failed)
+            finish(success: false)
             return
         }
 
         guard hasPendingInitialOptOuts else {
             Logger.dataBrokerProtection.log("Continued processing: no initial opt-outs found after scan phase for run \(self.logRunIdentifier(), privacy: .public)")
-            finish(success: true, reason: .completedCleanly)
+            finish(success: true)
             return
         }
 
@@ -162,7 +155,7 @@ final class DBPContinuedProcessingCoordinator {
 
     func handleOptOutPhaseCompleted() {
         Logger.dataBrokerProtection.log("Continued processing: opt-out phase completed for run \(self.logRunIdentifier(), privacy: .public)")
-        finish(success: true, reason: .completedCleanly)
+        finish(success: true)
     }
 
     // MARK: - Helpers
