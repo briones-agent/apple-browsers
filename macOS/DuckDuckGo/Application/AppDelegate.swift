@@ -377,6 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var didFinishLaunching = false
+    private var appStateMachine: AppStateMachine!
 
     var updateController: UpdateController?
     var dockCustomization: DockCustomization?
@@ -1165,6 +1166,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // swiftlint:enable cyclomatic_complexity
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        appStateMachine = AppStateMachine(initialState: .initializing(Initializing(appDelegate: self)))
+        appStateMachine.handle(.willFinishLaunching)
+
         let profilerToken = startupProfiler.startMeasuring(.appWillFinishLaunching)
         defer {
             profilerToken.stop()
@@ -1220,6 +1224,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard AppVersion.runType.requiresEnvironment else { return }
+        appStateMachine.handle(.didFinishLaunching)
+
         defer {
             didFinishLaunching = true
         }
@@ -1373,6 +1379,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidBecomeActive(_ notification: Notification) {
         guard didFinishLaunching else { return }
+        appStateMachine.handle(.didBecomeActive)
 
         // Fire quit survey return user pixel if the user completed the survey and returned within 8-14 day window
         let quitSurveyPersistor = QuitSurveyUserDefaultsPersistor(keyValueStore: keyValueStore)
