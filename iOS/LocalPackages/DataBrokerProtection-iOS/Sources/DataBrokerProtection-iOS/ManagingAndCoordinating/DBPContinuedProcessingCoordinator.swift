@@ -228,9 +228,11 @@ final class DBPContinuedProcessingCoordinator {
     private func startHeartbeat() {
         heartbeatTimer?.invalidate()
         heartbeatTimer = Timer.scheduledTimer(withTimeInterval: Constants.heartbeatInterval, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            self.progressReporter.advanceHeartbeat()
-            self.refreshContinuedProcessingUI()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.progressReporter.advanceHeartbeat()
+                self.refreshContinuedProcessingUI()
+            }
         }
     }
 
