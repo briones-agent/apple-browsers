@@ -322,7 +322,7 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
 
         do {
             try await subscriptionManager.adopt(accessToken: subscriptionValues.accessToken, refreshToken: subscriptionValues.refreshToken)
-            try await subscriptionManager.getSubscription(cachePolicy: .remoteFirst)
+            try await subscriptionManager.getSubscription(forceRefresh: true)
             Logger.subscription.log("Subscription retrieved")
             markEmailAddressRestoreWideEventFlowAsSuccess()
         } catch {
@@ -595,7 +595,7 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
 
         Logger.subscription.log("[TierChange] Starting \(subscriptionSelection.change ?? "change", privacy: .public) for: \(subscriptionSelection.id, privacy: .public)")
 
-        let currentSubscription = try? await subscriptionManager.getSubscription(cachePolicy: .cacheFirst)
+        let currentSubscription = try? await subscriptionManager.getSubscription()
         let effectivePlatform: DuckDuckGoSubscription.Platform = currentSubscription?.platform ?? (subscriptionPlatform == .stripe ? .stripe : .apple)
 
         Logger.subscription.log("[TierChange] Starting from subscription: \(currentSubscription?.productId ?? "unknown", privacy: .public)")

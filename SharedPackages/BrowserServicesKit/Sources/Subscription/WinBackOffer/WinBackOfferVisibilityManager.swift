@@ -175,7 +175,7 @@ public final class WinBackOfferVisibilityManager: WinBackOfferVisibilityManaging
     private func checkCachedSubscription() {
         guard isFeatureEnabled else { return }
         Task {
-            guard let currentSubscription = try? await subscriptionManager.getSubscription(cachePolicy: .cacheFirst) else {
+            guard let currentSubscription = try? await subscriptionManager.getSubscription() else {
                 return
             }
 

@@ -1317,7 +1317,21 @@ extension SettingsViewModel {
         }
 
         do {
-            let subscription = try await subscriptionManager.getSubscription(cachePolicy: .cacheFirst)
+            guard let subscription = try await subscriptionManager.getSubscription() else {
+                Logger.subscription.debug("No subscription data available")
+                updatedSubscription.hasSubscription = false
+                updatedSubscription.hasActiveSubscription = false
+                updatedSubscription.entitlements = []
+                updatedSubscription.platform = .unknown
+                updatedSubscription.isActiveTrialOffer = false
+                updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
+                DailyPixel.fireDailyAndCount(pixel: .settingsSubscriptionAccountWithNoSubscriptionFound)
+
+                state.subscription = updatedSubscription
+                subscriptionStateCache.set(updatedSubscription)
+                return
+            }
+
             updatedSubscription.platform = subscription.platform
             updatedSubscription.hasSubscription = true
             updatedSubscription.hasActiveSubscription = subscription.isActive
@@ -1337,8 +1351,8 @@ extension SettingsViewModel {
 
             updatedSubscription.entitlements = currentEntitlements
             updatedSubscription.subscriptionFeatures = try await subscriptionManager.currentSubscriptionFeatures(forceRefresh: false)
-        } catch SubscriptionEndpointServiceError.noData {
-            Logger.subscription.debug("No subscription data available")
+        } catch SubscriptionManagerError.noTokenAvailable {
+            Logger.subscription.debug("No subscription data available - user not authenticated")
             updatedSubscription.hasSubscription = false
             updatedSubscription.hasActiveSubscription = false
             updatedSubscription.entitlements = []

@@ -188,12 +188,14 @@ class SubscriptionManagerTests: XCTestCase {
             pendingPlans: nil
         )
         mockSubscriptionEndpointService.getSubscriptionResult = .success(activeSubscription)
+        mockSubscriptionEndpointService.getSubscriptionTierFeaturesResult = .success(GetSubscriptionTierFeaturesResponse(features: [:]))
         let tokenContainer = OAuthTokensFactory.makeValidTokenContainer()
         mockOAuthClient.getTokensResponse = .success(tokenContainer)
         mockOAuthClient.internalCurrentTokenContainer = tokenContainer
 
-        let subscription = try await subscriptionManager.getSubscription(cachePolicy: .remoteFirst)
-        XCTAssertTrue(subscription.isActive)
+        let subscription = try await subscriptionManager.getSubscription(forceRefresh: true)
+        XCTAssertNotNil(subscription)
+        XCTAssertTrue(subscription!.isActive)
     }
 
     func testRefreshCachedSubscription_ExpiredSubscription() async {
@@ -211,14 +213,55 @@ class SubscriptionManagerTests: XCTestCase {
             pendingPlans: nil
         )
         mockSubscriptionEndpointService.getSubscriptionResult = .success(expiredSubscription)
+        mockSubscriptionEndpointService.getSubscriptionTierFeaturesResult = .success(GetSubscriptionTierFeaturesResponse(features: [:]))
         mockOAuthClient.getTokensResponse = .success(OAuthTokensFactory.makeValidTokenContainer())
         do {
-            try await subscriptionManager.getSubscription(cachePolicy: .remoteFirst)
-        } catch SubscriptionEndpointServiceError.noData {
+            try await subscriptionManager.getSubscription(forceRefresh: true)
+        } catch SubscriptionManagerError.noTokenAvailable {
 
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
+    }
+
+    func testGetSubscription_NoDataOnBackend_ReturnsNil() async throws {
+        mockSubscriptionEndpointService.getSubscriptionResult = .failure(.noData)
+        let tokenContainer = OAuthTokensFactory.makeValidTokenContainer()
+        mockOAuthClient.getTokensResponse = .success(tokenContainer)
+        mockOAuthClient.internalCurrentTokenContainer = tokenContainer
+
+        let subscription = try await subscriptionManager.getSubscription(forceRefresh: true)
+        XCTAssertNil(subscription)
+    }
+
+    func testGetSubscription_CachedSubscription_ReturnsCachedWithoutRefresh() async throws {
+        // First, populate the cache with an active subscription
+        let activeSubscription = DuckDuckGoSubscription(
+            productId: "testProduct",
+            name: "Test Subscription",
+            billingPeriod: .monthly,
+            startedAt: Date().addingTimeInterval(.minutes(-5)),
+            expiresOrRenewsAt: Date().addingTimeInterval(.days(30)),
+            platform: .stripe,
+            status: .autoRenewable,
+            activeOffers: [],
+            tier: nil,
+            availableChanges: nil,
+            pendingPlans: nil
+        )
+        mockSubscriptionEndpointService.getSubscriptionResult = .success(activeSubscription)
+        mockSubscriptionEndpointService.getSubscriptionTierFeaturesResult = .success(GetSubscriptionTierFeaturesResponse(features: [:]))
+        let tokenContainer = OAuthTokensFactory.makeValidTokenContainer()
+        mockOAuthClient.getTokensResponse = .success(tokenContainer)
+        mockOAuthClient.internalCurrentTokenContainer = tokenContainer
+
+        _ = try await subscriptionManager.getSubscription(forceRefresh: true)
+
+        // Now request without force refresh — should return cached
+        mockSubscriptionEndpointService.getSubscriptionResult = .failure(.noData)
+        let cached = try await subscriptionManager.getSubscription()
+        XCTAssertNotNil(cached)
+        XCTAssertTrue(cached!.isActive)
     }
 
     // MARK: - URL Generation Tests

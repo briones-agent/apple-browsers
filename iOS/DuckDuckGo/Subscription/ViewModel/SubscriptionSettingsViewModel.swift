@@ -215,27 +215,34 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     func onFirstAppear() {
         Task {
             // Load initial state from the cache
-            async let loadedEmailFromCache = await self.fetchAndUpdateAccountEmail(cachePolicy: .cacheFirst)
-            async let loadedSubscriptionFromCache = await self.fetchAndUpdateSubscriptionDetails(cachePolicy: .cacheFirst,
+            async let loadedEmailFromCache = await self.fetchAndUpdateAccountEmail(forceRefresh: false)
+            async let loadedSubscriptionFromCache = await self.fetchAndUpdateSubscriptionDetails(forceRefresh: false,
                                                                                                  loadingIndicator: false)
             let (hasLoadedEmailFromCache, hasLoadedSubscriptionFromCache) = await (loadedEmailFromCache, loadedSubscriptionFromCache)
 
             // Reload remote subscription and email state
-            async let reloadedEmail = await self.fetchAndUpdateAccountEmail(cachePolicy: .remoteFirst)
-            async let reloadedSubscription = await self.fetchAndUpdateSubscriptionDetails(cachePolicy: .remoteFirst,
+            async let reloadedEmail = await self.fetchAndUpdateAccountEmail(forceRefresh: true)
+            async let reloadedSubscription = await self.fetchAndUpdateSubscriptionDetails(forceRefresh: true,
                                                                                           loadingIndicator: !hasLoadedSubscriptionFromCache)
             let (hasReloadedEmail, hasReloadedSubscription) = await (reloadedEmail, reloadedSubscription)
         }
     }
 
-    private func fetchAndUpdateSubscriptionDetails(cachePolicy: SubscriptionCachePolicy, loadingIndicator: Bool) async -> Bool {
+    private func fetchAndUpdateSubscriptionDetails(forceRefresh: Bool, loadingIndicator: Bool) async -> Bool {
         Logger.subscription.log("Fetch and update subscription details")
         guard subscriptionManager.isUserAuthenticated else { return false }
 
         if loadingIndicator { self.displaySubscriptionLoader(true) }
 
         do {
-            let subscription = try await self.subscriptionManager.getSubscription(cachePolicy: cachePolicy)
+            guard let subscription = try await self.subscriptionManager.getSubscription(forceRefresh: forceRefresh) else {
+                if loadingIndicator {
+                    Task { @MainActor in
+                        self.displaySubscriptionLoader(false)
+                    }
+                }
+                return false
+            }
             if loadingIndicator {
                 Task { @MainActor in
                     self.displaySubscriptionLoader(false)
@@ -256,18 +263,11 @@ final class SubscriptionSettingsViewModel: ObservableObject {
         }
     }
 
-    func fetchAndUpdateAccountEmail(cachePolicy: SubscriptionCachePolicy = .cacheFirst) async -> Bool {
+    func fetchAndUpdateAccountEmail(forceRefresh: Bool = false) async -> Bool {
         Logger.subscription.log("Fetch and update account email")
         guard subscriptionManager.isUserAuthenticated else { return false }
 
-        let tokensPolicy: AuthTokensCachePolicy
-
-        switch cachePolicy {
-        case .remoteFirst:
-            tokensPolicy = .localForceRefresh
-        case .cacheFirst:
-            tokensPolicy = .localValid
-        }
+        let tokensPolicy: AuthTokensCachePolicy = forceRefresh ? .localForceRefresh : .localValid
 
         do {
             let tokenContainer = try await subscriptionManager.getTokenContainer(policy: tokensPolicy)
@@ -410,7 +410,7 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
         subscriptionChangeObserver = NotificationCenter.default.addObserver(forName: .subscriptionDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { [weak self] in
-                _ = await self?.fetchAndUpdateSubscriptionDetails(cachePolicy: .cacheFirst, loadingIndicator: false)
+                _ = await self?.fetchAndUpdateSubscriptionDetails(forceRefresh: false, loadingIndicator: false)
             }
         }
     }

@@ -50,7 +50,7 @@ public final class SubscriptionManagerMock: SubscriptionManager {
         case .failure(let failure):
             throw failure
         case nil:
-            throw SubscriptionEndpointServiceError.noData
+            throw SubscriptionManagerError.noTokenAvailable
         }
     }
 
@@ -88,7 +88,7 @@ public final class SubscriptionManagerMock: SubscriptionManager {
     public var customerPortalURL: URL?
     public func getCustomerPortalURL() async throws -> URL {
         guard let customerPortalURL else {
-            throw SubscriptionEndpointServiceError.noData
+            throw SubscriptionManagerError.noTokenAvailable
         }
         return customerPortalURL
     }
@@ -131,6 +131,12 @@ public final class SubscriptionManagerMock: SubscriptionManager {
 
     }
 
+    public var ingestSubscriptionCalled: Bool = false
+    public func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws {
+        ingestSubscriptionCalled = true
+        resultSubscription = .success(subscription)
+    }
+
     public var confirmPurchaseResponse: Result<DuckDuckGoSubscription, Error>?
     public func confirmPurchase(signature: String, additionalParams: [String: String]?) async throws -> DuckDuckGoSubscription {
         switch confirmPurchaseResponse! {
@@ -141,14 +147,14 @@ public final class SubscriptionManagerMock: SubscriptionManager {
         }
     }
 
-    public func getSubscription(cachePolicy: SubscriptionCachePolicy) async throws -> DuckDuckGoSubscription {
+    public func getSubscription(forceRefresh: Bool) async throws -> DuckDuckGoSubscription? {
         switch resultSubscription {
         case .success(let success):
             return success
         case .failure(let failure):
             throw failure
         case nil:
-            throw SubscriptionEndpointServiceError.noData
+            return nil
         }
     }
 

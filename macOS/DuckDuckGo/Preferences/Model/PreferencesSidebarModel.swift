@@ -401,8 +401,8 @@ final class PreferencesSidebarModel: ObservableObject {
 
                     self.refreshSections()
                 }
-            } catch SubscriptionEndpointServiceError.noData {
-                // The server has no subscription for this user, logging out
+            } catch SubscriptionManagerError.noTokenAvailable {
+                // The user is not authenticated, logging out
                 await subscriptionManager.signOut(notifyUI: false)
                 refreshSubscriptionStateAndSectionsIfNeeded()
             } catch {

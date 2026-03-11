@@ -151,7 +151,7 @@ public final class PreferencesSubscriptionSettingsModel: ObservableObject {
         self.isProTierPurchaseEnabled = isProTierPurchaseEnabled
         self.cancelPendingDowngradeHandler = cancelPendingDowngradeHandler
         Task {
-            await self.updateSubscription(cachePolicy: .cacheFirst)
+            await self.updateSubscription(forceRefresh: false)
         }
 
         self.email = subscriptionManager.userEmail
@@ -166,7 +166,7 @@ public final class PreferencesSubscriptionSettingsModel: ObservableObject {
 
                 await self?.fetchEmail()
                 // Use remoteFirst to ensure fresh data after subscription changes
-                await self?.updateSubscription(cachePolicy: .remoteFirst)
+                await self?.updateSubscription(forceRefresh: true)
             }
         }
 
@@ -465,7 +465,7 @@ hasActiveTrialOffer: \(hasTrialOffer, privacy: .public)
             }
 
             await self?.fetchEmail()
-            await self?.updateSubscription(cachePolicy: .remoteFirst)
+            await self?.updateSubscription(forceRefresh: true)
         }
     }
 
@@ -475,9 +475,12 @@ hasActiveTrialOffer: \(hasTrialOffer, privacy: .public)
     }
 
     @MainActor
-    private func updateSubscription(cachePolicy: SubscriptionCachePolicy) async {
+    private func updateSubscription(forceRefresh: Bool) async {
         do {
-            let subscription = try await subscriptionManager.getSubscription(cachePolicy: cachePolicy)
+            guard let subscription = try await subscriptionManager.getSubscription(forceRefresh: forceRefresh) else {
+                Logger.subscription.log("No subscription available")
+                return
+            }
             Task { @MainActor in
                 updateDescription(for: subscription)
                 subscriptionPlatform = subscription.platform

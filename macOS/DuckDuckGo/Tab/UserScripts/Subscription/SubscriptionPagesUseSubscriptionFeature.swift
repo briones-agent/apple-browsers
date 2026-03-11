@@ -198,7 +198,7 @@ final class SubscriptionPagesUseSubscriptionFeature: Subfeature {
 
         do {
             try await subscriptionManager.adopt(accessToken: subscriptionValues.accessToken, refreshToken: subscriptionValues.refreshToken)
-            try await subscriptionManager.getSubscription(cachePolicy: .remoteFirst)
+            try await subscriptionManager.getSubscription(forceRefresh: true)
             markEmailAddressRestoreAsSuccess(data: restoreDataList)
             Logger.subscription.log("Subscription retrieved")
         } catch {
@@ -498,7 +498,7 @@ final class SubscriptionPagesUseSubscriptionFeature: Subfeature {
         }
 
         Logger.subscription.log("[TierChange] Parsed - id: \(subscriptionSelection.id, privacy: .public), change: \(subscriptionSelection.change ?? "nil", privacy: .public)")
-        let currentSubscription = try? await subscriptionManager.getSubscription(cachePolicy: .cacheFirst)
+        let currentSubscription = try? await subscriptionManager.getSubscription()
         let effectivePlatform: DuckDuckGoSubscription.Platform = currentSubscription?.platform ?? (subscriptionPlatform == .stripe ? .stripe : .apple)
 
         switch effectivePlatform {
