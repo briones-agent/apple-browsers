@@ -68,6 +68,7 @@ public class BreakageReportingSubfeature: Subfeature {
             jsPerformanceMetrics = nil
         }
 
+        // breakageData arrives percent-encoded from content-scope-scripts; decode it here at the source
         let rawBreakageData = payload["breakageData"] as? String
         let breakageData = rawBreakageData.flatMap { $0.removingPercentEncoding ?? $0 }
         completionHandler?(performanceMetrics, detectorData, jsPerformanceMetrics, breakageData)
