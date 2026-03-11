@@ -142,7 +142,7 @@ public class DBPIOSInterface {
 public final class DataBrokerProtectionIOSManager {
 
     struct ContinuedProcessingInitialRunPreparation {
-        let scanSummary: DBPContinuedProcessingProgressReporter.InitialScanSummary
+        let scanSummary: DBPContinuedProcessingInitialScanSummary
         let scanJobTimeout: TimeInterval
     }
 
@@ -446,9 +446,9 @@ extension DataBrokerProtectionIOSManager: JobQueueManagerDelegate {
                 }
             case .optOut:
                 if let extractedProfileId = context.extractedProfileId {
-                    let event = DBPContinuedProcessingEvent.optOutJobCompleted(
-                        .init(
-                            brokerId: context.brokerId,
+                        let event = DBPContinuedProcessingEvent.optOutJobCompleted(
+                            .init(
+                                brokerId: context.brokerId,
                             profileQueryId: context.profileQueryId,
                             extractedProfileId: extractedProfileId
                         )
@@ -909,7 +909,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.ContinuedProcessingDel
         try await saveProfileAndPrepareForInitialScans(profile)
 
         let brokerProfileQueryData = try database.fetchAllBrokerProfileQueryData(shouldFilterRemovedBrokers: true)
-        let scanSummary = DBPContinuedProcessingProgressReporter.makeInitialScanSummary(from: brokerProfileQueryData)
+        let scanSummary = DBPContinuedProcessingSummaryBuilder.makeInitialScanSummary(from: brokerProfileQueryData)
         guard scanSummary.scanCount > 0 else {
             throw DBPContinuedProcessingError.noPendingScans
         }
@@ -921,9 +921,9 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.ContinuedProcessingDel
     }
 
     @MainActor
-    func makeContinuedProcessingOptOutSummary() throws -> DBPContinuedProcessingProgressReporter.OptOutSummary {
+    func makeContinuedProcessingOptOutSummary() throws -> DBPContinuedProcessingOptOutSummary {
         let brokerProfileQueryData = try database.fetchAllBrokerProfileQueryData(shouldFilterRemovedBrokers: true)
-        return DBPContinuedProcessingProgressReporter.makeOptOutSummary(from: brokerProfileQueryData)
+        return DBPContinuedProcessingSummaryBuilder.makeOptOutSummary(from: brokerProfileQueryData)
     }
 
     @MainActor

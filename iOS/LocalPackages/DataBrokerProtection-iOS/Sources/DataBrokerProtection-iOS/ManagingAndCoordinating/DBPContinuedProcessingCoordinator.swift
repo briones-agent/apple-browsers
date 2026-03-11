@@ -28,8 +28,8 @@ protocol DBPContinuedProcessingEventDelegate: AnyObject {
 }
 
 enum DBPContinuedProcessingEvent {
-    case scanJobCompleted(DBPContinuedProcessingProgressReporter.ScanJobID)
-    case optOutJobCompleted(DBPContinuedProcessingProgressReporter.OptOutJobID)
+    case scanJobCompleted(DBPContinuedProcessingScanJobID)
+    case optOutJobCompleted(DBPContinuedProcessingOptOutJobID)
     case scanPhaseCompleted
     case optOutPhaseCompleted
 }
@@ -53,8 +53,8 @@ final class DBPContinuedProcessingCoordinator {
         case taskAttached
         case transition(Phase)
         case heartbeat
-        case scanJobCompleted(DBPContinuedProcessingProgressReporter.ScanJobID)
-        case optOutJobCompleted(DBPContinuedProcessingProgressReporter.OptOutJobID)
+        case scanJobCompleted(DBPContinuedProcessingScanJobID)
+        case optOutJobCompleted(DBPContinuedProcessingOptOutJobID)
         case scanPhaseCompleted
         case optOutPhaseCompleted
         case runCompleted(success: Bool)
@@ -104,7 +104,7 @@ final class DBPContinuedProcessingCoordinator {
     }
 
     private weak var manager: DataBrokerProtectionIOSManager?
-    private let progressReporter: DBPContinuedProcessingProgressReporter
+    private let progressState: DBPContinuedProcessingLifecycleProgressState
 
     private var taskIdentifier: String?
     private var runStartedAt: Date?
@@ -119,15 +119,15 @@ final class DBPContinuedProcessingCoordinator {
 
     init(manager: DataBrokerProtectionIOSManager) {
         self.manager = manager
-        self.progressReporter = DBPContinuedProcessingProgressReporter()
+        self.progressState = DBPContinuedProcessingLifecycleProgressState()
     }
 
     init(
         manager: DataBrokerProtectionIOSManager,
-        progressReporter: DBPContinuedProcessingProgressReporter
+        progressState: DBPContinuedProcessingLifecycleProgressState
     ) {
         self.manager = manager
-        self.progressReporter = progressReporter
+        self.progressState = progressState
     }
 
     // MARK: - Run Lifecycle
@@ -144,7 +144,7 @@ final class DBPContinuedProcessingCoordinator {
         Logger.dataBrokerProtection.log(
             "Continued processing: derived scan budget units per job \(scanBudgetUnitsPerJob, privacy: .public) from timeout \(scanJobTimeout, privacy: .public)s and heartbeat \(Constants.heartbeatInterval, privacy: .public)s"
         )
-        progressReporter.startInitialRun(summary: preparation.scanSummary, scanBudgetUnitsPerJob: scanBudgetUnitsPerJob)
+        progressState.startInitialRun(summary: preparation.scanSummary, scanBudgetUnitsPerJob: scanBudgetUnitsPerJob)
         runStartedAt = Date()
 
         phase = .initialScan
@@ -193,7 +193,7 @@ final class DBPContinuedProcessingCoordinator {
         manager?.continuedProcessingDelegate = nil
 
         if success {
-            progressReporter.completeAll()
+            progressState.completeAll()
             publishProgress(source: .runCompleted(success: true), note: "snap=run-allotted")
         }
 
@@ -209,14 +209,14 @@ final class DBPContinuedProcessingCoordinator {
     func startScanPhase() async {
         guard let manager else { return }
         transition(to: .initialScan) {
-            progressReporter.enterScanPhase()
+            progressState.enterScanPhase()
         }
         Logger.dataBrokerProtection.log("Continued processing: starting scan phase for run \(self.logRunIdentifier(), privacy: .public)")
         await manager.startImmediateScanOperationsForContinuedProcessing()
     }
 
     func handleScanPhaseCompleted() async {
-        progressReporter.completeScanPhase()
+        progressState.completeScanPhase()
         publishProgress(source: .scanPhaseCompleted, note: "snap=phase-allotted")
         Logger.dataBrokerProtection.log("Continued processing: scan phase completed for run \(self.logRunIdentifier(), privacy: .public)")
 
@@ -240,17 +240,17 @@ final class DBPContinuedProcessingCoordinator {
         await startOptOutPhase(optOutSummary: optOutSummary)
     }
 
-    func startOptOutPhase(optOutSummary: DBPContinuedProcessingProgressReporter.OptOutSummary) async {
+    func startOptOutPhase(optOutSummary: DBPContinuedProcessingOptOutSummary) async {
         guard let manager else { return }
         transition(to: .initialOptOut) {
-            progressReporter.enterOptOutPhase(summary: optOutSummary)
+            progressState.enterOptOutPhase(summary: optOutSummary)
         }
         Logger.dataBrokerProtection.log("Continued processing: starting opt-out phase for run \(self.logRunIdentifier(), privacy: .public)")
         manager.startImmediateOptOutOperationsForContinuedProcessing()
     }
 
     func handleOptOutPhaseCompleted() {
-        progressReporter.completeOptOutPhase()
+        progressState.completeOptOutPhase()
         publishProgress(source: .optOutPhaseCompleted, note: "snap=phase-allotted")
         Logger.dataBrokerProtection.log("Continued processing: opt-out phase completed for run \(self.logRunIdentifier(), privacy: .public)")
         finish(success: true, reason: .completedCleanly)
@@ -260,7 +260,7 @@ final class DBPContinuedProcessingCoordinator {
 
     private func publishProgress(source: ProgressUpdateSource, note: String? = nil) {
         guard let task else { return }
-        let snapshot = progressReporter.snapshot()
+        let snapshot = progressState.snapshot()
         task.progress.totalUnitCount = max(snapshot.total, 1)
         task.progress.completedUnitCount = min(snapshot.completed, max(snapshot.total, 1))
         let noteDescription = note ?? "none"
@@ -283,7 +283,7 @@ final class DBPContinuedProcessingCoordinator {
         heartbeatTimer?.invalidate()
         heartbeatTimer = Timer.scheduledTimer(withTimeInterval: Constants.heartbeatInterval, repeats: true) { [weak self] _ in
             guard let self else { return }
-            self.progressReporter.advanceHeartbeat()
+            self.progressState.advanceHeartbeat()
             self.publishProgress(source: .heartbeat)
         }
     }
@@ -353,7 +353,7 @@ final class DBPContinuedProcessingCoordinator {
         #else
         let request = BGContinuedProcessingTaskRequest(identifier: identifier,
                                                        title: Constants.taskTitle,
-                                                       subtitle: progressReporter.scanSubtitle)
+                                                       subtitle: progressState.scanSubtitle)
         request.strategy = .queue
 
         do {
@@ -376,9 +376,9 @@ final class DBPContinuedProcessingCoordinator {
     private func subtitle(for phase: Phase?) -> String {
         switch phase {
         case .initialOptOut:
-            progressReporter.optOutSubtitle
+            progressState.optOutSubtitle
         default:
-            progressReporter.scanSubtitle
+            progressState.scanSubtitle
         }
     }
 }
@@ -399,7 +399,7 @@ extension DBPContinuedProcessingCoordinator: DBPContinuedProcessingEventDelegate
                 )
                 return
             }
-            progressReporter.recordCompletedScan(id)
+            progressState.recordCompletedScan(id)
             publishProgress(source: .scanJobCompleted(id), note: "snap=job-allotted")
             updateTaskPresentation()
         case .optOutJobCompleted(let id):
@@ -409,7 +409,7 @@ extension DBPContinuedProcessingCoordinator: DBPContinuedProcessingEventDelegate
                 )
                 return
             }
-            progressReporter.recordCompletedOptOut(id)
+            progressState.recordCompletedOptOut(id)
             publishProgress(source: .optOutJobCompleted(id), note: "snap=job-allotted")
             updateTaskPresentation()
         case .scanPhaseCompleted:
