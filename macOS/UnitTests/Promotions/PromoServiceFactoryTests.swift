@@ -113,6 +113,7 @@ extension PromoServiceFactoryTests {
         )
         return PromoDependencies(
             keyValueStore: InMemoryThrowingKeyValueStore(),
+            internalUserDecider: DefaultInternalUserDecider(),
             isExternallyActivated: false,
             activeRemoteMessageModel: activeRemoteMessageModel,
             defaultBrowserAndDockPromptService: defaultBrowserAndDockPromptService

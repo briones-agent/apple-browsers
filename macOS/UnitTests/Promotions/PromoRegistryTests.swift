@@ -17,6 +17,7 @@
 //
 
 import PersistenceTestingUtils
+import PrivacyConfig
 import RemoteMessaging
 import RemoteMessagingTestsUtils
 import XCTest
@@ -44,6 +45,7 @@ final class PromoRegistryTests: XCTestCase {
         )
         let dependencies = PromoDependencies(
             keyValueStore: InMemoryThrowingKeyValueStore(),
+            internalUserDecider: DefaultInternalUserDecider(),
             isExternallyActivated: false,
             activeRemoteMessageModel: activeRemoteMessageModel,
             defaultBrowserAndDockPromptService: defaultBrowserAndDockPromptService)
