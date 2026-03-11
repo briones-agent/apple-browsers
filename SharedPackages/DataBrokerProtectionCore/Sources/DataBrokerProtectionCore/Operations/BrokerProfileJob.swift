@@ -28,16 +28,31 @@ public enum JobType {
     case all
 }
 
+public struct BrokerProfileJobContext: Sendable {
+    public let brokerId: Int64
+    public let profileQueryId: Int64
+    public let extractedProfileId: Int64?
+    public let stepType: StepType
+
+    public init(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64?, stepType: StepType) {
+        self.brokerId = brokerId
+        self.profileQueryId = profileQueryId
+        self.extractedProfileId = extractedProfileId
+        self.stepType = stepType
+    }
+}
+
 public protocol BrokerProfileJobStatusReportingDelegate: AnyObject {
     func dataBrokerOperationDidError(_ error: any Error,
                                      withBrokerURL brokerURL: String?,
                                      version: String?,
-                                     stepType: StepType?,
+                                     context: BrokerProfileJobContext?,
                                      dataBrokerParent: String?,
                                      isFreeScan: Bool?)
     func dataBrokerOperationDidCompleteSuccessfully(withBrokerURL brokerURL: String?,
                                                     version: String?,
-                                                    dataBrokerParent: String?)
+                                                    dataBrokerParent: String?,
+                                                    context: BrokerProfileJobContext)
 }
 
 public class BrokerProfileJob: Operation, @unchecked Sendable {
@@ -174,6 +189,12 @@ public class BrokerProfileJob: Operation, @unchecked Sendable {
             Logger.dataBrokerProtection.log("Running operation: \(String(describing: jobData), privacy: .public)")
 
             let isFreeScan = !(await jobDependencies.isAuthenticatedUser())
+            let context = BrokerProfileJobContext(
+                brokerId: jobData.brokerId,
+                profileQueryId: jobData.profileQueryId,
+                extractedProfileId: (jobData as? OptOutJobData)?.extractedProfile.id,
+                stepType: jobData is ScanJobData ? .scan : .optOut
+            )
 
             do {
                 var executed = false
@@ -208,7 +229,8 @@ public class BrokerProfileJob: Operation, @unchecked Sendable {
                     let dataBroker = brokerProfileQueriesData.first?.dataBroker
                     statusReportingDelegate?.dataBrokerOperationDidCompleteSuccessfully(withBrokerURL: dataBroker?.url,
                                                                                         version: dataBroker?.version,
-                                                                                        dataBrokerParent: dataBroker?.parent)
+                                                                                        dataBrokerParent: dataBroker?.parent,
+                                                                                        context: context)
 
                     let sleepInterval = jobDependencies.executionConfig.intervalBetweenSameBrokerJobs
                     Logger.dataBrokerProtection.log("Waiting...: \(sleepInterval, privacy: .public)")
@@ -219,18 +241,11 @@ public class BrokerProfileJob: Operation, @unchecked Sendable {
             } catch {
                 Logger.dataBrokerProtection.error("Error: \(error.localizedDescription, privacy: .public)")
 
-                let stepType: StepType? = {
-                    switch jobData {
-                    case is ScanJobData: return .scan
-                    case is OptOutJobData: return .optOut
-                    default: return nil
-                    }
-                }()
                 let dataBroker = brokerProfileQueriesData.first?.dataBroker
                 statusReportingDelegate?.dataBrokerOperationDidError(error,
                                                                      withBrokerURL: dataBroker?.url,
                                                                      version: dataBroker?.version,
-                                                                     stepType: stepType,
+                                                                     context: context,
                                                                      dataBrokerParent: dataBroker?.parent,
                                                                      isFreeScan: isFreeScan)
             }

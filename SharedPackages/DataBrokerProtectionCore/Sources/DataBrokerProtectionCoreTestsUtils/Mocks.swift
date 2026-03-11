@@ -1739,10 +1739,12 @@ public final class MockJobQueueManager: JobQueueManaging {
     public var debugRunningStatusString: String { return "" }
 
     public var startImmediateScanOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
+    public var startImmediateOptOutOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
     public var startScheduledAllOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
     public var startScheduledScanOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
 
     public var startImmediateScanOperationsIfPermittedCalledCompletion: (() -> Void)?
+    public var startImmediateOptOutOperationsIfPermittedCalledCompletion: (() -> Void)?
     public var startScheduledAllOperationsIfPermittedCalledCompletion: (() -> Void)?
     public var startScheduledScanOperationsIfPermittedCalledCompletion: (() -> Void)?
 
@@ -1756,6 +1758,12 @@ public final class MockJobQueueManager: JobQueueManaging {
         startImmediateScanOperationsIfPermittedCalledCompletion?()
     }
 
+    public func startImmediateOptOutOperationsIfPermitted(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding, errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?, completion: (() -> Void)?) {
+        errorHandler?(startImmediateOptOutOperationsIfPermittedCompletionError)
+        completion?()
+        startImmediateOptOutOperationsIfPermittedCalledCompletion?()
+    }
+
     public func startScheduledAllOperationsIfPermitted(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding, errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?, completion: (() -> Void)?) {
         errorHandler?(startScheduledAllOperationsIfPermittedCompletionError)
         completion?()
@@ -1766,9 +1774,6 @@ public final class MockJobQueueManager: JobQueueManaging {
         errorHandler?(startScheduledScanOperationsIfPermittedCompletionError)
         completion?()
         startScheduledScanOperationsIfPermittedCalledCompletion?()
-    }
-
-    public func execute(_ command: DataBrokerProtectionQueueManagerDebugCommand) {
     }
 
     public func stop() {
@@ -1873,7 +1878,7 @@ public final class MockBrokerProfileJob: BrokerProfileJob, @unchecked Sendable {
             statusReportingDelegate?.dataBrokerOperationDidError(DataBrokerProtectionError.noActionFound,
                                                                  withBrokerURL: nil,
                                                                  version: nil,
-                                                                 stepType: nil,
+                                                                 context: nil,
                                                                  dataBrokerParent: nil,
                                                                  isFreeScan: nil)
         }
@@ -1923,14 +1928,17 @@ public final class MockBrokerProfileJobStatusReportingDelegate: BrokerProfileJob
     public func dataBrokerOperationDidError(_ error: any Error,
                                             withBrokerURL brokerURL: String?,
                                             version: String?,
-                                            stepType: StepType?,
+                                            context: BrokerProfileJobContext?,
                                             dataBrokerParent: String?,
                                             isFreeScan: Bool?) {
         dataBrokerOperationDidErrorCalled = true
         operationErrors.append(error)
     }
 
-    public func dataBrokerOperationDidCompleteSuccessfully(withBrokerURL brokerURL: String?, version: String?, dataBrokerParent: String?) {
+    public func dataBrokerOperationDidCompleteSuccessfully(withBrokerURL brokerURL: String?,
+                                                           version: String?,
+                                                           dataBrokerParent: String?,
+                                                           context: BrokerProfileJobContext) {
 
     }
 }

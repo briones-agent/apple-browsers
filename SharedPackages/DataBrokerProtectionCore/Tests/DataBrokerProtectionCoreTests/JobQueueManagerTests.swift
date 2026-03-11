@@ -477,10 +477,10 @@ final class JobQueueManagerTests: XCTestCase {
         XCTAssert(mockOperationsCreator.createdType == .manualScan)
 
         // When
-        sut.execute(.startOptOutOperations(showWebView: false,
-                                           jobDependencies: mockDependencies,
-                                           errorHandler: nil,
-                                           completion: nil))
+        sut.startImmediateOptOutOperationsIfPermitted(showWebView: false,
+                                                      jobDependencies: mockDependencies,
+                                                      errorHandler: nil,
+                                                      completion: nil)
 
         // Then
         XCTAssert(mockOperationsCreator.createdType == .optOut)
