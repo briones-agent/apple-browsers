@@ -20,37 +20,34 @@ import Foundation
 
 /// Actor responsible for managing update check state and rate limiting.
 ///
-/// Handles rate limiting to prevent concurrent update checks.
+/// Handles rate limiting and in-flight tracking to prevent concurrent update checks.
 /// Each UpdateController instance has its own UpdateCheckState for isolated state management.
-/// 
+///
 public actor UpdateCheckState {
 
     /// Default minimum interval between update checks
     public static let defaultMinimumCheckInterval: TimeInterval = .minutes(5)
 
     private var lastUpdateCheckTime: Date?
+    private var isCheckInProgress = false
 
     public init() {}
 
     /// Determines whether a new update check can be started.
     ///
-    /// - Parameters:
-    ///   - updater: The updater instance to check for availability (must conform to UpdaterAvailabilityChecking)
-    ///   - minimumInterval: Minimum time interval that must pass between checks.
-    ///     Defaults to `UpdateCheckState.defaultMinimumCheckInterval`.
-    /// - Returns: `true` if the updater allows checks and enough time has passed since the last check, `false` otherwise.
+    /// Returns `false` if a check is already in flight, the updater disallows checks,
+    /// or the minimum interval since the last check has not elapsed.
     ///
-    public func canStartNewCheck(updater: UpdaterAvailabilityChecking?, latestUpdate: Update?, minimumInterval: TimeInterval = UpdateCheckState.defaultMinimumCheckInterval) -> Bool {
-        // Check if updater allows checking for updates
+    public func canStartNewCheck(
+        updater: UpdaterAvailabilityChecking?,
+        minimumInterval: TimeInterval = UpdateCheckState.defaultMinimumCheckInterval
+    ) -> Bool {
+        guard !isCheckInProgress else { return false }
+
         if let updater = updater, !updater.canCheckForUpdates {
             return false
         }
 
-        guard latestUpdate != nil else {
-            return true
-        }
-
-        // Check if last check was less than the specified interval ago
         if let lastCheck = lastUpdateCheckTime,
            Date().timeIntervalSince(lastCheck) < minimumInterval {
             return false
@@ -59,11 +56,15 @@ public actor UpdateCheckState {
         return true
     }
 
-    /// Records the current time as the last update check time.
-    ///
-    /// Used for rate limiting to ensure update checks don't happen too frequently.
-    ///
-    public func recordCheckTime() {
+    /// Marks a check as in progress. Call this immediately after `canStartNewCheck` returns `true`.
+    public func beginCheck() {
+        isCheckInProgress = true
+    }
+
+    /// Marks the check as finished and records the current time for rate limiting.
+    /// Call this in both the success and error paths of the check.
+    public func endCheck() {
+        isCheckInProgress = false
         lastUpdateCheckTime = Date()
     }
 }
