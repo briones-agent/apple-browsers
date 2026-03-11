@@ -177,6 +177,16 @@ final class AIChatModelsServiceTests: XCTestCase {
         XCTAssertEqual(provider, .mistral)
     }
 
+    func testWhenModelIdContainsGptOss_ThenMapsToOSS() {
+        let provider = AIChatModel.ModelProvider.from(id: "openai_gpt-oss-120b", providerString: "togetherai")
+        XCTAssertEqual(provider, .oss)
+    }
+
+    func testWhenModelIdContainsGptOssWithTinfoil_ThenMapsToOSS() {
+        let provider = AIChatModel.ModelProvider.from(id: "tinfoil/gpt-oss-120b", providerString: "tinfoil")
+        XCTAssertEqual(provider, .oss)
+    }
+
     func testWhenProviderIsOpenAIString_ThenMapsToOpenAI() {
         let provider = AIChatModel.ModelProvider.from(id: "gpt-5", providerString: "openai")
         XCTAssertEqual(provider, .openAI)

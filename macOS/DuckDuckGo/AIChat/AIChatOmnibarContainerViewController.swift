@@ -636,14 +636,16 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         menu.autoenablesItems = false
 
         if omnibarController.hasActiveSubscription {
-            return buildSubscribedModelPickerMenu(menu)
+            populateSubscribedModelPickerMenu(menu)
         } else {
-            return buildFreeModelPickerMenu(menu)
+            populateFreeModelPickerMenu(menu)
         }
+
+        return menu
     }
 
     /// Free user layout: accessible models first, then "Advanced Models" section with disabled premium models.
-    private func buildFreeModelPickerMenu(_ menu: NSMenu) -> NSMenu {
+    private func populateFreeModelPickerMenu(_ menu: NSMenu) {
         let accessible = omnibarController.models.filter { $0.entityHasAccess }
         let premium = omnibarController.models.filter { !$0.entityHasAccess }
 
@@ -662,14 +664,12 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 menu.addItem(menuItem(for: model))
             }
         }
-
-        return menu
     }
 
     /// Subscribed user layout: "Advanced Models" section first, then "Basic Models" section with free-tier models.
-    private func buildSubscribedModelPickerMenu(_ menu: NSMenu) -> NSMenu {
-        let basic = omnibarController.models.filter { $0.accessTier.contains("free") }
-        let advanced = omnibarController.models.filter { !$0.accessTier.contains("free") }
+    private func populateSubscribedModelPickerMenu(_ menu: NSMenu) {
+        let basic = omnibarController.models.filter { $0.accessTier.contains(AIChatUserTier.free.rawValue) }
+        let advanced = omnibarController.models.filter { !$0.accessTier.contains(AIChatUserTier.free.rawValue) }
 
         if !advanced.isEmpty {
             let header = NSMenuItem(title: UserText.aiChatModelPickerAdvancedModelsSectionHeader, action: nil, keyEquivalent: "")
@@ -692,8 +692,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 menu.addItem(menuItem(for: model))
             }
         }
-
-        return menu
     }
 
     private func menuItem(for model: AIChatModel) -> NSMenuItem {

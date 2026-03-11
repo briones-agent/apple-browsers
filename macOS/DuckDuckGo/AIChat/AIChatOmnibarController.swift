@@ -168,6 +168,7 @@ final class AIChatOmnibarController {
                 let userTier = await self.resolveUserTier()
                 self.hasActiveSubscription = userTier != .free
                 self.models = remoteModels.map { AIChatModel(remoteModel: $0, userTier: userTier) }
+                self.clearStaleModelSelectionIfNeeded()
             } catch {
                 Logger.aiChat.error("Failed to fetch models: \(error.localizedDescription)")
                 PixelKit.fire(AIChatPixel.aiChatModelsFetchFailed, frequency: .dailyAndCount, includeAppVersionParameter: true)
@@ -216,13 +217,16 @@ final class AIChatOmnibarController {
            models.contains(where: { $0.id == selectedId }) {
             return selectedId
         }
-        let fallback = models.first(where: { $0.entityHasAccess })?.id ?? ""
-        if preferences.selectedModelId != nil {
-            // Clear stale selection so the fallback sticks
+        return models.first(where: { $0.entityHasAccess })?.id ?? ""
+    }
+
+    /// Clears the persisted model selection if it no longer matches any available model.
+    private func clearStaleModelSelectionIfNeeded() {
+        guard let selectedId = preferences.selectedModelId else { return }
+        if !models.contains(where: { $0.id == selectedId }) {
             preferences.selectedModelId = nil
             preferences.selectedModelShortName = nil
         }
-        return fallback
     }
 
     /// The model ID to include in the prompt. Returns nil if the user has never
@@ -426,8 +430,9 @@ final class AIChatOmnibarController {
             return (fileType, sourceFormat)
         }
 
-        // Fall back to the first supported format we can encode
-        for format in supportedFormats {
+        // Fall back to the first supported format we can encode, in preference order
+        let preferred = ["png", "jpeg", "gif", "bmp", "tiff"]
+        for format in preferred where supportedFormats.contains(format) {
             if let fileType = bitmapFileType(for: format) {
                 return (fileType, format)
             }
