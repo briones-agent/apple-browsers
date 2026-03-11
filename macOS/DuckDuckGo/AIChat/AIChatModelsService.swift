@@ -18,7 +18,6 @@
 
 import AIChat
 import Foundation
-import os.log
 import WebKit
 
 // MARK: - Cookie Providing
@@ -105,9 +104,6 @@ final class AIChatModelsService: AIChatModelsProviding {
         let url = baseURL.appendingPathComponent("duckchat/v1/models")
 
         let cookies = await cookieProvider.cookies(for: baseURL)
-        // TODO: Remove debug logging after access-tier issue is resolved
-        Logger.aiChat.debug("[ModelsService] Cookies for \(self.baseURL.absoluteString): \(cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; "))")
-
         var request = URLRequest(url: url)
         HTTPCookie.requestHeaderFields(with: cookies).forEach {
             request.addValue($1, forHTTPHeaderField: $0)
@@ -118,19 +114,11 @@ final class AIChatModelsService: AIChatModelsProviding {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ServiceError.invalidResponse
         }
-
-        // TODO: Remove debug logging after access-tier issue is resolved
-        Logger.aiChat.debug("[ModelsService] HTTP \(httpResponse.statusCode) response: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
-
         guard (200...299).contains(httpResponse.statusCode) else {
             throw ServiceError.httpError(statusCode: httpResponse.statusCode)
         }
 
-        let models = try JSONDecoder().decode(AIChatModelsResponse.self, from: data).models
-        let accessSummary = models.map { "\($0.id): entityHasAccess=\($0.entityHasAccess), tier=\($0.accessTier)" }
-        Logger.aiChat.debug("[ModelsService] Parsed \(models.count) models: \(accessSummary.joined(separator: " | "))")
-
-        return models
+        return try JSONDecoder().decode(AIChatModelsResponse.self, from: data).models
     }
 
 }

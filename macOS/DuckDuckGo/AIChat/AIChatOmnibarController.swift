@@ -166,7 +166,6 @@ final class AIChatOmnibarController {
                 let remoteModels = try await modelsService.fetchModels()
                 guard !Task.isCancelled else { return }
                 let userTier = await self.resolveUserTier()
-                Logger.aiChat.debug("[ModelsService] Resolved user tier: \(userTier.rawValue)")
                 self.hasActiveSubscription = userTier != .free
                 self.models = remoteModels.map { AIChatModel(remoteModel: $0, userTier: userTier) }
             } catch {
@@ -186,7 +185,6 @@ final class AIChatOmnibarController {
             case .none: return .free
             }
         } catch {
-            Logger.aiChat.debug("[ModelsService] Could not resolve subscription tier: \(error.localizedDescription)")
             return .free
         }
     }
