@@ -184,6 +184,27 @@ final class UpdateCheckStateTests: XCTestCase {
 
     // MARK: - Atomicity / in-flight guard tests
 
+    /// Fires N concurrent callers and asserts exactly one wins.
+    /// Validates that beginCheckIfAllowed is atomic under real concurrency,
+    /// not just sequential state transitions.
+    func testExactlyOneCallerWinsUnderConcurrency() async {
+        let results = await withTaskGroup(of: Bool.self) { group in
+            for _ in 0..<10 {
+                group.addTask {
+                    await self.updateCheckState.beginCheckIfAllowed(updater: self.mockUpdater)
+                }
+            }
+            var outcomes: [Bool] = []
+            for await result in group {
+                outcomes.append(result)
+            }
+            return outcomes
+        }
+
+        let startedCount = results.filter { $0 }.count
+        XCTAssertEqual(startedCount, 1, "Exactly one concurrent caller should be allowed to start a check")
+    }
+
     /// beginCheckIfAllowed must atomically check AND set the flag.
     /// A second call while the first is in flight must return false immediately.
     func testBlocksNewCheckWhileOneIsInFlight() async {
