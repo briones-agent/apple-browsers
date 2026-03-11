@@ -1242,6 +1242,8 @@
 		37A0BA312D747C7000130447 /* CapturingHistoryViewTabOpener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A0BA2F2D747C6F00130447 /* CapturingHistoryViewTabOpener.swift */; };
 		37A0BA332D74BB3300130447 /* DefaultHistoryViewTabOpenerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A0BA322D74BB3100130447 /* DefaultHistoryViewTabOpenerTests.swift */; };
 		37A0BA342D74BB3300130447 /* DefaultHistoryViewTabOpenerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A0BA322D74BB3100130447 /* DefaultHistoryViewTabOpenerTests.swift */; };
+		37A2CC122F61F4DB00276ADA /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A2CC112F61F4DB00276ADA /* AppDependencies.swift */; };
+		37A2CC132F61F4DB00276ADA /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A2CC112F61F4DB00276ADA /* AppDependencies.swift */; };
 		37A4CEBA282E992F00D75B89 /* StartupPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4CEB9282E992F00D75B89 /* StartupPreferences.swift */; };
 		37A6A8F12AFCC988008580A3 /* FaviconsFetcherOnboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A6A8F02AFCC988008580A3 /* FaviconsFetcherOnboarding.swift */; };
 		37A6A8F22AFCC988008580A3 /* FaviconsFetcherOnboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A6A8F02AFCC988008580A3 /* FaviconsFetcherOnboarding.swift */; };
@@ -4852,6 +4854,7 @@
 		37A0BA2C2D747C5500130447 /* CapturingHistoryViewBookmarksHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturingHistoryViewBookmarksHandler.swift; sourceTree = "<group>"; };
 		37A0BA2F2D747C6F00130447 /* CapturingHistoryViewTabOpener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturingHistoryViewTabOpener.swift; sourceTree = "<group>"; };
 		37A0BA322D74BB3100130447 /* DefaultHistoryViewTabOpenerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultHistoryViewTabOpenerTests.swift; sourceTree = "<group>"; };
+		37A2CC112F61F4DB00276ADA /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		37A4CEB9282E992F00D75B89 /* StartupPreferences.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StartupPreferences.swift; sourceTree = "<group>"; };
 		37A6A8F02AFCC988008580A3 /* FaviconsFetcherOnboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconsFetcherOnboarding.swift; sourceTree = "<group>"; };
 		37A6A8F52AFCCA59008580A3 /* FaviconsFetcherOnboardingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconsFetcherOnboardingViewController.swift; sourceTree = "<group>"; };
@@ -7458,6 +7461,7 @@
 			children = (
 				370F18B42F619B0C0021D19E /* AppStates */,
 				370F18B62F619B100021D19E /* AppStateMachine.swift */,
+				37A2CC112F61F4DB00276ADA /* AppDependencies.swift */,
 			);
 			path = AppLifecycle;
 			sourceTree = "<group>";
@@ -15238,6 +15242,7 @@
 				4BF0E5132AD25A2600FFEC9E /* DuckDuckGoUserAgent.swift in Sources */,
 				3706FC78293F65D500E42796 /* SecureVaultReporter.swift in Sources */,
 				C172E7302C9329D300521D9A /* FlippedView.swift in Sources */,
+				37A2CC132F61F4DB00276ADA /* AppDependencies.swift in Sources */,
 				EE72DCA72EA91C9F0052661B /* ImportSourcePickerView.swift in Sources */,
 				3706FC7B293F65D500E42796 /* PasswordManagementViewController.swift in Sources */,
 				CD2AB5C02C8222F20019EB49 /* MaliciousSiteProtectionManager.swift in Sources */,
@@ -17359,6 +17364,7 @@
 				AAB549DF25DAB8F80058460B /* BookmarkViewModel.swift in Sources */,
 				F118EA7D2BEA2B8700F77634 /* DefaultSubscriptionFeatureAvailability+DefaultInitializer.swift in Sources */,
 				31F28C5328C8EECA00119F70 /* DuckURLSchemeHandler.swift in Sources */,
+				37A2CC122F61F4DB00276ADA /* AppDependencies.swift in Sources */,
 				AA13DCB4271480B0006D48D3 /* FireDialogViewModel.swift in Sources */,
 				1DDC84F72B83558F00670238 /* PreferencesPrivateSearchView.swift in Sources */,
 				F1C5763E2BFF972900C78647 /* SubscriptionUIHandling.swift in Sources */,

@@ -189,10 +189,10 @@ struct AppDependencies {
 
     // MARK: - Sub-containers
 
-    let stores: Stores
-    let featureFlags: FeatureFlags
-    let preferences: Preferences
-    let services: Services
-    let ui: UI
-    let subscription: SubscriptionDependencies
+    var stores: Stores
+    var featureFlags: FeatureFlags
+    var preferences: Preferences
+    var services: Services
+    var ui: UI
+    var subscription: SubscriptionDependencies
 }

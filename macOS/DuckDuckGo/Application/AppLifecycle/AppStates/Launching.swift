@@ -72,7 +72,7 @@ import WebKit
 @MainActor
 final class Launching: LaunchingHandling {
 
-    let dependencies: AppDependencies
+    var dependencies: AppDependencies
 
     // MARK: - Properties that live on Launching (not in AppDependencies)
 
