@@ -319,7 +319,6 @@ final class PrivacyDashboardUserScript: NSObject, StaticUserScript {
                              {"id": "openerContext"},
                              {"id": "userRefreshCount"},
                              {"id": "locale"},
-                             {"id": "detectorData"},
                          ]
                      });
                      """
