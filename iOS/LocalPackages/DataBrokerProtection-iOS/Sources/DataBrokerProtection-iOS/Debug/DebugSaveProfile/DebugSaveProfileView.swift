@@ -80,5 +80,8 @@ public struct DebugSaveProfileView: View {
                   dismissButton: .default(Text("OK"), action: { viewModel.showAlert = false })
             )
         }
+        .onAppear {
+            viewModel.applyDebugDefaultsIfNeeded()
+        }
     }
 }

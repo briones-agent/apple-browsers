@@ -95,14 +95,32 @@ final class DebugSaveProfileViewModel: ObservableObject {
     @Published var showAlert = false
     var alert: AlertUI?
 
-    @Published var birthYear: String = ""
-    @Published var names = [NameUI.empty()]
-    @Published var addresses = [AddressUI.empty()]
+    @Published var birthYear: String = "1990"
+    @Published var names = [NameUI(first: "John", last: "Smith")]
+    @Published var addresses = [AddressUI(city: "Houston", state: "Tx")]
 
     private weak var continuedProcessingDelegate: DBPIOSInterface.ContinuedProcessingDelegate?
 
     internal init(continuedProcessingDelegate: DBPIOSInterface.ContinuedProcessingDelegate?) {
         self.continuedProcessingDelegate = continuedProcessingDelegate
+    }
+
+    func applyDebugDefaultsIfNeeded() {
+        guard names.count == 1, addresses.count == 1 else { return }
+        guard names[0].first.isEmpty,
+              names[0].middle.isEmpty,
+              names[0].last.isEmpty,
+              addresses[0].city.isEmpty,
+              addresses[0].state.isEmpty,
+              birthYear.isEmpty else {
+            return
+        }
+
+        names[0].first = "John"
+        names[0].last = "Smith"
+        addresses[0].city = "Houston"
+        addresses[0].state = "Tx"
+        birthYear = "1990"
     }
 
     private func createBrokerProfileQueryData(for broker: DataBroker) -> [BrokerProfileQueryData] {
