@@ -1167,8 +1167,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // swiftlint:enable cyclomatic_complexity
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        appStateMachine = AppStateMachine(initialState: .initializing(Initializing(appDelegate: self)))
+        appStateMachine = AppStateMachine(initialState: .initializing(Initializing()))
         appStateMachine.handle(.willFinishLaunching)
+        appStateMachine.handle(.didFinishLaunching)
+        // State is now .launching — all dependencies available via forwarding properties
 
         let profilerToken = startupProfiler.startMeasuring(.appWillFinishLaunching)
         defer {
@@ -1225,7 +1227,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard AppVersion.runType.requiresEnvironment else { return }
-        appStateMachine.handle(.didFinishLaunching)
 
         defer {
             didFinishLaunching = true

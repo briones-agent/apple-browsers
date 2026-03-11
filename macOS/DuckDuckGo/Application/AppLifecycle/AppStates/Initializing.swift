@@ -17,29 +17,32 @@
 //  limitations under the License.
 //
 
+import Common
+import Crashes
 import Foundation
+import PixelKit
 
 @MainActor
 struct Initializing: InitializingHandling {
 
-    private weak var appDelegate: AppDelegate?
-
     init() {}
 
-    init(appDelegate: AppDelegate) {
-        self.appDelegate = appDelegate
-    }
+    func handleWillFinishLaunching() {
+        let didCrashDuringCrashHandlersSetUp = UserDefaultsWrapper(key: .didCrashDuringCrashHandlersSetUp, defaultValue: false)
+        if case .normal = AppVersion.runType,
+           !didCrashDuringCrashHandlersSetUp.wrappedValue {
+            didCrashDuringCrashHandlersSetUp.wrappedValue = true
+            CrashLogMessageExtractor.setUp(swapCxaThrow: false)
+            didCrashDuringCrashHandlersSetUp.wrappedValue = false
+        }
 
-    mutating func handleWillFinishLaunching() {
-        // Phase 1: delegates to AppDelegate's existing willFinishLaunching logic.
-        // In Phase 2, the willFinishLaunching work will move here.
+        if AppVersion.runType.requiresEnvironment {
+            AppDelegate.configurePixelKit()
+        }
     }
 
     func makeLaunchingState() throws -> any LaunchingHandling {
-        guard let appDelegate else {
-            fatalError("AppDelegate not set on Initializing state")
-        }
-        return Launching(appDelegate: appDelegate)
+        try Launching()
     }
 
 }
