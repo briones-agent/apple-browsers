@@ -455,7 +455,6 @@ extension DataBrokerProtectionIOSManager: JobQueueManagerDelegate {
                 }
             }
         }
-
         // Figure out if we've just finished initial scans, and send the appropriate pixel if necessary
         if eventPixels.hasInitialScansTotalDurationPixelBeenSent() {
             return
