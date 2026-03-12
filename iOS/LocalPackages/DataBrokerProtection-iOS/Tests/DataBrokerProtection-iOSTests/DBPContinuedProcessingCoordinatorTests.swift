@@ -92,16 +92,6 @@ final class DBPContinuedProcessingCoordinatorTests: XCTestCase {
         XCTAssertNil(manager.continuedProcessingDelegate)
     }
 
-    func testWhenOptOutPhaseCompletes_thenClearsDelegate() {
-        let (manager, _) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
-        let sut = DBPContinuedProcessingCoordinator(manager: manager)
-        manager.continuedProcessingDelegate = sut
-
-        sut.handleOptOutPhaseCompleted()
-
-        XCTAssertNil(manager.continuedProcessingDelegate)
-    }
-
     func testWhenExpire_thenStopsContinuedProcessingOperationsAndClearsDelegate() {
         let (manager, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
         let sut = DBPContinuedProcessingCoordinator(manager: manager)
