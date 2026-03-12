@@ -1096,7 +1096,9 @@
 		373E477C2D809EF5006F3FEC /* AddBookmarkPopoverViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 373E477B2D809EF3006F3FEC /* AddBookmarkPopoverViewModelTests.swift */; };
 		373E477D2D809EF5006F3FEC /* AddBookmarkPopoverViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 373E477B2D809EF3006F3FEC /* AddBookmarkPopoverViewModelTests.swift */; };
 		37445F992A1566420029F789 /* SyncDataProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37445F982A1566420029F789 /* SyncDataProviders.swift */; };
+		96F31F64816C4144B9772299 /* AppSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26BEA682B11B486985AE3D13 /* AppSyncService.swift */; };
 		37445F9A2A1566420029F789 /* SyncDataProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37445F982A1566420029F789 /* SyncDataProviders.swift */; };
+		4EF0AC3B1A9F4BA9922E4220 /* AppSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26BEA682B11B486985AE3D13 /* AppSyncService.swift */; };
 		37445F9C2A1569F00029F789 /* SyncBookmarksAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37445F9B2A1569F00029F789 /* SyncBookmarksAdapter.swift */; };
 		37445F9D2A1569F00029F789 /* SyncBookmarksAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37445F9B2A1569F00029F789 /* SyncBookmarksAdapter.swift */; };
 		3745DE052D536DCF00024FC8 /* HistoryGroupingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3745DE042D536DCA00024FC8 /* HistoryGroupingProvider.swift */; };
@@ -4762,6 +4764,7 @@
 		373E477B2D809EF3006F3FEC /* AddBookmarkPopoverViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookmarkPopoverViewModelTests.swift; sourceTree = "<group>"; };
 		374348BE2E26F21B00C37230 /* Sparkle.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Sparkle.xcconfig; sourceTree = "<group>"; };
 		37445F982A1566420029F789 /* SyncDataProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDataProviders.swift; sourceTree = "<group>"; };
+		26BEA682B11B486985AE3D13 /* AppSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSyncService.swift; sourceTree = "<group>"; };
 		37445F9B2A1569F00029F789 /* SyncBookmarksAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncBookmarksAdapter.swift; sourceTree = "<group>"; };
 		3745DE042D536DCA00024FC8 /* HistoryGroupingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryGroupingProvider.swift; sourceTree = "<group>"; };
 		3745DE072D536EF000024FC8 /* HistoryGroupingProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryGroupingProviderTests.swift; sourceTree = "<group>"; };
@@ -7595,6 +7598,7 @@
 				370A34B02AB24E3700C77F7C /* SyncDebugMenu.swift */,
 				3775913529AB9A1C00E26367 /* SyncManagementDialogViewController.swift */,
 				373D9B4729EEAC1B00381FDD /* SyncMetadataDatabase.swift */,
+				26BEA682B11B486985AE3D13 /* AppSyncService.swift */,
 				37445F982A1566420029F789 /* SyncDataProviders.swift */,
 				37445F9B2A1569F00029F789 /* SyncBookmarksAdapter.swift */,
 				372BC2A02A4AFA47001D8FD5 /* SyncCredentialsAdapter.swift */,
@@ -15225,6 +15229,7 @@
 				BB42A37D2F3A829700598719 /* MemoryUsageIntervalReporter.swift in Sources */,
 				CB63DECC2CDC0BBE0097986A /* PageRefreshMonitor.swift in Sources */,
 				3706FC6E293F65D500E42796 /* DuckURLSchemeHandler.swift in Sources */,
+				4EF0AC3B1A9F4BA9922E4220 /* AppSyncService.swift in Sources */,
 				37445F9A2A1566420029F789 /* SyncDataProviders.swift in Sources */,
 				3706FC6F293F65D500E42796 /* FireDialogViewModel.swift in Sources */,
 				CC9B678C2E607AD9003353C3 /* SessionRestorePromptPixel.swift in Sources */,
@@ -16368,6 +16373,7 @@
 				B65E5DAF2B74DE6D00480415 /* TrackerNetwork.swift in Sources */,
 				37657FC82DB95140003D749E /* TabCrashIndicatorModel.swift in Sources */,
 				37F09AD62DDE483500643A1B /* AppearancePreferencesMock.swift in Sources */,
+				96F31F64816C4144B9772299 /* AppSyncService.swift in Sources */,
 				37445F992A1566420029F789 /* SyncDataProviders.swift in Sources */,
 				31FBF22E2CDD068000626C17 /* AIChatUserScriptHandling.swift in Sources */,
 				C1D3C5682E747BBE0086A2BD /* CreditCardsCleanupErrorHandling.swift in Sources */,

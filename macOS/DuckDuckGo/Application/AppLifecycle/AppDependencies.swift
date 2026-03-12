@@ -121,9 +121,7 @@ struct AppDependencies {
         let autoconsentStats: AutoconsentStatsCollecting
         let remoteMessagingClient: RemoteMessagingClient!
         let activeRemoteMessageModel: ActiveRemoteMessageModel
-        var syncService: DDGSyncing?
-        var syncDataProviders: SyncDataProvidersSource?
-        var syncErrorHandler: SyncErrorHandler
+        let appSyncService: AppSyncService
         let webCacheManager: WebCacheManager
         let crashReporting: any CrashReporting
         let watchdog: Watchdog
@@ -180,9 +178,7 @@ struct AppDependencies {
             autoconsentStats: AutoconsentStatsCollecting,
             remoteMessagingClient: RemoteMessagingClient!,
             activeRemoteMessageModel: ActiveRemoteMessageModel,
-            syncService: DDGSyncing?,
-            syncDataProviders: SyncDataProvidersSource?,
-            syncErrorHandler: SyncErrorHandler,
+            appSyncService: AppSyncService,
             webCacheManager: WebCacheManager,
             crashReporting: any CrashReporting,
             watchdog: Watchdog,
@@ -237,9 +233,7 @@ struct AppDependencies {
             self.autoconsentStats = autoconsentStats
             self.remoteMessagingClient = remoteMessagingClient
             self.activeRemoteMessageModel = activeRemoteMessageModel
-            self.syncService = syncService
-            self.syncDataProviders = syncDataProviders
-            self.syncErrorHandler = syncErrorHandler
+            self.appSyncService = appSyncService
             self.webCacheManager = webCacheManager
             self.crashReporting = crashReporting
             self.watchdog = watchdog

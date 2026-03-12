@@ -331,18 +331,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var autoconsentStats: AutoconsentStatsCollecting { appDependencies.services.autoconsentStats }
     var remoteMessagingClient: RemoteMessagingClient! { appDependencies.services.remoteMessagingClient }
     var activeRemoteMessageModel: ActiveRemoteMessageModel { appDependencies.services.activeRemoteMessageModel }
-    var syncService: DDGSyncing? {
-        get { appDependencies.services.syncService }
-        set { appDependencies.services.syncService = newValue }
-    }
-    var syncDataProviders: SyncDataProvidersSource? {
-        get { appDependencies.services.syncDataProviders }
-        set { appDependencies.services.syncDataProviders = newValue }
-    }
-    var syncErrorHandler: SyncErrorHandler {
-        get { appDependencies.services.syncErrorHandler }
-        set { appDependencies.services.syncErrorHandler = newValue }
-    }
+    var appSyncService: AppSyncService { appDependencies.services.appSyncService }
+    var syncService: DDGSyncing? { appDependencies.services.appSyncService.sync }
+    var syncDataProviders: SyncDataProvidersSource? { appDependencies.services.appSyncService.syncDataProviders }
+    var syncErrorHandler: SyncErrorHandler { appDependencies.services.appSyncService.syncErrorHandler }
     var webCacheManager: WebCacheManager { appDependencies.services.webCacheManager }
     var watchdog: Watchdog { appDependencies.services.watchdog }
     var autoClearHandler: AutoClearHandler! {
@@ -426,9 +418,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var darkReaderFeatureSettings: DarkReaderFeatureSettings? {
         MainActor.assumeMainThread { foregroundState?.darkReaderFeatureSettings }
     }
-    var aiChatSyncCleaner: AIChatSyncCleaning? {
-        MainActor.assumeMainThread { foregroundState?.aiChatSyncCleaner }
-    }
+    var aiChatSyncCleaner: AIChatSyncCleaning? { appDependencies.services.appSyncService.aiChatSyncCleaner }
     var autofillPixelReporter: AutofillPixelReporter? {
         MainActor.assumeMainThread { foregroundState?.autofillPixelReporter }
     }

@@ -51,12 +51,10 @@ final class Foreground: ForegroundHandling {
 
     private var vpnSubscriptionEventHandler: VPNSubscriptionEventsHandler?
     private var freemiumDBPScanResultPolling: FreemiumDBPScanResultPolling?
-    private(set) var aiChatSyncCleaner: AIChatSyncCleaning?
     private(set) var autofillPixelReporter: AutofillPixelReporter?
     private var passwordsStatusBarMenu: PasswordsStatusBarMenu?
     private var passwordsMenuBarCancellable: AnyCancellable?
     private var isInternalUserSharingCancellable: AnyCancellable?
-    private var isSyncInProgressCancellable: AnyCancellable?
     private var syncFeatureFlagsCancellable: AnyCancellable?
     private var screenLockedCancellable: AnyCancellable?
     private var emailCancellables = Set<AnyCancellable>()
@@ -122,7 +120,8 @@ final class Foreground: ForegroundHandling {
         let statisticsLoader = AppVersion.runType.requiresEnvironment ? StatisticsLoader.shared : nil
         statisticsLoader?.load()
 
-        startupSync()
+        subscribeSyncQueueToScreenLockedNotifications()
+        subscribeToSyncFeatureFlags(dependencies.services.appSyncService.sync)
 
         profilerToken.advance(to: .appStateRestoration)
 
@@ -474,72 +473,6 @@ final class Foreground: ForegroundHandling {
     // MARK: - Sync
 
     @MainActor
-    private func startupSync() {
-#if DEBUG
-        let defaultEnvironment = ServerEnvironment.development
-#else
-        let defaultEnvironment = ServerEnvironment.production
-#endif
-
-        let environment: ServerEnvironment
-        let buildType = StandardApplicationBuildType()
-        if buildType.isDebugBuild || buildType.isReviewBuild {
-            environment = ServerEnvironment(
-                UserDefaultsWrapper(key: .syncEnvironment, defaultValue: defaultEnvironment.description).wrappedValue
-            ) ?? defaultEnvironment
-        } else {
-            environment = defaultEnvironment
-        }
-
-        let syncDataProviders = SyncDataProvidersSource(
-            bookmarksDatabase: dependencies.stores.bookmarkDatabase.db,
-            bookmarkManager: dependencies.services.bookmarkManager,
-            appearancePreferences: dependencies.preferences.appearancePreferences,
-            syncErrorHandler: dependencies.services.syncErrorHandler
-        )
-        let syncService = DDGSync(
-            dataProvidersSource: syncDataProviders,
-            errorEvents: SyncErrorHandler(),
-            privacyConfigurationManager: dependencies.services.privacyFeatures.contentBlocking.privacyConfigurationManager,
-            keyValueStore: dependencies.stores.keyValueStore,
-            environment: environment
-        )
-        let aiChatSyncCleaner = AIChatSyncCleaner(
-            sync: syncService,
-            keyValueStore: dependencies.stores.keyValueStore,
-            featureFlagProvider: AIChatFeatureFlagProvider(featureFlagger: dependencies.featureFlags.featureFlagger),
-            httpRequestErrorHandler: dependencies.services.syncErrorHandler.handleAiChatsError
-        )
-        syncService.setCustomOperations([AIChatDeleteOperation(cleaner: aiChatSyncCleaner)])
-
-        syncService.initializeIfNeeded()
-        syncDataProviders.setUpDatabaseCleaners(syncService: syncService)
-
-        // This is also called in applicationDidBecomeActive, but we're also calling it here, since
-        // syncService can be nil when applicationDidBecomeActive is called during startup, if a modal
-        // alert is shown before it's instantiated.  In any case it should be safe to call this here,
-        // since the scheduler debounces calls to notifyAppLifecycleEvent().
-        //
-        syncService.scheduler.notifyAppLifecycleEvent()
-
-        dependencies.services.syncDataProviders = syncDataProviders
-        dependencies.services.syncService = syncService
-        self.aiChatSyncCleaner = aiChatSyncCleaner
-
-        isSyncInProgressCancellable = syncService.isSyncInProgressPublisher
-            .filter { $0 }
-            .asVoid()
-            .sink { [weak syncService] in
-                PixelKit.fire(GeneralPixel.syncDaily, frequency: .legacyDailyNoSuffix)
-                syncService?.syncDailyStats.sendStatsIfNeeded(handler: { params in
-                    PixelKit.fire(GeneralPixel.syncSuccessRateDaily, withAdditionalParameters: params)
-                })
-            }
-
-        subscribeSyncQueueToScreenLockedNotifications()
-        subscribeToSyncFeatureFlags(syncService)
-    }
-
     private func subscribeToSyncFeatureFlags(_ syncService: DDGSync) {
         syncFeatureFlagsCancellable = syncService.featureFlagsPublisher
             .dropFirst()
@@ -578,15 +511,15 @@ final class Foreground: ForegroundHandling {
         screenLockedCancellable = Publishers.Merge(screenIsLockedPublisher, screenIsUnlockedPublisher)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isLocked in
-                guard let syncService = self?.dependencies.services.syncService, syncService.authState != .inactive else {
+                guard let sync = self?.dependencies.services.appSyncService.sync, sync.authState != .inactive else {
                     return
                 }
                 if isLocked {
                     Logger.sync.debug("Screen is locked")
-                    syncService.scheduler.cancelSyncAndSuspendSyncQueue()
+                    sync.scheduler.cancelSyncAndSuspendSyncQueue()
                 } else {
                     Logger.sync.debug("Screen is unlocked")
-                    syncService.scheduler.resumeSyncQueue()
+                    sync.scheduler.resumeSyncQueue()
                 }
             }
     }
@@ -615,15 +548,15 @@ final class Foreground: ForegroundHandling {
             PixelKit.fire(GeneralPixel.emailEnabledInitial, frequency: .legacyInitial)
         }
 
-        if let object = notification.object as? EmailManager, let emailManager = dependencies.services.syncDataProviders?.settingsAdapter.emailManager, object !== emailManager {
-            dependencies.services.syncService?.scheduler.notifyDataChanged()
+        if let object = notification.object as? EmailManager, let emailManager = dependencies.services.appSyncService.syncDataProviders.settingsAdapter.emailManager, object !== emailManager {
+            dependencies.services.appSyncService.sync.scheduler.notifyDataChanged()
         }
     }
 
     private func emailDidSignOutNotification(_ notification: Notification) {
         PixelKit.fire(NonStandardPixel.emailDisabled, doNotEnforcePrefix: true)
-        if let object = notification.object as? EmailManager, let emailManager = dependencies.services.syncDataProviders?.settingsAdapter.emailManager, object !== emailManager {
-            dependencies.services.syncService?.scheduler.notifyDataChanged()
+        if let object = notification.object as? EmailManager, let emailManager = dependencies.services.appSyncService.syncDataProviders.settingsAdapter.emailManager, object !== emailManager {
+            dependencies.services.appSyncService.sync.scheduler.notifyDataChanged()
         }
     }
 
@@ -668,7 +601,7 @@ final class Foreground: ForegroundHandling {
                                                 startupPreferences: dependencies.preferences.startupPreferences,
                                                 fireViewModel: dependencies.ui.fireCoordinator.fireViewModel,
                                                 stateRestorationManager: dependencies.services.stateRestorationManager,
-                                                aiChatSyncCleaner: aiChatSyncCleaner)
+                                                aiChatSyncCleaner: dependencies.services.appSyncService.aiChatSyncCleaner)
         dependencies.services.autoClearHandler = autoClearHandler
         DispatchQueue.main.async {
             autoClearHandler.handleAppLaunch()

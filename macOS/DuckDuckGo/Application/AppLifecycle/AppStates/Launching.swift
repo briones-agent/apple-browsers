@@ -545,9 +545,17 @@ final class Launching: LaunchingHandling {
         )
         let newTabPageCustomizationModel = NewTabPageCustomizationModel(appearancePreferences: appearancePreferences)
 
-        // MARK: - Sync Error Handler
+        // MARK: - Sync Service
 
-        let syncErrorHandler = SyncErrorHandler()
+        let appSyncService = AppSyncService(
+            bookmarksDatabase: bookmarkDatabase.db,
+            bookmarkManager: bookmarkManager,
+            appearancePreferences: appearancePreferences,
+            privacyConfigurationManager: privacyConfigurationManager,
+            keyValueStore: keyValueStore,
+            featureFlagger: featureFlagger
+        )
+        let syncErrorHandler = appSyncService.syncErrorHandler
 
         // MARK: - Fire Coordinator
 
@@ -924,9 +932,7 @@ final class Launching: LaunchingHandling {
                 autoconsentStats: autoconsentStats,
                 remoteMessagingClient: remoteMessagingClient,
                 activeRemoteMessageModel: activeRemoteMessageModel,
-                syncService: nil,
-                syncDataProviders: nil,
-                syncErrorHandler: syncErrorHandler,
+                appSyncService: appSyncService,
                 webCacheManager: webCacheManager,
                 crashReporting: crashReporting,
                 watchdog: watchdog,
@@ -995,9 +1001,8 @@ final class Launching: LaunchingHandling {
             pixelFiring: PixelKit.shared,
             memoryUsageMonitor: memoryUsageMonitor,
             windowContext: WindowContext(windowControllersManager: windowControllersManager),
-            isSyncEnabled: { [weak self] in
-                guard let syncService = self?.dependencies.services.syncService else { return nil }
-                return syncService.authState == .active
+            isSyncEnabled: { [weak appSyncService] in
+                return appSyncService?.sync.authState == .active
             },
             launchDate: appLaunchDate,
             logger: .memory
@@ -1008,9 +1013,8 @@ final class Launching: LaunchingHandling {
             featureFlagger: featureFlagger,
             pixelFiring: PixelKit.shared,
             windowContext: WindowContext(windowControllersManager: windowControllersManager),
-            isSyncEnabled: { [weak self] in
-                guard let syncService = self?.dependencies.services.syncService else { return nil }
-                return syncService.authState == .active
+            isSyncEnabled: { [weak appSyncService] in
+                return appSyncService?.sync.authState == .active
             },
             launchDate: appLaunchDate,
             logger: .memory
