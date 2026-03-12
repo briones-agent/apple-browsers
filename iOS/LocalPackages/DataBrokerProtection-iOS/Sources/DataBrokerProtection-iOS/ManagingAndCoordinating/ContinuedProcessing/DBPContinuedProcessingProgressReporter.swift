@@ -44,12 +44,29 @@ final class DBPContinuedProcessingProgressReporter {
         case optOut
     }
 
-    private enum Constants {
-        static let preparingScanSubtitle = "Preparing scan"
-        static let preparingOptOutSubtitle = "Continuing opt-outs for found matches"
-    }
-
-    /// Mutable progress state for one phase of the run.
+    /// Mutable progress state for one half of the continued-processing run.
+    ///
+    /// This state drives a single phase of the user-visible progress bar:
+    /// - `totalUnits` is the current budget assigned to the phase (e.g. `360`)
+    /// - `completedUnits` is how much of that budget has been consumed (e.g. `95`)
+    /// - `allottedUnitsByID` records how much of the phase budget belongs to each planned job,
+    ///   (e.g. `jobA = 120`, `jobB = 120`, `jobC = 120`)
+    /// - `completedIDs` records which planned jobs have finished (e.g. `[jobA]`)
+    ///
+    /// Example:
+    /// if a scan phase has 3 jobs and each is allotted 120 units, then:
+    /// - heartbeat increments `completedUnits` while work is still in progress
+    /// - when one job finishes, its ID is added to `completedIDs`
+    /// - progress then snaps forward to at least 120 completed units
+    ///
+    /// If all 360 units are consumed before the phase completes, heartbeat no longer turns
+    /// `360 / 360` into `361 / 360`. Instead it grows both values together:
+    /// - `360 / 360` becomes `361 / 361` then `362 / 362`
+    /// This keeps the system UI moving
+    ///
+    /// When the phase completes, progress snaps to the full phase budget.
+    /// For example, if the phase is at `245 / 360` when the last remaining job finishes,
+    /// `completedUnits` snaps to `360`.
     private struct PhaseProgress<ID: Hashable> {
         var completedUnits: Int64 = 0
         var totalUnits: Int64 = 0
@@ -121,6 +138,13 @@ final class DBPContinuedProcessingProgressReporter {
     // MARK: - Run Setup
 
     /// Seeds the scan-phase budget from the initial plan and reserves an equally sized opt-out budget.
+    ///
+    /// Example:
+    /// if the initial scan plan has 3 jobs and `scanBudgetUnitsPerJob` is `120`, then:
+    /// - the scan half starts with `3 * 120 = 360` total units
+    /// - each scan job is allotted `120` units
+    /// - the opt-out half reserves another `360` units up front
+    /// - the full run therefore starts with `720` total units split 50/50 across the two phases
     func startInitialRun(plan: DBPContinuedProcessingPlans.InitialScanPlan, scanBudgetUnitsPerJob: Int64) {
         let scanBudgetUnitsPerJob = max(scanBudgetUnitsPerJob, 1)
         phase = .scan
@@ -189,27 +213,22 @@ final class DBPContinuedProcessingProgressReporter {
 
     /// Builds the scan-phase subtitle shown by the system task UI.
     var scanSubtitle: String {
-        let brokerCount = uniqueScanBrokerCount
-        guard brokerCount > 0 else {
-            return Constants.preparingScanSubtitle
-        }
-
-        return "Scanning \(completedScanBrokerCount) of \(brokerCount) brokers"
+        uniqueScanBrokerCount > 0 ? "Scanning \(completedScanBrokerCount) of \(uniqueScanBrokerCount) brokers" : "Scanning brokers"
     }
 
     /// Builds the opt-out-phase subtitle shown by the system task UI.
     var optOutSubtitle: String {
-        let optOutCount = optOutProgress.allottedUnitsByID.count
-        guard optOutCount > 0 else {
-            return Constants.preparingOptOutSubtitle
-        }
-
-        return "Submitting \(optOutCount) opt-out requests"
+        optOutProgress.allottedUnitsByID.count > 0 ? "Submitting opt-out requests" : "Submitting opt-out requests"
     }
 
     // MARK: - Helpers
 
     /// Evenly distributes a phase budget across a fixed number of planned jobs.
+    ///
+    /// Example:
+    /// Distributing `360` units across `3` jobs returns `[120, 120, 120]`.
+    /// Distributing `362` units across `3` jobs returns `[121, 121, 120]`,
+    /// with the remainder assigned to the first jobs.
     private func distribute(totalUnits: Int64, acrossItemCount itemCount: Int) -> [Int64] {
         guard itemCount > 0 else { return [] }
 
