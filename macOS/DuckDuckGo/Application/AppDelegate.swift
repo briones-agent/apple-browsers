@@ -88,11 +88,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Always reads dependencies from the current state so that mutations made by state handlers
     /// (e.g. syncService set in Foreground.onTransition) are immediately visible to forwarding properties.
-    /// Uses MainActor.assumeMainThread because appStateMachine is @MainActor-isolated but forwarding
-    /// properties are accessed from nonisolated contexts (matching original stored property behavior).
+    /// On the main thread, reads live from the state machine. Off the main thread, returns the snapshot.
     private var appDependencies: AppDependencies! {
         get {
-            MainActor.assumeMainThread {
+            guard Thread.isMainThread else { return _appDependencies }
+            return MainActor.assumeMainThread {
                 switch appStateMachine?.currentState {
                 case .foreground(let fg):
                     return (fg as? Foreground)?.dependencies ?? _appDependencies
@@ -464,12 +464,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return nil
     }
 
+    /// Updates the snapshot so background threads see the latest dependencies.
+    @MainActor
+    private func refreshAppDependenciesSnapshot() {
+        switch appStateMachine.currentState {
+        case .launching(let launching):
+            if let state = launching as? Launching {
+                _appDependencies = state.dependencies
+            }
+        case .foreground(let fg):
+            if let state = fg as? Foreground {
+                _appDependencies = state.dependencies
+            }
+        default:
+            break
+        }
+    }
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         appStateMachine.handle(.willFinishLaunching)
+        refreshAppDependenciesSnapshot()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appStateMachine.handle(.appDidFinishLaunching)
+        refreshAppDependenciesSnapshot()
         guard AppVersion.runType.requiresEnvironment else { return }
         didFinishLaunching = true
         UNUserNotificationCenter.current().delegate = self
