@@ -53,8 +53,8 @@ final class DBPContinuedProcessingCoordinator {
         case taskAttached
         case transition(Phase)
         case heartbeat
-        case scanJobCompleted(DBPContinuedProcessingProgressReporter.ScanJobID)
-        case optOutJobCompleted(DBPContinuedProcessingProgressReporter.OptOutJobID)
+        case scanJobCompleted(DBPContinuedProcessingPlans.ScanJobID)
+        case optOutJobCompleted(DBPContinuedProcessingPlans.OptOutJobID)
         case scanPhaseCompleted
         case optOutPhaseCompleted
         case runCompleted(success: Bool)
