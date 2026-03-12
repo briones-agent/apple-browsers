@@ -36,12 +36,6 @@ PROVISIONING_PROFILE_SPECIFIER[config=Release][sdk=macosx*] = match Direct com.d
 PROVISIONING_PROFILE_SPECIFIER[config=Review][sdk=macosx*] = match Direct com.duckduckgo.macos.browser.review macos
 PROVISIONING_PROFILE_SPECIFIER[config=Alpha][sdk=macosx*] = match Direct com.duckduckgo.macos.browser.alpha macos
 
-GCC_PREPROCESSOR_DEFINITIONS[arch=*][sdk=*] = SWIFT_OBJC_INTERFACE_HEADER_NAME=$(SWIFT_OBJC_INTERFACE_HEADER_NAME) uint64_t="unsigned long long" _UINT64_T=1
-GCC_PREPROCESSOR_DEFINITIONS[config=CI][arch=*][sdk=*] = DEBUG=1 SWIFT_OBJC_INTERFACE_HEADER_NAME=$(SWIFT_OBJC_INTERFACE_HEADER_NAME) $(inherited)
-GCC_PREPROCESSOR_DEFINITIONS[config=Debug][arch=*][sdk=*] = DEBUG=1 SWIFT_OBJC_INTERFACE_HEADER_NAME=$(SWIFT_OBJC_INTERFACE_HEADER_NAME) $(inherited)
-GCC_PREPROCESSOR_DEFINITIONS[config=Review][arch=*][sdk=*] = SWIFT_OBJC_INTERFACE_HEADER_NAME=$(SWIFT_OBJC_INTERFACE_HEADER_NAME) $(inherited)
-GCC_PREPROCESSOR_DEFINITIONS[config=Alpha][arch=*][sdk=*] = SWIFT_OBJC_INTERFACE_HEADER_NAME=$(SWIFT_OBJC_INTERFACE_HEADER_NAME) $(inherited)
-
 // Install to /Applications/DEBUG/
 DEPLOYMENT_LOCATION[config=Debug] = YES;
 DSTROOT[config=Debug] = ${BUILT_PRODUCTS_DIR}
