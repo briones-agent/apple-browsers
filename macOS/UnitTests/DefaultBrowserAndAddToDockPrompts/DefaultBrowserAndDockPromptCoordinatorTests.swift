@@ -1123,7 +1123,7 @@ final class DefaultBrowserAndDockPromptCoordinatorTests: XCTestCase {
         XCTAssertNil(sut.eligiblePrompt.value)
     }
 
-    // MARK: - dismissAction() promptEligibility tests
+    // MARK: - promptEligibility tests
 
     func testWhenDismissActionCalledThenPromptEligibilityNotCleared() {
         // GIVEN
@@ -1138,6 +1138,24 @@ final class DefaultBrowserAndDockPromptCoordinatorTests: XCTestCase {
         sut.dismissAction(.userInput(prompt: .active(.banner), shouldHidePermanently: false))
 
         // THEN
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
+    }
+
+    func testWhenConfirmActionCalledThenEvaluateEligibilityUsesDeciderAndNotPreviousActivePrompt() {
+        // GIVEN
+        defaultBrowserProviderMock.isDefault = false
+        dockCustomizerMock.dockStatus = false
+        promptTypeDeciderMock.promptTypeToReturn = .active(.popover)
+        let sut = makeSUT()
+        _ = sut.getPromptType() // Sets activePrompt to .active(.popover)
+        XCTAssertEqual(sut.eligiblePrompt.value, .active(.popover))
+
+        // WHEN - user confirms popover, then decider changes to banner
+        sut.confirmAction(for: .active(.popover))
+        promptTypeDeciderMock.promptTypeToReturn = .active(.banner)
+        sut.evaluateEligibility()
+
+        // THEN - eligibility follows decider; previous active prompt is not sticky
         XCTAssertEqual(sut.eligiblePrompt.value, .active(.banner))
     }
 

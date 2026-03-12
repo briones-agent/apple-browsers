@@ -382,6 +382,7 @@ final class DefaultBrowserAndDockPromptCoordinator: DefaultBrowserAndDockPrompt 
         fireConfirmActionPixel()
         setDefaultBrowserAndAddToDockIfNeeded()
         promptDismissedSubject.send((prompt, .actioned))
+        activePrompt = nil
     }
 
     /// **PROMPT DISMISSED** (user clicked secondary button, close button, or status changed externally)
