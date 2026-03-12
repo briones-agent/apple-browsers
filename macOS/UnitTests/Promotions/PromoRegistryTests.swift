@@ -45,7 +45,6 @@ final class PromoRegistryTests: XCTestCase {
         )
         let dependencies = PromoDependencies(
             keyValueStore: InMemoryThrowingKeyValueStore(),
-            internalUserDecider: DefaultInternalUserDecider(),
             isExternallyActivated: false,
             activeRemoteMessageModel: activeRemoteMessageModel,
             defaultBrowserAndDockPromptService: defaultBrowserAndDockPromptService)
