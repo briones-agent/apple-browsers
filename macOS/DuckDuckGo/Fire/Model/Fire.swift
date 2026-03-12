@@ -407,7 +407,9 @@ final class Fire: FireProtocol {
                 dataClearingWideEventService?.start(.clearPermissions)
                 self.burnPermissions(of: domains) { result in
                     dataClearingWideEventService?.update(.clearPermissions, result: result)
-                    self.burnDownloads(of: domains)
+                    dataClearingWideEventService?.start(.cancelAllDownloads)
+                    let downloadsResult = self.burnDownloads(of: domains)
+                    dataClearingWideEventService?.update(.cancelAllDownloads, result: downloadsResult)
                     group.leave()
                 }
 
@@ -545,7 +547,9 @@ final class Fire: FireProtocol {
                     dataClearingWideEventService?.start(.clearFaviconCache)
                     self.burnFavicons { faviconResult in
                         dataClearingWideEventService?.update(.clearFaviconCache, result: faviconResult)
-                        self.burnDownloads()
+                        dataClearingWideEventService?.start(.cancelAllDownloads)
+                        let downloadsResult = self.burnDownloads()
+                        dataClearingWideEventService?.update(.cancelAllDownloads, result: downloadsResult)
                         group.leave()
                     }
                 }
@@ -904,13 +908,13 @@ final class Fire: FireProtocol {
     // MARK: - Downloads
 
     @MainActor
-    private func burnDownloads() {
-        self.downloadListCoordinator.cleanupInactiveDownloads(for: nil)
+    private func burnDownloads() -> Result<Void, Error> {
+        return self.downloadListCoordinator.cleanupInactiveDownloads(for: nil)
     }
 
     @MainActor
-    private func burnDownloads(of baseDomains: Set<String>) {
-        self.downloadListCoordinator.cleanupInactiveDownloads(for: baseDomains, tld: tld)
+    private func burnDownloads(of baseDomains: Set<String>) -> Result<Void, Error> {
+        return self.downloadListCoordinator.cleanupInactiveDownloads(for: baseDomains, tld: tld)
     }
 
     // MARK: - Favicons
