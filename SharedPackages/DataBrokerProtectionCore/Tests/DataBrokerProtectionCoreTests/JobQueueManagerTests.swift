@@ -61,7 +61,8 @@ final class JobQueueManagerTests: XCTestCase {
                                                         dataBrokerProtectionSettings: DataBrokerProtectionSettings(defaults: .standard),
                                                         emailConfirmationDataService: MockEmailConfirmationDataServiceProvider(),
                                                         captchaService: CaptchaServiceMock(),
-                                                        featureFlagger: MockDBPFeatureFlagger())
+                                                        featureFlagger: MockDBPFeatureFlagger(),
+                                                        applicationNameForUserAgent: nil)
     }
 
     func testWhenStartImmediateScanOperations_thenCreatorIsCalledWithManualScanOperationType() async throws {
