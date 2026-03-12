@@ -383,7 +383,7 @@ private extension OnboardingIntroViewModel {
         guard featureFlagger.isFeatureOn(.onboardingDuckAIQueryExperiment) else { return nil }
         // TODO: Temporary override for dev validation; remove once remote cohort mapping is finalized.
         // return featureFlagger.resolveCohort(for: FeatureFlag.onboardingDuckAIQueryExperiment) as? FeatureFlag.DuckAIQueryExperimentCohort
-        return .treatmentA
+        return .treatmentB
     }
 
 }
