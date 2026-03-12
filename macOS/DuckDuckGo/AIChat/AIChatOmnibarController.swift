@@ -165,10 +165,13 @@ final class AIChatOmnibarController {
             do {
                 let remoteModels = try await modelsService.fetchModels()
                 guard !Task.isCancelled else { return }
-                let userTier = await self.resolveUserTier()
+                let userTier = try await self.resolveUserTier()
+                guard !Task.isCancelled else { return }
                 self.hasActiveSubscription = userTier != .free
                 self.models = remoteModels.map { AIChatModel(remoteModel: $0, userTier: userTier) }
                 self.clearStaleModelSelectionIfNeeded()
+            } catch is CancellationError {
+                return
             } catch {
                 Logger.aiChat.error("Failed to fetch models: \(error.localizedDescription)")
                 PixelKit.fire(AIChatPixel.aiChatModelsFetchFailed, frequency: .dailyAndCount, includeAppVersionParameter: true)
@@ -176,7 +179,7 @@ final class AIChatOmnibarController {
         }
     }
 
-    private func resolveUserTier() async -> AIChatUserTier {
+    private func resolveUserTier() async throws -> AIChatUserTier {
         do {
             let subscription = try await subscriptionManager.getSubscription(cachePolicy: .cacheFirst)
             guard subscription.isActive else { return .free }
@@ -185,6 +188,8 @@ final class AIChatOmnibarController {
             case .pro: return .pro
             case .none: return .free
             }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             return .free
         }
