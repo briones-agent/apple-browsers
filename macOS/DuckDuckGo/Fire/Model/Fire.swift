@@ -380,7 +380,7 @@ final class Fire: FireProtocol {
             self.burnTabs(burningEntity: entity)
 
             if includeCookiesAndSiteData {
-                await self.burnWebCache(baseDomains: domains)
+                await self.burnWebCache(baseDomains: domains, dataClearingWideEventService: dataClearingWideEventService)
             }
 
             if includingHistory {
@@ -499,7 +499,7 @@ final class Fire: FireProtocol {
             self.burnTabs(burningEntity: .allWindows(mainWindowControllers: windowControllers, selectedDomains: Set(), customURLToOpen: url, close: true))
 
             if includeCookiesAndSiteData {
-                await self.burnWebCache()
+                await self.burnWebCache(dataClearingWideEventService: dataClearingWideEventService)
             }
             await self.burnPrivacyStats()
             await self.burnAutoconsentStats()
@@ -701,17 +701,17 @@ final class Fire: FireProtocol {
 
     // MARK: - Web cache
 
-    private func burnWebCache() async {
+    private func burnWebCache(dataClearingWideEventService: DataClearingWideEventService?) async {
         await unloadWebExtensions()
         Logger.fire.debug("WebsiteDataStore began cookie deletion")
-        await webCacheManager.clear()
+        await webCacheManager.clear(dataClearingWideEventService: dataClearingWideEventService)
         Logger.fire.debug("WebsiteDataStore completed cookie deletion")
     }
 
-    private func burnWebCache(baseDomains: Set<String>? = nil) async {
+    private func burnWebCache(baseDomains: Set<String>? = nil, dataClearingWideEventService: DataClearingWideEventService?) async {
         await unloadWebExtensions()
         Logger.fire.debug("WebsiteDataStore began cookie deletion")
-        await webCacheManager.clear(baseDomains: baseDomains)
+        await webCacheManager.clear(baseDomains: baseDomains, dataClearingWideEventService: dataClearingWideEventService)
         Logger.fire.debug("WebsiteDataStore completed cookie deletion")
     }
 

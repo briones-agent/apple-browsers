@@ -21,6 +21,7 @@ import WebKit
 import GRDB
 import Subscription
 import os.log
+import BrowserServicesKit
 
 public protocol HTTPCookieStore {
     func allCookies() async -> [HTTPCookie]
@@ -46,17 +47,23 @@ internal class WebCacheManager {
         self.websiteDataStore = websiteDataStore
     }
 
-    func clear(baseDomains: Set<String>? = nil) async {
+    func clear(baseDomains: Set<String>? = nil, dataClearingWideEventService: DataClearingWideEventService? = nil) async {
         // first cleanup ~/Library/Caches
         await clearFileCache()
 
         await clearDeviceHashSalts()
 
-        await removeAllSafelyRemovableDataTypes()
+        dataClearingWideEventService?.start(.clearSafelyRemovableWebsiteData)
+        let safelyRemovableResult = await removeAllSafelyRemovableDataTypes()
+        dataClearingWideEventService?.update(.clearSafelyRemovableWebsiteData, result: safelyRemovableResult)
 
-        await removeLocalStorageAndIndexedDBForNonFireproofDomains()
+        dataClearingWideEventService?.start(.clearFireproofableDataForNonFireproofDomains)
+        let fireproofableDataResult = await removeLocalStorageAndIndexedDBForNonFireproofDomains()
+        dataClearingWideEventService?.update(.clearFireproofableDataForNonFireproofDomains, result: fireproofableDataResult)
 
-        await removeCookies(for: baseDomains)
+        dataClearingWideEventService?.start(.clearCookiesForNonFireproofedDomains)
+        let cookiesResult = await removeCookies(for: baseDomains)
+        dataClearingWideEventService?.update(.clearCookiesForNonFireproofedDomains, result: cookiesResult)
 
         await self.removeResourceLoadStatisticsDatabase()
     }
@@ -131,15 +138,16 @@ internal class WebCacheManager {
     }
 
     @MainActor
-    private func removeAllSafelyRemovableDataTypes() async {
+    private func removeAllSafelyRemovableDataTypes() async -> Result<Void, Error> {
         let safelyRemovableTypes = WKWebsiteDataStore.safelyRemovableWebsiteDataTypes
 
         // Remove all data except cookies, local storage, and IndexedDB for all domains, and then filter cookies to preserve those allowed by Fireproofing.
         await websiteDataStore.removeData(ofTypes: safelyRemovableTypes, modifiedSince: Date.distantPast)
+        return .success(())
     }
 
     @MainActor
-    private func removeLocalStorageAndIndexedDBForNonFireproofDomains() async {
+    private func removeLocalStorageAndIndexedDBForNonFireproofDomains() async -> Result<Void, Error> {
         let allRecords = await websiteDataStore.dataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes())
 
         let removableRecords = allRecords.filter { record in
@@ -148,11 +156,12 @@ internal class WebCacheManager {
             !URL.duckduckgoDomain.contains(record.displayName) && !URL.duckAiDomain.contains(record.displayName) && !fireproofDomains.fireproofDomains.contains(record.displayName)
         }
         await websiteDataStore.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypesExceptCookies, for: removableRecords)
+        return .success(())
     }
 
     @MainActor
-    private func removeCookies(for baseDomains: Set<String>? = nil) async {
-        guard let cookieStore = websiteDataStore.cookieStore else { return }
+    private func removeCookies(for baseDomains: Set<String>? = nil) async -> Result<Void, Error> {
+        guard let cookieStore = websiteDataStore.cookieStore else { return .success(()) }
         var cookies = await cookieStore.allCookies()
 
         if let baseDomains = baseDomains {
@@ -173,6 +182,7 @@ internal class WebCacheManager {
             Logger.fire.debug("Deleting cookie for \(cookie.domain) named \(cookie.name)")
             await cookieStore.deleteCookie(cookie)
         }
+        return .success(())
     }
 
     // WKWebView doesn't provide a way to remove the observations database, which contains domains that have been
