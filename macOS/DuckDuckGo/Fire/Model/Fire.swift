@@ -423,9 +423,9 @@ final class Fire: FireProtocol {
 
             if includeChatHistory {
                 group.enter()
-                dataClearingWideEventService?.start(.clearAiChatHistory)
+                dataClearingWideEventService?.start(.clearAIChatHistory)
                 let chatHistoryResult = await burnChatHistory()
-                dataClearingWideEventService?.update(.clearAiChatHistory, result: chatHistoryResult)
+                dataClearingWideEventService?.update(.clearAIChatHistory, result: chatHistoryResult)
                 group.leave()
             }
 
@@ -507,13 +507,17 @@ final class Fire: FireProtocol {
             if includeCookiesAndSiteData {
                 await self.burnWebCache(dataClearingWideEventService: dataClearingWideEventService)
             }
-            await self.burnPrivacyStats()
+
+            dataClearingWideEventService?.start(.clearPrivacyStats)
+            let privacyStatsResult = await self.burnPrivacyStats()
+            dataClearingWideEventService?.update(.clearPrivacyStats, result: privacyStatsResult)
+
             await self.burnAutoconsentStats()
 
             if includeChatHistory {
-                dataClearingWideEventService?.start(.clearAiChatHistory)
+                dataClearingWideEventService?.start(.clearAIChatHistory)
                 let chatHistoryResult = await burnChatHistory()
-                dataClearingWideEventService?.update(.clearAiChatHistory, result: chatHistoryResult)
+                dataClearingWideEventService?.update(.clearAIChatHistory, result: chatHistoryResult)
             }
             self.burnHistory(ofEntity: .allWindows(mainWindowControllers: windowControllers, selectedDomains: [], customURLToOpen: nil, close: false)) {
                 self.burnPermissions {
@@ -798,8 +802,8 @@ final class Fire: FireProtocol {
 
     // MARK: - Privacy Stats
 
-    private func burnPrivacyStats() async {
-        await getPrivacyStats().clearPrivacyStats()
+    private func burnPrivacyStats() async -> Result<Void, Error> {
+        return await getPrivacyStats().clearPrivacyStats()
     }
 
     private func resetCookiePopupBlockedFlag(for domains: Set<String>) async {
