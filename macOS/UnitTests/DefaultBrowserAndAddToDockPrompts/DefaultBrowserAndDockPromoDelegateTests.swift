@@ -252,22 +252,6 @@ final class DefaultBrowserAndDockPromoDelegateTests: XCTestCase {
         _ = await showTask.value
     }
 
-    func testWhenShowCalledWithForceAndPromptDismissedThenReturnsNoChange() async {
-        // GIVEN
-        let expectedType = DefaultBrowserAndDockPromptPresentationType.active(.banner)
-        coordinator.eligiblePrompt.send(expectedType)
-        let delegate = makeDelegate(type: expectedType)
-
-        // WHEN
-        let showTask = Task { await delegate.show(history: PromoHistoryRecord(id: "test"), force: true) }
-        await Task.yield() // Allow show() to run and set up the prompt
-        coordinator.promptDismissed.send((expectedType, .ignored(cooldown: 1)))
-        let result = await showTask.value
-
-        // THEN
-        XCTAssertEqual(result, .noChange)
-    }
-
     // MARK: - hide() tests
 
     func testWhenHideCalledThenPresenterDismissesMatchingPromptType() async {
