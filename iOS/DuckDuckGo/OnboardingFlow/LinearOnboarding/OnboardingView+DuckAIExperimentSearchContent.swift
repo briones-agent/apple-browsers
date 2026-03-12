@@ -20,6 +20,7 @@
 import SwiftUI
 import UIKit
 import QuartzCore
+import Onboarding
 import DesignResourcesKit
 import DesignResourcesKitIcons
 import DuckUI
@@ -35,14 +36,25 @@ extension OnboardingView {
         static let pickerContainerHeight: CGFloat = 124.0 / 3.0
         static let singleLineFieldHeight: CGFloat = 26
         static let multilineFieldHeight: CGFloat = 56
+        static let legacyChipHeight: CGFloat = 46.33
+        static let rebrandedChipHeight: CGFloat = 32
+        static let legacyChipCornerRadius: CGFloat = 12
+        static let rebrandedChipCornerRadius: CGFloat = 32
     }
 
     struct DuckAIExperimentSearchContent: View {
+        enum VisualStyle {
+            case legacy
+            case rebranded
+        }
+
+        @Environment(\.onboardingTheme) private var onboardingTheme
         private let action: (OnboardingIntroViewModel.DuckAIExperimentSelection) -> Void
         private let openAIChatAction: (String?, Bool) -> Void
         private let openSearchAction: (String) -> Void
         private let measureQuerySubmissionAction: (Bool, DuckAIQueryExperimentPromptSource) -> Void
         private let startExitTransitionAction: () -> Void
+        private let visualStyle: VisualStyle
         @StateObject private var pickerViewModel: ImageSegmentedPickerViewModel
 
         @State private var query = ""
@@ -53,7 +65,8 @@ extension OnboardingView {
         @State private var isTransitioningOut = false
         @State private var isRunningInitialSelectionAnimation = false
         @State private var suggestionSequenceStarted = false
-        private let defaultDuckAISelection: Bool
+        private let defaultExperience: OnboardingIntroStep.DuckAIExperimentDefaultExperience
+        private let shouldAnimateToDuckAIOnAppear: Bool
 
         private static let pickerItems: [ImageSegmentedPickerItem] = [
             ImageSegmentedPickerItem(
@@ -69,7 +82,8 @@ extension OnboardingView {
         ]
 
         init(
-            defaultSelection: Bool,
+            defaultExperience: OnboardingIntroStep.DuckAIExperimentDefaultExperience,
+            visualStyle: VisualStyle = .legacy,
             action: @escaping (OnboardingIntroViewModel.DuckAIExperimentSelection) -> Void,
             openAIChatAction: @escaping (String?, Bool) -> Void,
             openSearchAction: @escaping (String) -> Void,
@@ -81,14 +95,17 @@ extension OnboardingView {
             self.openSearchAction = openSearchAction
             self.measureQuerySubmissionAction = measureQuerySubmissionAction
             self.startExitTransitionAction = startExitTransitionAction
-            self.defaultDuckAISelection = defaultSelection
-            let initialSelection = defaultSelection ? Self.pickerItems[0] : Self.pickerItems[1]
-            _isDuckAISelected = State(initialValue: !defaultSelection)
+            self.visualStyle = visualStyle
+            self.defaultExperience = defaultExperience
+            self.shouldAnimateToDuckAIOnAppear = defaultExperience == .duckAI
+            let startsInSearchMode = defaultExperience == .search || shouldAnimateToDuckAIOnAppear
+            let initialSelection = startsInSearchMode ? Self.pickerItems[0] : Self.pickerItems[1]
+            _isDuckAISelected = State(initialValue: !startsInSearchMode)
             _pickerViewModel = StateObject(wrappedValue: ImageSegmentedPickerViewModel(
                 items: Self.pickerItems,
                 selectedItem: initialSelection,
                 configuration: ImageSegmentedPickerConfiguration(itemContentSpacing: 8),
-                scrollProgress: defaultSelection ? 0 : 1,
+                scrollProgress: startsInSearchMode ? 0 : 1,
                 isScrollProgressDriven: false
             ))
         }
@@ -97,10 +114,10 @@ extension OnboardingView {
             VStack(spacing: 16) {
                 // Header text inside the onboarding bubble.
                 Text(UserText.Onboarding.DuckAIQueryExperiment.title)
-                    .font(Font(UIFont.daxTitle3()))
-                    .multilineTextAlignment(.leading)
-                    .foregroundColor(Color(designSystemColor: .textPrimary))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .font(visualStyle == .rebranded ? onboardingTheme.typography.title : Font(UIFont.daxTitle3()))
+                    .multilineTextAlignment(visualStyle == .rebranded ? .center : .leading)
+                    .foregroundColor(visualStyle == .rebranded ? onboardingTheme.colorPalette.textPrimary : Color(designSystemColor: .textPrimary))
+                    .frame(maxWidth: .infinity, alignment: visualStyle == .rebranded ? .center : .leading)
                     .fixedSize(horizontal: false, vertical: true)
 
                 // Search / Duck.ai segmented control.
@@ -152,33 +169,43 @@ extension OnboardingView {
             .animation(.easeInOut(duration: Metrics.contentFadeAnimationDuration), value: isTransitioningOut)
         }
 
+        private var accentColor: Color {
+            visualStyle == .rebranded ? Color(singleUseColor: .rebranding(.accentPrimary)) : Color(designSystemColor: .accent)
+        }
+
+        private var accentSecondaryColor: Color {
+            visualStyle == .rebranded ? Color(singleUseColor: .rebranding(.accentAltGlowPrimary)) : Color(designSystemColor: .accentGlowSecondary)
+        }
+
+        private var queryFieldBackgroundColor: Color {
+            visualStyle == .rebranded ? onboardingTheme.colorPalette.background : Color(designSystemColor: .surface)
+        }
+
         private func startInitialSelectionAnimationIfNeeded() {
             if !didRunInitialToggleAnimation {
                 didRunInitialToggleAnimation = true
-                // For cohorts that land on Search, keep initial state stable (no Duck.ai -> Search auto-switch).
-                // We only keep the intro auto-switch animation for Search -> Duck.ai.
-                guard defaultDuckAISelection else {
+                if shouldAnimateToDuckAIOnAppear {
+                    // Treatment A behavior: start in Search, then animate to Duck.ai.
+                    isDuckAISelected = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.initialToggleStartDelay) {
+                        guard didRunInitialToggleAnimation else { return }
+                        isRunningInitialSelectionAnimation = true
+                        isInputFocused = true
+                        withAnimation(.easeInOut(duration: Metrics.pickerSelectionAnimationDuration)) {
+                            isDuckAISelected = true
+                        } completion: {
+                            isRunningInitialSelectionAnimation = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
+                                startSuggestionSequenceIfNeeded()
+                            }
+                        }
+                    }
+                } else {
+                    // Treatment B behavior: stay in Search, no auto-switch.
                     isDuckAISelected = false
                     isInputFocused = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
                         startSuggestionSequenceIfNeeded()
-                    }
-                    return
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.initialToggleStartDelay) {
-                    guard didRunInitialToggleAnimation else { return }
-                    // Short intro animation: move from initial picker state to experiment default.
-                    // Start keyboard focus together with toggle animation for near-simultaneous motion.
-                    isRunningInitialSelectionAnimation = true
-                    isInputFocused = true
-                    withAnimation(.easeInOut(duration: Metrics.pickerSelectionAnimationDuration)) {
-                        isDuckAISelected = defaultDuckAISelection
-                    } completion: {
-                        isRunningInitialSelectionAnimation = false
-                        // Fallback for hardware keyboard / no keyboard animation callback.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
-                            startSuggestionSequenceIfNeeded()
-                        }
                     }
                 }
             }
@@ -211,7 +238,7 @@ extension OnboardingView {
                     )
                     .renderingMode(.template)
                     .font(Font(UIFont.daxBodyBold()))
-                    .foregroundColor(Color(designSystemColor: .icons))
+                    .foregroundColor(visualStyle == .rebranded ? accentColor : Color(designSystemColor: .icons))
                     .opacity(isPrimaryActionEnabled ? 1 : 0.3)
                     .frame(width: 28, height: 28)
                     .offset(x: 2.33, y: 1)
@@ -221,15 +248,15 @@ extension OnboardingView {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16.33)
-            .background(Color(designSystemColor: .surface))
+            .background(queryFieldBackgroundColor)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(Color(designSystemColor: .accentGlowSecondary), lineWidth: 2)
+                    .strokeBorder(accentSecondaryColor, lineWidth: visualStyle == .rebranded ? 1 : 2)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .inset(by: 2)
-                    .strokeBorder(Color(designSystemColor: .accent), lineWidth: 2)
+                    .strokeBorder(accentColor, lineWidth: visualStyle == .rebranded ? 1 : 2)
             )
             .cornerRadius(14)
             .frame(maxWidth: .infinity)
@@ -280,6 +307,14 @@ extension OnboardingView {
             )
         }
 
+        private var suggestionChipHeight: CGFloat {
+            visualStyle == .rebranded ? Metrics.rebrandedChipHeight : Metrics.legacyChipHeight
+        }
+
+        private var suggestionChipCornerRadius: CGFloat {
+            visualStyle == .rebranded ? Metrics.rebrandedChipCornerRadius : Metrics.legacyChipCornerRadius
+        }
+
         private var suggestionAppearanceAnimation: Animation {
             .interpolatingSpring(mass: 0.7, stiffness: 180, damping: 14, initialVelocity: 0.25)
         }
@@ -299,16 +334,16 @@ extension OnboardingView {
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .foregroundColor(Color(designSystemColor: .accent))
+                .foregroundColor(accentColor)
                 .padding(.leading, 14)
                 .padding(.trailing, 16)
                 .frame(maxWidth: .infinity)
-                .frame(height: 46.33)
+                .frame(height: suggestionChipHeight)
                 // Make the whole button area tappable, when there's no background.
                 .contentShape(Rectangle())
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(designSystemColor: .accent), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: suggestionChipCornerRadius)
+                        .stroke(accentColor, lineWidth: 1)
                 )
             }
             .buttonStyle(OutlinedSuggestionChipButtonStyle())

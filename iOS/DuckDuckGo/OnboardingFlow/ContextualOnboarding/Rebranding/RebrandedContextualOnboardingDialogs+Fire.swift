@@ -28,12 +28,13 @@ extension OnboardingRebranding {
     struct OnboardingFireDialog: View {
         @Environment(\.onboardingTheme) private var theme
 
+        let message: String
         let onManualDismiss: () -> Void
 
         var body: some View {
             ScrollView(.vertical, showsIndicators: false) {
                 OnboardingBubbleView.withDismissButton(tailPosition: nil, onDismiss: onManualDismiss) {
-                    OnboardingRebranding.OnboardingFireDialogContent()
+                    OnboardingRebranding.OnboardingFireDialogContent(message: message)
                 }
                 .padding(theme.contextualOnboardingMetrics.containerPadding)
             }
@@ -45,7 +46,7 @@ extension OnboardingRebranding {
         @Environment(\.verticalSizeClass) private var vSizeClass
         @Environment(\.horizontalSizeClass) private var hSizeClass
 
-        var message = UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage
+        let message: String
 
         var body: some View {
             OnboardingRebranding.ContextualDaxDialogContent<EmptyView>(
@@ -54,14 +55,14 @@ extension OnboardingRebranding {
             )
         }
 
-        private let attributedMessage: AttributedString = {
-            var attributedString = AttributedString(UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage)
+        private var attributedMessage: AttributedString {
+            var attributedString = AttributedString(message)
             // Find the range of "Fire Button"
             if let range = attributedString.range(of: "Fire Button") {
                 attributedString[range].inlinePresentationIntent = .stronglyEmphasized // Bold
             }
             return attributedString
-        }()
+        }
     }
 
 }

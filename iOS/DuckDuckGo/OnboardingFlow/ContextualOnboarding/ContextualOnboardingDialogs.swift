@@ -83,13 +83,14 @@ struct OnboardingTryVisitingSiteDialogContent: View {
 // MARK: - Fire Dialog
 
 struct OnboardingFireDialog: View {
+    let message: String
     let onManualDismiss: () -> Void
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             DaxDialogView(logoPosition: .left, onManualDismiss: onManualDismiss) {
                 VStack {
-                    OnboardingFireButtonDialogContent()
+                    OnboardingFireButtonDialogContent(message: message)
                 }
             }
             .padding()
@@ -98,12 +99,14 @@ struct OnboardingFireDialog: View {
 }
 
 struct OnboardingFireButtonDialogContent: View {
-    private let attributedMessage: NSAttributedString = {
+    let message: String
+
+    private var attributedMessage: NSAttributedString {
         let boldString = "Fire Button."
-        return UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage
+        return message
             .attributed
             .withFont(.daxBodyBold(), forText: boldString)
-    }()
+    }
 
     var body: some View {
         ContextualDaxDialogContent(
@@ -176,7 +179,9 @@ struct OnboardingTrackersDoneDialog: View {
             }) {
                 VStack {
                     if showNextScreen {
-                        OnboardingFireButtonDialogContent()
+                        OnboardingFireButtonDialogContent(
+                            message: UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage
+                        )
                     } else {
                         ContextualDaxDialogContent(
                             message: message,
@@ -368,7 +373,10 @@ struct OnboardingAddToDockTutorialContent: View {
 }
 
 #Preview("Try Fire Button") {
-    OnboardingFireDialog(onManualDismiss: {})
+    OnboardingFireDialog(
+        message: UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage,
+        onManualDismiss: {}
+    )
         .padding()
 }
 

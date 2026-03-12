@@ -72,6 +72,7 @@ final class RebrandedContextualDaxDialogFactory: ContextualDaxDialogsFactory {
         case .fire:
             rootView = AnyView(
                 fireDialog(
+                    message: spec.message,
                     delegate: delegate,
                     pixelName: spec.pixelName
                 )
@@ -236,6 +237,7 @@ private extension RebrandedContextualDaxDialogFactory {
 private extension RebrandedContextualDaxDialogFactory {
 
     func fireDialog(
+        message: String,
         delegate: ContextualOnboardingDelegate,
         pixelName: Pixel.Event
     ) -> some View {
@@ -244,8 +246,12 @@ private extension RebrandedContextualDaxDialogFactory {
             delegate?.didTapDismissContextualOnboardingAction()
         }
 
+        let fireDialogMessage = message.isEmpty ? UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage : message
         return OnboardingConditionalCenteredScrollableContainerView {
-            OnboardingRebranding.OnboardingFireDialog(onManualDismiss: onManualDismiss)
+            OnboardingRebranding.OnboardingFireDialog(
+                message: fireDialogMessage,
+                onManualDismiss: onManualDismiss
+            )
         }
         .applyContextualOnboardingBackground(backgroundType: .fireDialog, animationContext: .default)
         .onFirstAppear { [weak self] in

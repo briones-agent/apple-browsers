@@ -2193,6 +2193,11 @@ public struct UserText {
                 value: "surprise me!",
                 comment: "Surprise me suggestion chip label in onboarding Duck.ai query experiment screen."
             )
+            public static let fireOnboardingMessage = NotLocalizedString(
+                "onboarding.highlights.duckAIQueryExperiment.fire.message",
+                value: "Instantly delete your chats with the Fire Button.\n\nGive it a try! 🔥",
+                comment: "Experiment-only fire onboarding message shown after the first Duck.ai response."
+            )
         }
 
         enum ContextualOnboarding {

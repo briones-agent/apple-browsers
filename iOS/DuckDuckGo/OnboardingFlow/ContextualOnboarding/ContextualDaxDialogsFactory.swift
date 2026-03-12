@@ -94,6 +94,7 @@ final class DefaultContextualDaxDialogsFactory: ContextualDaxDialogsFactory {
         case .fire:
             rootView = AnyView(
                 fireDialog(
+                    message: spec.message,
                     delegate: delegate,
                     pixelName: spec.pixelName
                 )
@@ -237,6 +238,7 @@ final class DefaultContextualDaxDialogsFactory: ContextualDaxDialogsFactory {
     }
 
     private func fireDialog(
+        message: String,
         delegate: ContextualOnboardingDelegate,
         pixelName: Pixel.Event
     ) -> some View {
@@ -245,7 +247,8 @@ final class DefaultContextualDaxDialogsFactory: ContextualDaxDialogsFactory {
             delegate?.didTapDismissContextualOnboardingAction()
         }
 
-        return OnboardingFireDialog(onManualDismiss: onManualDismiss)
+        let fireDialogMessage = message.isEmpty ? UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage : message
+        return OnboardingFireDialog(message: fireDialogMessage, onManualDismiss: onManualDismiss)
             .onFirstAppear { [weak self] in
                 self?.contextualOnboardingPixelReporter.measureScreenImpression(event: pixelName)
             }

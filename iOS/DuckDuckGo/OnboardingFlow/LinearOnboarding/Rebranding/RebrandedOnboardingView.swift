@@ -156,6 +156,9 @@ extension OnboardingRebranding {
         @ObservedObject private var model: OnboardingIntroViewModel
         @State private var dialogContentHeight: CGFloat = 0
         @State private var showBubbleContent: Bool = false
+        @State private var showExperimentExitOverlay: Bool = false
+        @State private var experimentExitOverlayOpacity: CGFloat = 0
+        @State private var isExperimentDialogFadingOut = false
 
         init(model: OnboardingIntroViewModel) {
             self.model = model
@@ -218,6 +221,11 @@ extension OnboardingRebranding {
                         }
 #endif
                 }
+
+                if showExperimentExitOverlay {
+                    experimentExitOverlay
+                        .transition(.opacity)
+                }
             }
             .overlay(alignment: .topLeading) {
                 RebrandingBadge()
@@ -229,6 +237,7 @@ extension OnboardingRebranding {
 
         private func onboardingDialogView(state: ViewState.Intro) -> some View {
             let configuration = bubbleBackedDialogConfiguration(for: state.type)
+            let isExperimentSearchStep = if case .duckAIQueryExperimentDialog = state.type { true } else { false }
 
             return GeometryReader { geometry in
                 ScrollView(.vertical, showsIndicators: false) {
@@ -256,6 +265,12 @@ extension OnboardingRebranding {
                 }
             }
             .padding()
+            .opacity(isExperimentDialogFadingOut && isExperimentSearchStep ? 0 : 1)
+            .onAppear {
+                if isExperimentSearchStep {
+                    resetExperimentExitTransition()
+                }
+            }
         }
 
         private var landingView: some View {
@@ -363,8 +378,8 @@ extension OnboardingRebranding {
                 addressBarPositionView
             case .chooseSearchExperienceDialog:
                 searchExperienceSelectionView
-            case .duckAIQueryExperimentDialog:
-                EmptyView()
+            case .duckAIQueryExperimentDialog(let defaultExperience):
+                experimentSearchExperienceSelectionView(defaultExperience: defaultExperience)
             }
         }
 
@@ -423,7 +438,7 @@ extension OnboardingRebranding {
                     tailOffset: onboardingTheme.linearOnboardingMetrics.bubbleTailOffset,
                     tailDirection: .leading,
                     additionalTopMargin: BubbleBackedDialogMetrics.searchExperienceAdditionalTopMargin,
-                    isVisible: false,
+                    isVisible: true,
                     showsStepCounter: false
                 )
             }
@@ -475,6 +490,20 @@ extension OnboardingRebranding {
             )
         }
 
+        private func experimentSearchExperienceSelectionView(defaultExperience: OnboardingIntroStep.DuckAIExperimentDefaultExperience) -> some View {
+            LegacyOnboardingView.DuckAIExperimentSearchContent(
+                defaultExperience: defaultExperience,
+                visualStyle: .rebranded,
+                action: model.selectDuckAIQueryExperimentAction(selection:),
+                openAIChatAction: model.openAIChatFromOnboarding,
+                openSearchAction: model.searchFromOnboarding,
+                measureQuerySubmissionAction: model.measureDuckAIQueryExperimentQuerySubmission,
+                startExitTransitionAction: {
+                    beginExperimentExitTransition()
+                }
+            )
+        }
+
         /// Animates bubble content with a hide → optional action → show sequence.
         ///
         /// This three-phase sequence prevents cross-fading between old and new content:
@@ -511,6 +540,27 @@ extension OnboardingRebranding {
                     }
                 }
             }
+        }
+
+        private var experimentExitOverlay: some View {
+            onboardingTheme.colorPalette.background
+                .opacity(experimentExitOverlayOpacity)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
+
+        private func beginExperimentExitTransition() {
+            showExperimentExitOverlay = true
+            withAnimation(.easeInOut(duration: 0.18)) {
+                isExperimentDialogFadingOut = true
+                experimentExitOverlayOpacity = 1
+            }
+        }
+
+        private func resetExperimentExitTransition() {
+            showExperimentExitOverlay = false
+            experimentExitOverlayOpacity = 0
+            isExperimentDialogFadingOut = false
         }
 
     }

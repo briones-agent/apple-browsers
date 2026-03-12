@@ -23,6 +23,10 @@ import Persistence
 
 @MainActor
 final class ScopedFireConfirmationViewModel: ObservableObject {
+    enum Flow: Equatable {
+        case standard
+        case duckAIExperiment
+    }
     
     // MARK: - Constants
     
@@ -47,11 +51,13 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
     private let appSettings: AppSettings
     private let daxDialogsManager: DaxDialogsManaging
     private let source: FireRequest.Source
+    private let flow: Flow
     
     // MARK: - Initializer
     
     init(tabViewModel: TabViewModel?,
          source: FireRequest.Source,
+         flow: Flow = .standard,
          downloadManager: DownloadManaging = AppDependencyProvider.shared.downloadManager,
          keyValueStore: KeyValueStoring = UserDefaults.standard,
          appSettings: AppSettings = AppDependencyProvider.shared.appSettings,
@@ -64,6 +70,7 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
         self.keyValueStore = keyValueStore
         self.appSettings = appSettings
         self.daxDialogsManager = daxDialogsManager
+        self.flow = flow
         self.onConfirm = onConfirm
         self.onCancel = onCancel
         self.subtitle = computeSubtitle()
@@ -74,6 +81,13 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
     /// Indicates whether the single tab burn option should be shown.
     /// Returns `true` when a tab view model is available.
     var canBurnSingleTab: Bool {
+        if flow == .duckAIExperiment {
+            guard let tab = tabViewModel?.tab else {
+                return false
+            }
+            return tab.isAITab
+        }
+
         guard let tab = tabViewModel?.tab, tab.supportsTabHistory else {
             return false
         }
@@ -81,8 +95,16 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
     }
     
     var headerTitle: String {
+        if flow == .duckAIExperiment {
+            return UserText.Onboarding.DuckAIQueryExperiment.fireOnboardingMessage
+        }
+
         let shouldIncludeAIChat = appSettings.autoClearAIChatHistory
         return shouldIncludeAIChat ? UserText.scopedFireConfirmationAlertTitleWithAIChat : UserText.scopedFireConfirmationAlertTitle
+    }
+
+    var showsDeleteAllButton: Bool {
+        flow == .standard
     }
     
     var tabScopeButtonTitle: String {
@@ -103,7 +125,8 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
         guard let tabViewModel else {
             return
         }
-        let request = FireRequest(options: .all, trigger: .manualFire, scope: .tab(viewModel: tabViewModel), source: source)
+        let options: FireRequest.Options = flow == .duckAIExperiment ? [.aiChats] : .all
+        let request = FireRequest(options: options, trigger: .manualFire, scope: .tab(viewModel: tabViewModel), source: source)
         onConfirm(request)
     }
     
@@ -124,6 +147,10 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
     /// 6. For normal web tabs → show sign out warning (up to 2 times)
     /// 7. Otherwise → return nil
     private func computeSubtitle() -> String? {
+        if flow == .duckAIExperiment {
+            return nil
+        }
+
         // Skip all subtitles if in onboarding
         if daxDialogsManager.isShowingFireDialog {
             return nil

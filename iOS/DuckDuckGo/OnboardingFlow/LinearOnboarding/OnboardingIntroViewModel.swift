@@ -150,6 +150,17 @@ final class OnboardingIntroViewModel: ObservableObject {
         introSteps = onboardingManager.onboardingSteps
         currentIntroStep = currentOnboardingStep
         copy = .default
+        // Dev override disabled by request:
+        // keep normal onboarding flow wiring and rely only on cohort override.
+        /*
+        #if DEBUG || ALPHA
+        if DevOverrides.forceDuckAIQueryExperimentScreenAtAppStart {
+            let forcedExperimentStep: OnboardingIntroStep = .duckAIQueryExperimentSelection(defaultExperience: forcedExperimentDefaultExperience())
+            introSteps = [forcedExperimentStep]
+            currentIntroStep = forcedExperimentStep
+        }
+        #endif
+        */
     }
 
     func onAppear() {
@@ -262,6 +273,16 @@ final class OnboardingIntroViewModel: ObservableObject {
 // MARK: - Private
 
 private extension OnboardingIntroViewModel {
+    // Dev overrides disabled by request; keep cohort override only.
+    /*
+    #if DEBUG || ALPHA
+    enum DevOverrides {
+        static let forceDuckAIQueryExperimentScreenAtAppStart = true
+        static let forceExperimentDefaultFromCohort = true
+        static let experimentDefaultSelectionIsSearch = true // Fallback only when cohort-driven default is disabled.
+    }
+    #endif
+    */
 
     func makeInitialViewState() {
         setViewState(introStep: currentIntroStep)
@@ -288,8 +309,8 @@ private extension OnboardingIntroViewModel {
             OnboardingView.ViewState.onboarding(.init(type: .chooseAddressBarPositionDialog, step: stepInfo()))
         case .searchExperienceSelection:
             OnboardingView.ViewState.onboarding(.init(type: .chooseSearchExperienceDialog, step: stepInfo()))
-        case .duckAIQueryExperimentSelection(let defaultSelection):
-            OnboardingView.ViewState.onboarding(.init(type: .duckAIQueryExperimentDialog(defaultSelection: defaultSelection), step: stepInfo()))
+        case .duckAIQueryExperimentSelection(let defaultExperience):
+            OnboardingView.ViewState.onboarding(.init(type: .duckAIQueryExperimentDialog(defaultExperience: defaultExperience), step: stepInfo()))
         }
 
         state = viewState
@@ -350,11 +371,11 @@ private extension OnboardingIntroViewModel {
             // Control keeps the baseline flow and does not add the experiment dialog.
             return
         case .treatmentA:
-            // Treatment A defaults picker to Search.
-            introSteps.insert(.duckAIQueryExperimentSelection(defaultSelection: true), at: currentStepIndex + 1)
+            // Treatment A defaults picker to Duck.ai.
+            introSteps.insert(.duckAIQueryExperimentSelection(defaultExperience: .duckAI), at: currentStepIndex + 1)
         case .treatmentB:
-            // Treatment B defaults picker to Search & Duck.ai.
-            introSteps.insert(.duckAIQueryExperimentSelection(defaultSelection: false), at: currentStepIndex + 1)
+            // Treatment B defaults picker to Search.
+            introSteps.insert(.duckAIQueryExperimentSelection(defaultExperience: .search), at: currentStepIndex + 1)
         }
     }
 
@@ -362,7 +383,7 @@ private extension OnboardingIntroViewModel {
         guard featureFlagger.isFeatureOn(.onboardingDuckAIQueryExperiment) else { return nil }
         // TODO: Temporary override for dev validation; remove once remote cohort mapping is finalized.
         // return featureFlagger.resolveCohort(for: FeatureFlag.onboardingDuckAIQueryExperiment) as? FeatureFlag.DuckAIQueryExperimentCohort
-        return .control
+        return .treatmentA
     }
 
 }

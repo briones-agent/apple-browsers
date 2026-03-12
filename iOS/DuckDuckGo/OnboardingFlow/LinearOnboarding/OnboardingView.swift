@@ -107,8 +107,8 @@ struct OnboardingView: View {
                                 addressBarPreferenceSelectionView
                             case .chooseSearchExperienceDialog:
                                 searchExperienceSelectionView
-                            case .duckAIQueryExperimentDialog(let defaultSelection):
-                                experimentSearchExperienceSelectionView(defaultSelection: defaultSelection)
+                            case .duckAIQueryExperimentDialog(let defaultExperience):
+                                experimentSearchExperienceSelectionView(defaultExperience: defaultExperience)
                             }
                         }
                     }
@@ -248,9 +248,9 @@ struct OnboardingView: View {
         .onboardingDaxDialogStyle()
     }
 
-    private func experimentSearchExperienceSelectionView(defaultSelection: Bool) -> some View {
+    private func experimentSearchExperienceSelectionView(defaultExperience: OnboardingIntroStep.DuckAIExperimentDefaultExperience) -> some View {
         DuckAIExperimentSearchContent(
-            defaultSelection: defaultSelection,
+            defaultExperience: defaultExperience,
             action: model.selectDuckAIQueryExperimentAction(selection:),
             openAIChatAction: model.openAIChatFromOnboarding,
             openSearchAction: model.searchFromOnboarding,
@@ -349,7 +349,7 @@ extension OnboardingView.ViewState.Intro {
         case chooseAppIconDialog
         case chooseAddressBarPositionDialog
         case chooseSearchExperienceDialog
-        case duckAIQueryExperimentDialog(defaultSelection: Bool)
+        case duckAIQueryExperimentDialog(defaultExperience: OnboardingIntroStep.DuckAIExperimentDefaultExperience)
     }
 
     struct StepInfo: Equatable {

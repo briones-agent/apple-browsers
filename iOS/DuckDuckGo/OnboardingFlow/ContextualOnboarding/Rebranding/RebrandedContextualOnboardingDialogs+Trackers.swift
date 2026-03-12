@@ -41,7 +41,9 @@ extension OnboardingRebranding {
         var body: some View {
             OnboardingBubbleView.withDismissButton(tailPosition: nil, onDismiss: { onManualDismiss(showNextScreen) }) {
                 if showNextScreen {
-                    OnboardingRebranding.OnboardingFireDialogContent()
+                    OnboardingRebranding.OnboardingFireDialogContent(
+                        message: UserText.Onboarding.ContextualOnboarding.onboardingTryFireButtonMessage
+                    )
                 } else {
                     trackersBlockedContent
                 }

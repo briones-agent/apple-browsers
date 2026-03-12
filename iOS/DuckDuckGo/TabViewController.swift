@@ -1109,6 +1109,11 @@ class TabViewController: UIViewController {
         contextualOnboardingPresenter.dismissContextualOnboardingIfNeeded(from: self)
     }
 
+    func presentExperimentContextualDaxFireDialog(message: String) {
+        let fireSpec = DaxDialogs.BrowsingSpec.fire.withUpdatedMessage(message)
+        contextualOnboardingPresenter.presentContextualOnboarding(for: fireSpec, in: self)
+    }
+
     private func checkForReloadOnError() {
         guard shouldReloadOnError else { return }
         shouldReloadOnError = false
