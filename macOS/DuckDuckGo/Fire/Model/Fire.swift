@@ -392,7 +392,9 @@ final class Fire: FireProtocol {
                 dataClearingWideEventService?.start(.clearAllHistory)
                 self.burnHistory(ofEntity: entity) { result in
                     dataClearingWideEventService?.update(.clearAllHistory, result: result)
-                    self.burnFavicons(for: domains) {
+                    dataClearingWideEventService?.start(.clearFaviconCache)
+                    self.burnFavicons(for: domains) { faviconResult in
+                        dataClearingWideEventService?.update(.clearFaviconCache, result: faviconResult)
                         group.leave()
                     }
                 }
@@ -540,7 +542,9 @@ final class Fire: FireProtocol {
                 dataClearingWideEventService?.start(.clearPermissions)
                 self.burnPermissions { result in
                     dataClearingWideEventService?.update(.clearPermissions, result: result)
-                    self.burnFavicons {
+                    dataClearingWideEventService?.start(.clearFaviconCache)
+                    self.burnFavicons { faviconResult in
+                        dataClearingWideEventService?.update(.clearFaviconCache, result: faviconResult)
                         self.burnDownloads()
                         group.leave()
                     }
@@ -919,24 +923,24 @@ final class Fire: FireProtocol {
         return Set(accounts.compactMap { $0.domain })
     }
 
-    private func burnFavicons(completion: @escaping @MainActor () -> Void) {
+    private func burnFavicons(completion: @escaping @MainActor (Result<Void, Error>) -> Void) {
         Task { @MainActor in
-            await self.faviconManagement.burn(except: fireproofDomains,
-                                              bookmarkManager: bookmarkManager,
-                                              savedLogins: autofillDomains())
-            completion()
+            let result = await self.faviconManagement.burn(except: fireproofDomains,
+                                                           bookmarkManager: bookmarkManager,
+                                                           savedLogins: autofillDomains())
+            completion(result)
         }
     }
 
     @MainActor
-    private func burnFavicons(for baseDomains: Set<String>, completion: @escaping @MainActor () -> Void) {
+    private func burnFavicons(for baseDomains: Set<String>, completion: @escaping @MainActor (Result<Void, Error>) -> Void) {
         Task { @MainActor in
-            await self.faviconManagement.burnDomains(baseDomains,
-                                                     exceptBookmarks: bookmarkManager,
-                                                     exceptSavedLogins: autofillDomains(),
-                                                     exceptExistingHistory: historyCoordinating.history ?? [],
-                                                     tld: tld)
-            completion()
+            let result = await self.faviconManagement.burnDomains(baseDomains,
+                                                                  exceptBookmarks: bookmarkManager,
+                                                                  exceptSavedLogins: autofillDomains(),
+                                                                  exceptExistingHistory: historyCoordinating.history ?? [],
+                                                                  tld: tld)
+            completion(result)
         }
     }
 
