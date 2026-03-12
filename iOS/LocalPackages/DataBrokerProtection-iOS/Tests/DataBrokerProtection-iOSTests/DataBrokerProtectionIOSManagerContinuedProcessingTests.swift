@@ -23,7 +23,7 @@ import DataBrokerProtectionCore
 @MainActor
 final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
 
-    func testWhenPrepareContinuedProcessingInitialRunAndNoPendingScans_thenReturnsFalse() async throws {
+    func testWhenPrepareContinuedProcessingInitialRunAndNoPendingScans_thenReturnsNil() async throws {
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
         dependencies.database.brokerProfileQueryDataToReturn = [
             DBPContinuedProcessingTestUtils.makeBrokerProfileQueryData(
@@ -33,14 +33,14 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
             )
         ]
 
-        let hasPendingScans = try await sut.prepareContinuedProcessingInitialRun(profile: DBPContinuedProcessingTestUtils.makeProfile())
+        let initialScanPlan = try await sut.prepareContinuedProcessingInitialRun(profile: DBPContinuedProcessingTestUtils.makeProfile())
 
-        XCTAssertFalse(hasPendingScans)
+        XCTAssertNil(initialScanPlan)
         XCTAssertTrue(dependencies.database.wasSaveProfileCalled)
         XCTAssertTrue(dependencies.eventsHandler.profileSavedFired)
     }
 
-    func testWhenPrepareContinuedProcessingInitialRunAndPendingScansExist_thenReturnsTrue() async throws {
+    func testWhenPrepareContinuedProcessingInitialRunAndPendingScansExist_thenReturnsInitialScanPlan() async throws {
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
         dependencies.database.brokerProfileQueryDataToReturn = [
             DBPContinuedProcessingTestUtils.makeBrokerProfileQueryData(
@@ -50,14 +50,14 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
             )
         ]
 
-        let hasPendingScans = try await sut.prepareContinuedProcessingInitialRun(profile: DBPContinuedProcessingTestUtils.makeProfile())
+        let initialScanPlan = try await sut.prepareContinuedProcessingInitialRun(profile: DBPContinuedProcessingTestUtils.makeProfile())
 
-        XCTAssertTrue(hasPendingScans)
+        XCTAssertEqual(initialScanPlan?.scanCount, 1)
         XCTAssertTrue(dependencies.database.wasSaveProfileCalled)
         XCTAssertTrue(dependencies.eventsHandler.profileSavedFired)
     }
 
-    func testWhenHasPendingContinuedProcessingOptOutsAndNoEligibleJobs_thenReturnsFalse() throws {
+    func testWhenMakeContinuedProcessingOptOutPlanAndNoEligibleJobs_thenReturnsEmptyPlan() throws {
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
         dependencies.database.brokerProfileQueryDataToReturn = [
             DBPContinuedProcessingTestUtils.makeBrokerProfileQueryData(
@@ -74,12 +74,12 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
             )
         ]
 
-        let hasPendingOptOuts = try sut.hasPendingContinuedProcessingOptOuts()
+        let optOutPlan = try sut.makeContinuedProcessingOptOutPlan()
 
-        XCTAssertFalse(hasPendingOptOuts)
+        XCTAssertEqual(optOutPlan.optOutCount, 0)
     }
 
-    func testWhenHasPendingContinuedProcessingOptOutsAndEligibleJobsExist_thenReturnsTrue() throws {
+    func testWhenMakeContinuedProcessingOptOutPlanAndEligibleJobsExist_thenReturnsPlan() throws {
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
         dependencies.database.brokerProfileQueryDataToReturn = [
             DBPContinuedProcessingTestUtils.makeBrokerProfileQueryData(
@@ -96,9 +96,9 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
             )
         ]
 
-        let hasPendingOptOuts = try sut.hasPendingContinuedProcessingOptOuts()
+        let optOutPlan = try sut.makeContinuedProcessingOptOutPlan()
 
-        XCTAssertTrue(hasPendingOptOuts)
+        XCTAssertEqual(optOutPlan.optOutCount, 1)
     }
 
     func testWhenStartImmediateScanOperationsForContinuedProcessing_thenStartsQueueAndEmitsScanPhaseCompleted() async {
