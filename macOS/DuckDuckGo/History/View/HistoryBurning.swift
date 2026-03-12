@@ -76,6 +76,6 @@ struct FireHistoryBurner: HistoryBurning {
 
     func burnChats() async {
         recordAIChatHistoryClearForSync?()
-        await fire().burnChatHistory()
+        _ = await fire().burnChatHistory()
     }
 }

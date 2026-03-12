@@ -61,7 +61,7 @@ protocol FireProtocol: AnyObject {
                                urlToOpenIfWindowsAreClosed url: URL?,
                                dataClearingWideEventService: DataClearingWideEventService?,
                                completion: (@MainActor () -> Void)?)
-    @MainActor func burnChatHistory() async
+    @MainActor func burnChatHistory() async -> Result<Void, Error>
 }
 
 extension FireProtocol {
@@ -423,7 +423,9 @@ final class Fire: FireProtocol {
 
             if includeChatHistory {
                 group.enter()
-                await burnChatHistory()
+                dataClearingWideEventService?.start(.clearAiChatHistory)
+                let chatHistoryResult = await burnChatHistory()
+                dataClearingWideEventService?.update(.clearAiChatHistory, result: chatHistoryResult)
                 group.leave()
             }
 
@@ -509,7 +511,9 @@ final class Fire: FireProtocol {
             await self.burnAutoconsentStats()
 
             if includeChatHistory {
-                await burnChatHistory()
+                dataClearingWideEventService?.start(.clearAiChatHistory)
+                let chatHistoryResult = await burnChatHistory()
+                dataClearingWideEventService?.update(.clearAiChatHistory, result: chatHistoryResult)
             }
             self.burnHistory(ofEntity: .allWindows(mainWindowControllers: windowControllers, selectedDomains: [], customURLToOpen: nil, close: false)) {
                 self.burnPermissions {
@@ -623,11 +627,12 @@ final class Fire: FireProtocol {
     // MARK: - Duck.ai Chat History
 
     @MainActor
-    func burnChatHistory() async {
-        await aiChatHistoryCleaner.cleanAIChatHistory()
+    func burnChatHistory() async -> Result<Void, Error> {
+        let result = await aiChatHistoryCleaner.cleanAIChatHistory()
         if syncService?.authState != .inactive {
             syncService?.scheduler.requestSyncImmediately()
         }
+        return result
     }
 
     // MARK: - Fire animation

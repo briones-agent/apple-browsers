@@ -34,7 +34,7 @@ protocol AIChatHistoryCleaning {
     var shouldDisplayCleanAIChatHistoryOptionPublisher: AnyPublisher<Bool, Never> { get }
 
     /// Deletes all Duck.ai chat history.
-    @MainActor func cleanAIChatHistory() async
+    @MainActor func cleanAIChatHistory() async -> Result<Void, Error>
 }
 
 final class AIChatHistoryCleaner: AIChatHistoryCleaning {
@@ -82,7 +82,7 @@ final class AIChatHistoryCleaner: AIChatHistoryCleaning {
 
     /// Launches a headless web view to clear Duck.ai chat history with a C-S-S feature.
     @MainActor
-    func cleanAIChatHistory() async {
+    func cleanAIChatHistory() async -> Result<Void, Error> {
         let result = await historyCleaner.cleanAIChatHistory()
 
         switch result {
@@ -96,6 +96,8 @@ final class AIChatHistoryCleaner: AIChatHistoryCleaning {
                 userScriptError.fireLoadJSFailedPixelIfNeeded()
             }
         }
+
+        return result
     }
 
     private func subscribeToChanges() {
