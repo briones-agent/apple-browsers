@@ -76,18 +76,10 @@ final class DefaultBrowserAndDockPromoDelegate: PromoDelegate {
             showContinuation = continuation
 
             func resumeWithNoChange() {
+                cancellables.removeAll()
                 showContinuation?.resume(returning: .noChange)
                 showContinuation = nil
             }
-
-            presenter.tryToShowPrompt(
-                popoverAnchorProvider: { uiHosting.providePopoverAnchor() },
-                bannerViewHandler: { uiHosting.addSetAsDefaultBanner($0) },
-                inactiveUserModalWindowProvider: { uiHosting.provideModalAnchor() },
-                expectedType: type,
-                forceShow: force,
-                onNoShow: { resumeWithNoChange() }
-            )
 
             coordinator.promptDismissedPublisher
                 .filter { [weak self] (dismissedType, _) in
@@ -99,6 +91,15 @@ final class DefaultBrowserAndDockPromoDelegate: PromoDelegate {
                     self?.showContinuation = nil
                 }
                 .store(in: &cancellables)
+
+            presenter.tryToShowPrompt(
+                popoverAnchorProvider: { uiHosting.providePopoverAnchor() },
+                bannerViewHandler: { uiHosting.addSetAsDefaultBanner($0) },
+                inactiveUserModalWindowProvider: { uiHosting.provideModalAnchor() },
+                expectedType: type,
+                forceShow: force,
+                onNoShow: { resumeWithNoChange() }
+            )
         }
     }
 

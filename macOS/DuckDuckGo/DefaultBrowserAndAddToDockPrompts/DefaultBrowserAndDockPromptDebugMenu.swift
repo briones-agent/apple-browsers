@@ -17,7 +17,6 @@
 //
 
 import AppKit
-import Persistence
 import Utilities
 
 /// **DEBUG MENU for Default Browser & Dock Prompts**

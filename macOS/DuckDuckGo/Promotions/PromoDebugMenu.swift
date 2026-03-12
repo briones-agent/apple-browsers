@@ -20,7 +20,6 @@ import AppKit
 import BrowserServicesKit
 import Combine
 import Foundation
-import Persistence
 import Utilities
 
 /// **DEBUG MENU for Promo Queue**

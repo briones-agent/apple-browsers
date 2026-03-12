@@ -20,7 +20,6 @@ import AppKit
 import SwiftUIExtensions
 import Combine
 import BrowserServicesKit
-import Common
 import FeatureFlags
 import Utilities
 
@@ -39,7 +38,9 @@ protocol DefaultBrowserAndDockPromptPresenting {
     /// - Parameter popoverAnchorProvider: A closure that provides the anchor view for the popover. If the popover is eligible to be shown, it will be displayed relative to this view.
     /// - Parameter bannerViewHandler: A closure that takes a `BannerMessageViewController` instance, which can be used to configure and present the banner.
     /// - Parameter inactiveUserModalWindowProvider: A closure that provides the window for presenting the inactive user modal, if that prompt type is eligible to be shown.
-    /// - Parameter forceShowType: DEBUG ONLY. An optional parameter that allows forcing a specific prompt type to be shown, bypassing the eligibility checks.
+    /// - Parameter expectedType: When non-nil, if the coordinator returns a different type, `onNoShow` is invoked since the caller will not receive a dismiss event.
+    /// - Parameter forceShow: DEBUG ONLY. An optional parameter that allows forcing the prompt to be shown, bypassing the eligibility checks.
+    /// - Parameter onNoShow: Optional callback invoked when no prompt is shown (e.g. `getPromptType()` returns nil, a different type is shown, or anchors are nil). Used by PromoDelegate to avoid hanging continuations.
     ///
     /// The function first checks the user's eligibility for the experiment. Depending on which cohort the user falls into, the function will attempt to show either a popover or a banner.
     ///
@@ -48,9 +49,6 @@ protocol DefaultBrowserAndDockPromptPresenting {
     /// If the user is eligible for the banner, the function uses the `bannerViewHandler` closure to configure and present the banner. This allows the caller to customize the appearance and behavior of the banner as needed.
     ///
     /// The popover is more ephemeral and will only be shown in a single window, while the banner is more persistent and will be shown in all windows until the user takes an action on it.
-    ///
-    /// - Parameter onNoShow: Optional callback invoked when no prompt is shown (e.g. `getPromptType()` returns nil, a different type is shown, or anchors are nil). Used by PromoDelegate to avoid hanging continuations.
-    /// - Parameter expectedType: When non-nil, if the coordinator returns a different type, `onNoShow` is invoked since the caller will not receive a dismiss event.
     func tryToShowPrompt(popoverAnchorProvider: @escaping () -> NSView?,
                          bannerViewHandler: @escaping (BannerMessageViewController) -> Void,
                          inactiveUserModalWindowProvider: @escaping () -> NSWindow?,
