@@ -449,6 +449,7 @@ public class DDGSync: DDGSyncing {
 
         guard isSyncEngineReady else {
             authState = .inactive
+            try? dependencies.keyValueStore.set(nil, forKey: Constants.syncEnabledKey)
             throw SyncError.failedToSetupEngine
         }
 
