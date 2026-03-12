@@ -81,32 +81,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Stored Properties
 
-    /// Backing store for appDependencies, set once during init() from the Launching state.
-    /// The computed `appDependencies` property reads live from the current state when available,
-    /// falling back to this snapshot for properties accessed before a state with dependencies exists.
-    private var _appDependencies: AppDependencies!
-
-    /// Always reads dependencies from the current state so that mutations made by state handlers
-    /// (e.g. syncService set in Foreground.onTransition) are immediately visible to forwarding properties.
-    /// On the main thread, reads live from the state machine. Off the main thread, returns the snapshot.
-    private var appDependencies: AppDependencies! {
-        get {
-            guard Thread.isMainThread else { return _appDependencies }
-            return MainActor.assumeMainThread {
-                switch appStateMachine?.currentState {
-                case .foreground(let fg):
-                    return (fg as? Foreground)?.dependencies ?? _appDependencies
-                case .launching(let launching):
-                    return (launching as? Launching)?.dependencies ?? _appDependencies
-                default:
-                    return _appDependencies
-                }
-            }
-        }
-        set {
-            _appDependencies = newValue
-        }
-    }
+    /// Set once during init() from the Launching state. All forwarding properties read from here.
+    /// Services is a reference type (class), so mutations by state handlers are visible immediately.
+    private var appDependencies: AppDependencies!
 
     private var didFinishLaunching = false
     var dockCustomization: DockCustomization?
@@ -464,31 +441,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return nil
     }
 
-    /// Updates the snapshot so background threads see the latest dependencies.
-    @MainActor
-    private func refreshAppDependenciesSnapshot() {
-        switch appStateMachine.currentState {
-        case .launching(let launching):
-            if let state = launching as? Launching {
-                _appDependencies = state.dependencies
-            }
-        case .foreground(let fg):
-            if let state = fg as? Foreground {
-                _appDependencies = state.dependencies
-            }
-        default:
-            break
-        }
-    }
-
     func applicationWillFinishLaunching(_ notification: Notification) {
         appStateMachine.handle(.willFinishLaunching)
-        refreshAppDependenciesSnapshot()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appStateMachine.handle(.appDidFinishLaunching)
-        refreshAppDependenciesSnapshot()
         guard AppVersion.runType.requiresEnvironment else { return }
         didFinishLaunching = true
         UNUserNotificationCenter.current().delegate = self

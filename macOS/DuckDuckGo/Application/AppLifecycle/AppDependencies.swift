@@ -105,7 +105,9 @@ struct AppDependencies {
 
     // MARK: - Services
 
-    struct Services {
+    /// Class (reference type) so mutations made by state handlers are visible through
+    /// any copy of AppDependencies — including AppDelegate's snapshot taken during init().
+    final class Services {
         var configurationManager: ConfigurationManager
         var configurationURLProvider: CustomConfigurationURLProviding
         let bookmarkManager: LocalBookmarkManager
@@ -162,6 +164,124 @@ struct AppDependencies {
         var appIconChanger: AppIconChanger!
         let launchOptionsHandler: LaunchOptionsHandler
         var updateController: UpdateController?
+
+        // swiftlint:disable function_parameter_count
+        init(
+            configurationManager: ConfigurationManager,
+            configurationURLProvider: CustomConfigurationURLProviding,
+            bookmarkManager: LocalBookmarkManager,
+            historyCoordinator: HistoryCoordinator,
+            faviconManager: FaviconManager,
+            fireproofDomains: FireproofDomains,
+            permissionManager: PermissionManager,
+            downloadManager: FileDownloadManagerProtocol,
+            downloadListCoordinator: DownloadListCoordinator,
+            privacyStats: PrivacyStatsCollecting,
+            autoconsentStats: AutoconsentStatsCollecting,
+            remoteMessagingClient: RemoteMessagingClient!,
+            activeRemoteMessageModel: ActiveRemoteMessageModel,
+            syncService: DDGSyncing?,
+            syncDataProviders: SyncDataProvidersSource?,
+            syncErrorHandler: SyncErrorHandler,
+            webCacheManager: WebCacheManager,
+            crashReporting: any CrashReporting,
+            watchdog: Watchdog,
+            watchdogSleepMonitor: WatchdogSleepMonitor,
+            autoClearHandler: AutoClearHandler!,
+            privacyFeatures: AnyPrivacyFeatures,
+            tld: TLD,
+            autoconsentManagement: AutoconsentManagement,
+            brokenSitePromptLimiter: BrokenSitePromptLimiter,
+            notificationService: UserNotificationAuthorizationServicing,
+            onboardingContextualDialogsManager: ContextualOnboardingDialogTypeProviding & ContextualOnboardingStateUpdater,
+            defaultBrowserAndDockPromptService: DefaultBrowserAndDockPromptService,
+            userChurnScheduler: UserChurnBackgroundActivityScheduler,
+            bitwardenManager: BWManagement?,
+            passwordManagerCoordinator: PasswordManagerCoordinator,
+            attributedMetricManager: AttributedMetricManager,
+            memoryUsageMonitor: MemoryUsageMonitor,
+            memoryPressureReporter: MemoryPressureReporter?,
+            memoryUsageThresholdReporter: MemoryUsageThresholdReporter,
+            memoryUsageIntervalReporter: MemoryUsageIntervalReporter?,
+            startupProfiler: StartupProfiler,
+            duckPlayer: DuckPlayer,
+            newTabPageCustomizationModel: NewTabPageCustomizationModel,
+            vpnSettings: VPNSettings,
+            freemiumDBPFeature: FreemiumDBPFeature,
+            freemiumDBPPromotionViewCoordinator: FreemiumDBPPromotionViewCoordinator,
+            blackFridayCampaignProvider: BlackFridayCampaignProviding,
+            wideEvent: WideEventManaging,
+            urlEventHandler: URLEventHandler,
+            tabCrashAggregator: TabCrashAggregator,
+            grammarFeaturesManager: GrammarFeaturesManager,
+            webExtensionAvailability: WebExtensionAvailabilityProviding,
+            aiChatSessionStore: AIChatSessionStoring,
+            aiChatMenuConfiguration: AIChatMenuVisibilityConfigurable,
+            visualizeFireSettingsDecider: VisualizeFireSettingsDecider,
+            autoconsentEventCoordinator: AutoconsentEventCoordinator?,
+            stateRestorationManager: AppStateRestorationManager!,
+            appIconChanger: AppIconChanger!,
+            launchOptionsHandler: LaunchOptionsHandler,
+            updateController: UpdateController?
+        ) {
+            self.configurationManager = configurationManager
+            self.configurationURLProvider = configurationURLProvider
+            self.bookmarkManager = bookmarkManager
+            self.historyCoordinator = historyCoordinator
+            self.faviconManager = faviconManager
+            self.fireproofDomains = fireproofDomains
+            self.permissionManager = permissionManager
+            self.downloadManager = downloadManager
+            self.downloadListCoordinator = downloadListCoordinator
+            self.privacyStats = privacyStats
+            self.autoconsentStats = autoconsentStats
+            self.remoteMessagingClient = remoteMessagingClient
+            self.activeRemoteMessageModel = activeRemoteMessageModel
+            self.syncService = syncService
+            self.syncDataProviders = syncDataProviders
+            self.syncErrorHandler = syncErrorHandler
+            self.webCacheManager = webCacheManager
+            self.crashReporting = crashReporting
+            self.watchdog = watchdog
+            self.watchdogSleepMonitor = watchdogSleepMonitor
+            self.autoClearHandler = autoClearHandler
+            self.privacyFeatures = privacyFeatures
+            self.tld = tld
+            self.autoconsentManagement = autoconsentManagement
+            self.brokenSitePromptLimiter = brokenSitePromptLimiter
+            self.notificationService = notificationService
+            self.onboardingContextualDialogsManager = onboardingContextualDialogsManager
+            self.defaultBrowserAndDockPromptService = defaultBrowserAndDockPromptService
+            self.userChurnScheduler = userChurnScheduler
+            self.bitwardenManager = bitwardenManager
+            self.passwordManagerCoordinator = passwordManagerCoordinator
+            self.attributedMetricManager = attributedMetricManager
+            self.memoryUsageMonitor = memoryUsageMonitor
+            self.memoryPressureReporter = memoryPressureReporter
+            self.memoryUsageThresholdReporter = memoryUsageThresholdReporter
+            self.memoryUsageIntervalReporter = memoryUsageIntervalReporter
+            self.startupProfiler = startupProfiler
+            self.duckPlayer = duckPlayer
+            self.newTabPageCustomizationModel = newTabPageCustomizationModel
+            self.vpnSettings = vpnSettings
+            self.freemiumDBPFeature = freemiumDBPFeature
+            self.freemiumDBPPromotionViewCoordinator = freemiumDBPPromotionViewCoordinator
+            self.blackFridayCampaignProvider = blackFridayCampaignProvider
+            self.wideEvent = wideEvent
+            self.urlEventHandler = urlEventHandler
+            self.tabCrashAggregator = tabCrashAggregator
+            self.grammarFeaturesManager = grammarFeaturesManager
+            self.webExtensionAvailability = webExtensionAvailability
+            self.aiChatSessionStore = aiChatSessionStore
+            self.aiChatMenuConfiguration = aiChatMenuConfiguration
+            self.visualizeFireSettingsDecider = visualizeFireSettingsDecider
+            self.autoconsentEventCoordinator = autoconsentEventCoordinator
+            self.stateRestorationManager = stateRestorationManager
+            self.appIconChanger = appIconChanger
+            self.launchOptionsHandler = launchOptionsHandler
+            self.updateController = updateController
+        }
+        // swiftlint:enable function_parameter_count
     }
 
     // MARK: - UI
