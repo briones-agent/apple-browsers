@@ -1738,6 +1738,12 @@ public final class MockJobQueueManager: JobQueueManaging {
 
     public var debugRunningStatusString: String { return "" }
 
+    public private(set) var didCallStartImmediateScanOperationsIfPermitted = false
+    public private(set) var didCallStartImmediateOptOutOperationsIfPermitted = false
+    public private(set) var didCallStartScheduledAllOperationsIfPermitted = false
+    public private(set) var didCallStartScheduledScanOperationsIfPermitted = false
+    public private(set) var didCallStop = false
+
     public var startImmediateScanOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
     public var startImmediateOptOutOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
     public var startScheduledAllOperationsIfPermittedCompletionError: DataBrokerProtectionJobsErrorCollection?
@@ -1753,36 +1759,61 @@ public final class MockJobQueueManager: JobQueueManaging {
     }
 
     public func startImmediateScanOperationsIfPermitted(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding, errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?, completion: (() -> Void)?) {
+        didCallStartImmediateScanOperationsIfPermitted = true
         errorHandler?(startImmediateScanOperationsIfPermittedCompletionError)
         completion?()
         startImmediateScanOperationsIfPermittedCalledCompletion?()
     }
 
     public func startImmediateOptOutOperationsIfPermitted(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding, errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?, completion: (() -> Void)?) {
+        didCallStartImmediateOptOutOperationsIfPermitted = true
         errorHandler?(startImmediateOptOutOperationsIfPermittedCompletionError)
         completion?()
         startImmediateOptOutOperationsIfPermittedCalledCompletion?()
     }
 
     public func startScheduledAllOperationsIfPermitted(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding, errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?, completion: (() -> Void)?) {
+        didCallStartScheduledAllOperationsIfPermitted = true
         errorHandler?(startScheduledAllOperationsIfPermittedCompletionError)
         completion?()
         startScheduledAllOperationsIfPermittedCalledCompletion?()
     }
 
     public func startScheduledScanOperationsIfPermitted(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding, errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?, completion: (() -> Void)?) {
+        didCallStartScheduledScanOperationsIfPermitted = true
         errorHandler?(startScheduledScanOperationsIfPermittedCompletionError)
         completion?()
         startScheduledScanOperationsIfPermittedCalledCompletion?()
     }
 
     public func stop() {
+        didCallStop = true
     }
 
     public func stopScheduledOperationsOnly() {
     }
 
     public func addEmailConfirmationJobs(showWebView: Bool, jobDependencies: BrokerProfileJobDependencyProviding) {
+    }
+
+    public func reset() {
+        didCallStartImmediateScanOperationsIfPermitted = false
+        didCallStartImmediateOptOutOperationsIfPermitted = false
+        didCallStartScheduledAllOperationsIfPermitted = false
+        didCallStartScheduledScanOperationsIfPermitted = false
+        didCallStop = false
+
+        startImmediateScanOperationsIfPermittedCompletionError = nil
+        startImmediateOptOutOperationsIfPermittedCompletionError = nil
+        startScheduledAllOperationsIfPermittedCompletionError = nil
+        startScheduledScanOperationsIfPermittedCompletionError = nil
+
+        startImmediateScanOperationsIfPermittedCalledCompletion = nil
+        startImmediateOptOutOperationsIfPermittedCalledCompletion = nil
+        startScheduledAllOperationsIfPermittedCalledCompletion = nil
+        startScheduledScanOperationsIfPermittedCalledCompletion = nil
+
+        delegate = nil
     }
 }
 
