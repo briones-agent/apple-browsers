@@ -21,7 +21,6 @@ import WebKit
 import GRDB
 import Subscription
 import os.log
-import BrowserServicesKit
 
 public protocol HTTPCookieStore {
     func allCookies() async -> [HTTPCookie]
