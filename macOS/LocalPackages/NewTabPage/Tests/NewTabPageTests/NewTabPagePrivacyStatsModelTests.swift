@@ -89,8 +89,9 @@ final class CapturingAutoconsentStats: AutoconsentStatsCollecting {
         )
     }
 
-    func clearAutoconsentStats() async {
+    func clearAutoconsentStats() async -> Result<Void, Error> {
         clearAutoconsentStatsCallCount += 1
+        return .success(())
     }
 
     var recordAutoconsentActionCalls: [(clicksMade: Int64, timeSpent: TimeInterval)] = []

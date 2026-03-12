@@ -520,7 +520,9 @@ final class Fire: FireProtocol {
             let privacyStatsResult = await self.burnPrivacyStats()
             dataClearingWideEventService?.update(.clearPrivacyStats, result: privacyStatsResult)
 
-            await self.burnAutoconsentStats()
+            dataClearingWideEventService?.start(.clearAutoconsentStats)
+            let autoconsentStatsResult = await self.burnAutoconsentStats()
+            dataClearingWideEventService?.update(.clearAutoconsentStats, result: autoconsentStatsResult)
 
             if includeChatHistory {
                 dataClearingWideEventService?.start(.clearAIChatHistory)
@@ -1044,8 +1046,11 @@ final class Fire: FireProtocol {
         return .success(())
     }
 
-    private func burnAutoconsentStats() async {
-        await self.autoconsentStats?.clearAutoconsentStats()
+    private func burnAutoconsentStats() async -> Result<Void, Error> {
+        guard let autoconsentStats = autoconsentStats else {
+            return .failure(DataClearingWideEventError(description: "autoconsentStats is nil"))
+        }
+        return await autoconsentStats.clearAutoconsentStats()
     }
 
     // MARK: - Last Session State

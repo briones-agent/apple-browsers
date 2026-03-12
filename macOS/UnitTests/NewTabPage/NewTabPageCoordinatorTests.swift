@@ -61,7 +61,9 @@ final class MockAutoconsentStats: AutoconsentStatsCollecting {
             totalTotalTimeSpentBlockingCookiePopUps: 0
         )
     }
-    func clearAutoconsentStats() async {}
+    func clearAutoconsentStats() async -> Result<Void, Error> {
+        return .success(())
+    }
 }
 
 final class NewTabPageCoordinatorTests: XCTestCase {
