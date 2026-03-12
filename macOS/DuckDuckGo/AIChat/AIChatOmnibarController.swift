@@ -211,19 +211,19 @@ final class AIChatOmnibarController {
     // MARK: - Public Methods
 
     /// The persisted model ID. Falls back to the first accessible model if the
-    /// persisted selection is no longer available (e.g. model was removed from the API).
+    /// persisted selection is no longer available or no longer accessible for the user's tier.
     var persistedModelId: String {
         if let selectedId = preferences.selectedModelId,
-           models.contains(where: { $0.id == selectedId }) {
+           models.contains(where: { $0.id == selectedId && $0.entityHasAccess }) {
             return selectedId
         }
         return models.first(where: { $0.entityHasAccess })?.id ?? ""
     }
 
-    /// Clears the persisted model selection if it no longer matches any available model.
+    /// Clears the persisted model selection if it's no longer available or accessible.
     private func clearStaleModelSelectionIfNeeded() {
         guard let selectedId = preferences.selectedModelId else { return }
-        if !models.contains(where: { $0.id == selectedId }) {
+        if !models.contains(where: { $0.id == selectedId && $0.entityHasAccess }) {
             preferences.selectedModelId = nil
             preferences.selectedModelShortName = nil
         }
