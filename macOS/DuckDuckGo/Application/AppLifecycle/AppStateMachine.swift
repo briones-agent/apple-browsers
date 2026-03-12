@@ -193,8 +193,8 @@ final class AppStateMachine {
         case .appDidFinishLaunching:
             do {
                 let foreground = try launching.makeForegroundState()
-                foreground.onTransition()
                 currentState = .foreground(foreground)
+                foreground.onTransition()
             } catch {
                 let terminating = terminatingStateFactory.makeTerminatingState(error: error)
                 terminating.terminate()
