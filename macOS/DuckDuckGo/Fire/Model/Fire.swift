@@ -622,7 +622,10 @@ final class Fire: FireProtocol {
         let visitedLinksResult = burnVisitedLinks(visits)
         dataClearingWideEventService?.update(.clearVisitedLinks, result: visitedLinksResult)
 
-        historyCoordinating.burnVisits(visits) {_ in 
+        dataClearingWideEventService?.start(.clearVisits)
+        historyCoordinating.burnVisits(visits) { result in
+            dataClearingWideEventService?.update(.clearVisits, result: result)
+
             // If cookie/site data should not be cleared, finish after history burn
             guard clearSiteData else {
                 completion?()
@@ -811,7 +814,11 @@ final class Fire: FireProtocol {
         let visitedLinksResult = burnVisitedLinks(visits)
         dataClearingWideEventService?.update(.clearVisitedLinks, result: visitedLinksResult)
 
-        historyCoordinating.burnVisits(visits, completion: completion)
+        dataClearingWideEventService?.start(.clearVisits)
+        historyCoordinating.burnVisits(visits) { result in
+            self.dataClearingWideEventService?.update(.clearVisits, result: result)
+            completion(result)
+        }
     }
 
     @MainActor
