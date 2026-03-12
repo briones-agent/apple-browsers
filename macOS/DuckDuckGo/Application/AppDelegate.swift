@@ -1282,7 +1282,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if featureFlagger.isFeatureOn(.promoQueue) {
             let dependencies = PromoDependencies(
                 keyValueStore: keyValueStore,
-                internalUserDecider: internalUserDecider,
                 isExternallyActivated: urlEventHandlerResult.willOpenWindows,
                 activeRemoteMessageModel: activeRemoteMessageModel,
                 defaultBrowserAndDockPromptService: defaultBrowserAndDockPromptService)

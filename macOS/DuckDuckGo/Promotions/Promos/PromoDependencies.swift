@@ -25,7 +25,6 @@ import RemoteMessaging
 /// Add new fields as promo groups require them (e.g. subscriptionManager, onboardingState).
 struct PromoDependencies {
     let keyValueStore: ThrowingKeyValueStoring
-    let internalUserDecider: InternalUserDecider
     let isExternallyActivated: Bool
     let activeRemoteMessageModel: ActiveRemoteMessageModel
     let defaultBrowserAndDockPromptService: DefaultBrowserAndDockPromptService

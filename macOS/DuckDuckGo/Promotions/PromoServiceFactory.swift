@@ -34,7 +34,8 @@ struct PromoServiceFactory {
 
         let dateProvider: () -> Date
         let resetDebugDate: (() -> Void)?
-        if dependencies.internalUserDecider.isInternalUser {
+        let buildType = StandardApplicationBuildType()
+        if buildType.isDebugBuild || buildType.isReviewBuild {
             let debugSimulatedDateStore = DebugSimulatedDateStore(keyValueStore: dependencies.keyValueStore)
             dateProvider = { debugSimulatedDateStore.simulatedDate ?? Date() }
             resetDebugDate = { debugSimulatedDateStore.reset() }
