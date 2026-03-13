@@ -342,10 +342,29 @@ public final class DefaultSubscriptionManager: SubscriptionManager {
                     NotificationCenter.default.post(name: .subscriptionDidChange, object: self, userInfo: nil)
                 }
                 return nil
+            } catch {
+                // Transient backend error — fall back to cache if available
+                if let cachedSubscription = previousSubscription {
+                    subscription = cachedSubscription
+                    if subscription.isActive { pixelHandler.handle(pixel: .subscriptionIsActive) }
+                    return subscription
+                }
+                throw error
             }
 
             // Enrich with tier features and update cache
-            let enrichedSubscription = try await enrichSubscriptionWithFeatures(remoteSubscription)
+            let enrichedSubscription: DuckDuckGoSubscription
+            do {
+                enrichedSubscription = try await enrichSubscriptionWithFeatures(remoteSubscription)
+            } catch {
+                // Feature enrichment failed — fall back to cache if available
+                if let cachedSubscription = previousSubscription {
+                    subscription = cachedSubscription
+                    if subscription.isActive { pixelHandler.handle(pixel: .subscriptionIsActive) }
+                    return subscription
+                }
+                throw error
+            }
             subscriptionCachingService.set(enrichedSubscription)
             // Notify only if the subscription actually changed
             if enrichedSubscription != previousSubscription {
