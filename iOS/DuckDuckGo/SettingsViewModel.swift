@@ -895,7 +895,7 @@ extension SettingsViewModel {
         state.duckPlayerNativeYoutubeMode = duckPlayerSettings.nativeUIYoutubeMode
     }
 
-    // swiftint:disable:next cyclomatic_complexity
+    // swiftlint:disable:next cyclomatic_complexity
     private func updateCompleteSetupSectionVisiblity() {
         guard featureFlagger.isFeatureOn(.showSettingsCompleteSetupSection) else {
             return
