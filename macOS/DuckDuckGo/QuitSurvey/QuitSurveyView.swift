@@ -281,6 +281,7 @@ private struct QuitSurveyNegativeView: View {
     var onResize: ((CGFloat, CGFloat) -> Void)?
 
     @State private var pillsSectionHeight: CGFloat = 0
+    @State private var domainSectionHeight: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -289,6 +290,10 @@ private struct QuitSurveyNegativeView: View {
 
             if viewModel.shouldShowTextInput {
                 userTextInput()
+            }
+
+            if viewModel.shouldShowDomainSelector && viewModel.activeVariant == .inline {
+                inlineDomainSection()
             }
 
             footer()
@@ -301,9 +306,20 @@ private struct QuitSurveyNegativeView: View {
         .onChange(of: pillsSectionHeight) { _ in
             updateDialogHeight()
         }
+        .onChange(of: domainSectionHeight) { _ in
+            updateDialogHeight()
+        }
         .onAppear {
             updateDialogHeight()
         }
+    }
+
+    private var submitButtonTitle: String {
+        if viewModel.isSubmitting { return UserText.quitSurveySubmitting }
+        if viewModel.activeVariant == .newStep && viewModel.shouldShowDomainSelector {
+            return UserText.quitSurveyNext
+        }
+        return UserText.quitSurveySubmitAndQuit
     }
 
     // MARK: - Height Calculation
@@ -318,8 +334,11 @@ private struct QuitSurveyNegativeView: View {
         let baseHeight = ComponentHeights.header + ComponentHeights.footer
         let pillsHeight = pillsSectionHeight > 0 ? pillsSectionHeight : 80
         let textInputHeight = viewModel.shouldShowTextInput ? ComponentHeights.textInputSection : 0
+        let domainHeight = (viewModel.shouldShowDomainSelector && viewModel.activeVariant == .inline)
+            ? (domainSectionHeight > 0 ? domainSectionHeight : 0)
+            : 0
 
-        return baseHeight + pillsHeight + textInputHeight
+        return baseHeight + pillsHeight + textInputHeight + domainHeight
     }
 
     private func updateDialogHeight() {
@@ -426,6 +445,31 @@ private struct QuitSurveyNegativeView: View {
         .padding(.bottom, 8)
     }
 
+    private func inlineDomainSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(UserText.quitSurveyAffectedDomainsTitle)
+                .systemLabel()
+
+            ForEach(viewModel.recentDomains, id: \.self) { domain in
+                DomainToggleRow(
+                    domain: domain,
+                    isSelected: viewModel.selectedDomains.contains(domain)
+                ) {
+                    viewModel.toggleDomain(domain)
+                }
+            }
+        }
+        .padding([.leading, .trailing], 24)
+        .padding(.bottom, 8)
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { domainSectionHeight = geometry.size.height }
+                    .onChange(of: geometry.size) { domainSectionHeight = $0.height }
+            }
+        )
+    }
+
     private func footer() -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Divider()
@@ -439,7 +483,11 @@ private struct QuitSurveyNegativeView: View {
                 .padding([.leading, .trailing], 24)
 
             Button {
-                viewModel.submitFeedback()
+                if viewModel.activeVariant == .newStep && viewModel.shouldShowDomainSelector {
+                    viewModel.proceedToDomainSelection()
+                } else {
+                    viewModel.submitFeedback()
+                }
             } label: {
                 HStack(spacing: 8) {
                     if viewModel.isSubmitting {
@@ -447,7 +495,7 @@ private struct QuitSurveyNegativeView: View {
                             .controlSize(.small)
                             .progressViewStyle(.circular)
                     }
-                    Text(viewModel.isSubmitting ? UserText.quitSurveySubmitting : UserText.quitSurveySubmitAndQuit)
+                    Text(submitButtonTitle)
                 }
                 .frame(maxWidth: .infinity)
             }
