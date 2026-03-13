@@ -139,7 +139,7 @@ final class DebugSaveProfileViewModel: ObservableObject {
             )
         Task {
             do {
-                try await continuedProcessingDelegate?.saveProfileAndStartInitialRun(profile)
+                try await continuedProcessingDelegate?.saveProfileAndStartContinuedProcessingInitialRunIfSupported(profile)
                 Task { @MainActor in
                     self.alert = AlertUI.savedProfile()
                     self.showAlert = true

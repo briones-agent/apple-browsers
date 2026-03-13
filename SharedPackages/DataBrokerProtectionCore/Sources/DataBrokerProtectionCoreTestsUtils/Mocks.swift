@@ -1980,6 +1980,7 @@ public final class MockDBPFeatureFlagger: DBPFeatureFlagging {
     public let isForegroundRunningOnAppActiveFeatureOn: Bool
     public let isForegroundRunningWhenDashboardOpenFeatureOn: Bool
     public let isClickActionDelayReductionOptimizationOn: Bool
+    public let isContinuedProcessingFeatureOn: Bool
     public let isWebViewUserAgentOn: Bool
 
     public init(isRemoteBrokerDeliveryFeatureOn: Bool = true,
@@ -1987,12 +1988,14 @@ public final class MockDBPFeatureFlagger: DBPFeatureFlagging {
                 isForegroundRunningOnAppActiveFeatureOn: Bool = true,
                 isForegroundRunningWhenDashboardOpenFeatureOn: Bool = true,
                 isClickActionDelayReductionOptimizationOn: Bool = false,
+                isContinuedProcessingFeatureOn: Bool = true,
                 isWebViewUserAgentOn: Bool = false) {
         self.isRemoteBrokerDeliveryFeatureOn = isRemoteBrokerDeliveryFeatureOn
         self.isEmailConfirmationDecouplingFeatureOn = isEmailConfirmationDecouplingFeatureOn
         self.isForegroundRunningOnAppActiveFeatureOn = isForegroundRunningOnAppActiveFeatureOn
         self.isForegroundRunningWhenDashboardOpenFeatureOn = isForegroundRunningWhenDashboardOpenFeatureOn
         self.isClickActionDelayReductionOptimizationOn = isClickActionDelayReductionOptimizationOn
+        self.isContinuedProcessingFeatureOn = isContinuedProcessingFeatureOn
         self.isWebViewUserAgentOn = isWebViewUserAgentOn
     }
 }

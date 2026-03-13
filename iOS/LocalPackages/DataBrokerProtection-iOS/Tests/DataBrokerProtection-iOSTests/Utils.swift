@@ -29,12 +29,25 @@ struct IOSManagerTestDependencies {
     let queueManager: MockJobQueueManager
     let database: MockDatabase
     let eventsHandler: MockOperationEventsHandler
+    let continuedProcessingCoordinator: MockContinuedProcessingCoordinator
 }
 
 @MainActor
 enum DBPContinuedProcessingTestUtils {
-    static func makeTestIOSManager() -> (DataBrokerProtectionIOSManager, IOSManagerTestDependencies) {
-        IOSManagerTestDependenciesStore.shared.makeTestIOSManager()
+    static func makeTestIOSManager(
+        featureFlagger: MockDBPFeatureFlagger = MockDBPFeatureFlagger(),
+        continuedProcessingTestConfiguration: DataBrokerProtectionIOSManager.ContinuedProcessingTestConfiguration? = nil
+    ) -> (DataBrokerProtectionIOSManager, IOSManagerTestDependencies) {
+        let continuedProcessingCoordinator = (continuedProcessingTestConfiguration?.coordinator as? MockContinuedProcessingCoordinator) ?? MockContinuedProcessingCoordinator()
+        let normalizedContinuedProcessingTestConfiguration = DataBrokerProtectionIOSManager.ContinuedProcessingTestConfiguration(
+            coordinator: continuedProcessingCoordinator,
+            shouldUseForInitialRun: continuedProcessingTestConfiguration?.shouldUseForInitialRun,
+            shouldRegisterBackgroundTaskHandler: continuedProcessingTestConfiguration?.shouldRegisterBackgroundTaskHandler ?? false
+        )
+        return IOSManagerTestDependenciesStore.shared.makeTestIOSManager(
+            featureFlagger: featureFlagger,
+            continuedProcessingTestConfiguration: normalizedContinuedProcessingTestConfiguration
+        )
     }
 
     static func makeBrokerProfileQueryData(
@@ -73,8 +86,7 @@ enum DBPContinuedProcessingTestUtils {
         let jobDependencies = MockBrokerProfileJobDependencies()
         let authenticationManager = MockAuthenticationManager()
         let eventsHandler = MockOperationEventsHandler()
-        let manager: DataBrokerProtectionIOSManager
-
+        
         private init() {
             queueManager = MockJobQueueManager(
                 jobQueue: MockBrokerProfileJobQueue(),
@@ -83,9 +95,38 @@ enum DBPContinuedProcessingTestUtils {
                 mismatchCalculator: MockMismatchCalculator(database: database, pixelHandler: MockDataBrokerProtectionPixelsHandler()),
                 pixelHandler: MockDataBrokerProtectionPixelsHandler()
             )
+        }
+
+        func makeTestIOSManager(
+            featureFlagger: MockDBPFeatureFlagger,
+            continuedProcessingTestConfiguration: DataBrokerProtectionIOSManager.ContinuedProcessingTestConfiguration
+        ) -> (DataBrokerProtectionIOSManager, IOSManagerTestDependencies) {
+            let continuedProcessingCoordinator = (continuedProcessingTestConfiguration.coordinator as? MockContinuedProcessingCoordinator) ?? MockContinuedProcessingCoordinator()
+            let manager = makeManager(
+                featureFlagger: featureFlagger,
+                continuedProcessingTestConfiguration: continuedProcessingTestConfiguration
+            )
+            reset(manager: manager)
+
+            return (
+                manager,
+                IOSManagerTestDependencies(
+                    manager: manager,
+                    queueManager: queueManager,
+                    database: database,
+                    eventsHandler: eventsHandler,
+                    continuedProcessingCoordinator: continuedProcessingCoordinator
+                )
+            )
+        }
+
+        private func makeManager(
+            featureFlagger: MockDBPFeatureFlagger,
+            continuedProcessingTestConfiguration: DataBrokerProtectionIOSManager.ContinuedProcessingTestConfiguration
+        ) -> DataBrokerProtectionIOSManager {
             jobDependencies.database = database
 
-            manager = DataBrokerProtectionIOSManager(
+            return DataBrokerProtectionIOSManager(
                 queueManager: queueManager,
                 jobDependencies: jobDependencies,
                 emailConfirmationDataService: MockEmailConfirmationDataServiceProvider(),
@@ -97,30 +138,17 @@ enum DBPContinuedProcessingTestUtils {
                 database: database,
                 quickLinkOpenURLHandler: { _ in },
                 feedbackViewCreator: { EmptyView() },
-                featureFlagger: MockDBPFeatureFlagger(),
+                featureFlagger: featureFlagger,
                 settings: DataBrokerProtectionSettings(defaults: UserDefaults(suiteName: UUID().uuidString)!),
                 subscriptionManager: MockDataBrokerProtectionSubscriptionManaging(),
                 wideEvent: nil,
                 eventsHandler: eventsHandler,
-                engagementPixelsRepository: MockDataBrokerProtectionEngagementPixelsRepository()
+                engagementPixelsRepository: MockDataBrokerProtectionEngagementPixelsRepository(),
+                continuedProcessingTestConfiguration: continuedProcessingTestConfiguration
             )
         }
 
-        func makeTestIOSManager() -> (DataBrokerProtectionIOSManager, IOSManagerTestDependencies) {
-            reset()
-
-            return (
-                manager,
-                IOSManagerTestDependencies(
-                    manager: manager,
-                    queueManager: queueManager,
-                    database: database,
-                    eventsHandler: eventsHandler
-                )
-            )
-        }
-
-        private func reset() {
+        private func reset(manager: DataBrokerProtectionIOSManager) {
             database.clear()
             queueManager.reset()
             queueManager.delegate = manager

@@ -34,6 +34,11 @@ enum DBPContinuedProcessingEvent {
     case optOutPhaseCompleted
 }
 
+@MainActor
+protocol DBPContinuedProcessingCoordinating: AnyObject {
+    func startInitialRun(profile: DataBrokerProtectionProfile) async throws
+}
+
 @available(iOS 26.0, *)
 @MainActor
 final class DBPContinuedProcessingCoordinator {
@@ -324,6 +329,9 @@ final class DBPContinuedProcessingCoordinator {
         }
     }
 }
+
+@available(iOS 26.0, *)
+extension DBPContinuedProcessingCoordinator: DBPContinuedProcessingCoordinating {}
 
 // MARK: - DBPContinuedProcessingEventDelegate
 

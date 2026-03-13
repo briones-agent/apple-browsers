@@ -81,7 +81,7 @@ public class DBPIOSInterface {
     }
 
     public protocol ContinuedProcessingDelegate: AnyObject {
-        func saveProfileAndStartInitialRun(_ profile: DataBrokerProtectionCore.DataBrokerProtectionProfile) async throws
+        func saveProfileAndStartContinuedProcessingInitialRunIfSupported(_ profile: DataBrokerProtectionCore.DataBrokerProtectionProfile) async throws
     }
 
     public protocol AuthenticationDelegate: AnyObject {
@@ -149,6 +149,22 @@ public final class DataBrokerProtectionIOSManager {
         static let defaultMinBackgroundTaskWaitTime: TimeInterval = .minutes(15)
     }
 
+    struct ContinuedProcessingTestConfiguration {
+        let coordinator: (any DBPContinuedProcessingCoordinating)?
+        let shouldUseForInitialRun: Bool?
+        let shouldRegisterBackgroundTaskHandler: Bool?
+
+        init(
+            coordinator: (any DBPContinuedProcessingCoordinating)? = nil,
+            shouldUseForInitialRun: Bool? = nil,
+            shouldRegisterBackgroundTaskHandler: Bool? = nil
+        ) {
+            self.coordinator = coordinator
+            self.shouldUseForInitialRun = shouldUseForInitialRun
+            self.shouldRegisterBackgroundTaskHandler = shouldRegisterBackgroundTaskHandler
+        }
+    }
+
     public static let backgroundTaskIdentifier = "com.duckduckgo.app.dbp.backgroundProcessing"
 
     private let database: DataBrokerProtectionRepository
@@ -172,26 +188,27 @@ public final class DataBrokerProtectionIOSManager {
     private let eventsHandler: EventMapping<JobEvent>
     private let isWebViewInspectable: Bool
     private let freeTrialConversionService: FreeTrialConversionInstrumentationService?
+    private let continuedProcessingTestConfiguration: ContinuedProcessingTestConfiguration?
     private var currentRunIsFreeScan: Bool?
     weak var continuedProcessingDelegate: DBPContinuedProcessingEventDelegate?
-    private var _continuedProcessingCoordinator: AnyObject?
 
-    @available(iOS 26.0, *)
     @MainActor
-    private var continuedProcessingCoordinator: DBPContinuedProcessingCoordinator {
-        if let coordinator = _continuedProcessingCoordinator as? DBPContinuedProcessingCoordinator {
-            return coordinator
+    private lazy var continuedProcessingCoordinator: any DBPContinuedProcessingCoordinating = {
+        if let coordinatorForTesting = continuedProcessingTestConfiguration?.coordinator {
+            return coordinatorForTesting
         }
 
-        let coordinator = DBPContinuedProcessingCoordinator(manager: self)
-        _continuedProcessingCoordinator = coordinator
-        return coordinator
-    }
+        guard #available(iOS 26.0, *) else {
+            fatalError("Continued processing coordinator is unavailable before iOS 26")
+        }
+
+        return DBPContinuedProcessingCoordinator(manager: self)
+    }()
 
     @MainActor
     private var hasAttachedContinuedProcessingTask: Bool {
         if #available(iOS 26.0, *),
-           let coordinator = _continuedProcessingCoordinator as? DBPContinuedProcessingCoordinator {
+           let coordinator = continuedProcessingCoordinator as? DBPContinuedProcessingCoordinator {
             return coordinator.hasAttachedTask
         }
 
@@ -264,7 +281,8 @@ public final class DataBrokerProtectionIOSManager {
          eventsHandler: EventMapping<JobEvent>,
          engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository = DataBrokerProtectionEngagementPixelsUserDefaults(userDefaults: .dbp),
          isWebViewInspectable: Bool = false,
-         freeTrialConversionService: FreeTrialConversionInstrumentationService? = nil
+         freeTrialConversionService: FreeTrialConversionInstrumentationService? = nil,
+         continuedProcessingTestConfiguration: ContinuedProcessingTestConfiguration? = nil
     ) {
         self.queueManager = queueManager
         self.jobDependencies = jobDependencies
@@ -287,10 +305,13 @@ public final class DataBrokerProtectionIOSManager {
         self.eventsHandler = eventsHandler
         self.isWebViewInspectable = isWebViewInspectable
         self.freeTrialConversionService = freeTrialConversionService
+        self.continuedProcessingTestConfiguration = continuedProcessingTestConfiguration
 
         self.queueManager.delegate = self
 
-        registerBackgroundTaskHandler()
+        if continuedProcessingTestConfiguration?.shouldRegisterBackgroundTaskHandler ?? true {
+            registerBackgroundTaskHandler()
+        }
         Logger.dataBrokerProtection.debug("PIR wide event sweep requested (iOS setup)")
         sweepWideEvents()
     }
@@ -600,6 +621,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DataBrokerProtectionVi
     public func dataBrokerProtectionViewController() -> DataBrokerProtectionViewController {
         return DataBrokerProtectionViewController(authenticationDelegate: self,
                                                   databaseDelegate: self,
+                                                  continuedProcessingDelegate: self,
                                                   userEventsDelegate: self,
                                                   privacyConfigManager: self.privacyConfigManager,
                                                   contentScopeProperties: self.jobDependencies.contentScopeProperties,
@@ -891,11 +913,41 @@ private extension DataBrokerProtectionIOSManager {
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.ContinuedProcessingDelegate {
     @MainActor
-    public func saveProfileAndStartInitialRun(_ profile: DataBrokerProtectionCore.DataBrokerProtectionProfile) async throws {
-        if #available(iOS 26.0, *), featureFlagger.isContinuedProcessingFeatureOn {
-            try await continuedProcessingCoordinator.startInitialRun(profile: profile)
+    private func shouldUseContinuedProcessingForInitialRun() -> Bool {
+        if let shouldUseForInitialRun = continuedProcessingTestConfiguration?.shouldUseForInitialRun {
+            return shouldUseForInitialRun
+        }
+
+        guard #available(iOS 26.0, *) else {
+            return false
+        }
+
+        return featureFlagger.isContinuedProcessingFeatureOn
+    }
+
+    @MainActor
+    private func saveProfileAndStartImmediateScans(_ profile: DataBrokerProtectionCore.DataBrokerProtectionProfile) async throws {
+        try await saveProfileAndPrepareForInitialScans(profile)
+        await startImmediateScanOperations()
+    }
+
+    @MainActor
+    public func saveProfileAndStartContinuedProcessingInitialRunIfSupported(_ profile: DataBrokerProtectionCore.DataBrokerProtectionProfile) async throws {
+        if shouldUseContinuedProcessingForInitialRun() {
+            do {
+                if let coordinatorForTesting = continuedProcessingTestConfiguration?.coordinator {
+                    try await coordinatorForTesting.startInitialRun(profile: profile)
+                } else if #available(iOS 26.0, *) {
+                    try await continuedProcessingCoordinator.startInitialRun(profile: profile)
+                } else {
+                    fatalError("Continued processing coordinator is unavailable before iOS 26")
+                }
+            } catch {
+                Logger.dataBrokerProtection.error("Continued processing start failed, falling back to legacy save. Error: \(error.localizedDescription, privacy: .public)")
+                try await saveProfileAndStartImmediateScans(profile)
+            }
         } else {
-            try await saveProfile(profile)
+            try await saveProfileAndStartImmediateScans(profile)
         }
     }
 
