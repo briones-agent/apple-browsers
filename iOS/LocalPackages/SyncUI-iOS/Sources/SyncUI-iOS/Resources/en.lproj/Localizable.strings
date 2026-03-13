@@ -28,11 +28,11 @@
 /* Auto-Restore Settings Row - On */
 "auto.restore.settings.row.on" = "On";
 
+/* Auto-restore section - Footer */
+"auto.restore.toggle.footer" = "Restore your data automatically if you reinstall the app. Sync & Backup data can’t be recovered after 18 months of inactivity.";
+
 /* Auto-Restore - Toggle Label */
 "auto.restore.toggle.label" = "Restore on App Reinstall";
-
-/* Auto-restore section - Footer */
-"auto.restore.toogle.footer" = "Restore your data automatically if you reinstall the app. Sync & Backup data can’t be recovered after 18 months of inactivity.";
 
 /* Standard Buttons - Back Button */
 "back.button" = "Back";
