@@ -24,6 +24,8 @@ import DuckUI
 
 struct FireModeEmptyStateView: View {
     
+    // MARK: - Types
+
     typealias NewFireTabBlock =  () -> Void
     
     enum ViewType {
@@ -40,6 +42,8 @@ struct FireModeEmptyStateView: View {
         }
     }
 
+    // MARK: - Variables
+
     private let type: ViewType
     private var onNewFireTab: NewFireTabBlock? {
         if case .tabSwitcher(let onNewFireTab) = type {
@@ -47,6 +51,14 @@ struct FireModeEmptyStateView: View {
         }
         return nil
     }
+
+    // MARK: - Initializer
+    
+    init(type: ViewType) {
+        self.type = type
+    }
+    
+    // MARK: - Body
 
     var body: some View {
         ScrollView {
