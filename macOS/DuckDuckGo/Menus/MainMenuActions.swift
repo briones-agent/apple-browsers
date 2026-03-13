@@ -1653,6 +1653,16 @@ extension MainViewController {
         persistor.alwaysShowQuitSurvey = !persistor.alwaysShowQuitSurvey
     }
 
+    @objc func setQuitSurveyVariantInline(_ sender: Any?) {
+        let persistor = QuitSurveyUserDefaultsPersistor(keyValueStore: NSApp.delegateTyped.keyValueStore)
+        persistor.domainVariant = .inline
+    }
+
+    @objc func setQuitSurveyVariantNewStep(_ sender: Any?) {
+        let persistor = QuitSurveyUserDefaultsPersistor(keyValueStore: NSApp.delegateTyped.keyValueStore)
+        persistor.domainVariant = .newStep
+    }
+
     @objc func removeUserScripts(_ sender: Any?) {
         tabCollectionViewModel.selectedTab?.userContentController?.cleanUpBeforeClosing()
         tabCollectionViewModel.selectedTab?.reload()
