@@ -17,11 +17,15 @@
 //  limitations under the License.
 //
 
+import DesignResourcesKitIcons
+import DuckUI
 import SwiftUI
 
 public struct SimplifiedSyncSettingsView: View {
 
     @ObservedObject public var model: SyncSettingsViewModel
+
+    @State var isRecoverSyncedDataSheetVisible = false
 
     public init(model: SyncSettingsViewModel) {
         self.model = model
@@ -29,16 +33,133 @@ public struct SimplifiedSyncSettingsView: View {
 
     public var body: some View {
         List {
-            Section {
-                if model.isSyncEnabled {
-                    Text(verbatim: "Sync is enabled")
-                } else {
-                    Text(verbatim: "Sync is not enabled")
-                }
-            }
+            syncDisabledContent
         }
         .navigationTitle(UserText.syncTitle)
         .applyListStyle()
         .environmentObject(model)
+    }
+}
+
+// MARK: - Sync Disabled Content
+
+extension SimplifiedSyncSettingsView {
+
+    @ViewBuilder
+    var syncDisabledContent: some View {
+        syncUnavailableViewWhileLoggedOut
+        headerSection
+        syncToggleSection
+        alreadySetUpSection
+        getDesktopBrowserSection
+    }
+
+    @ViewBuilder
+    var syncUnavailableViewWhileLoggedOut: some View {
+        if !model.isDataSyncingAvailable || !model.isConnectingDevicesAvailable || !model.isAccountCreationAvailable {
+            if model.isAppVersionNotSupported {
+                SyncWarningMessageView(title: UserText.syncUnavailableTitle, message: UserText.syncUnavailableMessageUpgradeRequired)
+            } else {
+                SyncWarningMessageView(title: UserText.syncUnavailableTitle, message: UserText.syncUnavailableMessage)
+            }
+        }
+    }
+
+    @ViewBuilder
+    var headerSection: some View {
+        Section {
+            HStack {
+                VStack(alignment: .center, spacing: 20) {
+                    Image("Sync-New-128")
+
+                    Text(model.isAIChatSyncEnabled ? UserText.simplifiedSyncHeaderMessage : UserText.simplifiedSyncHeaderMessageBasic)
+                        .daxBodyRegular()
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(Color(designSystemColor: .textSecondary))
+                }
+            }
+        }
+        .listRowBackground(Color(designSystemColor: .background))
+    }
+
+    @ViewBuilder
+    var syncToggleSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { model.isSyncEnabled },
+                set: { _ in
+                    // Enable sync functionality to be added
+                }
+            )) {
+                Text(UserText.simplifiedSyncToggleTitle)
+                    .daxBodyRegular()
+            }
+            .disabled(!model.isAccountCreationAvailable)
+        }
+    }
+
+    @ViewBuilder
+    var alreadySetUpSection: some View {
+        Section {
+            Button {
+                model.scanQRCode()
+            } label: {
+                Label(title: {
+                    Text(UserText.simplifiedSyncWithAnotherDeviceButton)
+                        .daxBodyRegular()
+                        .foregroundColor(Color(designSystemColor: .accent))
+                }, icon: {
+                    Image(uiImage: DesignSystemImages.Glyphs.Size24.qr)
+                        .foregroundColor(Color(designSystemColor: .accent))
+                })
+            }
+            .disabled(!model.isAccountCreationAvailable)
+
+            Button {
+                Task { @MainActor in
+                    if await model.commonAuthenticate() {
+                        isRecoverSyncedDataSheetVisible = true
+                    }
+                }
+            } label: {
+                Label(title: {
+                    Text(UserText.simplifiedUseRecoveryCodeButton)
+                        .daxBodyRegular()
+                        .foregroundColor(Color(designSystemColor: .accent))
+                }, icon: {
+                    Image(uiImage: DesignSystemImages.Glyphs.Size24.note)
+                        .foregroundColor(Color(designSystemColor: .accent))
+                })
+            }
+            .sheet(isPresented: $isRecoverSyncedDataSheetVisible) {
+                RecoverSyncedDataView(model: model, onCancel: {
+                    isRecoverSyncedDataSheetVisible = false
+                })
+            }
+            .disabled(!model.isAccountRecoveryAvailable)
+        } header: {
+            Text(UserText.simplifiedAlreadySetUpSectionHeader)
+        }
+    }
+
+    @ViewBuilder
+    var getDesktopBrowserSection: some View {
+        Section {
+            NavigationLink(destination: PlatformLinksView(model: model, source: .notActivated)) {
+                Label(title: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(UserText.simplifiedGetDesktopBrowserTitle)
+                            .daxBodyRegular()
+                            .foregroundColor(Color(designSystemColor: .textPrimary))
+                        Text(UserText.simplifiedGetDesktopBrowserSubtitle)
+                            .daxFootnoteRegular()
+                            .foregroundColor(Color(designSystemColor: .textSecondary))
+                    }
+                }, icon: {
+                    Image(uiImage: DesignSystemImages.Color.Size24.deviceLaptopInstall)
+                })
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
