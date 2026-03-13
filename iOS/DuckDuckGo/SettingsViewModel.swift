@@ -824,9 +824,7 @@ extension SettingsViewModel {
 
         updateRecentlyVisitedSitesVisibility()
 
-        if #available(iOS 18.2, *) {
-            updateCompleteSetupSectionVisiblity()
-        }
+        updateCompleteSetupSectionVisiblity()
 
         setupSubscribers()
         Task { await setupSubscriptionEnvironment() }
