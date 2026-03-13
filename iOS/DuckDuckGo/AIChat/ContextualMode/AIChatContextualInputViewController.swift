@@ -92,6 +92,10 @@ final class AIChatContextualInputViewController: UIViewController {
         configureNativeInput()
         configureQuickActions()
         setupKeyboardObservers()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         updateBottomPaddingForOrientation()
     }
 
@@ -258,7 +262,12 @@ private extension AIChatContextualInputViewController {
         let isLandscape = UIDevice.current.orientation.isLandscape ||
             (view.window?.windowScene?.interfaceOrientation.isLandscape ?? false)
         let padding: CGFloat = isLandscape ? Constants.iPadLandscapeBottomPadding : 0
-        safeAreaBottomConstraint?.constant = -padding
+        
+        if let keyboardBottomConstraint = keyboardBottomConstraint, keyboardBottomConstraint.isActive {
+            keyboardBottomConstraint.constant = -(Constants.keyboardSpacing + padding)
+        } else {
+            safeAreaBottomConstraint?.constant = -padding
+        }
     }
 }
 
