@@ -20,6 +20,7 @@ import Combine
 import Foundation
 import os.log
 import Common
+import History
 import PixelKit
 
 // MARK: - Survey Option Model
@@ -43,6 +44,7 @@ enum QuitSurveyState: Equatable {
     case initialQuestion
     case positiveResponse
     case negativeFeedback
+    case domainSelection
 }
 
 // MARK: - View Model
@@ -57,6 +59,8 @@ final class QuitSurveyViewModel: ObservableObject {
     @Published var feedbackText: String = ""
     @Published private(set) var autoQuitCountdown: Int = 5
     @Published private(set) var isSubmitting: Bool = false
+    @Published private(set) var selectedDomains: Set<String> = []
+    @Published private(set) var activeVariant: QuitSurveyDomainVariant = .inline
 
     // MARK: - Configuration
 
@@ -85,6 +89,7 @@ final class QuitSurveyViewModel: ObservableObject {
     private static let somethingElseOption = QuitSurveyOption(id: "something-else", text: UserText.quitSurveyOptionSomethingElse)
 
     let availableOptions: [QuitSurveyOption]
+    let recentDomains: [String]
 
     private let feedbackSender: FeedbackSenderImplementing
     private var persistor: QuitSurveyPersistor?
@@ -101,21 +106,37 @@ final class QuitSurveyViewModel: ObservableObject {
         !selectedOptions.isEmpty || !feedbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    var shouldShowDomainSelector: Bool {
+        selectedOptions.contains("websites-didnt-work") && !recentDomains.isEmpty
+    }
+
     // MARK: - Initialization
 
     init(
         feedbackSender: FeedbackSenderImplementing = FeedbackSender(),
         persistor: QuitSurveyPersistor? = nil,
+        historyCoordinating: HistoryCoordinating? = nil,
         onQuit: @escaping () -> Void
     ) {
         self.feedbackSender = feedbackSender
         self.persistor = persistor
         self.onQuit = onQuit
-
-        // Select 8 random options + "Something else"
         let randomOptions = Array(Self.allOptions.shuffled().prefix(8))
         self.availableOptions = randomOptions + [Self.somethingElseOption]
+        self.recentDomains = Self.fetchRecentDomains(from: historyCoordinating)
+        self.activeVariant = persistor?.domainVariant ?? .inline
         fireSurveyShown()
+    }
+
+    private static func fetchRecentDomains(from history: HistoryCoordinating?) -> [String] {
+        guard let entries = history?.history else { return [] }
+        var seen = Set<String>()
+        return entries
+            .sorted { $0.lastVisit > $1.lastVisit }
+            .compactMap { $0.url.host }
+            .filter { seen.insert($0).inserted }
+            .prefix(5)
+            .map { $0 }
     }
 
     // MARK: - Actions
@@ -146,19 +167,42 @@ final class QuitSurveyViewModel: ObservableObject {
         }
     }
 
+    func toggleDomain(_ domain: String) {
+        if selectedDomains.contains(domain) {
+            selectedDomains.remove(domain)
+        } else {
+            selectedDomains.insert(domain)
+        }
+    }
+
+    func proceedToDomainSelection() {
+        state = .domainSelection
+    }
+
+    func goBackFromDomainSelection() {
+        selectedDomains.removeAll()
+        state = .negativeFeedback
+    }
+
     func submitFeedback() {
         isSubmitting = true
 
+        let domainsPrefix = selectedDomains.isEmpty
+            ? ""
+            : "Affected domains: \(selectedDomains.sorted().joined(separator: ", "))\n\n"
+        let combinedText = domainsPrefix + feedbackText
+
         let feedback = Feedback.from(
             selectedPillIds: Array(selectedOptions),
-            text: feedbackText,
+            text: combinedText,
             appVersion: AppVersion.shared.versionNumber,
             category: .firstTimeQuitSurvey,
             problemCategory: Self.firstTimeQuitSurveyCategory
         )
 
         let reasons = getReasonsForPixel()
-        fireThumbsDownPixelSubmission(reasons: reasons)
+        let affectedDomains = selectedDomains.isEmpty ? nil : selectedDomains.sorted().joined(separator: ",")
+        fireThumbsDownPixelSubmission(reasons: reasons, affectedDomains: affectedDomains)
 
         // Store reasons for the return user pixel (fired on next app launch)
         persistor?.pendingReturnUserReasons = reasons
@@ -195,8 +239,8 @@ final class QuitSurveyViewModel: ObservableObject {
         PixelKit.fire(QuitSurveyPixels.quitSurveyThumbsDown)
     }
 
-    private func fireThumbsDownPixelSubmission(reasons: String) {
-        PixelKit.fire(QuitSurveyPixels.quitSurveyThumbsDownSubmission(reasons: reasons))
+    private func fireThumbsDownPixelSubmission(reasons: String, affectedDomains: String?) {
+        PixelKit.fire(QuitSurveyPixels.quitSurveyThumbsDownSubmission(reasons: reasons, affectedDomains: affectedDomains))
     }
 
     /// This methods calculates the parameters for the thumbs down submission pixel.

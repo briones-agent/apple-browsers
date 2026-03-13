@@ -964,6 +964,9 @@ struct UserText {
     static let quitSurveyDisclaimer = NSLocalizedString("quit-survey.disclaimer", value: "Reports sent to DuckDuckGo are 100% anonymous and only include your message, the DuckDuckGo browser version, and your macOS version.", comment: "Privacy disclaimer in quit survey")
     static let quitSurveySubmitAndQuit = NSLocalizedString("quit-survey.submit-and-quit", value: "Submit and Quit", comment: "Button to submit feedback and quit")
     static let quitSurveySubmitting = NSLocalizedString("quit-survey.submitting", value: "Submitting...", comment: "Button text shown while feedback is being submitted")
+    static let quitSurveyAffectedDomainsTitle = NSLocalizedString("quit-survey.affected-domains.title", value: "Which websites had problems?", comment: "Title for quit survey domain selection screen")
+    static let quitSurveyAffectedDomainsSubtitle = NSLocalizedString("quit-survey.affected-domains.subtitle", value: "Select all that apply", comment: "Subtitle for quit survey domain selection screen")
+    static let quitSurveyNext = NSLocalizedString("quit-survey.next", value: "Next", comment: "Next button in quit survey")
 
     // Quit survey feedback options
     static let quitSurveyOptionPagesFroze = NSLocalizedString("quit-survey.option.pages-froze", value: "Pages froze", comment: "Quit survey feedback option - site breakage")

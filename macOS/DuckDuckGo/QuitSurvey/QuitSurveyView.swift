@@ -52,11 +52,13 @@ struct QuitSurveyFlowView: View {
 
     init(
         persistor: QuitSurveyPersistor?,
+        historyCoordinating: HistoryCoordinating? = nil,
         onQuit: @escaping () -> Void,
         onResize: ((CGFloat, CGFloat) -> Void)? = nil
     ) {
         self._viewModel = StateObject(wrappedValue: QuitSurveyViewModel(
             persistor: persistor,
+            historyCoordinating: historyCoordinating,
             onQuit: onQuit
         ))
         self.onResize = onResize
@@ -85,6 +87,9 @@ struct QuitSurveyFlowView: View {
 
             case .negativeFeedback:
                 QuitSurveyNegativeView(viewModel: viewModel, onResize: onResize)
+
+            case .domainSelection:
+                QuitSurveyDomainSelectionView(viewModel: viewModel, onResize: onResize)
             }
         }
     }
@@ -209,6 +214,28 @@ private struct QuitSurveyOptionRow: View {
     }
 }
 
+// MARK: - Domain Toggle Row
+
+private struct DomainToggleRow: View {
+    let domain: String
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .foregroundColor(isSelected ? Color(designSystemColor: .accent) : Color(.secondaryLabelColor))
+                Text(domain)
+                    .systemLabel()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Positive Response View
 
 private struct QuitSurveyPositiveView: View {
@@ -256,6 +283,7 @@ private struct QuitSurveyNegativeView: View {
     var onResize: ((CGFloat, CGFloat) -> Void)?
 
     @State private var pillsSectionHeight: CGFloat = 0
+    @State private var domainSectionHeight: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -264,6 +292,10 @@ private struct QuitSurveyNegativeView: View {
 
             if viewModel.shouldShowTextInput {
                 userTextInput()
+            }
+
+            if viewModel.shouldShowDomainSelector && viewModel.activeVariant == .inline {
+                inlineDomainSection()
             }
 
             footer()
@@ -276,9 +308,20 @@ private struct QuitSurveyNegativeView: View {
         .onChange(of: pillsSectionHeight) { _ in
             updateDialogHeight()
         }
+        .onChange(of: domainSectionHeight) { _ in
+            updateDialogHeight()
+        }
         .onAppear {
             updateDialogHeight()
         }
+    }
+
+    private var submitButtonTitle: String {
+        if viewModel.isSubmitting { return UserText.quitSurveySubmitting }
+        if viewModel.activeVariant == .newStep && viewModel.shouldShowDomainSelector {
+            return UserText.quitSurveyNext
+        }
+        return UserText.quitSurveySubmitAndQuit
     }
 
     // MARK: - Height Calculation
@@ -293,8 +336,11 @@ private struct QuitSurveyNegativeView: View {
         let baseHeight = ComponentHeights.header + ComponentHeights.footer
         let pillsHeight = pillsSectionHeight > 0 ? pillsSectionHeight : 80
         let textInputHeight = viewModel.shouldShowTextInput ? ComponentHeights.textInputSection : 0
+        let domainHeight = (viewModel.shouldShowDomainSelector && viewModel.activeVariant == .inline)
+            ? (domainSectionHeight > 0 ? domainSectionHeight : 0)
+            : 0
 
-        return baseHeight + pillsHeight + textInputHeight
+        return baseHeight + pillsHeight + textInputHeight + domainHeight
     }
 
     private func updateDialogHeight() {
@@ -401,6 +447,126 @@ private struct QuitSurveyNegativeView: View {
         .padding(.bottom, 8)
     }
 
+    private func inlineDomainSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(UserText.quitSurveyAffectedDomainsTitle)
+                .systemLabel()
+
+            ForEach(viewModel.recentDomains, id: \.self) { domain in
+                DomainToggleRow(
+                    domain: domain,
+                    isSelected: viewModel.selectedDomains.contains(domain)
+                ) {
+                    viewModel.toggleDomain(domain)
+                }
+            }
+        }
+        .padding([.leading, .trailing], 24)
+        .padding(.bottom, 8)
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { domainSectionHeight = geometry.size.height }
+                    .onChange(of: geometry.size) { domainSectionHeight = $0.height }
+            }
+        )
+    }
+
+    private func footer() -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Divider()
+                .background(Color(.separatorColor))
+                .frame(maxWidth: .infinity)
+                .frame(height: 1)
+
+            Text(UserText.quitSurveyDisclaimer)
+                .caption2()
+                .multilineTextAlignment(.leading)
+                .padding([.leading, .trailing], 24)
+
+            Button {
+                if viewModel.activeVariant == .newStep && viewModel.shouldShowDomainSelector {
+                    viewModel.proceedToDomainSelection()
+                } else {
+                    viewModel.submitFeedback()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if viewModel.isSubmitting {
+                        ProgressView()
+                            .controlSize(.small)
+                            .progressViewStyle(.circular)
+                    }
+                    Text(submitButtonTitle)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .disabled(!viewModel.shouldEnableSubmit || viewModel.isSubmitting)
+            .buttonStyle(DefaultActionButtonStyle(enabled: viewModel.shouldEnableSubmit && !viewModel.isSubmitting))
+            .padding([.leading, .trailing], 24)
+            .padding(.bottom, 16)
+        }
+    }
+}
+
+/// MARK: - Domain Selection View (Variant B)
+
+private struct QuitSurveyDomainSelectionView: View {
+    @ObservedObject var viewModel: QuitSurveyViewModel
+    var onResize: ((CGFloat, CGFloat) -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header()
+            domainList()
+            footer()
+        }
+        .frame(width: QuitSurveyViewController.Constants.negativeWidth)
+        .fixedSize(horizontal: false, vertical: true)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.2)) {
+                onResize?(QuitSurveyViewController.Constants.negativeWidth,
+                          QuitSurveyViewController.Constants.negativeBaseHeight)
+            }
+        }
+    }
+
+    private func header() -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Button {
+                viewModel.goBackFromDomainSelection()
+            } label: {
+                Image(nsImage: DesignSystemImages.Glyphs.Size16.arrowLeft)
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(UserText.quitSurveyAffectedDomainsTitle)
+                    .systemTitle2()
+
+                Text(UserText.quitSurveyAffectedDomainsSubtitle)
+                    .systemLabel()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(24)
+    }
+
+    private func domainList() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(viewModel.recentDomains, id: \.self) { domain in
+                DomainToggleRow(
+                    domain: domain,
+                    isSelected: viewModel.selectedDomains.contains(domain)
+                ) {
+                    viewModel.toggleDomain(domain)
+                }
+            }
+        }
+        .padding([.leading, .trailing], 24)
+        .padding(.bottom, 24)
+    }
+
     private func footer() -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Divider()
@@ -426,8 +592,8 @@ private struct QuitSurveyNegativeView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .disabled(!viewModel.shouldEnableSubmit || viewModel.isSubmitting)
-            .buttonStyle(DefaultActionButtonStyle(enabled: viewModel.shouldEnableSubmit && !viewModel.isSubmitting))
+            .disabled(viewModel.isSubmitting)
+            .buttonStyle(DefaultActionButtonStyle(enabled: !viewModel.isSubmitting))
             .padding([.leading, .trailing], 24)
             .padding(.bottom, 16)
         }

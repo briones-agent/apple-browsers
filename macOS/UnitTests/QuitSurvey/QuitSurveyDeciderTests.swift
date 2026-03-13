@@ -29,6 +29,7 @@ final class MockQuitSurveyPersistor: QuitSurveyPersistor {
     var alwaysShowQuitSurvey: Bool = false
     var pendingReturnUserReasons: String?
     var hasQuitAppBefore: Bool = false
+    var domainVariant: QuitSurveyDomainVariant = .inline
 }
 
 final class MockReinstallingUserDetecting: ReinstallingUserDetecting {
@@ -271,6 +272,13 @@ final class QuitSurveyDeciderTests: XCTestCase {
         createDecider()
 
         XCTAssertFalse(decider.shouldShowQuitSurvey)
+    }
+
+    // MARK: - Domain Variant Tests
+
+    func testDomainVariantDefaultsToInline() {
+        let persistor = MockQuitSurveyPersistor()
+        XCTAssertEqual(persistor.domainVariant, .inline)
     }
 }
 

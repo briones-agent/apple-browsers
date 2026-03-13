@@ -24,10 +24,14 @@ import SwiftUI
 final class QuitSurveyPresenter {
     private let windowControllersManager: WindowControllersManager
     private let persistor: QuitSurveyPersistor
+    private let historyCoordinating: HistoryCoordinating?
 
-    init(windowControllersManager: WindowControllersManager, persistor: QuitSurveyPersistor) {
+    init(windowControllersManager: WindowControllersManager,
+         persistor: QuitSurveyPersistor,
+         historyCoordinating: HistoryCoordinating? = nil) {
         self.windowControllersManager = windowControllersManager
         self.persistor = persistor
+        self.historyCoordinating = historyCoordinating
     }
 
     /// Shows the quit survey and asynchronously waits for user completion.
@@ -44,6 +48,7 @@ final class QuitSurveyPresenter {
 
             let surveyView = QuitSurveyFlowView(
                 persistor: persistor,
+                historyCoordinating: historyCoordinating,
                 onQuit: {
                     if let parentWindow = quitSurveyWindow?.sheetParent {
                         parentWindow.endSheet(quitSurveyWindow!)

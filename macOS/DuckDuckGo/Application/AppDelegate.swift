@@ -1559,7 +1559,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 reinstallUserDetection: DefaultReinstallUserDetection(keyValueStore: keyValueStore),
                 showQuitSurvey: { [weak self] in
                     guard let self else { return }
-                    let presenter = QuitSurveyPresenter(windowControllersManager: self.windowControllersManager, persistor: persistor)
+                    let presenter = QuitSurveyPresenter(windowControllersManager: self.windowControllersManager, persistor: persistor, historyCoordinating: self.historyCoordinator)
                     await presenter.showSurvey()
                 }
             ),

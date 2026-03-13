@@ -169,6 +169,11 @@ extension QuitSurveyAppTerminationDecider: ApplicationTerminationDecider {
 
 // MARK: - Persistor
 
+enum QuitSurveyDomainVariant: String {
+    case inline
+    case newStep
+}
+
 protocol QuitSurveyPersistor {
     var hasQuitAppBefore: Bool { get set }
 
@@ -179,6 +184,8 @@ protocol QuitSurveyPersistor {
 
     /// Only for internal users, triggered from the debug menu
     var alwaysShowQuitSurvey: Bool { get set }
+
+    var domainVariant: QuitSurveyDomainVariant { get set }
 }
 
 final class QuitSurveyUserDefaultsPersistor: QuitSurveyPersistor {
@@ -187,6 +194,7 @@ final class QuitSurveyUserDefaultsPersistor: QuitSurveyPersistor {
         case hasQuitAppBefore = "quit-survey.has-quit-app-before"
         case pendingReturnUserReasons = "quit-survey.pending-return-user-reasons"
         case alwaysShowQuitSurvey = "quit-survey.always-show-quit-survey"
+        case domainVariant = "quit-survey.domain-variant"
     }
 
     private let keyValueStore: ThrowingKeyValueStoring
@@ -256,6 +264,27 @@ final class QuitSurveyUserDefaultsPersistor: QuitSurveyPersistor {
                 try keyValueStore.set(newValue, forKey: Key.alwaysShowQuitSurvey.rawValue)
             } catch {
                 Logger.general.error("Failed to write hasQuitAppBefore to keyValueStore: \(error)")
+            }
+        }
+    }
+
+    var domainVariant: QuitSurveyDomainVariant {
+        get {
+            do {
+                guard let raw = try keyValueStore.object(forKey: Key.domainVariant.rawValue) as? String else {
+                    return .inline
+                }
+                return QuitSurveyDomainVariant(rawValue: raw) ?? .inline
+            } catch {
+                Logger.general.error("Failed to read domainVariant from keyValueStore: \(error)")
+                return .inline
+            }
+        }
+        set {
+            do {
+                try keyValueStore.set(newValue.rawValue, forKey: Key.domainVariant.rawValue)
+            } catch {
+                Logger.general.error("Failed to write domainVariant to keyValueStore: \(error)")
             }
         }
     }
