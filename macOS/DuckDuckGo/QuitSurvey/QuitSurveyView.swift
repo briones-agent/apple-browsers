@@ -18,8 +18,10 @@
 
 import DesignResourcesKit
 import DesignResourcesKitIcons
+import PrivacyConfig
 import SwiftUI
 import SwiftUIExtensions
+import History
 
 // MARK: - View Controller
 
@@ -52,13 +54,17 @@ struct QuitSurveyFlowView: View {
 
     init(
         persistor: QuitSurveyPersistor?,
+        featureFlagger: FeatureFlagger,
         historyCoordinating: HistoryCoordinating? = nil,
+        faviconManaging: FaviconManagement? = nil,
         onQuit: @escaping () -> Void,
         onResize: ((CGFloat, CGFloat) -> Void)? = nil
     ) {
         self._viewModel = StateObject(wrappedValue: QuitSurveyViewModel(
             persistor: persistor,
+            featureFlagger: featureFlagger,
             historyCoordinating: historyCoordinating,
+            faviconManaging: faviconManaging,
             onQuit: onQuit
         ))
         self.onResize = onResize
@@ -217,22 +223,81 @@ private struct QuitSurveyOptionRow: View {
 // MARK: - Domain Toggle Row
 
 private struct DomainToggleRow: View {
-    let domain: String
+    let entry: QuitSurveyDomainEntry
     let isSelected: Bool
     let onToggle: () -> Void
 
     var body: some View {
         Button(action: onToggle) {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                    .foregroundColor(isSelected ? Color(designSystemColor: .accent) : Color(.secondaryLabelColor))
-                Text(domain)
-                    .systemLabel()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .foregroundColor(isSelected ? Color(designSystemColor: .accentAltContentPrimary) : Color(.secondaryLabelColor))
+
+                if let favicon = entry.favicon {
+                    Image(nsImage: favicon)
+                        .resizable()
+                        .frame(width: 16, height: 16)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                } else {
+                    Image(systemName: "globe")
+                        .frame(width: 16, height: 16)
+                        .foregroundColor(Color(.secondaryLabelColor))
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    if let title = entry.title {
+                        Text(title)
+                            .systemLabel()
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(entry.domain)
+                            .caption2()
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(entry.domain)
+                            .systemLabel()
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Other Domain Row
+
+private struct OtherDomainRow: View {
+    @ObservedObject var viewModel: QuitSurveyViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: { viewModel.toggleOtherDomain() }) {
+                HStack(spacing: 8) {
+                    Image(systemName: viewModel.isOtherDomainSelected ? "checkmark.square.fill" : "square")
+                        .foregroundColor(viewModel.isOtherDomainSelected ? Color(designSystemColor: .accentAltContentPrimary) : Color(.secondaryLabelColor))
+
+                    Image(systemName: "globe")
+                        .frame(width: 16, height: 16)
+                        .foregroundColor(Color(.secondaryLabelColor))
+
+                    Text(UserText.quitSurveyAffectedDomainsOther)
+                        .systemLabel()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if viewModel.isOtherDomainSelected {
+                TextField(UserText.quitSurveyAffectedDomainsOtherPlaceholder, text: $viewModel.otherDomainText)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.leading, 24 + 8 + 16) // align with text after checkbox + favicon
+            }
+        }
     }
 }
 
@@ -290,12 +355,12 @@ private struct QuitSurveyNegativeView: View {
             header()
             optionsPills()
 
-            if viewModel.shouldShowTextInput {
-                userTextInput()
-            }
-
             if viewModel.shouldShowDomainSelector && viewModel.activeVariant == .inline {
                 inlineDomainSection()
+            }
+
+            if viewModel.shouldShowTextInput {
+                userTextInput()
             }
 
             footer()
@@ -452,17 +517,22 @@ private struct QuitSurveyNegativeView: View {
             Text(UserText.quitSurveyAffectedDomainsTitle)
                 .systemLabel()
 
-            ForEach(viewModel.recentDomains, id: \.self) { domain in
+            Text(UserText.quitSurveyAffectedDomainsFootnote)
+                .caption2()
+                .multilineTextAlignment(.leading)
+
+            ForEach(viewModel.recentDomains) { entry in
                 DomainToggleRow(
-                    domain: domain,
-                    isSelected: viewModel.selectedDomains.contains(domain)
+                    entry: entry,
+                    isSelected: viewModel.selectedDomains.contains(entry.domain)
                 ) {
-                    viewModel.toggleDomain(domain)
+                    viewModel.toggleDomain(entry.domain)
                 }
             }
+            OtherDomainRow(viewModel: viewModel)
         }
         .padding([.leading, .trailing], 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, 24)
         .background(
             GeometryReader { geometry in
                 Color.clear
@@ -554,14 +624,15 @@ private struct QuitSurveyDomainSelectionView: View {
 
     private func domainList() -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(viewModel.recentDomains, id: \.self) { domain in
+            ForEach(viewModel.recentDomains) { entry in
                 DomainToggleRow(
-                    domain: domain,
-                    isSelected: viewModel.selectedDomains.contains(domain)
+                    entry: entry,
+                    isSelected: viewModel.selectedDomains.contains(entry.domain)
                 ) {
-                    viewModel.toggleDomain(domain)
+                    viewModel.toggleDomain(entry.domain)
                 }
             }
+            OtherDomainRow(viewModel: viewModel)
         }
         .padding([.leading, .trailing], 24)
         .padding(.bottom, 24)
@@ -606,7 +677,7 @@ private struct QuitSurveyDomainSelectionView: View {
 struct QuitSurveyView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            QuitSurveyFlowView(persistor: nil, onQuit: {})
+            QuitSurveyFlowView(persistor: nil, featureFlagger: MockFeatureFlagger(), onQuit: {})
                 .frame(width: 400, height: 200)
                 .previewDisplayName("Initial Question")
         }

@@ -966,6 +966,9 @@ struct UserText {
     static let quitSurveySubmitting = NSLocalizedString("quit-survey.submitting", value: "Submitting...", comment: "Button text shown while feedback is being submitted")
     static let quitSurveyAffectedDomainsTitle = NSLocalizedString("quit-survey.affected-domains.title", value: "Which websites had problems?", comment: "Title for quit survey domain selection screen")
     static let quitSurveyAffectedDomainsSubtitle = NSLocalizedString("quit-survey.affected-domains.subtitle", value: "Select all that apply", comment: "Subtitle for quit survey domain selection screen")
+    static let quitSurveyAffectedDomainsFootnote = NSLocalizedString("quit-survey.affected-domains.footnote", value: "These are the 5 most recent domains from your local browsing history.", comment: "Footnote explaining domain list source in quit survey")
+    static let quitSurveyAffectedDomainsOther = NSLocalizedString("quit-survey.affected-domains.other", value: "Other", comment: "Other option in quit survey domain list")
+    static let quitSurveyAffectedDomainsOtherPlaceholder = NSLocalizedString("quit-survey.affected-domains.other-placeholder", value: "Type a domain...", comment: "Placeholder for the other domain text field in quit survey")
     static let quitSurveyNext = NSLocalizedString("quit-survey.next", value: "Next", comment: "Next button in quit survey")
 
     // Quit survey feedback options

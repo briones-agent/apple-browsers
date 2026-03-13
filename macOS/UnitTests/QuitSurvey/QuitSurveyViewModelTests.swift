@@ -18,6 +18,7 @@
 
 import History
 import XCTest
+import PrivacyConfig
 
 @testable import DuckDuckGo_Privacy_Browser
 
@@ -39,49 +40,6 @@ private func makeEntry(host: String, lastVisit: Date) -> HistoryEntry {
     )
 }
 
-// MARK: - Mock
-
-final class MockHistoryCoordinating: HistoryCoordinating {
-
-    var history: BrowsingHistory?
-    var allHistoryVisits: [Visit]?
-    @Published var historyDictionary: [URL: HistoryEntry]?
-    var historyDictionaryPublisher: Published<[URL: HistoryEntry]?>.Publisher { $historyDictionary }
-    var dataClearingPixelsHandling: DataClearingPixelsHandling?
-
-    func loadHistory(onCleanFinished: @escaping () -> Void) {}
-
-    @discardableResult
-    func addVisit(of url: URL, at date: Date, tabID: String?) -> Visit? { nil }
-
-    func addBlockedTracker(entityName: String, on url: URL) {}
-    func trackerFound(on url: URL) {}
-    func cookiePopupBlocked(on url: URL) {}
-    func updateTitleIfNeeded(title: String, url: URL) {}
-    func markFailedToLoadUrl(_ url: URL) {}
-    func commitChanges(url: URL) {}
-    func title(for url: URL) -> String? { nil }
-    func burnAll(completion: @escaping @MainActor () -> Void) { completion() }
-    func burnDomains(_ baseDomains: Set<String>, tld: TLD, completion: @escaping @MainActor (Set<URL>) -> Void) { completion([]) }
-    func burnVisits(_ visits: [Visit], completion: @escaping @MainActor () -> Void) { completion() }
-    func burnVisits(for tabID: String) async throws {}
-    func resetCookiePopupBlocked(for domains: Set<String>, tld: TLD, completion: @escaping @MainActor () -> Void) { completion() }
-    func removeUrlEntry(_ url: URL, completion: (@MainActor (Error?) -> Void)?) { completion?(nil) }
-}
-
-// MARK: - Mock Feedback Sender
-
-final class MockFeedbackSender: FeedbackSenderImplementing {
-    private(set) var lastFeedback: Feedback?
-
-    func sendFeedback(_ feedback: Feedback, completionHandler: (() -> Void)?) {
-        lastFeedback = feedback
-        completionHandler?()
-    }
-
-    func sendDataImportReport(_ report: DataImportReportModel) {}
-}
-
 // MARK: - Tests
 
 @MainActor
@@ -89,7 +47,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
 
     func testRecentDomainsReturnsLast5UniqueHostsSortedByMostRecent() {
         let now = Date()
-        let historyCoordinating = MockHistoryCoordinating()
+        let historyCoordinating = HistoryCoordinatingMock()
         historyCoordinating.history = [
             makeEntry(host: "a.com", lastVisit: now.addingTimeInterval(-1)),
             makeEntry(host: "b.com", lastVisit: now.addingTimeInterval(-2)),
@@ -102,16 +60,18 @@ final class QuitSurveyViewModelTests: XCTestCase {
 
         let viewModel = QuitSurveyViewModel(
             persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
             historyCoordinating: historyCoordinating,
             onQuit: {}
         )
 
-        XCTAssertEqual(viewModel.recentDomains, ["a.com", "b.com", "c.com", "d.com", "e.com"])
+        XCTAssertEqual(viewModel.recentDomains.map(\.domain), ["a.com", "b.com", "c.com", "d.com", "e.com"])
     }
 
     func testRecentDomainsIsEmptyWhenNoHistory() {
         let viewModel = QuitSurveyViewModel(
             persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
             historyCoordinating: nil,
             onQuit: {}
         )
@@ -122,6 +82,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testToggleDomainAddsAndRemovesDomain() {
         let viewModel = QuitSurveyViewModel(
             persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
             historyCoordinating: nil,
             onQuit: {}
         )
@@ -134,13 +95,16 @@ final class QuitSurveyViewModelTests: XCTestCase {
     }
 
     func testShouldShowDomainSelectorWhenWebsitesPillSelectedAndHistoryNonEmpty() {
-        let historyCoordinating = MockHistoryCoordinating()
+        let historyCoordinating = HistoryCoordinatingMock()
         historyCoordinating.history = [
             makeEntry(host: "example.com", lastVisit: Date()),
         ]
+        let featureFlagger = MockFeatureFlagger()
+        featureFlagger.enabledFeatureFlags = [.websitesHistoryFirstTimeQuitSurvey]
 
         let viewModel = QuitSurveyViewModel(
             persistor: nil,
+            featureFlagger: featureFlagger,
             historyCoordinating: historyCoordinating,
             onQuit: {}
         )
@@ -151,14 +115,32 @@ final class QuitSurveyViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.shouldShowDomainSelector)
     }
 
-    func testGoBackFromDomainSelectionReturnsToNegativeFeedbackAndClearsDomains() {
-        let historyCoordinating = MockHistoryCoordinating()
+    func testShouldNotShowDomainSelectorWhenFeatureFlagIsOff() {
+        let historyCoordinating = HistoryCoordinatingMock()
         historyCoordinating.history = [
             makeEntry(host: "example.com", lastVisit: Date()),
         ]
 
         let viewModel = QuitSurveyViewModel(
             persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
+            historyCoordinating: historyCoordinating,
+            onQuit: {}
+        )
+
+        viewModel.toggleOption("websites-didnt-work")
+        XCTAssertFalse(viewModel.shouldShowDomainSelector)
+    }
+
+    func testGoBackFromDomainSelectionReturnsToNegativeFeedbackAndClearsDomains() {
+        let historyCoordinating = HistoryCoordinatingMock()
+        historyCoordinating.history = [
+            makeEntry(host: "example.com", lastVisit: Date()),
+        ]
+
+        let viewModel = QuitSurveyViewModel(
+            persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
             historyCoordinating: historyCoordinating,
             onQuit: {}
         )
@@ -177,12 +159,12 @@ final class QuitSurveyViewModelTests: XCTestCase {
     }
 
     func testSubmitFeedbackIncludesDomainsInFeedbackText() {
-        let historyCoordinating = MockHistoryCoordinating()
+        let historyCoordinating = HistoryCoordinatingMock()
         historyCoordinating.history = [
             makeEntry(host: "a.com", lastVisit: Date()),
         ]
         let sender = MockFeedbackSender()
-        let vm = QuitSurveyViewModel(feedbackSender: sender, historyCoordinating: historyCoordinating, onQuit: {})
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), historyCoordinating: historyCoordinating, onQuit: {})
         vm.selectNegativeResponse()
         vm.toggleOption("websites-didnt-work")
         vm.toggleDomain("a.com")

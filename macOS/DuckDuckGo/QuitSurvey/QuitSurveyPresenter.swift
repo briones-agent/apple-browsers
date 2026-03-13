@@ -17,7 +17,9 @@
 //
 
 import AppKit
+import PrivacyConfig
 import SwiftUI
+import History
 
 /// Presents the quit survey UI as a sheet or standalone window.
 @MainActor
@@ -25,13 +27,19 @@ final class QuitSurveyPresenter {
     private let windowControllersManager: WindowControllersManager
     private let persistor: QuitSurveyPersistor
     private let historyCoordinating: HistoryCoordinating?
+    private let faviconManaging: FaviconManagement?
+    private let featureFlagger: FeatureFlagger
 
     init(windowControllersManager: WindowControllersManager,
          persistor: QuitSurveyPersistor,
-         historyCoordinating: HistoryCoordinating? = nil) {
+         featureFlagger: FeatureFlagger,
+         historyCoordinating: HistoryCoordinating? = nil,
+         faviconManaging: FaviconManagement? = nil) {
         self.windowControllersManager = windowControllersManager
         self.persistor = persistor
+        self.featureFlagger = featureFlagger
         self.historyCoordinating = historyCoordinating
+        self.faviconManaging = faviconManaging
     }
 
     /// Shows the quit survey and asynchronously waits for user completion.
@@ -48,7 +56,9 @@ final class QuitSurveyPresenter {
 
             let surveyView = QuitSurveyFlowView(
                 persistor: persistor,
+                featureFlagger: featureFlagger,
                 historyCoordinating: historyCoordinating,
+                faviconManaging: faviconManaging,
                 onQuit: {
                     if let parentWindow = quitSurveyWindow?.sheetParent {
                         parentWindow.endSheet(quitSurveyWindow!)

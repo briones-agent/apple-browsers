@@ -85712,6 +85712,66 @@
         }
       }
     },
+    "quit-survey.affected-domains.footnote" : {
+      "comment" : "Footnote explaining domain list source in quit survey",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "These are the 5 most recent domains from your local browsing history."
+          }
+        }
+      }
+    },
+    "quit-survey.affected-domains.other" : {
+      "comment" : "Other option in quit survey domain list",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Other"
+          }
+        }
+      }
+    },
+    "quit-survey.affected-domains.other-placeholder" : {
+      "comment" : "Placeholder for the other domain text field in quit survey",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type a domain..."
+          }
+        }
+      }
+    },
+    "quit-survey.affected-domains.subtitle" : {
+      "comment" : "Subtitle for quit survey domain selection screen",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Select all that apply"
+          }
+        }
+      }
+    },
+    "quit-survey.affected-domains.title" : {
+      "comment" : "Title for quit survey domain selection screen",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Which websites had problems?"
+          }
+        }
+      }
+    },
     "quit-survey.auto-quit-message" : {
       "comment" : "Message indicating browser will auto-quit. %d is the number of seconds remaining",
       "extractionState" : "extracted_with_value",
@@ -86068,6 +86128,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "С какими проблемами вы столкнулись?"
+          }
+        }
+      }
+    },
+    "quit-survey.next" : {
+      "comment" : "Next button in quit survey",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Next"
           }
         }
       }

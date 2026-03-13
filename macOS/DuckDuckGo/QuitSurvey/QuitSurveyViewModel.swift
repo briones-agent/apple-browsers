@@ -22,6 +22,21 @@ import os.log
 import Common
 import History
 import PixelKit
+import PrivacyConfig
+import AppKit
+
+// MARK: - Domain Entry Model
+
+struct QuitSurveyDomainEntry: Identifiable, Hashable {
+    let domain: String
+    let title: String?
+    let favicon: NSImage?
+
+    var id: String { domain }
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.domain == rhs.domain }
+    func hash(into hasher: inout Hasher) { hasher.combine(domain) }
+}
 
 // MARK: - Survey Option Model
 
@@ -60,6 +75,8 @@ final class QuitSurveyViewModel: ObservableObject {
     @Published private(set) var autoQuitCountdown: Int = 5
     @Published private(set) var isSubmitting: Bool = false
     @Published private(set) var selectedDomains: Set<String> = []
+    @Published var otherDomainText: String = ""
+    @Published private(set) var isOtherDomainSelected: Bool = false
     @Published private(set) var activeVariant: QuitSurveyDomainVariant = .inline
 
     // MARK: - Configuration
@@ -86,13 +103,15 @@ final class QuitSurveyViewModel: ObservableObject {
         QuitSurveyOption(id: "issue-importing-my-stuff", text: UserText.quitSurveyOptionIssueImportingMyStuff)
     ]
 
+    private static let websitesDidntWorkOption = QuitSurveyOption(id: "websites-didnt-work", text: UserText.quitSurveyOptionWebsitesDidntWork)
     private static let somethingElseOption = QuitSurveyOption(id: "something-else", text: UserText.quitSurveyOptionSomethingElse)
 
     let availableOptions: [QuitSurveyOption]
-    let recentDomains: [String]
+    let recentDomains: [QuitSurveyDomainEntry]
 
     private let feedbackSender: FeedbackSenderImplementing
     private var persistor: QuitSurveyPersistor?
+    private let featureFlagger: FeatureFlagger
     private let onQuit: () -> Void
     private var autoQuitTimer: Timer?
 
@@ -107,7 +126,9 @@ final class QuitSurveyViewModel: ObservableObject {
     }
 
     var shouldShowDomainSelector: Bool {
-        selectedOptions.contains("websites-didnt-work") && !recentDomains.isEmpty
+        featureFlagger.isFeatureOn(.websitesHistoryFirstTimeQuitSurvey)
+            && selectedOptions.contains("websites-didnt-work")
+            && !recentDomains.isEmpty
     }
 
     // MARK: - Initialization
@@ -115,28 +136,37 @@ final class QuitSurveyViewModel: ObservableObject {
     init(
         feedbackSender: FeedbackSenderImplementing = FeedbackSender(),
         persistor: QuitSurveyPersistor? = nil,
+        featureFlagger: FeatureFlagger,
         historyCoordinating: HistoryCoordinating? = nil,
+        faviconManaging: FaviconManagement? = nil,
         onQuit: @escaping () -> Void
     ) {
         self.feedbackSender = feedbackSender
         self.persistor = persistor
+        self.featureFlagger = featureFlagger
         self.onQuit = onQuit
-        let randomOptions = Array(Self.allOptions.shuffled().prefix(8))
-        self.availableOptions = randomOptions + [Self.somethingElseOption]
-        self.recentDomains = Self.fetchRecentDomains(from: historyCoordinating)
+        let otherOptions = Self.allOptions.filter { $0.id != Self.websitesDidntWorkOption.id }
+        let randomOptions = Array(otherOptions.shuffled().prefix(7))
+        self.availableOptions = (randomOptions + [Self.websitesDidntWorkOption]).shuffled() + [Self.somethingElseOption]
+        self.recentDomains = Self.fetchRecentDomainEntries(from: historyCoordinating, faviconManaging: faviconManaging)
         self.activeVariant = persistor?.domainVariant ?? .inline
         fireSurveyShown()
     }
 
-    private static func fetchRecentDomains(from history: HistoryCoordinating?) -> [String] {
+    private static func fetchRecentDomainEntries(from history: HistoryCoordinating?, faviconManaging: FaviconManagement?) -> [QuitSurveyDomainEntry] {
         guard let entries = history?.history else { return [] }
         var seen = Set<String>()
         return entries
             .sorted { $0.lastVisit > $1.lastVisit }
-            .compactMap { $0.url.host }
-            .filter { seen.insert($0).inserted }
+            .filter { $0.url.host != nil }
+            .filter { seen.insert($0.url.host!).inserted }
             .prefix(5)
-            .map { $0 }
+            .map { entry in
+                let domain = entry.url.host!
+                let title = entry.title.flatMap { $0.isEmpty ? nil : $0 }
+                let favicon = faviconManaging?.getCachedFavicon(forDomainOrAnySubdomain: domain, sizeCategory: .small)?.image
+                return QuitSurveyDomainEntry(domain: domain, title: title, favicon: favicon)
+            }
     }
 
     // MARK: - Actions
@@ -179,17 +209,32 @@ final class QuitSurveyViewModel: ObservableObject {
         state = .domainSelection
     }
 
+    func toggleOtherDomain() {
+        isOtherDomainSelected.toggle()
+        if !isOtherDomainSelected {
+            otherDomainText = ""
+        }
+    }
+
     func goBackFromDomainSelection() {
         selectedDomains.removeAll()
+        otherDomainText = ""
+        isOtherDomainSelected = false
         state = .negativeFeedback
     }
 
     func submitFeedback() {
         isSubmitting = true
 
-        let domainsPrefix = selectedDomains.isEmpty
+        var effectiveDomains = selectedDomains
+        let trimmedOther = otherDomainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isOtherDomainSelected && !trimmedOther.isEmpty {
+            effectiveDomains.insert(trimmedOther)
+        }
+
+        let domainsPrefix = effectiveDomains.isEmpty
             ? ""
-            : "Affected domains: \(selectedDomains.sorted().joined(separator: ", "))\n\n"
+            : "Affected domains: \(effectiveDomains.sorted().joined(separator: ", "))\n\n"
         let combinedText = domainsPrefix + feedbackText
 
         let feedback = Feedback.from(
@@ -201,7 +246,7 @@ final class QuitSurveyViewModel: ObservableObject {
         )
 
         let reasons = getReasonsForPixel()
-        let affectedDomains = selectedDomains.isEmpty ? nil : selectedDomains.sorted().joined(separator: ",")
+        let affectedDomains = effectiveDomains.isEmpty ? nil : effectiveDomains.sorted().joined(separator: ",")
         fireThumbsDownPixelSubmission(reasons: reasons, affectedDomains: affectedDomains)
 
         // Store reasons for the return user pixel (fired on next app launch)
