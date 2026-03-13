@@ -82,7 +82,7 @@ final class OnboardingRestorePromptHandlerTests: XCTestCase {
         XCTAssertFalse(sut.isEligibleForRestorePrompt())
     }
 
-    func testWhenConfigurationIsEnabledThenRestoreSyncAccountInvokesSyncAutoRestoreHandler() {
+    func testWhenConfigurationIsEnabledThenRestoreSyncAccountInvokesSyncAutoRestoreHandler() async {
         let syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
         let restoreCalledExpectation = expectation(description: "Restore from preserved account is invoked")
         syncAutoRestoreHandler.onRestoreFromPreservedAccount = {
@@ -96,13 +96,14 @@ final class OnboardingRestorePromptHandlerTests: XCTestCase {
             authenticator: authenticator
         )
 
-        sut.restoreSyncAccount()
+        let didRestore = await sut.restoreSyncAccount()
 
         wait(for: [restoreCalledExpectation], timeout: 1.0)
         XCTAssertEqual(syncAutoRestoreHandler.restoreFromPreservedAccountCallCount, 1)
+        XCTAssertTrue(didRestore)
     }
 
-    func testWhenConfigurationIsDisabledThenRestoreSyncAccountDoesNotInvokeSyncAutoRestoreHandler() {
+    func testWhenConfigurationIsDisabledThenRestoreSyncAccountDoesNotInvokeSyncAutoRestoreHandler() async {
         let syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
         let authenticator = MockAuthenticator()
 
@@ -112,8 +113,26 @@ final class OnboardingRestorePromptHandlerTests: XCTestCase {
             authenticator: authenticator
         )
 
-        sut.restoreSyncAccount()
+        let didRestore = await sut.restoreSyncAccount()
 
         XCTAssertEqual(syncAutoRestoreHandler.restoreFromPreservedAccountCallCount, 0)
+        XCTAssertFalse(didRestore)
+    }
+
+    func testWhenRestoreFailsThenRestoreSyncAccountReturnsFalse() async {
+        let syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
+        syncAutoRestoreHandler.restoreFromPreservedAccountError = NSError(domain: "test", code: 1)
+        let authenticator = MockAuthenticator()
+
+        let sut = OnboardingRestorePromptHandler(
+            configuration: .enabled,
+            syncAutoRestoreHandler: syncAutoRestoreHandler,
+            authenticator: authenticator
+        )
+
+        let didRestore = await sut.restoreSyncAccount()
+
+        XCTAssertEqual(syncAutoRestoreHandler.restoreFromPreservedAccountCallCount, 1)
+        XCTAssertFalse(didRestore)
     }
 }

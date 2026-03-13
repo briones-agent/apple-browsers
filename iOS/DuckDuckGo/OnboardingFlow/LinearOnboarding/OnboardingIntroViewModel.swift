@@ -231,9 +231,12 @@ final class OnboardingIntroViewModel: ObservableObject {
         isSkipped = true
     }
 
-    func restoreSyncAccountAction() {
+    func restoreSyncAccountAction() async {
         pixelReporter.measureAutoRestoreOnboardingRestoreCTAAction()
-        restorePromptHandler.restoreSyncAccount()
+        let restoreSucceeded = await restorePromptHandler.restoreSyncAccount()
+        guard restoreSucceeded else {
+            return
+        }
         contextualDaxDialogs.disableContextualDaxDialogs()
     }
 

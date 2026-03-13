@@ -19,7 +19,7 @@
 
 protocol OnboardingRestorePromptHandling {
     func isEligibleForRestorePrompt() -> Bool
-    func restoreSyncAccount()
+    func restoreSyncAccount() async -> Bool
 }
 
 struct OnboardingRestorePromptHandler: OnboardingRestorePromptHandling {
@@ -48,12 +48,16 @@ struct OnboardingRestorePromptHandler: OnboardingRestorePromptHandling {
         return syncAutoRestoreHandler.isEligibleForAutoRestore() && authenticator.canAuthenticate()
     }
 
-    func restoreSyncAccount() {
+    func restoreSyncAccount() async -> Bool {
         guard case .enabled = configuration else {
-            return
+            return false
         }
-        Task {
-            try? await syncAutoRestoreHandler.restoreFromPreservedAccount(source: .onboarding)
+
+        do {
+            try await syncAutoRestoreHandler.restoreFromPreservedAccount(source: .onboarding)
+            return true
+        } catch {
+            return false
         }
     }
 }

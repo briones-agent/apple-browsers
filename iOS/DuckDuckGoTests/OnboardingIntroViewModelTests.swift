@@ -108,9 +108,10 @@ final class OnboardingIntroViewModelTests: XCTestCase {
         XCTAssertEqual(result, .landing)
     }
 
-    func testWhenRestoreActionProvided_PerformRestoreInvokesAction() {
+    func testWhenRestoreActionProvidedAndRestoreSucceeds_PerformRestoreInvokesActionAndDisablesDaxDialogs() async {
         // GIVEN
         let restorePromptHandlerMock = MockRestorePromptHandler()
+        restorePromptHandlerMock.restoreSyncAccountResult = true
         let sut = makeSUT(
             currentOnboardingStep: .introDialog(isReturningUser: true),
             restorePromptHandler: restorePromptHandlerMock
@@ -119,11 +120,30 @@ final class OnboardingIntroViewModelTests: XCTestCase {
         XCTAssertFalse(contextualDaxDialogs.didCallDisableDaxDialogs)
 
         // WHEN
-        sut.restoreSyncAccountAction()
+        await sut.restoreSyncAccountAction()
 
         // THEN
         XCTAssertTrue(restorePromptHandlerMock.didCallRestoreSyncAccount)
         XCTAssertTrue(contextualDaxDialogs.didCallDisableDaxDialogs)
+    }
+
+    func testWhenRestoreActionProvidedAndRestoreFails_PerformRestoreInvokesActionAndDoesNotDisableDaxDialogs() async {
+        // GIVEN
+        let restorePromptHandlerMock = MockRestorePromptHandler()
+        restorePromptHandlerMock.restoreSyncAccountResult = false
+        let sut = makeSUT(
+            currentOnboardingStep: .introDialog(isReturningUser: true),
+            restorePromptHandler: restorePromptHandlerMock
+        )
+        XCTAssertFalse(restorePromptHandlerMock.didCallRestoreSyncAccount)
+        XCTAssertFalse(contextualDaxDialogs.didCallDisableDaxDialogs)
+
+        // WHEN
+        await sut.restoreSyncAccountAction()
+
+        // THEN
+        XCTAssertTrue(restorePromptHandlerMock.didCallRestoreSyncAccount)
+        XCTAssertFalse(contextualDaxDialogs.didCallDisableDaxDialogs)
     }
 
     func testWhenReturningUserAndRestorePromptEligibilityIsTrueThenShowsRestorePrompt() {
@@ -849,13 +869,15 @@ extension OnboardingIntroViewModelTests {
 
 private final class MockRestorePromptHandler: OnboardingRestorePromptHandling {
     var isEligibleForRestorePromptValue = false
+    var restoreSyncAccountResult = false
     private(set) var didCallRestoreSyncAccount = false
 
     func isEligibleForRestorePrompt() -> Bool {
         isEligibleForRestorePromptValue
     }
 
-    func restoreSyncAccount() {
+    func restoreSyncAccount() async -> Bool {
         didCallRestoreSyncAccount = true
+        return restoreSyncAccountResult
     }
 }

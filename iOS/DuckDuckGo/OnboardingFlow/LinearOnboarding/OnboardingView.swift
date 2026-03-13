@@ -153,7 +153,9 @@ struct OnboardingView: View {
                 showCTA: $model.restorePromptState.showContent,
                 isSkipped: $model.isSkipped,
                 restoreAction: {
-                    model.restoreSyncAccountAction()
+                    Task {
+                        await model.restoreSyncAccountAction()
+                    }
                     animateBrowserComparisonViewState(isResumingOnboarding: false)
                 },
                 skipAction: {
@@ -357,7 +359,9 @@ struct OnboardingView_Previews: PreviewProvider {
             false
         }
 
-        func restoreSyncAccount() {}
+        func restoreSyncAccount() async -> Bool {
+            false
+        }
     }
 
     static var previews: some View {
