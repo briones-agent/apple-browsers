@@ -187,16 +187,22 @@ final class QuitSurveyViewModel: ObservableObject {
     func submitFeedback() {
         isSubmitting = true
 
+        let domainsPrefix = selectedDomains.isEmpty
+            ? ""
+            : "Affected domains: \(selectedDomains.sorted().joined(separator: ", "))\n\n"
+        let combinedText = domainsPrefix + feedbackText
+
         let feedback = Feedback.from(
             selectedPillIds: Array(selectedOptions),
-            text: feedbackText,
+            text: combinedText,
             appVersion: AppVersion.shared.versionNumber,
             category: .firstTimeQuitSurvey,
             problemCategory: Self.firstTimeQuitSurveyCategory
         )
 
         let reasons = getReasonsForPixel()
-        fireThumbsDownPixelSubmission(reasons: reasons)
+        let affectedDomains = selectedDomains.isEmpty ? nil : selectedDomains.sorted().joined(separator: ",")
+        fireThumbsDownPixelSubmission(reasons: reasons, affectedDomains: affectedDomains)
 
         // Store reasons for the return user pixel (fired on next app launch)
         persistor?.pendingReturnUserReasons = reasons
@@ -233,8 +239,8 @@ final class QuitSurveyViewModel: ObservableObject {
         PixelKit.fire(QuitSurveyPixels.quitSurveyThumbsDown)
     }
 
-    private func fireThumbsDownPixelSubmission(reasons: String) {
-        PixelKit.fire(QuitSurveyPixels.quitSurveyThumbsDownSubmission(reasons: reasons))
+    private func fireThumbsDownPixelSubmission(reasons: String, affectedDomains: String?) {
+        PixelKit.fire(QuitSurveyPixels.quitSurveyThumbsDownSubmission(reasons: reasons, affectedDomains: affectedDomains))
     }
 
     /// This methods calculates the parameters for the thumbs down submission pixel.

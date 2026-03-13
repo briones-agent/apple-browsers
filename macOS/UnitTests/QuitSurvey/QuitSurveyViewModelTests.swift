@@ -69,6 +69,19 @@ final class MockHistoryCoordinating: HistoryCoordinating {
     func removeUrlEntry(_ url: URL, completion: (@MainActor (Error?) -> Void)?) { completion?(nil) }
 }
 
+// MARK: - Mock Feedback Sender
+
+final class MockFeedbackSender: FeedbackSenderImplementing {
+    private(set) var lastFeedback: Feedback?
+
+    func sendFeedback(_ feedback: Feedback, completionHandler: (() -> Void)?) {
+        lastFeedback = feedback
+        completionHandler?()
+    }
+
+    func sendDataImportReport(_ report: DataImportReportModel) {}
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -161,5 +174,19 @@ final class QuitSurveyViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.state, .negativeFeedback)
         XCTAssertTrue(viewModel.selectedDomains.isEmpty)
+    }
+
+    func testSubmitFeedbackIncludesDomainsInFeedbackText() {
+        let historyCoordinating = MockHistoryCoordinating()
+        historyCoordinating.history = [
+            makeEntry(host: "a.com", lastVisit: Date()),
+        ]
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, historyCoordinating: historyCoordinating, onQuit: {})
+        vm.selectNegativeResponse()
+        vm.toggleOption("websites-didnt-work")
+        vm.toggleDomain("a.com")
+        vm.submitFeedback()
+        XCTAssertTrue(sender.lastFeedback?.comment.contains("a.com") == true)
     }
 }
