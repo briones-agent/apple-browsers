@@ -862,7 +862,11 @@ final class Fire: FireProtocol {
 
     @MainActor
     private func burnAllVisitedLinks() -> Result<Void, Error> {
-        getVisitedLinkStore()?.removeAll()
+        guard let visitedLinkStore = getVisitedLinkStore() else {
+            return .failure(DataClearingWideEventError(description: "visitedLinkStore not available"))
+        }
+
+        visitedLinkStore.removeAll()
         return .success(())
     }
 
