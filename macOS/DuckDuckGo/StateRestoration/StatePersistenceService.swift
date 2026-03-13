@@ -65,7 +65,7 @@ final class StatePersistenceService {
         write(data, sync: sync)
     }
 
-    func clearState() -> Result<Void, Error> {
+    func clearState(sync: Bool) -> Result<Void, Error> {
         dispatchPrecondition(condition: .onQueue(.main))
 
         job?.cancel()
@@ -74,7 +74,7 @@ final class StatePersistenceService {
         job = DispatchWorkItem {
             capturedResult = self.performClearState()
         }
-        queue.dispatch(job!, sync: true)
+        queue.dispatch(job!, sync: sync)
 
         // sync is always true in production code; sync is only false for tests in persistState/write methods
         return capturedResult ?? .success(())
