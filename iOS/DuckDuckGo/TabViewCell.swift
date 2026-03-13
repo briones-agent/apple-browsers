@@ -220,20 +220,29 @@ final class TabViewCell: UICollectionViewCell {
         return asset
     }
 
-    static let logoImage: UIImage = {
-        let image = UIImage(resource: .logo)
-        let renderFormat = UIGraphicsImageRendererFormat.default()
-        renderFormat.opaque = false
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: Constants.cellLogoSize,
-                                                            height: Constants.cellLogoSize),
-                                               format: renderFormat)
-        return renderer.image { _ in
-            image.draw(in: CGRect(x: 0,
-                                  y: 0,
-                                  width: Constants.cellLogoSize,
-                                  height: Constants.cellLogoSize))
+    static func logoImage(for tab: Tab?) -> UIImage {
+        if let tab, tab.fireTab {
+            return DesignSystemImages.Color.Size96.fireTab
+
+        } else {
+            let image = UIImage(resource: .logo)
+            let renderFormat = UIGraphicsImageRendererFormat.default()
+            renderFormat.opaque = false
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: Constants.cellLogoSize,
+                                                                height: Constants.cellLogoSize),
+                                                   format: renderFormat)
+            return renderer.image { _ in
+                image.draw(in: CGRect(x: 0,
+                                      y: 0,
+                                      width: Constants.cellLogoSize,
+                                      height: Constants.cellLogoSize))
+            }
         }
-    }()
+    }
+
+    var logoImage: UIImage {
+        Self.logoImage(for: tab)
+    }
 
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -410,7 +419,7 @@ final class TabViewCell: UICollectionViewCell {
 
         } else if tab.link == nil {
             updatePreviewToDisplayLogo()
-            self.preview?.image = Self.logoImage
+            self.preview?.image = logoImage
             self.preview?.contentMode = .center
 
             updateEmptyTabLabel(for: tab)
