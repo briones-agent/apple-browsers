@@ -960,10 +960,6 @@ extension SettingsViewModel {
     }
 
     private func updateNextStepsSectionVisibility() {
-        guard featureFlagger.isFeatureOn(.showSettingsCompleteSetupSection) else {
-            return
-        }
-
         shouldShowAddToDock = shouldShowCompleteSetupForKey(Constants.didDismissAddToDockKey)
         shouldShowAddWidget = shouldShowCompleteSetupForKey(Constants.didDismissAddWidgetKey)
         shouldShowAddressBarPosition = shouldShowCompleteSetupForKey(Constants.didDismissAddressBarKey) && state.addressBar.enabled
