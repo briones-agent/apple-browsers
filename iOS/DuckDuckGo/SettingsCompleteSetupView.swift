@@ -25,17 +25,6 @@ struct SettingsCompleteSetupView: View {
     @EnvironmentObject var viewModel: SettingsViewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    private var swipeColor: Color {
-        switch colorScheme {
-        case .light:
-            Color(red: 0.875, green: 0.875, blue: 0.875)
-        case .dark:
-            Color(red: 0.255, green: 0.255, blue: 0.255)
-        @unknown default:
-            Color(red: 0.875, green: 0.875, blue: 0.875)
-        }
-    }
-
     var body: some View {
         Section(header: Text(UserText.completeSetupSettings)) {
             // Set As Default Browser (iOS 18.2+ only)
@@ -53,7 +42,6 @@ struct SettingsCompleteSetupView: View {
                         Image(uiImage: DesignSystemImages.Glyphs.Size24.eyeClosed
                             .withTintColor(UIColor(designSystemColor: .textPrimary), renderingMode: .alwaysOriginal))
                     }
-                    .tint(swipeColor)
                 }
                 .id(colorScheme)
             }
@@ -72,7 +60,6 @@ struct SettingsCompleteSetupView: View {
                         Image(uiImage: DesignSystemImages.Glyphs.Size24.eyeClosed
                             .withTintColor(UIColor(designSystemColor: .textPrimary), renderingMode: .alwaysOriginal))
                     }
-                    .tint(swipeColor)
                 }
                 .id(colorScheme)
             }
