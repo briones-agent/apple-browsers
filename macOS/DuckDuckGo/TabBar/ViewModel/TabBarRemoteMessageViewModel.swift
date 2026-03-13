@@ -58,6 +58,10 @@ final class TabBarRemoteMessageViewModel: ObservableObject {
     func markTabBarRemoteMessageAsShown() {
         Task { await tabBarRemoteActiveMessage.markRemoteMessageAsShown() }
     }
+
+    func forceShowMessage(_ message: TabBarRemoteMessage) {
+        remoteMessage = message
+    }
 }
 
 private extension RemoteMessageModel {

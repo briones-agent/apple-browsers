@@ -68,6 +68,8 @@ final class RemoteMessagingDebugMenu: NSMenu {
         buildItems {
             configurationURLMenuItem
             NSMenuItem.separator()
+            NSMenuItem(title: "Force Show Tab Bar Message…", action: #selector(forceShowTabBarMessage), target: self)
+                .withAccessibilityIdentifier("RemoteMessagingDebugMenu.forceShowTabBarMessage")
             NSMenuItem(title: "Reset Remote Messages", action: #selector(AppDelegate.resetRemoteMessages))
                 .withAccessibilityIdentifier("RemoteMessagingDebugMenu.resetRemoteMessages")
             NSMenuItem(title: "Refresh Config", action: #selector(fetchRemoteMessagesConfig), target: self)
@@ -96,8 +98,8 @@ final class RemoteMessagingDebugMenu: NSMenu {
     }
 
     private func populateMessages() {
-        (8..<self.numberOfItems).forEach { _ in
-            removeItem(at: 8)
+        (9..<self.numberOfItems).forEach { _ in
+            removeItem(at: 9)
         }
 
         guard AppVersion.runType.requiresEnvironment, NSApp.delegateTyped.remoteMessagingClient.isRemoteMessagingDatabaseLoaded else {
@@ -129,6 +131,34 @@ final class RemoteMessagingDebugMenu: NSMenu {
             item.isEnabled = false
             addItem(item)
         }
+    }
+
+    @MainActor
+    @objc func forceShowTabBarMessage(_ sender: Any?) {
+        let alert = NSAlert()
+        alert.messageText = "Force Show Tab Bar Message"
+        alert.informativeText = "Enter a survey URL to show in the tab bar:"
+        alert.addButton(withTitle: "Show")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        textField.stringValue = "https://duckduckgo.com"
+        alert.accessoryView = textField
+        alert.window.initialFirstResponder = textField
+
+        guard alert.runModal() != .alertSecondButtonReturn,
+              let surveyURL = URL(string: textField.stringValue) else { return }
+
+        let message = TabBarRemoteMessage(
+            buttonTitle: "Share Feedback",
+            popupTitle: "Take Our Survey",
+            popupSubtitle: "Help us improve DuckDuckGo",
+            surveyURL: surveyURL
+        )
+
+        NSApp.delegateTyped.windowControllersManager.lastKeyMainWindowController?
+            .mainViewController.tabBarViewController.tabBarRemoteMessageViewModel
+            .forceShowMessage(message)
     }
 
     @objc func fetchRemoteMessagesConfig() {
