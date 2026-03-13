@@ -75,7 +75,7 @@ final class DataClearingWideEventService {
             overallDuration: .startingNow(),
             path: path.toWideEventPath(),
             includedDomains: options.toIncludedDomains(),
-            contextData: WideEventContextData(name: "data-clearing")
+            contextData: WideEventContextData(name: "funnel_default_macos")
         )
 
         self.eventData = data
