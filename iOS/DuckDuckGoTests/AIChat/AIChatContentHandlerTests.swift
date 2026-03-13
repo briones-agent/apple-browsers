@@ -191,12 +191,12 @@ final class AIChatContentHandlerTests: XCTestCase {
         XCTAssertEqual(autoSendItem?.value, AIChatURLParameters.autoSubmitPromptQueryValue)
     }
 
-    func testBuildQueryURLWithOnboardingConsentType() throws {
+    func testBuildQueryURLWithOnboardingFlow() throws {
         // Given
-        let consentType: AIChatOnboardingConsentType = .deferUntilFirstQuery
+        let onboardingConsentType: AIChatOnboardingConsentType = .deferUntilFirstQuery
 
         // When
-        let url = handler.buildQueryURL(query: "test", autoSend: false, onboardingConsentType: consentType, tools: nil)
+        let url = handler.buildQueryURL(query: "test", autoSend: false, onboardingConsentType: onboardingConsentType, tools: nil)
 
         // Then
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
@@ -204,8 +204,9 @@ final class AIChatContentHandlerTests: XCTestCase {
             return
         }
 
-        let consentTypeItem = components.queryItems?.first { $0.name == AIChatURLParameters.consentTypeQueryName }
-        XCTAssertEqual(consentTypeItem?.value, consentType.queryValue)
+        let flowItem = components.queryItems?.first { $0.name == AIChatURLParameters.flowQueryName }
+        XCTAssertEqual(flowItem?.value, AIChatURLParameters.onboardingFlowQueryValue)
+        XCTAssertEqual(components.host, AIChatURLParameters.onboardingDemoHost)
     }
 
     func testBuildQueryURLWithTools() throws {

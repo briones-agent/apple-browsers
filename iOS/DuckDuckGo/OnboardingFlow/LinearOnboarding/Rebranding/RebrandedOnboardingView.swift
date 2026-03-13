@@ -211,13 +211,14 @@ extension OnboardingRebranding {
                             .scale.combined(with: .opacity)
                         )
 #if DEBUG || ALPHA
-                        .safeAreaInset(edge: .bottom) {
+                        .overlay(alignment: .bottom) {
                             Button {
                                 model.overrideOnboardingCompleted()
                             } label: {
                                 Text(UserText.Onboarding.Intro.Debug.skip)
                             }
                             .buttonStyle(SecondaryFillButtonStyle(compact: true, fullWidth: false))
+                            .padding(.bottom, 8)
                         }
 #endif
                 }
@@ -231,6 +232,7 @@ extension OnboardingRebranding {
                 RebrandingBadge()
                     .padding(.leading, onboardingTheme.linearOnboardingMetrics.rebrandingBadgeLeadingPadding)
                     .padding(.top, onboardingTheme.linearOnboardingMetrics.rebrandingBadgeTopPadding)
+                    .opacity(showExperimentExitOverlay || isExperimentDialogFadingOut ? 0 : 1)
             }
             .applyOnboardingTheme(.rebranding2026, stepProgressTheme: .rebranding2026)
         }

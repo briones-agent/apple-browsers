@@ -53,6 +53,8 @@ extension MainViewController {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()
 
+        // TODO: Temporary override for experiment validation. Keep commented out unless explicitly needed again.
+        // let shouldForceRebrandedOnboarding = true
         let controller: Onboarding = if featureFlagger.isFeatureOn(.onboardingRebranding) {
             OnboardingIntroViewController.rebranded(
                 onboardingPixelReporter: contextualOnboardingPixelReporter,

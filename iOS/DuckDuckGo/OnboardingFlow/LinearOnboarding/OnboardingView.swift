@@ -151,13 +151,8 @@ struct OnboardingView: View {
     }
 
     private func calculateOffsets(state: ViewState.Intro, geometry: GeometryProxy) -> (verticalOffset: CGFloat, contentInsets: EdgeInsets) {
-        if state.type.isExperimentSearchScreen {
-            return (Metrics.experimentDialogTopOffset,
-                    EdgeInsets(top: 26, leading: 24, bottom: 25.34, trailing: 24))
-        } else {
             return (geometry.size.height * Metrics.dialogVerticalOffsetPercentage.build(v: verticalSizeClass, h: horizontalSizeClass),
                     EdgeInsets(top: 24, leading: 24, bottom: 24, trailing: 24))
-        }
     }
 
     private func introView(shouldShowSkipOnboardingButton: Bool) -> some View {

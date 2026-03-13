@@ -197,20 +197,35 @@ class MainViewController: UIViewController {
 
     var keyModifierFlags: UIKeyModifierFlags?
     var showKeyboardAfterFireButton: DispatchWorkItem?
-    private var awaitingExperimentDuckAIFirstResponse = false
-    private var experimentDuckAIFireOnboardingActive = false
-    private var experimentDuckAIFireOnboardingCompleted = false
-    private var shouldForcePostFireAddressBarPickerRestore = false
-    private var experimentFireControlsLocked = false
-    private var experimentDuckAIFireTriggerWorkItem: DispatchWorkItem?
+    private enum ExperimentDuckAIFireOnboardingState {
+        case idle
+        case awaitingFirstResponse
+        case active
+        case completed
+    }
+
+    private struct ExperimentDuckAIFireOnboardingFlowContext {
+        var state: ExperimentDuckAIFireOnboardingState = .idle
+        var shouldForcePostFireAddressBarPickerRestore = false
+        var controlsLocked = false
+        var triggerWorkItem: DispatchWorkItem?
+    }
+
+    private var experimentDuckAIFireOnboardingFlow = ExperimentDuckAIFireOnboardingFlowContext()
     private var onboardingTransitionInProgress = false
+    private var hasResetSessionForOnboardingLaunch = false
 
     private var isExperimentDuckAIFireFlowRunning: Bool {
-        awaitingExperimentDuckAIFirstResponse || experimentDuckAIFireOnboardingActive
+        switch experimentDuckAIFireOnboardingFlow.state {
+        case .awaitingFirstResponse, .active:
+            return true
+        case .idle, .completed:
+            return false
+        }
     }
 
     private enum ExperimentDuckAIFireOnboardingMetrics {
-        static let onboardingFireTriggerDelayAfterLoad: TimeInterval = 2.8
+        static let onboardingFireFailsafeTriggerDelayAfterLoad: TimeInterval = 8
     }
 
     // Skip SERP flow (focusing on autocomplete logic) and prepare for new navigation when selecting search bar
@@ -538,6 +553,7 @@ class MainViewController: UIViewController {
         subscribeToNetworkProtectionEvents()
         subscribeToUnifiedFeedbackNotifications()
         subscribeToAIChatSettingsEvents()
+        subscribeToAIChatResponseEvents()
         subscribeToRefreshButtonSettingsEvents()
         subscribeToCustomizationSettingsEvents()
         subscribeToDaxEasterEggLogoChanges()
@@ -608,6 +624,14 @@ class MainViewController: UIViewController {
         // Should be safe to call anyway but only really need for this specific scenario
         if #available(iOS 26, *), isPad {
             view.setNeedsUpdateConstraints()
+        }
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if shouldShowOnboardingFlowOnLaunch() {
+            // Keep chrome hidden while onboarding modal is about to be presented.
+            setBarsVisibility(0, animated: false, animationDuration: nil)
         }
     }
 
@@ -773,22 +797,57 @@ class MainViewController: UIViewController {
     }
     
     func startOnboardingFlowIfNotSeenBefore() {
-        // Check if we override onboarding flag and show/hide onboarding accordingly
-        // If onboarding is not overridden, show onboarding only if users have not seen it.
-        let showOnboarding: Bool
-        switch LaunchOptionsHandler().onboardingStatus {
-        case .notOverridden:
-            showOnboarding = !tutorialSettings.hasSeenOnboarding
-        case let .overridden(.developer(isOnboardingCompleted)):
-            showOnboarding = !isOnboardingCompleted
-        case let .overridden(.uiTests(isOnboardingCompleted)):
-            // Set onboarding settings so state is persisted across app re-launches during UI Tests
-            tutorialSettings.hasSeenOnboarding = isOnboardingCompleted
-            showOnboarding = !tutorialSettings.hasSeenOnboarding
+        guard shouldShowOnboardingFlowOnLaunch() else { return }
+        resetSessionForOnboardingLaunchIfNeeded()
+        segueToDaxOnboarding()
+    }
+
+    private func resetSessionForOnboardingLaunchIfNeeded() {
+        guard !hasResetSessionForOnboardingLaunch else { return }
+        hasResetSessionForOnboardingLaunch = true
+
+        // TODO: Temporary override for experiment validation. Remove when onboarding launch no longer needs a forced clean session.
+        tabManager.removeAll()
+        tabsBarController?.refresh(tabsModel: tabManager.model, scrollToSelected: true)
+        swipeTabsCoordinator?.refresh(tabsModel: tabManager.model, scrollToSelected: true)
+    }
+
+    private func enforceSingleTabAfterOnboardingIfNeeded() {
+        guard shouldShowOnboardingFlowOnLaunch(),
+              let tabToKeep = tabManager.model.currentTab else {
+            return
         }
 
-        guard showOnboarding else { return }
-        segueToDaxOnboarding()
+        let tabsToRemove = tabManager.model.tabs.filter { $0 !== tabToKeep }
+        for tab in tabsToRemove {
+            if let index = tabManager.model.indexOf(tab: tab) {
+                tabManager.remove(at: index, clearTabHistory: false)
+            }
+        }
+        tabManager.selectTab(tabToKeep)
+        tabsBarController?.refresh(tabsModel: tabManager.model, scrollToSelected: true)
+        swipeTabsCoordinator?.refresh(tabsModel: tabManager.model, scrollToSelected: true)
+    }
+
+    private func shouldShowOnboardingFlowOnLaunch() -> Bool {
+        // TODO: Temporary override for experiment validation. Remove when launch behavior should respect persisted onboarding state.
+        let shouldForceOnboardingOnLaunch = true
+        if shouldForceOnboardingOnLaunch {
+            return true
+        }
+
+        // Check if we override onboarding flag and show/hide onboarding accordingly.
+        // If onboarding is not overridden, show onboarding only if users have not seen it.
+        switch LaunchOptionsHandler().onboardingStatus {
+        case .notOverridden:
+            return !tutorialSettings.hasSeenOnboarding
+        case let .overridden(.developer(isOnboardingCompleted)):
+            return !isOnboardingCompleted
+        case let .overridden(.uiTests(isOnboardingCompleted)):
+            // Set onboarding settings so state is persisted across app re-launches during UI Tests.
+            tutorialSettings.hasSeenOnboarding = isOnboardingCompleted
+            return !tutorialSettings.hasSeenOnboarding
+        }
     }
 
     func presentSyncRecoveryPromptIfNeeded() {
@@ -1405,7 +1464,7 @@ class MainViewController: UIViewController {
                 daxDialogsManager: daxDialogsManager,
                 onConfirm: { [weak self] fireRequest in
                     self?.forgetAllWithAnimation(request: fireRequest) {
-                        self?.shouldForcePostFireAddressBarPickerRestore = true
+                        self?.experimentDuckAIFireOnboardingFlow.shouldForcePostFireAddressBarPickerRestore = true
                         self?.currentTab?.submitStartChatAction()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             self?.refreshOmniBar()
@@ -1432,8 +1491,9 @@ class MainViewController: UIViewController {
         currentTab?.dismissContextualDaxFireDialog()
         ViewHighlighter.hideAll()
 
-        if experimentDuckAIFireOnboardingActive {
-            // Keep this path scoped to the onboarding experiment: single "Delete This Chat" action only.
+        if experimentDuckAIFireOnboardingFlow.state == .awaitingFirstResponse || experimentDuckAIFireOnboardingFlow.state == .active {
+            // Keep this path scoped to the onboarding experiment: single "Delete This Chat" action only,
+            // whether the contextual dialog has already appeared or is still pending.
             setExperimentFireControlsLocked(false)
             showExperimentDuckAIFireConfirmation()
             performCancel()
@@ -1929,7 +1989,9 @@ class MainViewController: UIViewController {
         DispatchQueue.main.async {
             // Do this async otherwise the toolbar buttons skew to the right
             if self.viewCoordinator.constraints.navigationBarContainerTop.constant >= 0 {
-                self.showBars()
+                if !self.shouldShowOnboardingFlowOnLaunch() {
+                    self.showBars()
+                }
             }
             // If tabs have been udpated, do this async to make sure size calcs are current
             self.tabsBarController?.refresh(tabsModel: self.tabManager.model)
@@ -2394,28 +2456,34 @@ class MainViewController: UIViewController {
             .store(in: &aiChatCancellables)
     }
 
+    private func subscribeToAIChatResponseEvents() {
+        NotificationCenter.default.publisher(for: .aiChatResponseReceived)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.triggerExperimentDuckAIFireOnboardingIfNeeded()
+            }
+            .store(in: &aiChatCancellables)
+    }
+
     private func triggerExperimentDuckAIFireOnboardingIfNeeded() {
         if onboardingTransitionInProgress {
-            experimentDuckAIFireTriggerWorkItem?.cancel()
+            experimentDuckAIFireOnboardingFlow.triggerWorkItem?.cancel()
             let workItem = DispatchWorkItem { [weak self] in
                 self?.triggerExperimentDuckAIFireOnboardingIfNeeded()
             }
-            experimentDuckAIFireTriggerWorkItem = workItem
+            experimentDuckAIFireOnboardingFlow.triggerWorkItem = workItem
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
             return
         }
 
-        guard awaitingExperimentDuckAIFirstResponse,
-              !experimentDuckAIFireOnboardingActive,
-              !experimentDuckAIFireOnboardingCompleted,
+        guard experimentDuckAIFireOnboardingFlow.state == .awaitingFirstResponse,
               currentTab?.isAITab == true else {
             return
         }
 
-        awaitingExperimentDuckAIFirstResponse = false
-        experimentDuckAIFireTriggerWorkItem?.cancel()
-        experimentDuckAIFireTriggerWorkItem = nil
-        experimentDuckAIFireOnboardingActive = true
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem?.cancel()
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem = nil
+        experimentDuckAIFireOnboardingFlow.state = .active
         applyExperimentDuckAIFireChromeState()
         setExperimentFireControlsLocked(true)
         showFireButtonPulse()
@@ -2425,40 +2493,32 @@ class MainViewController: UIViewController {
     }
 
     private func scheduleExperimentDuckAIFireOnboardingAfterLoadIfNeeded(for tab: TabViewController) {
-        guard awaitingExperimentDuckAIFirstResponse,
-              !experimentDuckAIFireOnboardingActive,
-              !experimentDuckAIFireOnboardingCompleted,
+        guard experimentDuckAIFireOnboardingFlow.state == .awaitingFirstResponse,
               currentTab == tab,
               tab.isAITab else {
             return
         }
 
-        experimentDuckAIFireTriggerWorkItem?.cancel()
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             self?.triggerExperimentDuckAIFireOnboardingIfNeeded()
         }
-        experimentDuckAIFireTriggerWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + ExperimentDuckAIFireOnboardingMetrics.onboardingFireTriggerDelayAfterLoad, execute: workItem)
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + ExperimentDuckAIFireOnboardingMetrics.onboardingFireFailsafeTriggerDelayAfterLoad, execute: workItem)
     }
 
     private func applyExperimentDuckAIFireChromeState() {
         setBarsVisibility(1, animated: false, animationDuration: nil)
-        viewCoordinator.setNavigationChromeHidden(true)
-        viewCoordinator.navigationBarContainer.alpha = 0
-        viewCoordinator.statusBackground.alpha = 0
-        viewCoordinator.topSlideContainer.alpha = 0
-        applyExperimentDuckAIStatusBackgroundStyle()
     }
 
     private func completeExperimentDuckAIFireOnboarding() {
-        experimentDuckAIFireOnboardingActive = false
-        experimentDuckAIFireOnboardingCompleted = true
-        awaitingExperimentDuckAIFirstResponse = false
-        experimentDuckAIFireTriggerWorkItem?.cancel()
-        experimentDuckAIFireTriggerWorkItem = nil
+        experimentDuckAIFireOnboardingFlow.state = .completed
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem?.cancel()
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem = nil
         setExperimentFireControlsLocked(false)
         markContextualOnboardingAsSeenAfterExperimentFire()
-        animateAddressBarRevealAfterExperimentFire()
+        refreshOmniBar()
+        restorePostFireAddressBarPickerIfNeeded()
     }
 
     private func markContextualOnboardingAsSeenAfterExperimentFire() {
@@ -2466,7 +2526,7 @@ class MainViewController: UIViewController {
         daxDialogsManager.setTryAnonymousSearchMessageSeen()
         daxDialogsManager.setSearchMessageSeen()
         daxDialogsManager.setTryVisitSiteMessageSeen()
-        daxDialogsManager.setFireEducationMessageSeen()
+//        daxDialogsManager.setFireEducationMessageSeen()
         daxDialogsManager.setFinalOnboardingDialogSeen()
 
         daxDialogsManager.overrideShownFlagFor(.afterSearch, flag: true)
@@ -2481,36 +2541,26 @@ class MainViewController: UIViewController {
         subscriptionCoordinator.subscriptionPromotionDialogSeen = true
     }
 
-    private func animateAddressBarRevealAfterExperimentFire() {
-        viewCoordinator.setNavigationChromeHidden(false)
-        viewCoordinator.navigationBarContainer.alpha = 0
-        viewCoordinator.statusBackground.alpha = 0
-        viewCoordinator.topSlideContainer.alpha = 0
-        UIView.animate(withDuration: 0.25) {
-            self.viewCoordinator.navigationBarContainer.alpha = 1
-            self.viewCoordinator.statusBackground.alpha = 1
-            self.viewCoordinator.topSlideContainer.alpha = 1
-        } completion: { _ in
-            self.refreshOmniBar()
-            self.restorePostFireAddressBarPickerIfNeeded()
-        }
-    }
-
     private func restorePostFireAddressBarPickerIfNeeded() {
-        guard shouldForcePostFireAddressBarPickerRestore,
+        guard experimentDuckAIFireOnboardingFlow.shouldForcePostFireAddressBarPickerRestore,
               aiChatAddressBarExperience.shouldShowModeToggle else {
             return
         }
 
-        shouldForcePostFireAddressBarPickerRestore = false
+        experimentDuckAIFireOnboardingFlow.shouldForcePostFireAddressBarPickerRestore = false
 
         // Unified toggle can be disabled for this configuration. Force the picker via omnibar mode-toggle path.
         viewCoordinator.setNavigationChromeHidden(false)
         viewCoordinator.navigationBarContainer.alpha = 1
         if let omniBarVC = viewCoordinator.omniBar as? OmniBarViewController {
-            omniBarVC.setSelectedTextEntryMode(.search)
+            let targetMode: TextEntryMode = currentTab?.isAITab == true ? .aiChat : .search
+            omniBarVC.setSelectedTextEntryMode(targetMode)
         }
-        enterSearch()
+        viewCoordinator.omniBar.endEditing()
+        viewCoordinator.omniBar.barView.isUserInteractionEnabled = true
+        viewCoordinator.omniBar.barView.menuButton.isUserInteractionEnabled = true
+        refreshOmniBar()
+        refreshBackForwardButtons()
     }
 
     private func applyExperimentDuckAIStatusBackgroundStyle() {
@@ -2519,11 +2569,15 @@ class MainViewController: UIViewController {
     }
 
     private func setExperimentFireControlsLocked(_ locked: Bool) {
-        guard experimentFireControlsLocked != locked else { return }
-        experimentFireControlsLocked = locked
+        guard experimentDuckAIFireOnboardingFlow.controlsLocked != locked else { return }
+        experimentDuckAIFireOnboardingFlow.controlsLocked = locked
 
-        viewCoordinator.toolbarBackButton.isEnabled = !locked
-        viewCoordinator.toolbarForwardButton.isEnabled = !locked
+        let canGoBack = currentTab?.canGoBack ?? false
+        let canGoForward = currentTab?.canGoForward ?? false
+        viewCoordinator.toolbarBackButton.isEnabled = locked ? false : canGoBack
+        viewCoordinator.toolbarForwardButton.isEnabled = locked ? false : canGoForward
+        viewCoordinator.omniBar.isBackButtonEnabled = locked ? false : canGoBack
+        viewCoordinator.omniBar.isForwardButtonEnabled = locked ? false : canGoForward
         viewCoordinator.toolbarTabSwitcherButton.isEnabled = !locked
         viewCoordinator.menuToolbarButton.isEnabled = !locked
         viewCoordinator.toolbarPasswordsButton.isEnabled = !locked
@@ -2533,6 +2587,8 @@ class MainViewController: UIViewController {
             tabSwitcherView.isUserInteractionEnabled = !locked
         }
         swipeTabsCoordinator?.isEnabled = !locked
+        viewCoordinator.omniBar.barView.isUserInteractionEnabled = !locked
+        viewCoordinator.omniBar.barView.menuButton.isUserInteractionEnabled = !locked
     }
     
     private func subscribeToRefreshButtonSettingsEvents() {
@@ -2947,20 +3003,14 @@ extension MainViewController: BrowserChromeDelegate {
             showMenuHighlighterIfNeeded()
         }
 
-        let shouldForceAddressBarHiddenForExperiment = isExperimentDuckAIFireFlowRunning
-        
         let updateBlock = {
-            let navPercent = shouldForceAddressBarHiddenForExperiment ? 0 : percent
             self.updateToolbarConstant(percent)
-            self.updateNavBarConstant(navPercent)
+            self.updateNavBarConstant(percent)
             self.currentTab?.updateWebViewBottomAnchor(for: percent)
 
-            self.viewCoordinator.navigationBarContainer.alpha = shouldForceAddressBarHiddenForExperiment ? 0 : percent
-            self.viewCoordinator.tabBarContainer.alpha = shouldForceAddressBarHiddenForExperiment ? 0 : percent
+            self.viewCoordinator.navigationBarContainer.alpha = percent
+            self.viewCoordinator.tabBarContainer.alpha = percent
             self.viewCoordinator.toolbar.alpha = self.onboardingTransitionInProgress ? 1 : percent
-            if shouldForceAddressBarHiddenForExperiment {
-                self.applyExperimentDuckAIStatusBackgroundStyle()
-            }
             
             // Post notification only when bars are fully shown or hidden
             if percent == 0 || percent == 1 {
@@ -3871,11 +3921,11 @@ extension MainViewController: TabDelegate {
 
     func tabLoadingStateDidChange(tab: TabViewController) {
         if tab.isLoading {
-            experimentDuckAIFireTriggerWorkItem?.cancel()
-            experimentDuckAIFireTriggerWorkItem = nil
+            experimentDuckAIFireOnboardingFlow.triggerWorkItem?.cancel()
+            experimentDuckAIFireOnboardingFlow.triggerWorkItem = nil
         } else {
             scheduleExperimentDuckAIFireOnboardingAfterLoadIfNeeded(for: tab)
-            if shouldForcePostFireAddressBarPickerRestore && currentTab == tab {
+            if experimentDuckAIFireOnboardingFlow.shouldForcePostFireAddressBarPickerRestore && currentTab == tab {
                 restorePostFireAddressBarPickerIfNeeded()
             }
         }
@@ -4251,7 +4301,9 @@ extension MainViewController: TabSwitcherDelegate {
             let newTab = Tab()
             tabManager.replaceTab(at: index, withNewTab: newTab, clearTabHistory: clearTabHistory)
             tabManager.selectTab(newTab)
-            showBars() // In case the browser chrome bars are hidden when calling this method
+            if !shouldShowOnboardingFlowOnLaunch() {
+                showBars() // In case the browser chrome bars are hidden when calling this method
+            }
         case .createOrReuseEmptyTab:
             tabManager.remove(at: index, clearTabHistory: clearTabHistory)
             if let existing = tabManager.firstHomeTab() {
@@ -4259,7 +4311,9 @@ extension MainViewController: TabSwitcherDelegate {
             } else {
                 tabManager.addHomeTab()
             }
-            showBars() // In case the browser chrome bars are hidden when calling this method
+            if !shouldShowOnboardingFlowOnLaunch() {
+                showBars() // In case the browser chrome bars are hidden when calling this method
+            }
         case .onlyClose:
             tabManager.remove(at: index, clearTabHistory: clearTabHistory)
         }
@@ -4431,7 +4485,11 @@ extension MainViewController {
     }
     
     private func showFireButtonPulse() {
-        daxDialogsManager.fireButtonPulseStarted()
+        // During experiment fire onboarding we control pulse lifecycle explicitly.
+        // Avoid Dax pulse bookkeeping here, because it can immediately clear highlights.
+        if experimentDuckAIFireOnboardingFlow.state != .active {
+            daxDialogsManager.fireButtonPulseStarted()
+        }
         guard let window = view.window else { return }
         
         let fireButtonView: UIView?
@@ -4658,13 +4716,14 @@ extension MainViewController: OnboardingDelegate {
         
     func onboardingCompleted(controller: UIViewController) {
         markOnboardingSeen()
+        enforceSingleTabAfterOnboardingIfNeeded()
         onboardingTransitionInProgress = true
         // Preserve the exact onboarding appearance while dismissing onboarding.
         let onboardingTransitionSnapshotView = showOnboardingTransitionSnapshot(from: controller)
         // controller.modalTransitionStyle = .crossDissolve
         controller.dismiss(animated: false) { [weak self] in
             guard let self else { return }
-            let isExperimentTransition = self.awaitingExperimentDuckAIFirstResponse
+            let isExperimentTransition = self.experimentDuckAIFireOnboardingFlow.state == .awaitingFirstResponse
             let chromeRevealDelay: TimeInterval = 0.05
             let chromeRevealDuration: CGFloat = 0.25
             let onboardingTransitionBottomFillView = self.showOnboardingTransitionBottomFill()
@@ -4714,10 +4773,18 @@ extension MainViewController: OnboardingDelegate {
     }
 
     func openAIChatFromOnboarding(_ query: String?, autoSend: Bool, onboardingConsentType: AIChatOnboardingConsentType) {
-        let shouldArmExperimentFireOnboarding = autoSend && !experimentDuckAIFireOnboardingCompleted
-        experimentDuckAIFireTriggerWorkItem?.cancel()
-        experimentDuckAIFireTriggerWorkItem = nil
-        awaitingExperimentDuckAIFirstResponse = shouldArmExperimentFireOnboarding
+        enforceSingleTabAfterOnboardingIfNeeded()
+        let shouldArmExperimentFireOnboarding = autoSend && experimentDuckAIFireOnboardingFlow.state != .completed
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem?.cancel()
+        experimentDuckAIFireOnboardingFlow.triggerWorkItem = nil
+        if shouldArmExperimentFireOnboarding {
+            experimentDuckAIFireOnboardingFlow.state = .awaitingFirstResponse
+            // Disable legacy contextual onboarding immediately for the experiment flow so redirects cannot surface other dialogs.
+            markContextualOnboardingAsSeenAfterExperimentFire()
+        } else if experimentDuckAIFireOnboardingFlow.state != .completed {
+            experimentDuckAIFireOnboardingFlow.state = .idle
+        }
+        setExperimentFireControlsLocked(shouldArmExperimentFireOnboarding)
         if shouldArmExperimentFireOnboarding, !aiChatSettings.isAIChatSearchInputUserSettingsEnabled {
             aiChatSettings.enableAIChatSearchInputUserSettings(enable: true)
         }

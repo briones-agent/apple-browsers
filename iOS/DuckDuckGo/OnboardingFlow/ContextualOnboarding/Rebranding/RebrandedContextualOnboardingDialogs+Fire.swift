@@ -29,12 +29,20 @@ extension OnboardingRebranding {
         @Environment(\.onboardingTheme) private var theme
 
         let message: String
-        let onManualDismiss: () -> Void
+        let onManualDismiss: (() -> Void)?
 
         var body: some View {
             ScrollView(.vertical, showsIndicators: false) {
-                OnboardingBubbleView.withDismissButton(tailPosition: nil, onDismiss: onManualDismiss) {
-                    OnboardingRebranding.OnboardingFireDialogContent(message: message)
+                Group {
+                    if let onManualDismiss {
+                        OnboardingBubbleView.withDismissButton(tailPosition: nil, onDismiss: onManualDismiss) {
+                            OnboardingRebranding.OnboardingFireDialogContent(message: message)
+                        }
+                    } else {
+                        OnboardingBubbleView(tailPosition: nil) {
+                            OnboardingRebranding.OnboardingFireDialogContent(message: message)
+                        }
+                    }
                 }
                 .padding(theme.contextualOnboardingMetrics.containerPadding)
             }

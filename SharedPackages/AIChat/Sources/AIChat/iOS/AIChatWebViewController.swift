@@ -125,8 +125,8 @@ extension AIChatWebViewController {
         static let autoSendValue = AIChatURLParameters.autoSubmitPromptQueryValue
         /// Tool selection key (can appear multiple times).
         static let toolChoice = AIChatURLParameters.toolChoiceName
-        /// Consent behavior key used in onboarding consent flows.
-        static let consentTypeKey = AIChatURLParameters.consentTypeQueryName
+        /// Flow key used for onboarding-specific Duck.ai behavior.
+        static let flowKey = AIChatURLParameters.flowQueryName
     }
 
     func reload() {
@@ -153,6 +153,11 @@ extension AIChatWebViewController {
             return chatModel.aiChatURL
         }
 
+        // TODO: Temporary onboarding demo-host override; remove when onboarding no longer targets demo FE.
+        if case .deferUntilFirstQuery = onboardingConsentType {
+            components.host = AIChatURLParameters.onboardingDemoHost
+        }
+
         var queryItems = components.queryItems ?? []
 
         if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -165,11 +170,11 @@ extension AIChatWebViewController {
             queryItems.append(URLQueryItem(name: QueryParameters.autoSendKey, value: QueryParameters.autoSendValue))
         }
 
-        if let consentTypeValue = onboardingConsentType.queryValue {
-            queryItems.removeAll { $0.name == QueryParameters.consentTypeKey }
-            queryItems.append(URLQueryItem(name: QueryParameters.consentTypeKey, value: consentTypeValue))
+        if let flowValue = onboardingConsentType.flowQueryValue {
+            queryItems.removeAll { $0.name == QueryParameters.flowKey }
+            queryItems.append(URLQueryItem(name: QueryParameters.flowKey, value: flowValue))
         } else {
-            queryItems.removeAll { $0.name == QueryParameters.consentTypeKey }
+            queryItems.removeAll { $0.name == QueryParameters.flowKey }
         }
 
         if let tools = tools, !tools.isEmpty {

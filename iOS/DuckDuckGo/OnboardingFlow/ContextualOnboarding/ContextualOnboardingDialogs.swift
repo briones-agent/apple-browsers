@@ -84,7 +84,7 @@ struct OnboardingTryVisitingSiteDialogContent: View {
 
 struct OnboardingFireDialog: View {
     let message: String
-    let onManualDismiss: () -> Void
+    let onManualDismiss: (() -> Void)?
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {

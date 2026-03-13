@@ -185,11 +185,13 @@ final class DaxDialogs: NewTabDialogSpecProvider, ContextualOnboardingLogic, Con
         let message: String
         let pixelName: Pixel.Event
         let type: SpecType
+        let allowsManualDismiss: Bool
 
-        init(type: SpecType, pixelName: Pixel.Event, message: String = "") {
+        init(type: SpecType, pixelName: Pixel.Event, message: String = "", allowsManualDismiss: Bool = true) {
             self.type = type
             self.pixelName = pixelName
             self.message = message
+            self.allowsManualDismiss = allowsManualDismiss
         }
 
         func format(args: CVarArg...) -> BrowsingSpec {
@@ -204,7 +206,17 @@ final class DaxDialogs: NewTabDialogSpecProvider, ContextualOnboardingLogic, Con
             BrowsingSpec(
                 type: type,
                 pixelName: pixelName,
-                message: message
+                message: message,
+                allowsManualDismiss: allowsManualDismiss
+            )
+        }
+
+        func withManualDismissAllowed(_ allowsManualDismiss: Bool) -> BrowsingSpec {
+            BrowsingSpec(
+                type: type,
+                pixelName: pixelName,
+                message: message,
+                allowsManualDismiss: allowsManualDismiss
             )
         }
     }
@@ -300,6 +312,10 @@ final class DaxDialogs: NewTabDialogSpecProvider, ContextualOnboardingLogic, Con
     var isShowingFireDialog: Bool {
         guard let lastShownDaxDialogType else { return false }
         return lastShownDaxDialogType == .fire
+    }
+
+    func setLastShownDialog(type: BrowsingSpec.SpecType) {
+        lastShownDaxDialogType = type
     }
 
     var isAddFavoriteFlow: Bool {
@@ -733,10 +749,6 @@ extension DaxDialogs {
 
     func setLastVisitedURL(_ url: URL?) {
         lastVisitedOnboardingWebsiteURL = url
-    }
-
-    func setLastShownDialog(type: BrowsingSpec.SpecType) {
-        lastShownDaxDialogType = type
     }
 
 }

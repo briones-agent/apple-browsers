@@ -17,37 +17,82 @@
 //  limitations under the License.
 //
 
-import SwiftUI
-import UIKit
-import QuartzCore
-import Onboarding
 import DesignResourcesKit
 import DesignResourcesKitIcons
 import DuckUI
+import Onboarding
+import QuartzCore
+import SwiftUI
 import UIComponents
+import UIKit
 
 extension OnboardingView {
     private enum Metrics {
+        // MARK: Spacing
+        static let contentVerticalSpacing: CGFloat = 16
+        static let legacyTitleToPickerTopPadding: CGFloat = 8
+        static let rebrandedTitleToPickerTopPadding: CGFloat = 16
+        static let fieldToFirstChipTopPadding: CGFloat = 16
+        static let interChipSpacing: CGFloat = 8
+        static let queryFieldBottomPadding: CGFloat = -8
+        static let queryFieldTopPadding: CGFloat = -12
+        static let queryFieldContentSpacing: CGFloat = 8
+        static let queryFieldHorizontalPadding: CGFloat = 16
+        static let queryFieldVerticalPadding: CGFloat = 16.33
+        static let suggestionChipLeadingPadding: CGFloat = 14
+        static let suggestionChipTrailingPadding: CGFloat = 16
+        static let suggestionChipContentSpacing: CGFloat = 8
+        static let disabledPrimaryActionOpacity: CGFloat = 0.3
+
+        // MARK: Sizing
+        static let pickerWidth: CGFloat = 216
+        static let pickerHeight: CGFloat = 38
+        static let pickerContainerHeight: CGFloat = 40
+        static let pickerVerticalPadding: CGFloat = 0.5
+        static let pickerBottomPadding: CGFloat = 4
+        static let singleLineFieldHeight: CGFloat = 26
+        static let multilineFieldHeight: CGFloat = 56
+        static let legacyChipHeight: CGFloat = 32
+        static let rebrandedChipHeight: CGFloat = 32
+        static let queryFieldActionButtonSize: CGFloat = 28
+        static let queryFieldCornerRadius: CGFloat = 14
+        static let queryFieldInnerBorderInset: CGFloat = 2
+        static let suggestionChipIconSize: CGFloat = 16
+        static let maxSuggestionCount = 3
+        static let legacyChipCornerRadius: CGFloat = 12
+        static let rebrandedChipCornerRadius: CGFloat = 32
+        static let legacyQueryFieldBorderWidth: CGFloat = 2
+        static let rebrandedQueryFieldBorderWidth: CGFloat = 1
+        static let legacySuggestionChipBorderWidth: CGFloat = 1
+        static let rebrandedSuggestionChipBorderWidth: CGFloat = 1.5
+
+        // MARK: Animation
         static let initialToggleStartDelay: TimeInterval = 0.35
+        static let legacyInitialInputFocusDelayAfterAppear: TimeInterval = 0.35
+        static let rebrandedInitialInputFocusDelayAfterAppear: TimeInterval = 0.55
         static let suggestionInitialRevealDelay: TimeInterval = 1
         static let suggestionRevealFallbackDelayAfterFocus: TimeInterval = 0.4
         static let pickerSelectionAnimationDuration: TimeInterval = 0.22
         static let contentFadeAnimationDuration: TimeInterval = 0.2
-        static let pickerContainerHeight: CGFloat = 124.0 / 3.0
-        static let singleLineFieldHeight: CGFloat = 26
-        static let multilineFieldHeight: CGFloat = 56
-        static let legacyChipHeight: CGFloat = 46.33
-        static let rebrandedChipHeight: CGFloat = 32
-        static let legacyChipCornerRadius: CGFloat = 12
-        static let rebrandedChipCornerRadius: CGFloat = 32
+        static let suggestionTransitionScale: CGFloat = 0.96
+        static let suggestionSpringMass: CGFloat = 0.7
+        static let suggestionSpringStiffness: CGFloat = 180
+        static let suggestionSpringDamping: CGFloat = 14
+        static let suggestionSpringInitialVelocity: CGFloat = 0.25
+
+        // MARK: Offset
+        static let queryFieldActionOffsetX: CGFloat = 2.33
+        static let queryFieldActionOffsetY: CGFloat = 1
     }
 
     struct DuckAIExperimentSearchContent: View {
+        // MARK: Types
         enum VisualStyle {
             case legacy
             case rebranded
         }
 
+        // MARK: Dependencies
         @Environment(\.onboardingTheme) private var onboardingTheme
         private let action: (OnboardingIntroViewModel.DuckAIExperimentSelection) -> Void
         private let openAIChatAction: (String?, Bool) -> Void
@@ -57,6 +102,7 @@ extension OnboardingView {
         private let visualStyle: VisualStyle
         @StateObject private var pickerViewModel: ImageSegmentedPickerViewModel
 
+        // MARK: State
         @State private var query = ""
         @State private var isDuckAISelected: Bool
         @State private var isInputFocused = false
@@ -65,9 +111,11 @@ extension OnboardingView {
         @State private var isTransitioningOut = false
         @State private var isRunningInitialSelectionAnimation = false
         @State private var suggestionSequenceStarted = false
-        private let defaultExperience: OnboardingIntroStep.DuckAIExperimentDefaultExperience
+        @State private var hasPassedInitialFocusDelay = false
+        @State private var shouldFocusWhenInitialDelayPasses = false
         private let shouldAnimateToDuckAIOnAppear: Bool
 
+        // MARK: Constants
         private static let pickerItems: [ImageSegmentedPickerItem] = [
             ImageSegmentedPickerItem(
                 text: UserText.searchInputToggleSearchButtonTitle,
@@ -96,7 +144,6 @@ extension OnboardingView {
             self.measureQuerySubmissionAction = measureQuerySubmissionAction
             self.startExitTransitionAction = startExitTransitionAction
             self.visualStyle = visualStyle
-            self.defaultExperience = defaultExperience
             self.shouldAnimateToDuckAIOnAppear = defaultExperience == .duckAI
             let startsInSearchMode = defaultExperience == .search || shouldAnimateToDuckAIOnAppear
             let initialSelection = startsInSearchMode ? Self.pickerItems[0] : Self.pickerItems[1]
@@ -104,14 +151,15 @@ extension OnboardingView {
             _pickerViewModel = StateObject(wrappedValue: ImageSegmentedPickerViewModel(
                 items: Self.pickerItems,
                 selectedItem: initialSelection,
-                configuration: ImageSegmentedPickerConfiguration(itemContentSpacing: 8),
+                configuration: ImageSegmentedPickerConfiguration(itemContentSpacing: Metrics.queryFieldContentSpacing),
                 scrollProgress: startsInSearchMode ? 0 : 1,
                 isScrollProgressDriven: false
             ))
         }
 
+        // MARK: View
         var body: some View {
-            VStack(spacing: 16) {
+            VStack(spacing: Metrics.contentVerticalSpacing) {
                 // Header text inside the onboarding bubble.
                 Text(UserText.Onboarding.DuckAIQueryExperiment.title)
                     .font(visualStyle == .rebranded ? onboardingTheme.typography.title : Font(UIFont.daxTitle3()))
@@ -122,9 +170,9 @@ extension OnboardingView {
 
                 // Search / Duck.ai segmented control.
                 ImageSegmentedPickerView(viewModel: pickerViewModel)
-                    .frame(width: 216, height: 38)
-                    .padding(.vertical, 0.5)
-                    .frame(width: 216, height: Metrics.pickerContainerHeight)
+                    .frame(width: Metrics.pickerWidth, height: Metrics.pickerHeight)
+                    .padding(.vertical, Metrics.pickerVerticalPadding)
+                    .frame(width: Metrics.pickerWidth, height: Metrics.pickerContainerHeight)
                     // Drive content mode (Search vs Duck.ai) from user picker selection.
                     .onChange(of: pickerViewModel.selectedItem) { selectedItem in
                         SwiftUI.withAnimation(.easeInOut(duration: Metrics.pickerSelectionAnimationDuration)) {
@@ -140,26 +188,30 @@ extension OnboardingView {
                         pickerViewModel.updateScrollProgress(isSelected ? 1 : 0)
                         // During initial intro animation, delay focus until animation completion.
                         if !isRunningInitialSelectionAnimation {
-                            isInputFocused = true
+                            requestInputFocus()
                         }
                     }
-                    .padding(.top, 7.33)
-                    .padding(.bottom, 3.67)
+                    .padding(.top, titleToPickerTopPadding)
+                    .padding(.bottom, Metrics.pickerBottomPadding)
 
                 // Query field + trailing action icon.
                 queryField
-                    .padding(.top, -12)
-                    .padding(.bottom, -7.67)
+                    .padding(.top, Metrics.queryFieldTopPadding)
+                    .padding(.bottom, Metrics.queryFieldBottomPadding)
 
                 // Delayed/staggered suggestion chips.
                 if visibleSuggestionCount > 0 {
                     suggestionChips
+                        .padding(.top, Metrics.fieldToFirstChipTopPadding)
                 }
             }
             .opacity(isTransitioningOut ? 0 : 1)
             .onAppear {
                 isInputFocused = false
+                hasPassedInitialFocusDelay = false
+                shouldFocusWhenInitialDelayPasses = false
                 suggestionSequenceStarted = false
+                scheduleInitialFocusGate()
                 startInitialSelectionAnimationIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
@@ -169,8 +221,13 @@ extension OnboardingView {
             .animation(.easeInOut(duration: Metrics.contentFadeAnimationDuration), value: isTransitioningOut)
         }
 
+        // MARK: Style
         private var accentColor: Color {
             visualStyle == .rebranded ? Color(singleUseColor: .rebranding(.accentPrimary)) : Color(designSystemColor: .accent)
+        }
+
+        private var titleToPickerTopPadding: CGFloat {
+            visualStyle == .rebranded ? Metrics.rebrandedTitleToPickerTopPadding : Metrics.legacyTitleToPickerTopPadding
         }
 
         private var accentSecondaryColor: Color {
@@ -181,6 +238,19 @@ extension OnboardingView {
             visualStyle == .rebranded ? onboardingTheme.colorPalette.background : Color(designSystemColor: .surface)
         }
 
+        private var queryFieldBorderWidth: CGFloat {
+            visualStyle == .rebranded ? Metrics.rebrandedQueryFieldBorderWidth : Metrics.legacyQueryFieldBorderWidth
+        }
+
+        private var suggestionChipBorderWidth: CGFloat {
+            visualStyle == .rebranded ? Metrics.rebrandedSuggestionChipBorderWidth : Metrics.legacySuggestionChipBorderWidth
+        }
+
+        private var initialInputFocusDelayAfterAppear: TimeInterval {
+            visualStyle == .rebranded ? Metrics.rebrandedInitialInputFocusDelayAfterAppear : Metrics.legacyInitialInputFocusDelayAfterAppear
+        }
+
+        // MARK: Initial Sequencing
         private func startInitialSelectionAnimationIfNeeded() {
             if !didRunInitialToggleAnimation {
                 didRunInitialToggleAnimation = true
@@ -190,11 +260,11 @@ extension OnboardingView {
                     DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.initialToggleStartDelay) {
                         guard didRunInitialToggleAnimation else { return }
                         isRunningInitialSelectionAnimation = true
-                        isInputFocused = true
                         withAnimation(.easeInOut(duration: Metrics.pickerSelectionAnimationDuration)) {
                             isDuckAISelected = true
                         } completion: {
                             isRunningInitialSelectionAnimation = false
+                            requestInputFocus()
                             DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
                                 startSuggestionSequenceIfNeeded()
                             }
@@ -203,7 +273,7 @@ extension OnboardingView {
                 } else {
                     // Treatment B behavior: stay in Search, no auto-switch.
                     isDuckAISelected = false
-                    isInputFocused = true
+                    requestInputFocus()
                     DispatchQueue.main.asyncAfter(deadline: .now() + Metrics.suggestionRevealFallbackDelayAfterFocus) {
                         startSuggestionSequenceIfNeeded()
                     }
@@ -211,8 +281,27 @@ extension OnboardingView {
             }
         }
 
+        private func scheduleInitialFocusGate() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + initialInputFocusDelayAfterAppear) {
+                hasPassedInitialFocusDelay = true
+                if shouldFocusWhenInitialDelayPasses {
+                    shouldFocusWhenInitialDelayPasses = false
+                    isInputFocused = true
+                }
+            }
+        }
+
+        private func requestInputFocus() {
+            if hasPassedInitialFocusDelay {
+                isInputFocused = true
+            } else {
+                shouldFocusWhenInitialDelayPasses = true
+            }
+        }
+
+        // MARK: Subviews
         private var queryField: some View {
-            HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: Metrics.queryFieldContentSpacing) {
                 // Text input
                 OnboardingQueryField(
                     text: $query,
@@ -227,7 +316,10 @@ extension OnboardingView {
                     // Prevent placeholder/baseline shifts from inheriting parent animations when toggling mode.
                     transaction.animation = nil
                 }
-                .frame(height: isDuckAISelected ? 56 : 26, alignment: isDuckAISelected ? .topLeading : .center)
+                .frame(
+                    height: isDuckAISelected ? Metrics.multilineFieldHeight : Metrics.singleLineFieldHeight,
+                    alignment: isDuckAISelected ? .topLeading : .center
+                )
 
                 // Submit action button
                 Button(action: handlePrimaryAction) {
@@ -239,32 +331,32 @@ extension OnboardingView {
                     .renderingMode(.template)
                     .font(Font(UIFont.daxBodyBold()))
                     .foregroundColor(visualStyle == .rebranded ? accentColor : Color(designSystemColor: .icons))
-                    .opacity(isPrimaryActionEnabled ? 1 : 0.3)
-                    .frame(width: 28, height: 28)
-                    .offset(x: 2.33, y: 1)
+                    .opacity(isPrimaryActionEnabled ? 1 : Metrics.disabledPrimaryActionOpacity)
+                    .frame(width: Metrics.queryFieldActionButtonSize, height: Metrics.queryFieldActionButtonSize)
+                    .offset(x: Metrics.queryFieldActionOffsetX, y: Metrics.queryFieldActionOffsetY)
                 }
                 .buttonStyle(.plain)
                 .disabled(!isPrimaryActionEnabled)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16.33)
+            .padding(.horizontal, Metrics.queryFieldHorizontalPadding)
+            .padding(.vertical, Metrics.queryFieldVerticalPadding)
             .background(queryFieldBackgroundColor)
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(accentSecondaryColor, lineWidth: visualStyle == .rebranded ? 1 : 2)
+                RoundedRectangle(cornerRadius: Metrics.queryFieldCornerRadius)
+                    .strokeBorder(accentSecondaryColor, lineWidth: queryFieldBorderWidth)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .inset(by: 2)
-                    .strokeBorder(accentColor, lineWidth: visualStyle == .rebranded ? 1 : 2)
+                RoundedRectangle(cornerRadius: Metrics.queryFieldCornerRadius)
+                    .inset(by: Metrics.queryFieldInnerBorderInset)
+                    .strokeBorder(accentColor, lineWidth: queryFieldBorderWidth)
             )
-            .cornerRadius(14)
+            .cornerRadius(Metrics.queryFieldCornerRadius)
             .frame(maxWidth: .infinity)
             .animation(.easeInOut(duration: Metrics.contentFadeAnimationDuration), value: isDuckAISelected)
         }
 
         private var suggestionChips: some View {
-            VStack(spacing: 9.33) {
+            VStack(spacing: Metrics.interChipSpacing) {
                 if visibleSuggestionCount >= 1 {
                     suggestionChip(
                         isDuckAISelected
@@ -302,7 +394,7 @@ extension OnboardingView {
 
         private var suggestionTransition: AnyTransition {
             .asymmetric(
-                insertion: .scale(scale: 0.96, anchor: .top).combined(with: .opacity),
+                insertion: .scale(scale: Metrics.suggestionTransitionScale, anchor: .top).combined(with: .opacity),
                 removal: .opacity
             )
         }
@@ -316,39 +408,45 @@ extension OnboardingView {
         }
 
         private var suggestionAppearanceAnimation: Animation {
-            .interpolatingSpring(mass: 0.7, stiffness: 180, damping: 14, initialVelocity: 0.25)
+            .interpolatingSpring(
+                mass: Metrics.suggestionSpringMass,
+                stiffness: Metrics.suggestionSpringStiffness,
+                damping: Metrics.suggestionSpringDamping,
+                initialVelocity: Metrics.suggestionSpringInitialVelocity
+            )
         }
 
         private func suggestionChip(_ title: String, promptSource: DuckAIQueryExperimentPromptSource, icon: UIImage) -> some View {
             Button {
                 openSelectedExperience(prompt: title, autoSend: true, promptSource: promptSource)
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: Metrics.suggestionChipContentSpacing) {
                     Image(uiImage: icon)
                         .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 16, height: 16)
+                        .frame(width: Metrics.suggestionChipIconSize, height: Metrics.suggestionChipIconSize)
                     Text(title)
                         .font(Font(UIFont.daxBodyBold()))
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .foregroundColor(accentColor)
-                .padding(.leading, 14)
-                .padding(.trailing, 16)
+                .padding(.leading, Metrics.suggestionChipLeadingPadding)
+                .padding(.trailing, Metrics.suggestionChipTrailingPadding)
                 .frame(maxWidth: .infinity)
                 .frame(height: suggestionChipHeight)
                 // Make the whole button area tappable, when there's no background.
                 .contentShape(Rectangle())
                 .overlay(
                     RoundedRectangle(cornerRadius: suggestionChipCornerRadius)
-                        .stroke(accentColor, lineWidth: 1)
+                        .strokeBorder(accentColor, lineWidth: suggestionChipBorderWidth)
                 )
             }
-            .buttonStyle(OutlinedSuggestionChipButtonStyle())
+            .buttonStyle(OutlinedSuggestionChipButtonStyle(cornerRadius: suggestionChipCornerRadius))
         }
 
+        // MARK: Actions
         private func handlePrimaryAction() {
             guard isPrimaryActionEnabled else { return }
             let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -396,6 +494,7 @@ extension OnboardingView {
             }
         }
 
+        // MARK: Suggestion Sequencing
         private func startSuggestionSequenceIfNeeded() {
             guard !suggestionSequenceStarted else { return }
             suggestionSequenceStarted = true
@@ -413,7 +512,7 @@ extension OnboardingView {
 
         private func revealSuggestionsSequentially(nextIndex: Int) {
             guard suggestionSequenceStarted, !isTransitioningOut else { return }
-            guard nextIndex <= 3 else { return }
+            guard nextIndex <= Metrics.maxSuggestionCount else { return }
 
             withAnimation(suggestionAppearanceAnimation) {
                 visibleSuggestionCount = nextIndex
@@ -422,9 +521,9 @@ extension OnboardingView {
             }
         }
 
+        // MARK: Utilities
         @MainActor
         private func withAnimation(_ animation: Animation, _ updates: @escaping () -> Void, completion: @escaping () -> Void) {
-#if os(iOS)
             if #available(iOS 17, *) {
                 SwiftUI.withAnimation(animation, completionCriteria: .logicallyComplete, updates) {
                     completion()
@@ -435,10 +534,6 @@ extension OnboardingView {
                 SwiftUI.withAnimation(animation, updates)
                 CATransaction.commit()
             }
-#else
-            SwiftUI.withAnimation(animation, updates)
-            completion()
-#endif
         }
 
         private func dismissKeyboard() {
@@ -447,7 +542,7 @@ extension OnboardingView {
     }
 
 }
-
+// MARK: - OnboardingQueryField
 private struct OnboardingQueryField: UIViewRepresentable {
     private static let singleLineTopInset: CGFloat = 5.0 / 3.0
     private static let multiLineTopInset: CGFloat = 10.0 / 3.0
@@ -637,10 +732,17 @@ private struct OnboardingQueryField: UIViewRepresentable {
     }
 }
 
+// MARK: - OutlinedSuggestionChipButtonStyle
 private struct OutlinedSuggestionChipButtonStyle: ButtonStyle {
+    private let cornerRadius: CGFloat
+
+    init(cornerRadius: CGFloat = 12) {
+        self.cornerRadius = cornerRadius
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(configuration.isPressed ? Color(designSystemColor: .accent).opacity(0.1) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }

@@ -417,9 +417,9 @@ extension FeatureFlag: FeatureFlagDescribing {
     public enum DuckAIQueryExperimentCohort: String, FeatureFlagCohortDescribing {
         /// Control cohort skips the experiment and keeps the existing onboarding flow.
         case control
-        /// Treatment A shows experiment screen with "Search" selected by default.
+        /// Treatment A shows experiment screen with "Duck.ai" selected by default.
         case treatmentA
-        /// Treatment B shows experiment screen with "Search & Duck.ai" selected by default.
+        /// Treatment B shows experiment screen with "Search" selected by default.
         case treatmentB
     }
 

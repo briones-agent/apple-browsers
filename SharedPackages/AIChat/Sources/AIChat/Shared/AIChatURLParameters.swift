@@ -25,10 +25,12 @@ public enum AIChatURLParameters {
     public static let autoSubmitPromptQueryValue = "1"
     /// Repeating parameter for selecting one or more RAG tools.
     public static let toolChoiceName = "toolChoice"
-    /// Consent behavior selector used for onboarding consent-flow experiments.
-    public static let consentTypeQueryName = "consentType"
-    /// Consent type value that defers consent until first real query.
-    public static let deferUntilFirstQueryConsentTypeValue = "1"
+    /// Flow selector key used for onboarding-specific Duck.ai behavior.
+    public static let flowQueryName = "flow"
+    /// Flow selector value for onboarding.
+    public static let onboardingFlowQueryValue = "onboarding"
+    /// TODO: Temporary demo host override for onboarding experiment validation; remove when demo routing is no longer required.
+    public static let onboardingDemoHost = "use-serp-dev-testing15.duck.ai"
 }
 
 /// Allowed onboarding consent behaviors passed through Duck.ai URL query params.
@@ -38,13 +40,13 @@ public enum AIChatOnboardingConsentType {
     /// Defers consent collection until the user sends their first real query.
     case deferUntilFirstQuery
 
-    /// Serialized query value for `consentType` (if any).
-    public var queryValue: String? {
+    /// Serialized `flow` query value (if any) used by onboarding-specific FE behavior.
+    public var flowQueryValue: String? {
         switch self {
         case .default:
             return nil
         case .deferUntilFirstQuery:
-            return AIChatURLParameters.deferUntilFirstQueryConsentTypeValue
+            return AIChatURLParameters.onboardingFlowQueryValue
         }
     }
 }

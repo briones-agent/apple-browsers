@@ -241,6 +241,10 @@ private extension URL {
     /// - If `debugSettings.customURL` is `nil`, empty, or invalid, returns the standard `isDuckAIURL` result.
     func isDuckAIURL(debugSettings: AIChatDebugSettingsHandling) -> Bool {
         if isDuckAIURL { return true }
+        // TODO: Temporary onboarding experiment override; remove when demo host should no longer be treated as an AI tab.
+        if host?.lowercased() == AIChatURLParameters.onboardingDemoHost.lowercased() {
+            return true
+        }
         guard let customURLString = debugSettings.customURL,
               !customURLString.isEmpty,
               let customURL = URL(string: customURLString),

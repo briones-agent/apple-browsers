@@ -1110,7 +1110,10 @@ class TabViewController: UIViewController {
     }
 
     func presentExperimentContextualDaxFireDialog(message: String) {
-        let fireSpec = DaxDialogs.BrowsingSpec.fire.withUpdatedMessage(message)
+        (contextualOnboardingLogic as? DaxDialogs)?.setLastShownDialog(type: .fire)
+        let fireSpec = DaxDialogs.BrowsingSpec.fire
+            .withUpdatedMessage(message)
+            .withManualDismissAllowed(false)
         contextualOnboardingPresenter.presentContextualOnboarding(for: fireSpec, in: self)
     }
 
