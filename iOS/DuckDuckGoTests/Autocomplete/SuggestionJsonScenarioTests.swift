@@ -468,7 +468,7 @@ extension SuggestionJsonScenarioTests {
             return historyFeatureEnabled
         }
         
-        func removeAllHistory() async {
+        func removeAllHistory() async throws {
         }
         
         func deleteHistoryForURL(_ url: URL) async {

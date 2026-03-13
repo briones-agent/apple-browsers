@@ -349,7 +349,11 @@ class FireExecutor: FireExecuting {
         }
 
         self.forgetTextZoom()
-        await historyManager.removeAllHistory()
+        do {
+            try await historyManager.removeAllHistory()
+        } catch {
+            Logger.general.error("Failed to remove all history: \(error.localizedDescription)")
+        }
         _ = await privacyStats?.clearPrivacyStats()
     }
     

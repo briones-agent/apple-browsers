@@ -288,9 +288,14 @@ final public class HistoryCoordinator: HistoryCoordinating {
         assert(visits.count == visitIDs.count,
                "burnVisits(for:) found \(visitIDs.count) visit IDs but matched only \(visits.count) in memory")
 
-        return await withCheckedContinuation { continuation in
-            burnVisits(visits) {_ in 
-                continuation.resume()
+        try await withCheckedThrowingContinuation { continuation in
+            burnVisits(visits) { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
             }
         }
     }

@@ -55,7 +55,7 @@ class MockHistoryManager: HistoryManaging {
         return historyFeatureEnabled
     }
 
-    func removeAllHistory() async {
+    func removeAllHistory() async throws {
         removeAllHistoryCallCount += 1
     }
 

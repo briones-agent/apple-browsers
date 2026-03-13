@@ -837,7 +837,11 @@ extension SettingsViewModel {
     private func clearHistoryIfNeeded() {
         if !historyManager.isEnabledByUser {
             Task {
-                await self.historyManager.removeAllHistory()
+                do {
+                    try await self.historyManager.removeAllHistory()
+                } catch {
+                    Logger.history.error("Failed to clear history after settings change: \(error.localizedDescription)")
+                }
             }
         }
     }
