@@ -45,3 +45,27 @@ final class MockContinuedProcessingEventDelegate: DBPContinuedProcessingEventDel
         onEvent?(event)
     }
 }
+
+final class MockContinuedProcessingCoordinator: DBPContinuedProcessingCoordinating {
+    var didCallStartInitialRun = false
+    var hasAttachedTask = false
+    var startInitialRunError: Error?
+    private(set) var receivedProfile: DataBrokerProtectionProfile?
+
+    @MainActor
+    func startInitialRun(profile: DataBrokerProtectionProfile) async throws {
+        didCallStartInitialRun = true
+        receivedProfile = profile
+
+        if let startInitialRunError {
+            throw startInitialRunError
+        }
+    }
+
+    func reset() {
+        didCallStartInitialRun = false
+        hasAttachedTask = false
+        startInitialRunError = nil
+        receivedProfile = nil
+    }
+}
