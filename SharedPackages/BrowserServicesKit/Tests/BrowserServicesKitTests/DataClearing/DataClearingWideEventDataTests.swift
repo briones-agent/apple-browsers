@@ -667,7 +667,7 @@ final class DataClearingWideEventDataTests: XCTestCase {
 
     // MARK: - H. Edge Cases
 
-    func testDurationFormatting_convertsToIntegerMilliseconds() {
+    func testDurationFormatting_roundsTo10msPrecision() {
         // Given
         let eventData = DataClearingWideEventData(
             options: .all,
@@ -675,7 +675,7 @@ final class DataClearingWideEventDataTests: XCTestCase {
             contextData: WideEventContextData(name: "test-context")
         )
         let base = Date()
-        // Duration with fractional milliseconds (1234.567ms)
+        // Duration with fractional milliseconds (1234.567ms → rounds to 1230ms)
         eventData.clearTabsDuration = WideEvent.MeasuredInterval(
             start: base,
             end: base.addingTimeInterval(1.234567)
@@ -684,8 +684,149 @@ final class DataClearingWideEventDataTests: XCTestCase {
         // When
         let params = eventData.jsonParameters()
 
-        // Then - verify duration is integer (no decimals)
-        XCTAssertEqual(params["feature.data.ext.clear_tabs_latency_ms"] as? Int, 1234)
+        // Then - verify duration is rounded to nearest 10ms
+        XCTAssertEqual(params["feature.data.ext.clear_tabs_latency_ms"] as? Int, 1230)
+    }
+
+    func testDurationFormatting_roundsVariousValues() {
+        // Test various rounding scenarios (Swift uses banker's rounding: .5 rounds to nearest even)
+        // Test with clean Int values to avoid floating point precision issues in TimeInterval
+        let testCases: [(inputMs: Int, expected: Int)] = [
+            (12, 10),      // 12ms → 10ms (1.2 → 1)
+            (18, 20),      // 18ms → 20ms (1.8 → 2)
+            (24, 20),      // 24ms → 20ms (2.4 → 2)
+            (25, 20),      // 25ms → 20ms (2.5 → 2 even)
+            (35, 30),      // 35ms → 40ms (3.5 → 3 even)
+            (45, 40),      // 45ms → 40ms (4.5 → 4 even)
+            (55, 50),      // 55ms → 60ms (5.5 → 5 even)
+            (123, 120),    // 123ms → 120ms (12.3 → 12)
+            (128, 130),    // 128ms → 130ms (12.8 → 13)
+            (1234, 1230),  // 1234ms → 1230ms (123.4 → 123)
+            (2567, 2570),  // 2567ms → 2570ms (256.7 → 257)
+        ]
+
+        for (inputMs, expected) in testCases {
+            let eventData = DataClearingWideEventData(
+                options: .all,
+                trigger: .manualFire,
+                contextData: WideEventContextData(name: "test-context")
+            )
+            // Create interval that will produce exact millisecond values
+            let base = Date()
+            eventData.clearTabsDuration = WideEvent.MeasuredInterval(
+                start: base,
+                end: base.addingTimeInterval(Double(inputMs) / 1000.0)
+            )
+
+            let params = eventData.jsonParameters()
+            XCTAssertEqual(params["feature.data.ext.clear_tabs_latency_ms"] as? Int, expected,
+                          "Input \(inputMs)ms should round to \(expected)ms")
+        }
+    }
+
+    func testDurationFormatting_capsAt10Seconds() {
+        // Given
+        let eventData = DataClearingWideEventData(
+            options: .all,
+            trigger: .manualFire,
+            contextData: WideEventContextData(name: "test-context")
+        )
+        let base = Date()
+        // Duration of 25.678 seconds (25678ms → rounds to 25680ms → caps to 10000ms)
+        eventData.clearTabsDuration = WideEvent.MeasuredInterval(
+            start: base,
+            end: base.addingTimeInterval(25.678)
+        )
+
+        // When
+        let params = eventData.jsonParameters()
+
+        // Then - verify duration is capped at 10000ms
+        XCTAssertEqual(params["feature.data.ext.clear_tabs_latency_ms"] as? Int, 10000)
+    }
+
+    func testDurationFormatting_appliesToOverallLatency() {
+        // Given
+        let eventData = DataClearingWideEventData(
+            options: .all,
+            trigger: .manualFire,
+            contextData: WideEventContextData(name: "test-context")
+        )
+        let base = Date()
+        // Duration of 5.678 seconds (5678ms → rounds to 5680ms)
+        eventData.overallDuration = WideEvent.MeasuredInterval(
+            start: base,
+            end: base.addingTimeInterval(5.678)
+        )
+
+        // When
+        let params = eventData.jsonParameters()
+
+        // Then - verify overall latency is also processed
+        XCTAssertEqual(params["feature.data.ext.overall_latency_ms"] as? Int, 5680)
+    }
+
+    func testDurationFormatting_overallLatencyCappedAt10Seconds() {
+        // Given
+        let eventData = DataClearingWideEventData(
+            options: .all,
+            trigger: .manualFire,
+            contextData: WideEventContextData(name: "test-context")
+        )
+        let base = Date()
+        // Duration of 30 seconds → caps to 10000ms
+        eventData.overallDuration = WideEvent.MeasuredInterval(
+            start: base,
+            end: base.addingTimeInterval(30.0)
+        )
+
+        // When
+        let params = eventData.jsonParameters()
+
+        // Then
+        XCTAssertEqual(params["feature.data.ext.overall_latency_ms"] as? Int, 10000)
+    }
+
+    func testDurationFormatting_exactlyAtCap() {
+        // Given
+        let eventData = DataClearingWideEventData(
+            options: .all,
+            trigger: .manualFire,
+            contextData: WideEventContextData(name: "test-context")
+        )
+        let base = Date()
+        // Duration of exactly 10 seconds → should equal 10000ms (not capped)
+        eventData.clearTabsDuration = WideEvent.MeasuredInterval(
+            start: base,
+            end: base.addingTimeInterval(10.0)
+        )
+
+        // When
+        let params = eventData.jsonParameters()
+
+        // Then
+        XCTAssertEqual(params["feature.data.ext.clear_tabs_latency_ms"] as? Int, 10000)
+    }
+
+    func testDurationFormatting_handlesZero() {
+        // Given
+        let eventData = DataClearingWideEventData(
+            options: .all,
+            trigger: .manualFire,
+            contextData: WideEventContextData(name: "test-context")
+        )
+        let base = Date()
+        // Zero duration
+        eventData.clearTabsDuration = WideEvent.MeasuredInterval(
+            start: base,
+            end: base
+        )
+
+        // When
+        let params = eventData.jsonParameters()
+
+        // Then
+        XCTAssertEqual(params["feature.data.ext.clear_tabs_latency_ms"] as? Int, 0)
     }
 
     func testMetadata_valuesMatchSpec() {

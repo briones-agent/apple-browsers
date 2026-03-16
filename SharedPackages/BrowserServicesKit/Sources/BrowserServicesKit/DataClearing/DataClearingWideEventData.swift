@@ -436,10 +436,16 @@ extension DataClearingWideEventData {
 extension DataClearingWideEventData {
 
     public func jsonParameters() -> [String: Encodable] {
+        // Process overall latency with rounding and capping
+        let processedOverallLatency: Int? = {
+            guard let duration = overallDuration?.durationMilliseconds else { return nil }
+            return processedDuration(duration)
+        }()
+
         var params: [String: Encodable] = Dictionary(compacting: [
             (WideEventParameter.DataClearingFeature.options, options.rawValue),
             (WideEventParameter.DataClearingFeature.trigger, trigger.rawValue),
-            (WideEventParameter.DataClearingFeature.overallLatency, overallDuration?.intValue(.noBucketing)),
+            (WideEventParameter.DataClearingFeature.overallLatency, processedOverallLatency),
             (WideEventParameter.DataClearingFeature.scope, scope?.rawValue),
             (WideEventParameter.DataClearingFeature.source, source?.rawValue),
             (WideEventParameter.DataClearingFeature.path, path?.rawValue),
@@ -460,9 +466,27 @@ extension DataClearingWideEventData {
 
 private extension DataClearingWideEventData {
 
+    /// Processes duration for pixel reporting: rounds to 10ms precision and caps at 10 seconds.
+    ///
+    /// This ensures all duration values conform to the pixel schema constraints:
+    /// - `multipleOf: 10` - Round to nearest 10ms
+    /// - `maximum: 10000` - Cap at 10 seconds (10000ms)
+    ///
+    /// - Parameter durationMs: Raw duration in milliseconds
+    /// - Returns: Processed duration (rounded to 10ms, capped at 10000ms)
+    func processedDuration(_ durationMs: Int) -> Int {
+        // Round to nearest 10ms
+        let rounded = (Double(durationMs) / 10.0).rounded() * 10.0
+
+        // Cap at 10 seconds (10000ms) and ensure non-negative
+        let capped = min(max(rounded, 0), 10000.0)
+
+        return Int(capped)
+    }
+
     func addActionLatency(_ interval: WideEvent.MeasuredInterval?, action: Action, to params: inout [String: Encodable]) {
         guard let duration = interval?.durationMilliseconds else { return }
-        params[WideEventParameter.DataClearingFeature.latency(at: action)] = Int(duration)
+        params[WideEventParameter.DataClearingFeature.latency(at: action)] = processedDuration(duration)
     }
 
     func addActionStatus(_ status: ActionStatus?, action: Action, to params: inout [String: Encodable]) {
