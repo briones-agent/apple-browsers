@@ -133,7 +133,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
 
         XCTAssertFalse(viewModel.shouldShowDomainSelector)
 
-        viewModel.toggleOption("websites-didnt-work")
+        viewModel.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         XCTAssertTrue(viewModel.shouldShowDomainSelector)
     }
 
@@ -150,7 +150,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
             onQuit: {}
         )
 
-        viewModel.toggleOption("websites-didnt-work")
+        viewModel.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         XCTAssertFalse(viewModel.shouldShowDomainSelector)
     }
 
@@ -162,7 +162,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
         let sender = MockFeedbackSender()
         let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), historyCoordinating: historyCoordinating, onQuit: {})
         vm.selectNegativeResponse()
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleDomain("a.com")
         vm.submitFeedback()
         XCTAssertTrue(sender.lastFeedback?.comment.contains("a.com") == true)
@@ -171,7 +171,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testSubmitFeedbackIncludesOtherDomainTextWhenSelectedAndFilled() {
         let sender = MockFeedbackSender()
         let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleOtherDomain()
         vm.otherDomainText = "custom.example.com"
         vm.submitFeedback()
@@ -181,7 +181,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testSubmitFeedbackExcludesOtherDomainTextWhenNotSelected() {
         let sender = MockFeedbackSender()
         let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.otherDomainText = "custom.example.com" // set text without toggling the checkbox
         vm.submitFeedback()
         XCTAssertFalse(sender.lastFeedback?.comment.contains("custom.example.com") == true)
@@ -190,7 +190,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testSubmitFeedbackExcludesOtherDomainTextWhenWhitespaceOnly() {
         let sender = MockFeedbackSender()
         let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleOtherDomain()
         vm.otherDomainText = "   "
         vm.submitFeedback()
@@ -210,12 +210,12 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testDeselectingWebsitesPillClearsDomainState() {
         let sender = MockFeedbackSender()
         let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleDomain("example.com")
         vm.toggleOtherDomain()
         vm.otherDomainText = "other.com"
 
-        vm.toggleOption("websites-didnt-work") // deselect the pill
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId) // deselect the pill
 
         XCTAssertTrue(vm.selectedDomains.isEmpty)
         XCTAssertFalse(vm.isOtherDomainSelected)
@@ -225,12 +225,12 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testDeselectingWebsitesPillMeansDomainsNotSubmitted() {
         let sender = MockFeedbackSender()
         let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleDomain("example.com")
         vm.toggleOtherDomain()
         vm.otherDomainText = "other.com"
 
-        vm.toggleOption("websites-didnt-work") // deselect the pill
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId) // deselect the pill
         vm.toggleOption("slow-to-open") // select a different pill so submit is enabled
         vm.submitFeedback()
 
@@ -241,7 +241,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
     func testGoBackClearsDomainState() {
         let vm = QuitSurveyViewModel(featureFlagger: MockFeatureFlagger(), onQuit: {})
         vm.selectNegativeResponse()
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleDomain("example.com")
         vm.toggleOtherDomain()
         vm.otherDomainText = "other.com"
@@ -259,7 +259,7 @@ final class QuitSurveyViewModelTests: XCTestCase {
         let pixelMock = PixelKitMock(expecting: [])
         let sender = MockFeedbackSender()
         let vm = makeViewModel(feedbackSender: sender, pixelFiring: pixelMock)
-        vm.toggleOption("websites-didnt-work")
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
         vm.toggleDomain("example.com")
         vm.submitFeedback()
 
@@ -268,6 +268,23 @@ final class QuitSurveyViewModelTests: XCTestCase {
         }
         XCTAssertNotNil(submissionCall)
         XCTAssertEqual(submissionCall?.pixel.parameters?["affected_domains"], "example.com")
+    }
+
+    func testSubmitFeedbackStripsCommasFromOtherDomainTextInPixel() {
+        let pixelMock = PixelKitMock(expecting: [])
+        let sender = MockFeedbackSender()
+        let vm = makeViewModel(feedbackSender: sender, pixelFiring: pixelMock)
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "a.com,b.com"
+        vm.submitFeedback()
+
+        let submissionCall = pixelMock.actualFireCalls.first {
+            $0.pixel.name == QuitSurveyPixelName.quitSurveyThumbsDownSubmission.rawValue
+        }
+        let affectedDomains = submissionCall?.pixel.parameters?["affected_domains"]
+        XCTAssertNotNil(affectedDomains)
+        XCTAssertFalse(affectedDomains?.contains(",") == true, "Commas in other domain text must not corrupt the pixel separator")
     }
 
     func testSubmitFeedbackDoesNotIncludeAffectedDomainsParameterWhenNoneSelected() {

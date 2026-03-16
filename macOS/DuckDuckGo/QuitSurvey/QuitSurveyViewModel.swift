@@ -82,7 +82,7 @@ final class QuitSurveyViewModel: ObservableObject {
     private static let allOptions: [QuitSurveyOption] = [
         QuitSurveyOption(id: "pages-froze", text: UserText.quitSurveyOptionPagesFroze),
         QuitSurveyOption(id: "pages-loaded-slowly", text: UserText.quitSurveyOptionPagesLoadedSlowly),
-        QuitSurveyOption(id: "websites-didnt-work", text: UserText.quitSurveyOptionWebsitesDidntWork),
+        QuitSurveyOption(id: websitesDidntWorkOptionId, text: UserText.quitSurveyOptionWebsitesDidntWork),
         QuitSurveyOption(id: "browser-crashed", text: UserText.quitSurveyOptionBrowserCrashed),
         QuitSurveyOption(id: "tabs-opened-slowly", text: UserText.quitSurveyOptionTabsOpenedSlowly),
         QuitSurveyOption(id: "slowed-my-computer", text: UserText.quitSurveyOptionSlowedMyComputer),
@@ -101,7 +101,8 @@ final class QuitSurveyViewModel: ObservableObject {
         QuitSurveyOption(id: "issue-importing-my-stuff", text: UserText.quitSurveyOptionIssueImportingMyStuff)
     ]
 
-    private static let websitesDidntWorkOption = QuitSurveyOption(id: "websites-didnt-work", text: UserText.quitSurveyOptionWebsitesDidntWork)
+    static let websitesDidntWorkOptionId = "websites-didnt-work"
+    private static let websitesDidntWorkOption = QuitSurveyOption(id: websitesDidntWorkOptionId, text: UserText.quitSurveyOptionWebsitesDidntWork)
     private static let somethingElseOption = QuitSurveyOption(id: "something-else", text: UserText.quitSurveyOptionSomethingElse)
 
     let availableOptions: [QuitSurveyOption]
@@ -126,7 +127,7 @@ final class QuitSurveyViewModel: ObservableObject {
 
     var shouldShowDomainSelector: Bool {
         featureFlagger.isFeatureOn(.websitesHistoryFirstTimeQuitSurvey)
-            && selectedOptions.contains("websites-didnt-work")
+            && selectedOptions.contains(Self.websitesDidntWorkOption.id)
             && !recentDomains.isEmpty
     }
 
@@ -193,7 +194,7 @@ final class QuitSurveyViewModel: ObservableObject {
     func toggleOption(_ optionId: String) {
         if selectedOptions.contains(optionId) {
             selectedOptions.remove(optionId)
-            if optionId == "websites-didnt-work" {
+            if optionId == Self.websitesDidntWorkOption.id {
                 clearDomainState()
             }
         } else {
@@ -226,7 +227,9 @@ final class QuitSurveyViewModel: ObservableObject {
         isSubmitting = true
 
         var effectiveDomains = selectedDomains
-        let trimmedOther = otherDomainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedOther = otherDomainText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: "")
         if isOtherDomainSelected && !trimmedOther.isEmpty {
             effectiveDomains.insert(trimmedOther)
         }
