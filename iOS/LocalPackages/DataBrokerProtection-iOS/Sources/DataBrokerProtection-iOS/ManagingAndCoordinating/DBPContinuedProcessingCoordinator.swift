@@ -89,8 +89,13 @@ final class DBPContinuedProcessingCoordinator {
         let taskIdentifier = makeTaskIdentifier()
         self.taskIdentifier = taskIdentifier
         Logger.dataBrokerProtection.log("Continued processing: starting run \(self.logRunIdentifier(), privacy: .public) with task identifier \(taskIdentifier, privacy: .public)")
-        try registerTaskHandlerIfNeeded(identifier: taskIdentifier)
-        try submitTaskRequest(identifier: taskIdentifier)
+        do {
+            try registerTaskHandlerIfNeeded()
+            try submitTaskRequest(identifier: taskIdentifier)
+        } catch {
+            finish(success: false)
+            throw error
+        }
 
         await startScanPhase()
     }
