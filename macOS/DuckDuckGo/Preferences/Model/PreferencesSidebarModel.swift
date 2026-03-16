@@ -377,7 +377,7 @@ final class PreferencesSidebarModel: ObservableObject {
 
     private var hasLoadedInitialSubscriptionState: Bool = false
 
-    private func refreshSubscriptionStateAndSectionsIfNeeded() {
+    private func refreshSubscriptionStateAndSectionsIfNeeded(retryCount: Int = 0) {
         Task { @MainActor in
             do {
                 let updatedState = try await makeSubscriptionState()
@@ -402,7 +402,11 @@ final class PreferencesSidebarModel: ObservableObject {
                     self.refreshSections()
                 }
             } catch SubscriptionManagerError.noTokenAvailable {
-                refreshSubscriptionStateAndSectionsIfNeeded()
+                guard retryCount < 3 else {
+                    Logger.general.error("Failed to refresh subscription state after maximum retries: noTokenAvailable")
+                    return
+                }
+                refreshSubscriptionStateAndSectionsIfNeeded(retryCount: retryCount + 1)
             } catch {
                 Logger.general.error("Failed to refresh subscription state: \(error, privacy: .public)")
             }
