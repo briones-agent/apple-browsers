@@ -277,30 +277,6 @@
 /* Scan or See Code View - Title */
 "scan.or.see.code.title" = "Scan QR Code";
 
-/* Simplified Sync Settings - Already set up section header */
-"simplified.already.set.up.section.header" = "Already set up on another device?";
-
-/* Simplified Sync Settings - Get Desktop Browser row subtitle */
-"simplified.get.desktop.browser.subtitle" = "DuckDuckGo for Mac and Windows";
-
-/* Simplified Sync Settings - Get Desktop Browser row title */
-"simplified.get.desktop.browser.title" = "Get Desktop Browser";
-
-/* Simplified Sync Settings - Header description message when AI chat sync is enabled */
-"simplified.sync.header.message" = "Save your bookmarks, autofill data, and Duck.ai chats, and sync them between your devices with end-to-end encryption.";
-
-/* Simplified Sync Settings - Header description message when AI chat sync is not enabled */
-"simplified.sync.header.message.basic" = "Save your bookmarks and autofill data, and sync them between your devices with end-to-end encryption.";
-
-/* Simplified Sync Settings - Toggle Title */
-"simplified.sync.toggle.title" = "Sync & Backup";
-
-/* Simplified Sync Settings - Sync With Another Device button label */
-"simplified.sync.with.another.device.button" = "Sync With Another Device";
-
-/* Simplified Sync Settings - Use Recovery Code button label */
-"simplified.use.recovery.code.button" = "Use Recovery Code";
-
 /* Link label for syncing and backing up the device */
 "sync.and.backup.this.device.link" = "Sync and Back Up This Device";
 
