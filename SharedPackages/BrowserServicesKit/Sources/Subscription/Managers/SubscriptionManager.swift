@@ -50,6 +50,7 @@ public protocol SubscriptionManager: SubscriptionTokenProvider, SubscriptionAuth
     /// - Parameter forceRefresh: When `true`, skips the cache and fetches the subscription from the remote backend. When `false`, returns the cached subscription if available, otherwise fetches remotely.
     /// - Returns: The subscription if available, or `nil` if no subscription exists on the backend.
     /// - Throws: `SubscriptionManagerError.noTokenAvailable` if the user is not authenticated. `SubscriptionManagerError.noLocalSubscription` if the token is invalid and no cached subscription is available.
+    /// - Note: This method may post `.subscriptionDidChange` notifications from an arbitrary async context. Subscribers must dispatch to the main thread if needed (e.g. `.receive(on: DispatchQueue.main)`).
     @discardableResult func getSubscription(forceRefresh: Bool) async throws -> DuckDuckGoSubscription?
 
     /// - Returns: true is a subscription (expired or not) is present, false otherwise.
