@@ -261,4 +261,3 @@ final class QuitSurveyUserDefaultsPersistor: QuitSurveyPersistor {
     }
 
 }
-
