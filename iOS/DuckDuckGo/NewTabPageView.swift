@@ -111,10 +111,21 @@ private extension NewTabPageView {
 
     @ViewBuilder
     private var emptyStateView: some View {
+        if viewModel.fireTab {
+            FireModeEmptyStateView(type: .tab,
+                                   escapeHatch: viewModel.escapeHatch,
+                                   onEscapeHatchTap: viewModel.onEscapeHatchTap)
+        } else {
+            logoEmptyView
+        }
+    }
+    
+    @ViewBuilder
+    private var logoEmptyView: some View {
         GeometryReader { proxy in
             ZStack {
                 if shouldShowLogoInEmptyState {
-                    mainEmptyView
+                    NewTabPageDaxLogoView()
                 }
 
                 ScrollView {
@@ -137,15 +148,6 @@ private extension NewTabPageView {
         .if(dismissKeyboardOnScroll, transform: {
             $0.ignoresSafeArea(.keyboard)
         })
-    }
-    
-    @ViewBuilder
-    private var mainEmptyView: some View {
-        if viewModel.fireTab {
-            FireModeEmptyStateView(type: .tab)
-        } else {
-            NewTabPageDaxLogoView()
-        }
     }
 
     private var shouldShowLogoInEmptyState: Bool {

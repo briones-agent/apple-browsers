@@ -45,6 +45,9 @@ struct FireModeEmptyStateView: View {
     // MARK: - Variables
 
     private let type: ViewType
+    private let escapeHatch: EscapeHatchModel?
+    private let onEscapeHatchTap: (() -> Void)?
+
     private var onNewFireTab: NewFireTabBlock? {
         if case .tabSwitcher(let onNewFireTab) = type {
             return onNewFireTab
@@ -54,8 +57,12 @@ struct FireModeEmptyStateView: View {
 
     // MARK: - Initializer
     
-    init(type: ViewType) {
+    init(type: ViewType,
+         escapeHatch: EscapeHatchModel? = nil,
+         onEscapeHatchTap: (() -> Void)? = nil) {
         self.type = type
+        self.escapeHatch = escapeHatch
+        self.onEscapeHatchTap = onEscapeHatchTap
     }
     
     // MARK: - Body
@@ -63,6 +70,7 @@ struct FireModeEmptyStateView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Constants.mainSectionSpacing) {
+                escapeHatchSection
                 headerSection
                 contentCard
             }
@@ -71,6 +79,15 @@ struct FireModeEmptyStateView: View {
             .frame(maxWidth: Constants.maxViewWidth)
         }
         .modifier(ScrollBounceBehaviorModifier())
+    }
+
+    // MARK: - Escape Hatch
+
+    @ViewBuilder
+    private var escapeHatchSection: some View {
+        if let escapeHatch, let onEscapeHatchTap {
+            ReturnToTabCard(model: escapeHatch, onTap: onEscapeHatchTap)
+        }
     }
 
     // MARK: - Header
