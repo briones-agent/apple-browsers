@@ -259,6 +259,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212901927858518?focus=true
     case supportsSyncChatsDeletion
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213433942918287?focus=true
+    case aiChatMultiplePageContexts
+
     /// https://app.asana.com/1/137249556945/task/1213316822018797
     case aiChatSidebarResizable
 
@@ -290,6 +293,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// Enables the promo service to coordinate promos/calls to action
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213431687119179?focus=true
     case promoQueue
+
+    /// Enables the new Tab Animations (Milestone 1)
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213643457004332
+    case tabAnimations
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -321,7 +328,9 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .aiChatChromeSidebar,
                 .nextStepsListWidget,
                 .webViewLookUpAction,
-                .startupMetrics:
+                .startupMetrics,
+                .promoQueue,
+                .tabAnimations:
             true
         default:
             false
@@ -408,6 +417,7 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .wideEventPostEndpoint,
                 .freeTrialConversionWideEvent,
                 .supportsSyncChatsDeletion,
+                .aiChatMultiplePageContexts,
                 .aiChatSidebarResizable,
                 .aiChatNtpRecentChats,
                 .aiChatSidebarFloating,
@@ -416,7 +426,8 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .aiChatChromeSidebar,
                 .webViewLookUpAction,
                 .promoQueue,
-                .semaphoreAlwaysVisible:
+                .semaphoreAlwaysVisible,
+                .tabAnimations:
             return true
         case .freemiumDBP,
                 .contextualOnboarding,
@@ -580,6 +591,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.freeTrialConversionWideEvent))
         case .supportsSyncChatsDeletion:
             return .remoteReleasable(.subfeature(AIChatSubfeature.supportsSyncChatsDeletion))
+        case .aiChatMultiplePageContexts:
+            return .remoteReleasable(.subfeature(AIChatSubfeature.multiplePageContexts))
         case .aiChatSidebarResizable:
             return .remoteReleasable(.subfeature(AIChatSubfeature.sidebarResizable))
         case .aiChatNtpRecentChats:
@@ -597,7 +610,9 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .semaphoreAlwaysVisible:
             return .internalOnly()
         case .promoQueue:
-            return .disabled
+            return .remoteReleasable(.feature(.promoQueue))
+        case .tabAnimations:
+            return .internalOnly()
         }
     }
 }

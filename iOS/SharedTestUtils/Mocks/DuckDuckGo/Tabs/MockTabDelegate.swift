@@ -245,8 +245,9 @@ final class MockPrivacyStats: PrivacyStatsProviding {
         return total
     }
 
-    func clearPrivacyStats() async {
+    func clearPrivacyStats() async -> Result<Void, Error> {
         clearCallCount += 1
+        return .success(())
     }
 
     func handleAppTermination() async {
