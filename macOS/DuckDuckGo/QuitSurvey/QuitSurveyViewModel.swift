@@ -159,11 +159,13 @@ final class QuitSurveyViewModel: ObservableObject {
         var seen = Set<String>()
         return entries
             .sorted { $0.lastVisit > $1.lastVisit }
-            .filter { $0.url.host != nil }
-            .filter { seen.insert($0.url.host!).inserted }
+            .compactMap { entry -> (HistoryEntry, String)? in
+                guard let host = entry.url.host else { return nil }
+                return (entry, host)
+            }
+            .filter { seen.insert($0.1).inserted }
             .prefix(5)
-            .map { entry in
-                let domain = entry.url.host!
+            .map { (entry, domain) in
                 let title = entry.title.flatMap { $0.isEmpty ? nil : $0 }
                 let favicon = faviconManaging?.getCachedFavicon(forDomainOrAnySubdomain: domain, sizeCategory: .small)?.image
                 return QuitSurveyDomainEntry(domain: domain, title: title, favicon: favicon)
