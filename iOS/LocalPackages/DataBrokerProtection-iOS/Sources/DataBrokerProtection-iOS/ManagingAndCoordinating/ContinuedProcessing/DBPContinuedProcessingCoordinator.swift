@@ -50,7 +50,7 @@ final class DBPContinuedProcessingCoordinator {
     }
 
     private enum Constants {
-        static let taskIdentifierSuffix = "dbp.continuedProcessing"
+        static let taskIdentifierPrefix = "dbp.continuedProcessing"
         static let taskTitle = "Personal Information Removal"
         static let heartbeatInterval: TimeInterval = 1.5
     }
@@ -61,7 +61,6 @@ final class DBPContinuedProcessingCoordinator {
     private var taskIdentifier: String?
     private var phase: Phase?
     private var task: BGContinuedProcessingTask?
-    private var hasRegisteredTaskHandler = false
     private var heartbeatTimer: Timer?
 
     var hasAttachedTask: Bool {
@@ -215,10 +214,10 @@ final class DBPContinuedProcessingCoordinator {
 
     /// Creates a unique task identifier, registers the handler, and submits the continued task request.
     private func registerAndSubmitTask() throws {
-        let taskIdentifier = makeTaskIdentifier()
+        let taskIdentifier = makeUniqueTaskIdentifier()
         self.taskIdentifier = taskIdentifier
         Logger.dataBrokerProtection.log("Continued processing: starting run \(self.logRunIdentifier(), privacy: .public) with task identifier \(taskIdentifier, privacy: .public)")
-        try registerTaskHandlerIfNeeded()
+        try registerTaskHandler(identifier: taskIdentifier)
         try submitTaskRequest(identifier: taskIdentifier)
     }
 
@@ -242,8 +241,8 @@ final class DBPContinuedProcessingCoordinator {
         refreshContinuedProcessingUI()
     }
 
-    private func makeTaskIdentifier() -> String {
-        "\(requiredBundleIdentifier()).\(Constants.taskIdentifierSuffix)"
+    private func makeUniqueTaskIdentifier() -> String {
+        "\(requiredBundleIdentifier()).\(Constants.taskIdentifierPrefix).\(UUID().uuidString)"
     }
 
     private func requiredBundleIdentifier() -> String {
@@ -261,14 +260,8 @@ final class DBPContinuedProcessingCoordinator {
     }
 
     @available(iOS 26.0, *)
-    /// Registers the continued task handler once using the concrete task identifier.
-    private func registerTaskHandlerIfNeeded() throws {
-        guard !hasRegisteredTaskHandler else {
-            Logger.dataBrokerProtection.log("Continued processing: task handler already registered")
-            return
-        }
-
-        let taskIdentifier = makeTaskIdentifier()
+    /// Registers the continued task handler using the unique task identifier.
+    private func registerTaskHandler(identifier taskIdentifier: String) throws {
         Logger.dataBrokerProtection.log(
             "Continued processing: registering task handler for identifier \(taskIdentifier, privacy: .public)"
         )
@@ -296,7 +289,6 @@ final class DBPContinuedProcessingCoordinator {
         Logger.dataBrokerProtection.log(
             "Continued processing: successfully registered task handler for identifier \(taskIdentifier, privacy: .public)"
         )
-        hasRegisteredTaskHandler = true
     }
 
     @available(iOS 26.0, *)
