@@ -177,6 +177,7 @@ final class BrokerProfileJobTests: XCTestCase {
         let database = MockDatabase()
         let mockDependencies = MockBrokerProfileJobDependencies()
         mockDependencies.database = database
+        mockDependencies.mockScanRunner.shouldScanThrow = true
 
         let brokerId: Int64 = 7
         let profileQueryId: Int64 = 11
