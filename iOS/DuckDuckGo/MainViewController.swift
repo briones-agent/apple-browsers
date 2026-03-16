@@ -1347,11 +1347,16 @@ class MainViewController: UIViewController {
         guard let tabModel = tabManager.currentTabsModel.currentTab else {
             fatalError("No tab model")
         }
+        
+        let shouldSaveTabs = tabModel.viewed == false || tabModel.openedAfterIdle != openedAfterIdle
 
         // Attaching HomeScreen means it's going to be displayed immediately.
         // This value gets updated on didAppear so after we leave this function so **after** `refreshControls` is done already, which leads to dot being visible on tab switcher icon on newly opened tab page.
         tabModel.viewed = true
         tabModel.openedAfterIdle = openedAfterIdle
+        if shouldSaveTabs {
+            tabManager.save()
+        }
 
         let newTabDaxDialogFactory = NewTabDaxDialogsProvider(featureFlagger: featureFlagger, delegate: self, daxDialogsFlowCoordinator: daxDialogsManager, onboardingPixelReporter: contextualOnboardingPixelReporter)
         let narrowLayoutInLandscape = aiChatSettings.isAIChatSearchInputUserSettingsEnabled
