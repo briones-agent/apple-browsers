@@ -48,7 +48,7 @@ final class DBPContinuedProcessingCoordinator {
     }
 
     private enum Constants {
-        static let taskIdentifierPrefix = "dbp.continuedProcessing"
+        static let taskIdentifierSuffix = "dbp.continuedProcessing"
         static let taskTitle = "Personal Information Removal"
         static let taskSubtitle = "In Progress"
     }
@@ -86,7 +86,7 @@ final class DBPContinuedProcessingCoordinator {
         phase = .initialScan
         manager.continuedProcessingDelegate = self
 
-        let taskIdentifier = makeUniqueTaskIdentifier()
+        let taskIdentifier = makeTaskIdentifier()
         self.taskIdentifier = taskIdentifier
         Logger.dataBrokerProtection.log("Continued processing: starting run \(self.logRunIdentifier(), privacy: .public) with task identifier \(taskIdentifier, privacy: .public)")
         do {
@@ -189,12 +189,8 @@ final class DBPContinuedProcessingCoordinator {
         return String(format: "%.1fs", Date().timeIntervalSince(runStartedAt))
     }
 
-    private func makeUniqueTaskIdentifier() -> String {
-        "\(requiredBundleIdentifier()).\(Constants.taskIdentifierPrefix).\(UUID().uuidString)"
-    }
-
-    private func makeTaskRegistrationIdentifier() -> String {
-        "\(requiredBundleIdentifier()).\(Constants.taskIdentifierPrefix).*"
+    private func makeTaskIdentifier() -> String {
+        "\(requiredBundleIdentifier()).\(Constants.taskIdentifierSuffix)"
     }
 
     private func requiredBundleIdentifier() -> String {
@@ -217,12 +213,12 @@ final class DBPContinuedProcessingCoordinator {
             return
         }
 
-        let registrationIdentifier = makeTaskRegistrationIdentifier()
+        let taskIdentifier = makeTaskIdentifier()
         Logger.dataBrokerProtection.log(
-            "Continued processing: registering task handler for identifier \(registrationIdentifier, privacy: .public)"
+            "Continued processing: registering task handler for identifier \(taskIdentifier, privacy: .public)"
         )
 
-        let didRegister = BGTaskScheduler.shared.register(forTaskWithIdentifier: registrationIdentifier, using: nil) { [weak self] task in
+        let didRegister = BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { [weak self] task in
             Logger.dataBrokerProtection.log("Continued processing: task handler invoked for identifier \(task.identifier, privacy: .public)")
             guard let continuedTask = task as? BGContinuedProcessingTask else {
                 Logger.dataBrokerProtection.error("Continued processing: received non-continued task for identifier \(task.identifier, privacy: .public)")
@@ -237,13 +233,13 @@ final class DBPContinuedProcessingCoordinator {
 
         guard didRegister else {
             Logger.dataBrokerProtection.error(
-                "Continued processing: failed to register task handler for identifier \(registrationIdentifier, privacy: .public)"
+                "Continued processing: failed to register task handler for identifier \(taskIdentifier, privacy: .public)"
             )
             throw DBPContinuedProcessingError.taskHandlerRegistrationFailed
         }
 
         Logger.dataBrokerProtection.log(
-            "Continued processing: successfully registered task handler for identifier \(registrationIdentifier, privacy: .public)"
+            "Continued processing: successfully registered task handler for identifier \(taskIdentifier, privacy: .public)"
         )
         hasRegisteredTaskHandler = true
     }
