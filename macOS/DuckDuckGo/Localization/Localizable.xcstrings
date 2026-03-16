@@ -85748,18 +85748,6 @@
         }
       }
     },
-    "quit-survey.affected-domains.subtitle" : {
-      "comment" : "Subtitle for quit survey domain selection screen",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Select all that apply"
-          }
-        }
-      }
-    },
     "quit-survey.affected-domains.title" : {
       "comment" : "Title for quit survey domain selection screen",
       "extractionState" : "extracted_with_value",
@@ -86128,18 +86116,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "С какими проблемами вы столкнулись?"
-          }
-        }
-      }
-    },
-    "quit-survey.next" : {
-      "comment" : "Next button in quit survey",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Next"
           }
         }
       }

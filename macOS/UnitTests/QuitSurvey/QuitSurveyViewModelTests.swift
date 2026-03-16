@@ -145,4 +145,89 @@ final class QuitSurveyViewModelTests: XCTestCase {
         vm.submitFeedback()
         XCTAssertTrue(sender.lastFeedback?.comment.contains("a.com") == true)
     }
+
+    func testSubmitFeedbackIncludesOtherDomainTextWhenSelectedAndFilled() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption("websites-didnt-work")
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "custom.example.com"
+        vm.submitFeedback()
+        XCTAssertTrue(sender.lastFeedback?.comment.contains("custom.example.com") == true)
+    }
+
+    func testSubmitFeedbackExcludesOtherDomainTextWhenNotSelected() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption("websites-didnt-work")
+        vm.otherDomainText = "custom.example.com" // set text without toggling the checkbox
+        vm.submitFeedback()
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("custom.example.com") == true)
+    }
+
+    func testSubmitFeedbackExcludesOtherDomainTextWhenWhitespaceOnly() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption("websites-didnt-work")
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "   "
+        vm.submitFeedback()
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("Affected domains") == true)
+    }
+
+    func testToggleOtherDomainClearsTextOnDeselect() {
+        let vm = QuitSurveyViewModel(featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "custom.example.com"
+        vm.toggleOtherDomain() // deselect
+        XCTAssertTrue(vm.otherDomainText.isEmpty)
+    }
+
+    // MARK: - Bug fixes
+
+    func testDeselectingWebsitesPillClearsDomainState() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption("websites-didnt-work")
+        vm.toggleDomain("example.com")
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "other.com"
+
+        vm.toggleOption("websites-didnt-work") // deselect the pill
+
+        XCTAssertTrue(vm.selectedDomains.isEmpty)
+        XCTAssertFalse(vm.isOtherDomainSelected)
+        XCTAssertTrue(vm.otherDomainText.isEmpty)
+    }
+
+    func testDeselectingWebsitesPillMeansDomainsNotSubmitted() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption("websites-didnt-work")
+        vm.toggleDomain("example.com")
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "other.com"
+
+        vm.toggleOption("websites-didnt-work") // deselect the pill
+        vm.toggleOption("slow-to-open") // select a different pill so submit is enabled
+        vm.submitFeedback()
+
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("example.com") == true)
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("other.com") == true)
+    }
+
+    func testGoBackClearsDomainState() {
+        let vm = QuitSurveyViewModel(featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.selectNegativeResponse()
+        vm.toggleOption("websites-didnt-work")
+        vm.toggleDomain("example.com")
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "other.com"
+
+        vm.goBack()
+
+        XCTAssertTrue(vm.selectedDomains.isEmpty)
+        XCTAssertFalse(vm.isOtherDomainSelected)
+        XCTAssertTrue(vm.otherDomainText.isEmpty)
+    }
 }

@@ -183,15 +183,25 @@ final class QuitSurveyViewModel: ObservableObject {
         stopAutoQuitTimer()
         selectedOptions.removeAll()
         feedbackText = ""
+        clearDomainState()
         state = .initialQuestion
     }
 
     func toggleOption(_ optionId: String) {
         if selectedOptions.contains(optionId) {
             selectedOptions.remove(optionId)
+            if optionId == "websites-didnt-work" {
+                clearDomainState()
+            }
         } else {
             selectedOptions.insert(optionId)
         }
+    }
+
+    private func clearDomainState() {
+        selectedDomains.removeAll()
+        isOtherDomainSelected = false
+        otherDomainText = ""
     }
 
     func toggleDomain(_ domain: String) {
