@@ -215,6 +215,10 @@ public final class DataBrokerProtectionIOSManager {
         return false
     }
 
+    private var isInitialContinuedProcessingRunActive: Bool {
+        continuedProcessingDelegate != nil
+    }
+
     /// Snapshots the current authentication state and caches whether this is a free scan run.
     /// Returns the current `isAuthenticated` value for callers that need it.
     @discardableResult
@@ -343,7 +347,8 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
         let operationPreferredDateUpdater = OperationPreferredDateUpdater(database: jobDependencies.database)
         operationPreferredDateUpdater.runPreferredRunDateNilMigrationIfNeeded(settings: jobDependencies.dataBrokerProtectionSettings)
 
-        if featureFlagger.isForegroundRunningOnAppActiveFeatureOn {
+        if featureFlagger.isForegroundRunningOnAppActiveFeatureOn,
+           !isInitialContinuedProcessingRunActive {
             await startImmediateScanOperations()
         } else {
             await checkForEmailConfirmationData()
@@ -372,7 +377,8 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.UserEventsDelegate {
     public func dashboardDidOpen() {
-        guard featureFlagger.isForegroundRunningWhenDashboardOpenFeatureOn else { return }
+        guard featureFlagger.isForegroundRunningWhenDashboardOpenFeatureOn,
+              !isInitialContinuedProcessingRunActive else { return }
 
         Logger.dataBrokerProtection.log("Starting all operations whilst dashboard open")
         queueManager.startScheduledAllOperationsIfPermitted(showWebView: false, jobDependencies: jobDependencies, errorHandler: nil) {
