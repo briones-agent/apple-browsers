@@ -479,6 +479,16 @@ hasActiveTrialOffer: \(hasTrialOffer, privacy: .public)
         do {
             guard let subscription = try await subscriptionManager.getSubscription(forceRefresh: forceRefresh) else {
                 Logger.subscription.log("No subscription available")
+                subscriptionDetails = nil
+                cancelPendingDowngradeDetails = nil
+                subscriptionStatus = .unknown
+                hasActiveTrialOffer = false
+                subscriptionTier = nil
+                subscriptionPlatform = nil
+                isSubscriptionActive = false
+                availableChanges = nil
+                pendingPlans = nil
+                currentProductID = nil
                 return
             }
             Task { @MainActor in

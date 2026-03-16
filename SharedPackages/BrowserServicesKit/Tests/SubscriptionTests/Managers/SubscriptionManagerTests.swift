@@ -234,6 +234,38 @@ class SubscriptionManagerTests: XCTestCase {
         XCTAssertNil(subscription)
     }
 
+    func testGetSubscription_TransientError_ReturnsCachedSubscription() async throws {
+        // Populate the cache with an active subscription
+        let cachedSubscription = DuckDuckGoSubscription(
+            productId: "testProduct",
+            name: "Test Subscription",
+            billingPeriod: .monthly,
+            startedAt: Date().addingTimeInterval(.minutes(-5)),
+            expiresOrRenewsAt: Date().addingTimeInterval(.days(30)),
+            platform: .stripe,
+            status: .autoRenewable,
+            activeOffers: [],
+            tier: nil,
+            availableChanges: nil,
+            pendingPlans: nil
+        )
+        mockSubscriptionEndpointService.getSubscriptionResult = .success(cachedSubscription)
+        mockSubscriptionEndpointService.getSubscriptionTierFeaturesResult = .success(GetSubscriptionTierFeaturesResponse(features: [:]))
+        let tokenContainer = OAuthTokensFactory.makeValidTokenContainer()
+        mockOAuthClient.getTokensResponse = .success(tokenContainer)
+        mockOAuthClient.internalCurrentTokenContainer = tokenContainer
+
+        _ = try await subscriptionManager.getSubscription(forceRefresh: true)
+
+        // Now simulate a transient backend error on the next forceRefresh
+        mockSubscriptionEndpointService.getSubscriptionResult = .failure(.invalidResponseCode(.internalServerError))
+
+        let result = try await subscriptionManager.getSubscription(forceRefresh: true)
+        XCTAssertNotNil(result, "Should fall back to the cached subscription on transient error")
+        XCTAssertEqual(result?.productId, cachedSubscription.productId)
+        XCTAssertTrue(result!.isActive)
+    }
+
     func testGetSubscription_CachedSubscription_ReturnsCachedWithoutRefresh() async throws {
         // First, populate the cache with an active subscription
         let activeSubscription = DuckDuckGoSubscription(
