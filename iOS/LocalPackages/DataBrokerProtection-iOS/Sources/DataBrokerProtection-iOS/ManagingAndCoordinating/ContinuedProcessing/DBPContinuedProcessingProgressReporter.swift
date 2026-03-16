@@ -218,7 +218,7 @@ final class DBPContinuedProcessingProgressReporter {
 
     /// Builds the opt-out-phase subtitle shown by the system task UI.
     var optOutSubtitle: String {
-        optOutProgress.allottedUnitsByID.count > 0 ? "Submitting opt-out requests" : "Submitting opt-out requests"
+        "Submitting opt-out requests"
     }
 
     // MARK: - Helpers
