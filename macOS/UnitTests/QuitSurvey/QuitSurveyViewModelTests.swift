@@ -132,32 +132,6 @@ final class QuitSurveyViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.shouldShowDomainSelector)
     }
 
-    func testGoBackFromDomainSelectionReturnsToNegativeFeedbackAndClearsDomains() {
-        let historyCoordinating = HistoryCoordinatingMock()
-        historyCoordinating.history = [
-            makeEntry(host: "example.com", lastVisit: Date()),
-        ]
-
-        let viewModel = QuitSurveyViewModel(
-            persistor: nil,
-            featureFlagger: MockFeatureFlagger(),
-            historyCoordinating: historyCoordinating,
-            onQuit: {}
-        )
-
-        viewModel.selectNegativeResponse()
-        viewModel.proceedToDomainSelection()
-        viewModel.toggleDomain("example.com")
-
-        XCTAssertEqual(viewModel.state, .domainSelection)
-        XCTAssertFalse(viewModel.selectedDomains.isEmpty)
-
-        viewModel.goBackFromDomainSelection()
-
-        XCTAssertEqual(viewModel.state, .negativeFeedback)
-        XCTAssertTrue(viewModel.selectedDomains.isEmpty)
-    }
-
     func testSubmitFeedbackIncludesDomainsInFeedbackText() {
         let historyCoordinating = HistoryCoordinatingMock()
         historyCoordinating.history = [

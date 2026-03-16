@@ -119,8 +119,6 @@ final class MainMenu: NSMenu {
     let toggleWatchdogMenuItem = NSMenuItem(title: "Toggle Hang Watchdog", action: #selector(MainViewController.toggleWatchdog))
     let toggleWatchdogCrashMenuItem = NSMenuItem(title: "Crash on timeout", action: #selector(MainViewController.toggleWatchdogCrash))
     let alwaysShowFirstTimeQuitSurvey = NSMenuItem(title: "Always Show First-Time Quit Survey", action: #selector(MainViewController.alwaysShowFirstTimeQuitSurvey))
-    let quitSurveyVariantInlineMenuItem = NSMenuItem(title: "Quit Survey Variant: Inline", action: #selector(MainViewController.setQuitSurveyVariantInline))
-    let quitSurveyVariantNewStepMenuItem = NSMenuItem(title: "Quit Survey Variant: New Step", action: #selector(MainViewController.setQuitSurveyVariantNewStep))
     let shiftNextStepsDaysMenuItem = NSMenuItem(title: "Shift maximum Next Steps demonstration days", action: #selector(MainViewController.debugShiftNewTabOpeningDateNtimes))
 
     // MARK: Help
@@ -531,18 +529,11 @@ final class MainMenu: NSMenu {
         updateWatchdogMenuItems()
         updateWebExtensionsMenuItem()
         updateAlwaysShowFirstTimeQuitSurvey()
-        updateQuitSurveyVariantMenuItems()
         updateDuckAIChromeButtonMenuItems()
     }
 
     private func updateAlwaysShowFirstTimeQuitSurvey() {
         alwaysShowFirstTimeQuitSurvey.state = quitSurveyPersistor.alwaysShowQuitSurvey ? .on : .off
-    }
-
-    private func updateQuitSurveyVariantMenuItems() {
-        let currentVariant = quitSurveyPersistor.domainVariant
-        quitSurveyVariantInlineMenuItem.state = currentVariant == .inline ? .on : .off
-        quitSurveyVariantNewStepMenuItem.state = currentVariant == .newStep ? .on : .off
     }
 
     private func updateWebExtensionsMenuItem() {
@@ -841,8 +832,6 @@ final class MainMenu: NSMenu {
                 NSMenuItem(title: "Show Credentials Saved Popover", action: #selector(MainViewController.showCredentialsSavedPopover))
                 NSMenuItem(title: "Show Pop Up Window", action: #selector(MainViewController.showPopUpWindow))
                 alwaysShowFirstTimeQuitSurvey
-                quitSurveyVariantInlineMenuItem
-                quitSurveyVariantNewStepMenuItem
             }
             NSMenuItem(title: "Remote Configuration") {
                 customConfigurationUrlMenuItem

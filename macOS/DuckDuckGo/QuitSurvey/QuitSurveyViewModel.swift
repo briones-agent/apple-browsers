@@ -59,7 +59,6 @@ enum QuitSurveyState: Equatable {
     case initialQuestion
     case positiveResponse
     case negativeFeedback
-    case domainSelection
 }
 
 // MARK: - View Model
@@ -77,7 +76,6 @@ final class QuitSurveyViewModel: ObservableObject {
     @Published private(set) var selectedDomains: Set<String> = []
     @Published var otherDomainText: String = ""
     @Published private(set) var isOtherDomainSelected: Bool = false
-    @Published private(set) var activeVariant: QuitSurveyDomainVariant = .inline
 
     // MARK: - Configuration
 
@@ -149,7 +147,6 @@ final class QuitSurveyViewModel: ObservableObject {
         let randomOptions = Array(otherOptions.shuffled().prefix(7))
         self.availableOptions = (randomOptions + [Self.websitesDidntWorkOption]).shuffled() + [Self.somethingElseOption]
         self.recentDomains = Self.fetchRecentDomainEntries(from: historyCoordinating, faviconManaging: faviconManaging)
-        self.activeVariant = persistor?.domainVariant ?? .inline
         fireSurveyShown()
     }
 
@@ -205,22 +202,11 @@ final class QuitSurveyViewModel: ObservableObject {
         }
     }
 
-    func proceedToDomainSelection() {
-        state = .domainSelection
-    }
-
     func toggleOtherDomain() {
         isOtherDomainSelected.toggle()
         if !isOtherDomainSelected {
             otherDomainText = ""
         }
-    }
-
-    func goBackFromDomainSelection() {
-        selectedDomains.removeAll()
-        otherDomainText = ""
-        isOtherDomainSelected = false
-        state = .negativeFeedback
     }
 
     func submitFeedback() {
