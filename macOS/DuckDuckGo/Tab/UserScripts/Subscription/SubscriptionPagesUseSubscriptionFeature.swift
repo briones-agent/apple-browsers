@@ -198,7 +198,11 @@ final class SubscriptionPagesUseSubscriptionFeature: Subfeature {
 
         do {
             try await subscriptionManager.adopt(accessToken: subscriptionValues.accessToken, refreshToken: subscriptionValues.refreshToken)
-            try await subscriptionManager.getSubscription(forceRefresh: true)
+            guard try await subscriptionManager.getSubscription(forceRefresh: true) != nil else {
+                Logger.subscription.error("No subscription data retrieved after token adoption")
+                markEmailAddressRestoreAsFailure(data: restoreDataList)
+                return nil
+            }
             markEmailAddressRestoreAsSuccess(data: restoreDataList)
             Logger.subscription.log("Subscription retrieved")
         } catch {
