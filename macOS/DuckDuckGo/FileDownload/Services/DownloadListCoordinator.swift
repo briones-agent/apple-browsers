@@ -424,14 +424,10 @@ final class DownloadListCoordinator {
                 self.updatesSubject.send(Update(kind: .removed, item: item))
             }
 
-            let cleanupResult = cleanupTempFiles(for: item)
+            _ = cleanupTempFiles(for: item)
             filePresenters[item.identifier] = nil
             filePresenterCancellables[item.identifier] = nil
             store.remove(item)
-
-            if case .failure(let error) = cleanupResult {
-                return .failure(error)
-            }
         }
         return .success(modified)
     }

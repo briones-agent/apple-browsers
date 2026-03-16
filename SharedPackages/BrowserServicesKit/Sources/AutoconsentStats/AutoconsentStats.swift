@@ -184,20 +184,27 @@ public actor AutoconsentStats: AutoconsentStatsCollecting {
 
     public func clearAutoconsentStats() async -> Result<Void, Error> {
         var capturedError: Error?
-        do {
-            try keyValueStore.removeObject(forKey: Constants.totalCookiePopUpsBlockedKey)
-            try keyValueStore.removeObject(forKey: Constants.totalClicksMadeBlockingCookiePopUpsKey)
-            try keyValueStore.removeObject(forKey: Constants.totalTimeSpentBlockingCookiePopUpsKey)
-        } catch {
-            capturedError = error
-            errorEvents?.fire(.failedToClearAutoconsentStats(error))
-        }
+        let keys = [
+            Constants.totalCookiePopUpsBlockedKey,
+            Constants.totalClicksMadeBlockingCookiePopUpsKey,
+            Constants.totalTimeSpentBlockingCookiePopUpsKey
+        ]
 
-        statsUpdateSubject.send()
+        for key in keys {
+            do {
+                try keyValueStore.removeObject(forKey: key)
+            } catch {
+                if capturedError == nil {
+                    capturedError = error
+                }
+            }
+        }
 
         if let error = capturedError {
+            errorEvents?.fire(.failedToClearAutoconsentStats(error))
             return .failure(error)
         }
+        statsUpdateSubject.send()
         return .success(())
     }
 
