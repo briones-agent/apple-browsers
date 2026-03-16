@@ -113,7 +113,7 @@ class TabsBarCell: UICollectionViewCell {
         if model.link == nil {
             faviconImage.loadFavicon(forDomain: URL.ddg.host, usingCache: .tabs)
             updateEmptyTabLabel(for: model)
-            removeButton.accessibilityLabel = UserText.closeHomeTab
+            removeButton.accessibilityLabel = closeButtonAccessibilityLabel(for: model)
         } else if model.isAITab {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
             faviconImage.image = DesignSystemImages.Color.Size24.aiChatGradient
@@ -137,6 +137,13 @@ class TabsBarCell: UICollectionViewCell {
             label.text = UserText.homeTabTitle
             label.accessibilityLabel = UserText.openHomeTab
         }
+    }
+
+    private func closeButtonAccessibilityLabel(for tab: Tab) -> String {
+        if isFireModeEnabled {
+            return tab.fireTab ? UserText.closeFireTab : UserText.closeNewTab
+        }
+        return UserText.closeHomeTab
     }
     
 }
