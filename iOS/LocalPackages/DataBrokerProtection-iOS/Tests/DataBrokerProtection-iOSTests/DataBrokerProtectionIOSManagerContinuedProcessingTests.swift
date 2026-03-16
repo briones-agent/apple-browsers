@@ -112,7 +112,7 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
     func testWhenSaveProfileAndStartInitialRunAndContinuedProcessingIsNotSupported_thenFallsBackToLegacySave() async throws {
         // Given
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager(
-            continuedProcessingTestConfiguration: .init(shouldUseForInitialRun: false)
+            continuedProcessingTestConfiguration: .init(shouldUseContinuedProcessingForInitialRun: false)
         )
 
         // When
@@ -130,7 +130,7 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager(
             continuedProcessingTestConfiguration: .init(
                 coordinator: continuedProcessingCoordinator,
-                shouldUseForInitialRun: true
+                shouldUseContinuedProcessingForInitialRun: true
             )
         )
         let profile = DBPContinuedProcessingTestUtils.makeProfile()
@@ -154,7 +154,7 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager(
             continuedProcessingTestConfiguration: .init(
                 coordinator: continuedProcessingCoordinator,
-                shouldUseForInitialRun: true
+                shouldUseContinuedProcessingForInitialRun: true
             )
         )
 

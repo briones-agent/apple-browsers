@@ -151,16 +151,16 @@ public final class DataBrokerProtectionIOSManager {
 
     struct ContinuedProcessingTestConfiguration {
         let coordinator: (any DBPContinuedProcessingCoordinating)?
-        let shouldUseForInitialRun: Bool?
-        let shouldRegisterBackgroundTaskHandler: Bool?
+        let shouldUseContinuedProcessingForInitialRun: Bool
+        let shouldRegisterBackgroundTaskHandler: Bool
 
         init(
             coordinator: (any DBPContinuedProcessingCoordinating)? = nil,
-            shouldUseForInitialRun: Bool? = nil,
-            shouldRegisterBackgroundTaskHandler: Bool? = nil
+            shouldUseContinuedProcessingForInitialRun: Bool = true,
+            shouldRegisterBackgroundTaskHandler: Bool = false
         ) {
             self.coordinator = coordinator
-            self.shouldUseForInitialRun = shouldUseForInitialRun
+            self.shouldUseContinuedProcessingForInitialRun = shouldUseContinuedProcessingForInitialRun
             self.shouldRegisterBackgroundTaskHandler = shouldRegisterBackgroundTaskHandler
         }
     }
@@ -309,7 +309,10 @@ public final class DataBrokerProtectionIOSManager {
 
         self.queueManager.delegate = self
 
-        if continuedProcessingTestConfiguration?.shouldRegisterBackgroundTaskHandler ?? true {
+        if let continuedProcessingTestConfiguration,
+           continuedProcessingTestConfiguration.shouldRegisterBackgroundTaskHandler == false {
+            // Skip registration in tests.
+        } else {
             registerBackgroundTaskHandler()
         }
         Logger.dataBrokerProtection.debug("PIR wide event sweep requested (iOS setup)")
@@ -919,8 +922,8 @@ private extension DataBrokerProtectionIOSManager {
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.ContinuedProcessingDelegate {
     @MainActor
     private func shouldUseContinuedProcessingForInitialRun() -> Bool {
-        if let shouldUseForInitialRun = continuedProcessingTestConfiguration?.shouldUseForInitialRun {
-            return shouldUseForInitialRun
+        if let continuedProcessingTestConfiguration {
+            return continuedProcessingTestConfiguration.shouldUseContinuedProcessingForInitialRun
         }
 
         guard #available(iOS 26.0, *) else {

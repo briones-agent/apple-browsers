@@ -41,10 +41,10 @@ enum DBPContinuedProcessingTestUtils {
         let continuedProcessingCoordinator = (continuedProcessingTestConfiguration?.coordinator as? MockContinuedProcessingCoordinator) ?? MockContinuedProcessingCoordinator()
         let normalizedContinuedProcessingTestConfiguration = DataBrokerProtectionIOSManager.ContinuedProcessingTestConfiguration(
             coordinator: continuedProcessingCoordinator,
-            shouldUseForInitialRun: continuedProcessingTestConfiguration?.shouldUseForInitialRun,
+            shouldUseContinuedProcessingForInitialRun: continuedProcessingTestConfiguration?.shouldUseContinuedProcessingForInitialRun ?? true,
             shouldRegisterBackgroundTaskHandler: continuedProcessingTestConfiguration?.shouldRegisterBackgroundTaskHandler ?? false
         )
-        return IOSManagerTestDependenciesStore.shared.makeTestIOSManager(
+        return IOSManagerTestDependenciesStore().makeTestIOSManager(
             featureFlagger: featureFlagger,
             continuedProcessingTestConfiguration: normalizedContinuedProcessingTestConfiguration
         )
@@ -79,15 +79,13 @@ enum DBPContinuedProcessingTestUtils {
 
     @MainActor
     private final class IOSManagerTestDependenciesStore {
-        static let shared = IOSManagerTestDependenciesStore()
-
         let database = MockDatabase()
         let queueManager: MockJobQueueManager
         let jobDependencies = MockBrokerProfileJobDependencies()
         let authenticationManager = MockAuthenticationManager()
         let eventsHandler = MockOperationEventsHandler()
-        
-        private init() {
+
+        init() {
             queueManager = MockJobQueueManager(
                 jobQueue: MockBrokerProfileJobQueue(),
                 jobProvider: MockDataBrokerOperationsCreator(),
