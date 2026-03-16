@@ -837,7 +837,6 @@ extension SettingsViewModel {
            let passwordsCount = try? secureVault.accountsCount(),
            passwordsCount >= 25 {
             permanentlyDismissCompleteSetupSection()
-            permanentlyDismissNextStepsSection()
         }
     }
 
