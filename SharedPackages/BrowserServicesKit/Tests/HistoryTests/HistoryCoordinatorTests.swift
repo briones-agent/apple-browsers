@@ -194,7 +194,7 @@ class HistoryCoordinatorTests: XCTestCase {
         let visitsToBurn = Array(historyCoordinator.history!.first!.visits)
 
         let waiter = expectation(description: "Wait")
-        historyCoordinator.burnVisits(visitsToBurn) {
+        historyCoordinator.burnVisits(visitsToBurn) { _ in
             waiter.fulfill()
             XCTAssertEqual(historyStoringMock.removeEntriesArray.count, 1)
             XCTAssertEqual(historyStoringMock.removeEntriesArray.first!.url, url1)
@@ -216,7 +216,7 @@ class HistoryCoordinatorTests: XCTestCase {
         let visitsToBurn = Array(historyCoordinator.history!.first!.visits)
 
         let waiter = expectation(description: "Wait")
-        historyCoordinator.burnVisits(visitsToBurn) {
+        historyCoordinator.burnVisits(visitsToBurn) { _ in
             waiter.fulfill()
             XCTAssertEqual(historyStoringMock.removeVisitsArray.count, 3)
         }
@@ -248,7 +248,7 @@ class HistoryCoordinatorTests: XCTestCase {
         let visitsToBurn = Array(historyCoordinator.history!.first!.visits)
 
         let waiter = expectation(description: "Wait")
-        historyCoordinator.burnVisits(visitsToBurn) {
+        historyCoordinator.burnVisits(visitsToBurn) { _ in
             waiter.fulfill()
             // Simply don't raise an assertion
         }
