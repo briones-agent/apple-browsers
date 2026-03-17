@@ -1279,70 +1279,40 @@ extension SettingsViewModel {
 // MARK: Subscriptions
 extension SettingsViewModel {
 
+    /// Fetches the current subscription from the backend and updates `state.subscription` and the cache.
+    /// Handles three outcomes: active subscription (populates entitlements), nil/no subscription, and no token (unauthenticated).
     @MainActor
     private func setupSubscriptionEnvironment() async {
-        // Create a temporary subscription state to batch all updates
-        var updatedSubscription: SettingsState.Subscription
+        // 1. Start from cached state or defaults
+        var updatedSubscription = subscriptionStateCache.get() ?? SettingsState.defaults.subscription
 
-        // If there's cached data use it by default
-        if let cachedSubscription = subscriptionStateCache.get() {
-            updatedSubscription = cachedSubscription
-        // Otherwise use defaults and setup purchase availability
-        } else {
-            updatedSubscription = SettingsState.defaults.subscription
-        }
-
-        // Update if can purchase based on App Store product availability
+        // 2. Set store availability, auth status, and offer eligibility (independent of backend subscription)
         updatedSubscription.hasAppStoreProductsAvailable = subscriptionManager.hasAppStoreProductsAvailable
-
-        // Update if user is signed in based on the presence of token
         updatedSubscription.isSignedIn = subscriptionManager.isUserAuthenticated
-
-        // Active subscription check
-        guard let token = try? await subscriptionManager.getAccessToken() else {
-            // Reset state in case cache was outdated
-            updatedSubscription.hasSubscription = false
-            updatedSubscription.hasActiveSubscription = false
-            updatedSubscription.entitlements = []
-            updatedSubscription.platform = .unknown
-            updatedSubscription.isActiveTrialOffer = false
-
-            updatedSubscription.isEligibleForTrialOffer = await isUserEligibleForTrialOffer()
-            updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
-
-            state.subscription = updatedSubscription
-            // Sync cache
-            subscriptionStateCache.set(state.subscription)
-            return
-        }
+        updatedSubscription.isEligibleForTrialOffer = await isUserEligibleForTrialOffer()
+        updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
 
         do {
+            // 3. Fetch subscription from backend (returns nil if no subscription exists)
             guard let subscription = try await subscriptionManager.getSubscription() else {
+                // 3a. No subscription on backend — reset subscription fields and exit early
                 Logger.subscription.debug("No subscription data available")
-                updatedSubscription.hasSubscription = false
-                updatedSubscription.hasActiveSubscription = false
-                updatedSubscription.entitlements = []
-                updatedSubscription.platform = .unknown
-                updatedSubscription.isActiveTrialOffer = false
-                updatedSubscription.isEligibleForTrialOffer = await isUserEligibleForTrialOffer()
-                updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
+                applyNoSubscriptionState(&updatedSubscription)
                 DailyPixel.fireDailyAndCount(pixel: .settingsSubscriptionAccountWithNoSubscriptionFound)
-
                 state.subscription = updatedSubscription
-                subscriptionStateCache.set(updatedSubscription)
+                subscriptionStateCache.set(state.subscription)
                 return
             }
 
+            // 4. Populate subscription details from backend response
             updatedSubscription.platform = subscription.platform
             updatedSubscription.hasSubscription = true
             updatedSubscription.hasActiveSubscription = subscription.isActive
             updatedSubscription.isActiveTrialOffer = subscription.hasActiveTrialOffer
-            updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
 
-            // Check entitlements and update state
-            var currentEntitlements: [SubscriptionEntitlement] = []
+            // 5. Check which entitlements are active for this subscription
             let entitlementsToCheck: [SubscriptionEntitlement] = [.networkProtection, .dataBrokerProtection, .identityTheftRestoration, .identityTheftRestorationGlobal, .paidAIChat]
-
+            var currentEntitlements: [SubscriptionEntitlement] = []
             for entitlement in entitlementsToCheck {
                 if let hasEntitlement = try? await subscriptionManager.isFeatureEnabled(entitlement),
                     hasEntitlement {
@@ -1350,29 +1320,31 @@ extension SettingsViewModel {
                 }
             }
 
+            // 6. Set entitlements and tier features
             updatedSubscription.entitlements = currentEntitlements
             updatedSubscription.subscriptionFeatures = try await subscriptionManager.currentSubscriptionFeatures(forceRefresh: false)
         } catch SubscriptionManagerError.noTokenAvailable {
+            // 3b. User is not authenticated — reset subscription fields
             Logger.subscription.debug("No subscription data available - user not authenticated")
-            updatedSubscription.hasSubscription = false
-            updatedSubscription.hasActiveSubscription = false
-            updatedSubscription.entitlements = []
-            updatedSubscription.platform = .unknown
-            updatedSubscription.isActiveTrialOffer = false
-            updatedSubscription.isEligibleForTrialOffer = await isUserEligibleForTrialOffer()
-            updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
-
+            applyNoSubscriptionState(&updatedSubscription)
             DailyPixel.fireDailyAndCount(pixel: .settingsSubscriptionAccountWithNoSubscriptionFound)
         } catch {
+            // 3c. Transient error — keep cached state as-is
             Logger.subscription.error("Failed to fetch Subscription: \(error, privacy: .public)")
-            updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
         }
 
-        // Apply all updates at once
+        // 7. Persist updated state
         state.subscription = updatedSubscription
-
-        // Sync Cache
         subscriptionStateCache.set(state.subscription)
+    }
+
+    /// Resets subscription-dependent fields to their "no subscription" defaults.
+    private func applyNoSubscriptionState(_ subscription: inout SettingsState.Subscription) {
+        subscription.hasSubscription = false
+        subscription.hasActiveSubscription = false
+        subscription.entitlements = []
+        subscription.platform = .unknown
+        subscription.isActiveTrialOffer = false
     }
     
     private func setupNotificationObservers() {

@@ -93,7 +93,7 @@ public protocol SubscriptionManager: SubscriptionTokenProvider, SubscriptionAuth
     func clearSubscriptionCache()
 
     /// Ingests a subscription by enriching it with tier features, caching it, and posting a change notification.
-    func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws
+    func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws -> DuckDuckGoSubscription
 
     /// Confirm a purchase with a platform signature
     func confirmPurchase(signature: String, additionalParams: [String: String]?) async throws -> DuckDuckGoSubscription
@@ -380,18 +380,18 @@ public final class DefaultSubscriptionManager: SubscriptionManager {
         subscriptionCachingService.get() != nil
     }
 
-    public func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws {
+    public func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws -> DuckDuckGoSubscription {
         let enrichedSubscription = try await enrichSubscriptionWithFeatures(subscription)
         subscriptionCachingService.set(enrichedSubscription)
         NotificationCenter.default.post(name: .subscriptionDidChange, object: self, userInfo: [UserDefaultsCacheKey.subscription: enrichedSubscription])
+        return enrichedSubscription
     }
 
     public func getSubscriptionFrom(lastTransactionJWSRepresentation: String) async throws -> DuckDuckGoSubscription? {
         do {
             let tokenContainer = try await oAuthClient.activate(withPlatformSignature: lastTransactionJWSRepresentation)
             let remoteSubscription = try await subscriptionEndpointService.getSubscription(accessToken: tokenContainer.accessToken)
-            try await ingestSubscription(remoteSubscription)
-            return subscriptionCachingService.get()
+            return try await ingestSubscription(remoteSubscription)
         } catch SubscriptionEndpointServiceError.noData {
             return nil
         } catch {
@@ -656,9 +656,9 @@ public final class DefaultSubscriptionManager: SubscriptionManager {
         let confirmation = try await subscriptionEndpointService.confirmPurchase(accessToken: accessToken,
                                                                                  signature: signature,
                                                                                  additionalParams: additionalParams)
-        try await ingestSubscription(confirmation.subscription)
+        let subscription = try await ingestSubscription(confirmation.subscription)
         Logger.subscription.log("Purchase confirmed!")
-        return confirmation.subscription
+        return subscription
     }
 
     public var currentStorefrontRegion: SubscriptionRegion {

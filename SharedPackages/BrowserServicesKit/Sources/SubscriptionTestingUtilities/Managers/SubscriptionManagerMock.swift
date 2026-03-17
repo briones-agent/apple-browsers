@@ -132,9 +132,10 @@ public final class SubscriptionManagerMock: SubscriptionManager {
     }
 
     public var ingestSubscriptionCalled: Bool = false
-    public func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws {
+    public func ingestSubscription(_ subscription: DuckDuckGoSubscription) async throws -> DuckDuckGoSubscription {
         ingestSubscriptionCalled = true
         resultSubscription = .success(subscription)
+        return subscription
     }
 
     public var confirmPurchaseResponse: Result<DuckDuckGoSubscription, Error>?
