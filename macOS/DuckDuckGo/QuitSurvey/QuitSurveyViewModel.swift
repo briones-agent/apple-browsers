@@ -23,6 +23,7 @@ import Common
 import History
 import PixelKit
 import PrivacyConfig
+import PrivacyDashboard
 import AppKit
 
 // MARK: - Domain Entry Model
@@ -160,7 +161,7 @@ final class QuitSurveyViewModel: ObservableObject {
         return entries
             .sorted { $0.lastVisit > $1.lastVisit }
             .compactMap { entry -> (HistoryEntry, String)? in
-                guard let host = entry.url.host else { return nil }
+                guard let host = entry.url.trimmingQueryItemsAndFragment().host else { return nil }
                 return (entry, host)
             }
             .filter { seen.insert($0.1).inserted }
@@ -229,8 +230,8 @@ final class QuitSurveyViewModel: ObservableObject {
         isSubmitting = true
 
         var effectiveDomains = selectedDomains
-        let trimmedOther = otherDomainText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawOther = otherDomainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedOther = (URL(string: rawOther)?.trimmingQueryItemsAndFragment().absoluteString ?? rawOther)
             .replacingOccurrences(of: ",", with: "")
         if isOtherDomainSelected && !trimmedOther.isEmpty {
             effectiveDomains.insert(trimmedOther)

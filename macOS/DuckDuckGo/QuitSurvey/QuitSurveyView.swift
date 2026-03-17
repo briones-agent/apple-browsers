@@ -288,7 +288,7 @@ private struct OtherDomainRow: View {
                 set: { _ in viewModel.toggleOtherDomain() }
             )) {
                 HStack(spacing: 8) {
-                    Image(systemName: "globe")
+                    Image(nsImage: DesignSystemImages.Glyphs.Size12.globe)
                         .frame(width: 16, height: 16)
                         .foregroundColor(Color(designSystemColor: .iconsSecondary))
 

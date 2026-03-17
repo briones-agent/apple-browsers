@@ -27,9 +27,13 @@ import PrivacyConfig
 // MARK: - Helpers
 
 private func makeEntry(host: String, lastVisit: Date) -> HistoryEntry {
+    makeEntry(url: URL(string: "https://\(host)/")!, lastVisit: lastVisit)
+}
+
+private func makeEntry(url: URL, lastVisit: Date) -> HistoryEntry {
     HistoryEntry(
         identifier: UUID(),
-        url: URL(string: "https://\(host)/")!,
+        url: url,
         title: nil,
         failedToLoad: false,
         numberOfTotalVisits: 1,
@@ -88,6 +92,56 @@ final class QuitSurveyViewModelTests: XCTestCase {
         )
 
         XCTAssertEqual(viewModel.recentDomains.map(\.domain), ["a.com", "b.com", "c.com", "d.com", "e.com"])
+    }
+
+    func testRecentDomainsStripsQueryStringsFromHistoryURLs() {
+        let historyCoordinating = HistoryCoordinatingMock()
+        historyCoordinating.history = [
+            makeEntry(url: URL(string: "https://example.com/page?user=secret&token=abc")!, lastVisit: Date()),
+        ]
+
+        let viewModel = QuitSurveyViewModel(
+            persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
+            historyCoordinating: historyCoordinating,
+            onQuit: {}
+        )
+
+        XCTAssertEqual(viewModel.recentDomains.map(\.domain), ["example.com"])
+    }
+
+    func testRecentDomainsStripsFragmentsFromHistoryURLs() {
+        let historyCoordinating = HistoryCoordinatingMock()
+        historyCoordinating.history = [
+            makeEntry(url: URL(string: "https://example.com/page#section-with-id")!, lastVisit: Date()),
+        ]
+
+        let viewModel = QuitSurveyViewModel(
+            persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
+            historyCoordinating: historyCoordinating,
+            onQuit: {}
+        )
+
+        XCTAssertEqual(viewModel.recentDomains.map(\.domain), ["example.com"])
+    }
+
+    func testRecentDomainsDeduplicatesByHostAcrossDifferentPaths() {
+        let now = Date()
+        let historyCoordinating = HistoryCoordinatingMock()
+        historyCoordinating.history = [
+            makeEntry(url: URL(string: "https://example.com/page1?q=1")!, lastVisit: now.addingTimeInterval(-1)),
+            makeEntry(url: URL(string: "https://example.com/page2?q=2")!, lastVisit: now.addingTimeInterval(-2)),
+        ]
+
+        let viewModel = QuitSurveyViewModel(
+            persistor: nil,
+            featureFlagger: MockFeatureFlagger(),
+            historyCoordinating: historyCoordinating,
+            onQuit: {}
+        )
+
+        XCTAssertEqual(viewModel.recentDomains.map(\.domain), ["example.com"])
     }
 
     func testRecentDomainsIsEmptyWhenNoHistory() {
@@ -268,6 +322,29 @@ final class QuitSurveyViewModelTests: XCTestCase {
         }
         XCTAssertNotNil(submissionCall)
         XCTAssertEqual(submissionCall?.pixel.parameters?["affected_domains"], "example.com")
+    }
+
+    func testSubmitFeedbackStripsQueryStringFromOtherDomainText() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "example.com/path?user=secret&token=abc"
+        vm.submitFeedback()
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("user=secret") == true)
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("token=abc") == true)
+        XCTAssertTrue(sender.lastFeedback?.comment.contains("example.com") == true)
+    }
+
+    func testSubmitFeedbackStripsFragmentFromOtherDomainText() {
+        let sender = MockFeedbackSender()
+        let vm = QuitSurveyViewModel(feedbackSender: sender, featureFlagger: MockFeatureFlagger(), onQuit: {})
+        vm.toggleOption(QuitSurveyViewModel.websitesDidntWorkOptionId)
+        vm.toggleOtherDomain()
+        vm.otherDomainText = "example.com/page#section-with-id"
+        vm.submitFeedback()
+        XCTAssertFalse(sender.lastFeedback?.comment.contains("section-with-id") == true)
+        XCTAssertTrue(sender.lastFeedback?.comment.contains("example.com") == true)
     }
 
     func testSubmitFeedbackStripsCommasFromOtherDomainTextInPixel() {
