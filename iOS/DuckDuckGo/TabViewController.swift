@@ -163,6 +163,11 @@ class TabViewController: UIViewController {
     let adClickAttributionLogic = ContentBlocking.shared.makeAdClickAttributionLogic(tld: tld)
 
     private var httpsForced: Bool = false
+    private(set) lazy var safariRedirectHandler: SafariRedirectHandler = {
+        let handler = SafariRedirectHandler(tld: AppDependencyProvider.shared.storageCache.tld, featureFlagger: featureFlagger)
+        handler.delegate = self
+        return handler
+    }()
     private var lastUpgradedURL: URL?
     private var lastError: Error?
     private var lastHttpStatusCode: Int?
@@ -598,7 +603,6 @@ class TabViewController: UIViewController {
         self.aiChatFullModeFeature = aiChatFullModeFeature
         self.aiChatContentHandler = AIChatContentHandler(aiChatSettings: aiChatSettings,
                                                          featureDiscovery: featureDiscovery,
-                                                         featureFlagger: featureFlagger,
                                                          productSurfaceTelemetry: productSurfaceTelemetry)
         self.subscriptionAIChatStateHandler = SubscriptionAIChatStateHandler()
         self.voiceSearchHelper = voiceSearchHelper
@@ -960,6 +964,7 @@ class TabViewController: UIViewController {
         wasLoadingStoppedExternally = false
         webView.stopLoading()
         dismissJSAlertIfNeeded()
+        safariRedirectHandler.reset()
 
         load(url: url, didUpgradeURL: false)
     }
@@ -1036,7 +1041,7 @@ class TabViewController: UIViewController {
         switch keyPath {
 
         case #keyPath(WKWebView.isLoading):
-            if webView.isLoading {
+            if webView.isLoading, isTabCurrentlyPresented() {
                 delegate?.showBars()
             }
             if #available(iOS 18.4, *) {
@@ -1044,7 +1049,9 @@ class TabViewController: UIViewController {
             }
 
         case #keyPath(WKWebView.estimatedProgress):
-            progressWorker.progressDidChange(webView.estimatedProgress)
+            if isTabCurrentlyPresented() {
+                progressWorker.progressDidChange(webView.estimatedProgress)
+            }
 
         case #keyPath(WKWebView.url):
             // A short delay is required here, because the URL takes some time
@@ -1435,11 +1442,13 @@ class TabViewController: UIViewController {
     }
     
     func presentOpenInExternalAppAlert(url: URL) {
+        if safariRedirectHandler.handleRedirect(to: url) { return }
+
         let title = UserText.customUrlSchemeTitle
         let message = UserText.customUrlSchemeMessage
         let open = UserText.customUrlSchemeOpen
         let dontOpen = UserText.customUrlSchemeDontOpen
-        
+
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: dontOpen, style: .cancel, handler: { _ in
             if self.webView.url == nil {
@@ -1490,7 +1499,8 @@ class TabViewController: UIViewController {
                                                                      vpnOn: netPConnected,
                                                                      userRefreshCount: refreshCountSinceLoad,
                                                                      breakageReportingSubfeature: breakageReportingSubfeature,
-                                                                     isForceDarkModeEnabled: darkReaderFeatureSettings.isForceDarkModeEnabled)
+                                                                     isForceDarkModeEnabled: darkReaderFeatureSettings.isForceDarkModeEnabled,
+                                                                     isAfterSuppressedXSafariRedirect: safariRedirectHandler.isAfterSuppressedXSafariRedirect(for: currentURL))
     }
 
     public func print() {
@@ -2288,7 +2298,7 @@ extension TabViewController: WKNavigationDelegate {
                         NotificationCenter.default.post(name: .userDidPerformDDGSearch, object: self)
                     }
 
-                    let shouldSkipSearchAtbForDuckAI = url.isDuckAIURL && featureFlagger.isFeatureOn(.aiChatAtb)
+                    let shouldSkipSearchAtbForDuckAI = url.isDuckAIURL
                     if !shouldSkipSearchAtbForDuckAI {
                         let backgroundAssertion = QRunInBackgroundAssertion(name: "StatisticsLoader background assertion - search",
                                                                             application: UIApplication.shared)
@@ -2363,11 +2373,17 @@ extension TabViewController: WKNavigationDelegate {
 
         let schemeType = SchemeHandler.schemeType(for: url)
         self.blobDownloadTargetFrame = nil
+
+        if safariRedirectHandler.handleRedirect(to: url) {
+            completion(.cancel)
+            return
+        }
+
         switch schemeType {
         case .allow:
             completion(.allow)
             return
-            
+
         case .navigational:
             performNavigationFor(url: url,
                                  navigationAction: navigationAction,
@@ -2575,8 +2591,8 @@ extension TabViewController: WKNavigationDelegate {
             return
         }
         NotificationCenter.default.addObserver(self,
-                                               selector: #selector(keyboardWillHide),
-                                               name: UIResponder.keyboardWillHideNotification,
+                                               selector: #selector(keyboardDidHide),
+                                               name: UIResponder.keyboardDidHideNotification,
                                                object: nil)
     }
 
@@ -2587,7 +2603,7 @@ extension TabViewController: WKNavigationDelegate {
 
         NotificationCenter.default.removeObserver(
             self,
-            name: UIResponder.keyboardWillHideNotification,
+            name: UIResponder.keyboardDidHideNotification,
             object: nil
         )
     }
@@ -2613,7 +2629,7 @@ extension TabViewController: WKNavigationDelegate {
         ActionMessageView.present(message: UserText.autofillSettingsReportNotWorkingSentConfirmation)
     }
 
-    @objc private func keyboardWillHide(_ notification: Notification) {
+    @objc private func keyboardDidHide(_ notification: Notification) {
         if !fillCreditCardsPromptIsPresenting && isTabCurrentlyPresented() {
             autofillUserScript?.cancelAllPendingReplies()
             cleanupInputAccessoryView()
@@ -3019,6 +3035,13 @@ extension TabViewController: UIGestureRecognizerDelegate {
             return false
         }
 
+        // Don't delay tap gestures that are inside the onboarding dialog
+        if let daxContextualOnboardingController,
+           let otherView = otherRecognizer.view,
+           otherView.isDescendant(of: daxContextualOnboardingController.view) {
+            return false
+        }
+
         if gestureRecognizer == showBarsTapGestureRecogniser,
             otherRecognizer is UITapGestureRecognizer {
             return true
@@ -3077,9 +3100,6 @@ extension TabViewController: UserContentControllerDelegate {
     private var findInPageScript: FindInPageUserScript? {
         userScripts?.findInPageScript
     }
-    private var contentBlockerUserScript: ContentBlockerRulesUserScript? {
-        userScripts?.contentBlockerUserScript
-    }
     private var autofillUserScript: AutofillUserScript? {
         userScripts?.autofillUserScript
     }
@@ -3091,8 +3111,7 @@ extension TabViewController: UserContentControllerDelegate {
         guard let userScripts = userScripts as? UserScripts else { fatalError("Unexpected UserScripts") }
 
         userScripts.debugScript.instrumentation = instrumentation
-        userScripts.surrogatesScript.delegate = self
-        userScripts.contentBlockerUserScript.delegate = self
+        userScripts.trackerProtectionSubfeature.delegate = self
         userScripts.autofillUserScript.emailDelegate = emailManager
         userScripts.autofillUserScript.vaultDelegate = vaultManager
         userScripts.autofillUserScript.passwordImportDelegate = credentialsImportManager
@@ -3148,41 +3167,41 @@ extension TabViewController: UserContentControllerDelegate {
 
 }
 
-// MARK: - ContentBlockerRulesUserScriptDelegate
-extension TabViewController: ContentBlockerRulesUserScriptDelegate {
-    
-    func contentBlockerRulesUserScriptShouldProcessTrackers(_ script: ContentBlockerRulesUserScript) -> Bool {
+// MARK: - TrackerProtectionSubfeatureDelegate
+extension TabViewController: TrackerProtectionSubfeatureDelegate {
+
+    private static let trackerProtectionMapper = TrackerProtectionEventMapper(tld: tld)
+
+    func trackerProtectionShouldProcessTrackers(_ subfeature: TrackerProtectionSubfeature) -> Bool {
         return privacyInfo?.isFor(self.url) ?? false
     }
-    
-    func contentBlockerRulesUserScriptShouldProcessCTLTrackers(_ script: ContentBlockerRulesUserScript) -> Bool {
-        return false
-    }
 
-    func contentBlockerRulesUserScript(_ script: ContentBlockerRulesUserScript,
-                                       detectedTracker tracker: DetectedRequest) {
-        userScriptDetectedTracker(tracker)
-    }
-    
-    func contentBlockerRulesUserScript(_ script: ContentBlockerRulesUserScript,
-                                       detectedThirdPartyRequest request: DetectedRequest) {
-        privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: request)
-    }
-
-    fileprivate func userScriptDetectedTracker(_ tracker: DetectedRequest) {
+    func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
+                           didDetectTracker tracker: TrackerProtectionSubfeature.TrackerDetection) {
         guard let url = url else { return }
-        
-        adClickAttributionLogic.onRequestDetected(request: tracker)
 
-        if tracker.isBlocked && fireWoFollowUp {
+        if Self.trackerProtectionMapper.isSameSiteDetection(tracker) {
+            return
+        }
+
+        let detectedRequest = Self.trackerProtectionMapper.detectedRequest(from: tracker)
+
+        if TrackerProtectionEventMapper.isThirdPartyRequest(tracker) {
+            privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: detectedRequest)
+            return
+        }
+
+        adClickAttributionLogic.onRequestDetected(request: detectedRequest)
+
+        if detectedRequest.isBlocked && fireWoFollowUp {
             fireWoFollowUp = false
             Pixel.fire(pixel: .daxDialogsWithoutTrackersFollowUp)
         }
 
-        privacyInfo?.trackerInfo.addDetectedTracker(tracker, onPageWithURL: url)
+        privacyInfo?.trackerInfo.addDetectedTracker(detectedRequest, onPageWithURL: url)
 
-        guard tracker.isBlocked,
-              let host = tracker.url.url?.host,
+        guard detectedRequest.isBlocked,
+              let host = detectedRequest.url.url?.host,
               let entityName = ContentBlocking.shared.trackerDataManager.trackerData.findParentEntityOrFallback(forHost: host)?.displayName else {
             return
         }
@@ -3191,28 +3210,16 @@ extension TabViewController: ContentBlockerRulesUserScriptDelegate {
             await privacyStats.recordBlockedTracker(entityName)
         }
     }
-}
 
-// MARK: - SurrogatesUserScriptDelegate
-extension TabViewController: SurrogatesUserScriptDelegate {
+    func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
+                           didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
+        guard let url = url,
+              let surrogateHost = Self.trackerProtectionMapper.surrogateHost(from: surrogate),
+              !surrogateHost.isEmpty else { return }
 
-    func surrogatesUserScriptShouldProcessTrackers(_ script: SurrogatesUserScript) -> Bool {
-        return privacyInfo?.isFor(self.url) ?? false
+        let detectedRequest = Self.trackerProtectionMapper.detectedRequest(from: surrogate)
+        privacyInfo?.trackerInfo.addInstalledSurrogateHost(surrogateHost, for: detectedRequest, onPageWithURL: url)
     }
-
-    func surrogatesUserScriptShouldProcessCTLTrackers(_ script: SurrogatesUserScript) -> Bool {
-        false
-    }
-
-    func surrogatesUserScript(_ script: SurrogatesUserScript,
-                              detectedTracker tracker: DetectedRequest,
-                              withSurrogate host: String) {
-        guard let url = url else { return }
-        
-        privacyInfo?.trackerInfo.addInstalledSurrogateHost(host, for: tracker, onPageWithURL: url)
-        userScriptDetectedTracker(tracker)
-    }
-
 }
 
 // MARK: - PrintingSubfeatureDelegate
@@ -3262,12 +3269,9 @@ extension TabViewController: AdClickAttributionLogicDelegate {
         guard privacyConfigurationManager.privacyConfig.isEnabled(featureKey: .contentBlocking)
         else {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
-            contentBlockerUserScript?.currentAdClickAttributionVendor = nil
-            contentBlockerUserScript?.supplementaryTrackerData = []
             return
         }
 
-        contentBlockerUserScript?.currentAdClickAttributionVendor = vendor
         if let rules = rules {
 
             let globalListName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
@@ -3280,10 +3284,6 @@ extension TabViewController: AdClickAttributionLogicDelegate {
                 userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
                 try? userContentController.enableGlobalContentRuleList(withIdentifier: globalAttributionListName)
             }
-
-            contentBlockerUserScript?.supplementaryTrackerData = [rules.trackerData]
-        } else {
-            contentBlockerUserScript?.supplementaryTrackerData = []
         }
     }
 
@@ -4203,5 +4203,26 @@ extension TabViewController: SERPSettingsUserScriptDelegate {
         PixelKit.fire(SERPSettingsPixel.openDuckAIButtonClick, frequency: .dailyAndStandard)
         guard let mainVC = parent as? MainViewController else { return }
         mainVC.segueToSettingsAIChat(openedFromSERPSettingsButton: true)
+    }
+}
+
+// MARK: - SafariRedirectHandlerDelegate
+
+extension TabViewController: SafariRedirectHandlerDelegate {
+
+    func safariRedirectHandler(_ handler: SafariRedirectHandling, didRequestLoadURL url: URL) {
+        load(url: url, didUpgradeURL: false)
+    }
+
+    func safariRedirectHandler(_ handler: SafariRedirectHandling, didRequestOpenExternallyURL url: URL) {
+        openExternally(url: url)
+    }
+
+    func safariRedirectHandlerDidRequestGoBack(_ handler: SafariRedirectHandling) {
+        goBack()
+    }
+
+    func safariRedirectHandler(_ handler: SafariRedirectHandling, didRequestPresentAlert alert: UIAlertController) {
+        delegate?.tab(self, didRequestPresentingAlert: alert)
     }
 }

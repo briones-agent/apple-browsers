@@ -46,6 +46,12 @@ final class OnboardingIntroViewModel: ObservableObject {
         var showContent = false
     }
 
+    struct RestorePromptState {
+        var animateTitle = false
+        var animateBody = false
+        var showContent = false
+    }
+
     struct BrowserComparisonState {
         var showComparisonButton = false
         var animateComparisonText = false
@@ -84,6 +90,7 @@ final class OnboardingIntroViewModel: ObservableObject {
     @Published var addToDockState = AddToDockState()
     @Published var browserComparisonState = BrowserComparisonState()
     @Published var introState = IntroState()
+    @Published var restorePromptState = RestorePromptState()
 
     /// Set to true when the view controller is tapped
     @Published var isSkipped = false
@@ -104,8 +111,12 @@ final class OnboardingIntroViewModel: ObservableObject {
     private let appIconProvider: () -> AppIcon
     private let addressBarPositionProvider: () -> AddressBarPosition
     private let featureFlagger: FeatureFlagger
+    private let restorePromptHandler: OnboardingRestorePromptHandling
 
-    convenience init(pixelReporter: LinearOnboardingPixelReporting, systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging, daxDialogsManager: ContextualDaxDialogDisabling) {
+    convenience init(pixelReporter: LinearOnboardingPixelReporting,
+                     systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging,
+                     daxDialogsManager: ContextualDaxDialogDisabling,
+                     restorePromptHandler: OnboardingRestorePromptHandling) {
         let onboardingManager = OnboardingManager()
         let defaultBrowserInfoStore = DefaultBrowserInfoStore()
         let defaultBrowserEventMapper = DefaultBrowserPromptManagerDebugPixelHandler()
@@ -121,7 +132,8 @@ final class OnboardingIntroViewModel: ObservableObject {
             onboardingSearchExperienceProvider: onboardingSearchExperienceProvider,
             appIconProvider: { AppIconManager.shared.appIcon },
             addressBarPositionProvider: { AppUserDefaults().currentAddressBarPosition },
-            featureFlagger: AppDependencyProvider.shared.featureFlagger
+            featureFlagger: AppDependencyProvider.shared.featureFlagger,
+            restorePromptHandler: restorePromptHandler
         )
     }
 
@@ -135,7 +147,8 @@ final class OnboardingIntroViewModel: ObservableObject {
         onboardingSearchExperienceProvider: OnboardingSearchExperienceProvider,
         appIconProvider: @escaping () -> AppIcon,
         addressBarPositionProvider: @escaping () -> AddressBarPosition,
-        featureFlagger: FeatureFlagger = AppDependencyProvider.shared.featureFlagger
+        featureFlagger: FeatureFlagger = AppDependencyProvider.shared.featureFlagger,
+        restorePromptHandler: OnboardingRestorePromptHandling
     ) {
         self.defaultBrowserManager = defaultBrowserManager
         self.contextualDaxDialogs = contextualDaxDialogs
@@ -146,6 +159,7 @@ final class OnboardingIntroViewModel: ObservableObject {
         self.appIconProvider = appIconProvider
         self.addressBarPositionProvider = addressBarPositionProvider
         self.featureFlagger = featureFlagger
+        self.restorePromptHandler = restorePromptHandler
 
         introSteps = onboardingManager.onboardingSteps
         currentIntroStep = currentOnboardingStep
@@ -180,6 +194,7 @@ final class OnboardingIntroViewModel: ObservableObject {
 
     func confirmSkipOnboardingAction() {
         pixelReporter.measureConfirmSkipOnboardingCTAAction()
+        onboardingSearchExperienceProvider.storeAIChatSearchInputDuringOnboardingChoice(enable: true)
         contextualDaxDialogs.disableContextualDaxDialogs()
         onCompletingOnboardingIntro?()
     }
@@ -262,6 +277,16 @@ final class OnboardingIntroViewModel: ObservableObject {
         )
     }
 
+    func restoreSyncAccountAction() {
+        pixelReporter.measureAutoRestoreOnboardingRestoreCTAAction()
+        restorePromptHandler.restoreSyncAccount()
+        contextualDaxDialogs.disableContextualDaxDialogs()
+    }
+
+    func restorePromptSkipAction() {
+        pixelReporter.measureAutoRestoreOnboardingSkipCTAAction()
+    }
+
 #if DEBUG || ALPHA
     public func overrideOnboardingCompleted() {
         LaunchOptionsHandler().overrideOnboardingCompleted()
@@ -298,7 +323,7 @@ private extension OnboardingIntroViewModel {
 
         let viewState = switch introStep {
         case .introDialog(let isReturningUser):
-            OnboardingView.ViewState.onboarding(.init(type: .startOnboardingDialog(canSkipTutorial: isReturningUser), step: .hidden))
+            OnboardingView.ViewState.onboarding(.init(type: .startOnboardingDialog(type: introDialogType(isReturningUser: isReturningUser)), step: .hidden))
         case .browserComparison:
             OnboardingView.ViewState.onboarding(.init(type: .browsersComparisonDialog, step: stepInfo()))
         case .addToDockPromo:
@@ -341,8 +366,9 @@ private extension OnboardingIntroViewModel {
     func measureScreenImpression() {
         guard let intro = state.intro else { return }
         switch intro.type {
-        case .startOnboardingDialog:
+        case .startOnboardingDialog(let dialogType):
             pixelReporter.measureOnboardingIntroImpression()
+            measureAutoRestorePromptImpressionIfNeeded(dialogType: dialogType)
         case .browsersComparisonDialog:
             pixelReporter.measureBrowserComparisonImpression()
         case .addToDockPromoDialog:
@@ -384,6 +410,20 @@ private extension OnboardingIntroViewModel {
         // TODO: Temporary override for dev validation; remove once remote cohort mapping is finalized.
         // return featureFlagger.resolveCohort(for: FeatureFlag.onboardingDuckAIQueryExperiment) as? FeatureFlag.DuckAIQueryExperimentCohort
         return .treatmentA
+    }
+
+    func introDialogType(isReturningUser: Bool) -> OnboardingView.ViewState.Intro.IntroDialogType {
+        guard isReturningUser else {
+            return .default
+        }
+        return restorePromptHandler.isEligibleForRestorePrompt() ? .restoreData : .skipTutorial
+    }
+
+    func measureAutoRestorePromptImpressionIfNeeded(dialogType: OnboardingView.ViewState.Intro.IntroDialogType) {
+        guard dialogType == .restoreData else {
+            return
+        }
+        pixelReporter.measureAutoRestoreOnboardingPromptShown()
     }
 
 }

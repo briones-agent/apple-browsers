@@ -63,8 +63,11 @@ final class AIChatHistoryManagerTests: XCTestCase {
 
         textSubject.send("test query")
 
-        // Wait for debounce (150ms) plus processing time
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        let predicate = NSPredicate { _, _ in
+            self.mockSuggestionsReader.fetchSuggestionsCallCount == 1
+        }
+        let exp = expectation(for: predicate, evaluatedWith: nil)
+        await fulfillment(of: [exp], timeout: 5.0)
 
         XCTAssertEqual(mockSuggestionsReader.fetchSuggestionsCallCount, 1)
         XCTAssertEqual(mockSuggestionsReader.lastQuery, "test query")
@@ -76,8 +79,11 @@ final class AIChatHistoryManagerTests: XCTestCase {
 
         textSubject.send("")
 
-        // Wait for debounce
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        let predicate = NSPredicate { _, _ in
+            self.mockSuggestionsReader.fetchSuggestionsCallCount == 1
+        }
+        let exp = expectation(for: predicate, evaluatedWith: nil)
+        await fulfillment(of: [exp], timeout: 5.0)
 
         XCTAssertNil(mockSuggestionsReader.lastQuery)
     }
@@ -202,17 +208,32 @@ final class AIChatHistoryManagerTests: XCTestCase {
         XCTAssertEqual(parentVC.children.count, 1)
     }
 
+    func testInstallInContainerView_ConfiguresHistoryListToDismissKeyboardOnDrag() {
+        let containerView = UIView()
+        let parentVC = UIViewController()
+
+        sut.installInContainerView(containerView, parentViewController: parentVC)
+
+        let tableView = findTableView(in: parentVC.children.first?.view)
+
+        XCTAssertEqual(tableView?.keyboardDismissMode, .onDrag)
+        XCTAssertEqual(tableView?.alwaysBounceVertical, true)
+    }
+
     func testInstallInContainerView_FetchesSuggestionsImmediately() async {
         let containerView = UIView()
         let parentVC = UIViewController()
 
         sut.installInContainerView(containerView, parentViewController: parentVC)
 
-        // Allow async fetch to complete
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        let predicate = NSPredicate { _, _ in
+            self.mockSuggestionsReader.fetchSuggestionsCallCount == 1
+        }
+        let exp = expectation(for: predicate, evaluatedWith: nil)
+        await fulfillment(of: [exp], timeout: 5.0)
 
         XCTAssertEqual(mockSuggestionsReader.fetchSuggestionsCallCount, 1)
-        XCTAssertNil(mockSuggestionsReader.lastQuery) // Empty query for initial fetch
+        XCTAssertNil(mockSuggestionsReader.lastQuery)
     }
 }
 
@@ -239,10 +260,17 @@ private final class MockAIChatSuggestionsReader: AIChatSuggestionsReading {
     }
 }
 
-private final class MockAIChatHistoryManagerDelegate: AIChatHistoryManagerDelegate {
-    var selectedURLs: [URL] = []
-
-    func aiChatHistoryManager(_ manager: AIChatHistoryManager, didSelectChatURL url: URL) {
-        selectedURLs.append(url)
+private func findTableView(in view: UIView?) -> UITableView? {
+    guard let view else { return nil }
+    if let tableView = view as? UITableView {
+        return tableView
     }
+
+    for subview in view.subviews {
+        if let tableView = findTableView(in: subview) {
+            return tableView
+        }
+    }
+
+    return nil
 }

@@ -44,10 +44,6 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866473771128
     case networkProtectionAppStoreSysexMessage
 
-    /// Enable WebKit page load timing performance reporting
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866615625098
-    case webKitPerformanceReporting
-
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866615719736
     case autoUpdateInDEBUG
 
@@ -83,6 +79,9 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212397941080401
     case dbpClickActionDelayReductionOptimization
+
+    /// https://app.asana.com/1/137249556945/project/1206873150423133/task/1213344522599586
+    case dbpWebViewUserAgent
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866717382557
     case syncSetupBarcodeIsUrlBased
@@ -221,9 +220,6 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212444166689969
     case warnBeforeQuit
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212357739558636?focus=true
-    case dataImportWideEventMeasurement
-
     /// https://app.asana.com/1/137249556945/project/1201899738287924/task/1212437820560561?focus=true
     case memoryUsageMonitor
 
@@ -263,6 +259,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212901927858518?focus=true
     case supportsSyncChatsDeletion
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213433942918287?focus=true
+    case aiChatMultiplePageContexts
+
     /// https://app.asana.com/1/137249556945/task/1213316822018797
     case aiChatSidebarResizable
 
@@ -280,9 +279,24 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213442286513425
     case privateProcessName
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213610208091978?focus=true
+    case aiChatChromeSidebar
+
     /// Enable Look Up (three-finger click) while keeping link preview disabled
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213489080183740
     case webViewLookUpAction
+
+    /// Window Semaphore Fullscreen Behavior Flag
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213585076410725?focus=true
+    case semaphoreAlwaysVisible
+
+    /// Enables the promo service to coordinate promos/calls to action
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213431687119179?focus=true
+    case promoQueue
+
+    /// Enables the new Tab Animations (Milestone 1)
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213643457004332
+    case tabAnimations
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -301,7 +315,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .syncIdentities,
                 .dataImportNewSafariFilePicker,
                 .blurryAddressBarTahoeFix,
-                .dataImportWideEventMeasurement,
                 .firstTimeQuitSurvey,
                 .aiChatOmnibarOnboarding,
                 .autofillPasswordSearchPrioritizeDomain,
@@ -312,8 +325,12 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .memoryUsageReporting,
                 .aiChatSidebarResizable,
                 .aiChatSidebarFloating,
+                .aiChatChromeSidebar,
                 .nextStepsListWidget,
-                .webViewLookUpAction:
+                .webViewLookUpAction,
+                .startupMetrics,
+                .promoQueue,
+                .tabAnimations:
             true
         default:
             false
@@ -368,10 +385,10 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .dbpEmailConfirmationDecoupling,
                 .dbpRemoteBrokerDelivery,
                 .dbpClickActionDelayReductionOptimization,
+                .dbpWebViewUserAgent,
                 .syncFeatureLevel3,
                 .appStoreUpdateFlow,
                 .unifiedURLPredictor,
-                .webKitPerformanceReporting,
                 .winBackOffer,
                 .syncCreditCards,
                 .syncIdentities,
@@ -391,7 +408,6 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .autofillPasswordSearchPrioritizeDomain,
                 .autofillPasswordsStatusBar,
                 .warnBeforeQuit,
-                .dataImportWideEventMeasurement,
                 .memoryUsageMonitor,
                 .memoryUsageReporting,
                 .aiChatSync,
@@ -401,12 +417,17 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .wideEventPostEndpoint,
                 .freeTrialConversionWideEvent,
                 .supportsSyncChatsDeletion,
+                .aiChatMultiplePageContexts,
                 .aiChatSidebarResizable,
                 .aiChatNtpRecentChats,
                 .aiChatSidebarFloating,
                 .startupMetrics,
                 .privateProcessName,
-                .webViewLookUpAction:
+                .aiChatChromeSidebar,
+                .webViewLookUpAction,
+                .promoQueue,
+                .semaphoreAlwaysVisible,
+                .tabAnimations:
             return true
         case .freemiumDBP,
                 .contextualOnboarding,
@@ -464,6 +485,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(DBPSubfeature.emailConfirmationDecoupling))
         case .dbpClickActionDelayReductionOptimization:
             return .remoteReleasable(.subfeature(DBPSubfeature.clickActionDelayReductionOptimization))
+        case .dbpWebViewUserAgent:
+            return .remoteReleasable(.subfeature(DBPSubfeature.webViewUserAgent))
         case .syncSetupBarcodeIsUrlBased:
             return .remoteReleasable(.subfeature(SyncSubfeature.syncSetupBarcodeIsUrlBased))
         case .exchangeKeysToSyncWithAnotherDevice:
@@ -512,8 +535,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.appStoreUpdateFlow))
         case .unifiedURLPredictor:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.unifiedURLPredictor))
-        case .webKitPerformanceReporting:
-            return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.webKitPerformanceReporting))
         case .winBackOffer:
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.winBackOffer))
         case .blackFridayCampaign:
@@ -548,8 +569,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .internalOnly()
         case .warnBeforeQuit:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.warnBeforeQuit))
-        case .dataImportWideEventMeasurement:
-            return .remoteReleasable(.subfeature(DataImportSubfeature.dataImportWideEventMeasurement))
         case .memoryUsageMonitor:
             return .disabled
         case .memoryUsageReporting:
@@ -572,6 +591,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.freeTrialConversionWideEvent))
         case .supportsSyncChatsDeletion:
             return .remoteReleasable(.subfeature(AIChatSubfeature.supportsSyncChatsDeletion))
+        case .aiChatMultiplePageContexts:
+            return .remoteReleasable(.subfeature(AIChatSubfeature.multiplePageContexts))
         case .aiChatSidebarResizable:
             return .remoteReleasable(.subfeature(AIChatSubfeature.sidebarResizable))
         case .aiChatNtpRecentChats:
@@ -579,11 +600,19 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatSidebarFloating:
             return .internalOnly()
         case .startupMetrics:
-            return .internalOnly()
+            return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.startupMetrics))
         case .privateProcessName:
             return .disabled
+        case .aiChatChromeSidebar:
+            return .remoteReleasable(.subfeature(AIChatSubfeature.sidebar))
         case .webViewLookUpAction:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.webViewLookUpAction))
+        case .semaphoreAlwaysVisible:
+            return .internalOnly()
+        case .promoQueue:
+            return .remoteReleasable(.feature(.promoQueue))
+        case .tabAnimations:
+            return .internalOnly()
         }
     }
 }

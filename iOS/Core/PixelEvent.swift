@@ -833,6 +833,7 @@ extension Pixel {
         case adAttributionLogicWrongVendorOnFailedCompilation
 
         case debugTabSwitcherDidChangeInvalidState
+        case debugTabsModelCrossModeMismatch
 
         case debugBookmarksInitialStructureQueryFailed
         case debugBookmarksStructureLost
@@ -981,6 +982,28 @@ extension Pixel {
         case syncRecoveryAlternativeScanRecoveryCodeTapped
         case syncRecoveryAlternativeBackupThisDeviceTapped
         case syncRecoveryAlternativeDismissed
+
+        case syncAutoRestoreOnboardingPromptShownUnique
+        case syncAutoRestoreOnboardingRestoreTappedUnique
+        case syncAutoRestoreOnboardingSkipTappedUnique
+
+        case syncAutoRestoreToggleShown
+        case syncAutoRestoreToggleOptedOut
+
+        case syncAutoRestoreSettingsReadyShown
+        case syncAutoRestoreSettingsRestoreTapped
+        case syncAutoRestoreSettingsSkipRestoreTapped
+        case syncAutoRestoreSettingsCancelled
+        case syncAutoRestoreSettingsManualRecoveryShown
+
+        case syncAutoRestoreSettingsPageShown
+        case syncAutoRestoreSettingsPageToggleEnabled
+        case syncAutoRestoreSettingsPageToggleDisabled
+
+        case syncAutoRestoreSuccess
+        case syncAutoRestoreFailure
+        case syncAutoRestorePreservedAccountCleared
+        case syncAutoRestorePreservedAccountClearFailed
 
         case syncSetupBarcodeScreenShown
         case syncSetupBarcodeScannerSuccess
@@ -1303,6 +1326,24 @@ extension Pixel {
         case bookmarkLaunchedDaily
         case newTabPageDisplayedDaily
 
+        // MARK: NTP after idle
+        case ntpAfterIdleNTPShownAfterIdle
+        case ntpAfterIdleNTPShownUserInitiated
+        case ntpAfterIdleReturnToPageTappedAfterIdle
+        case ntpAfterIdleReturnToPageTappedUserInitiated
+        case ntpAfterIdleBarUsedAfterIdle
+        case ntpAfterIdleBarUsedUserInitiated
+        case ntpAfterIdleToggleUsedAfterIdle
+        case ntpAfterIdleToggleUsedUserInitiated
+        case ntpAfterIdleBackButtonUsedAfterIdle
+        case ntpAfterIdleBackButtonUsedUserInitiated
+        case ntpAfterIdleAppBackgroundedAfterIdle
+        case ntpAfterIdleAppBackgroundedUserInitiated
+        case ntpAfterIdleTabSwitcherSelectedAfterIdle
+        case ntpAfterIdleTabSwitcherSelectedUserInitiated
+        case ntpAfterIdleSettingChangedToNewTab
+        case ntpAfterIdleSettingChangedToLastUsedTab
+
         // MARK: DuckPlayer
 
         /// [Privacy Triage](https://app.asana.com/1/137249556945/project/69071770703008/task/1210068471808737)
@@ -1372,6 +1413,12 @@ extension Pixel {
         // MARK: WebView Error Page Shown
         case webViewErrorPageShown
 
+        // MARK: External Scheme Navigation
+        case webViewExternalSchemeNavigationXSafariHTTPSStay
+        case webViewExternalSchemeNavigationXSafariHTTPSOpenInSafari
+        case webViewExternalSchemeNavigationXSafariHTTPSLoopDetected
+        case webViewExternalSchemeNavigationXSafariHTTPSLoopOpenInSafari
+
         // MARK: Browsing
         case stopPageLoad
 
@@ -1435,6 +1482,8 @@ extension Pixel {
         case aiChatSyncEncryptionError
         case aiChatSyncDecryptionError
         case aiChatSyncHistoryEnabledError
+        case aiChatTermsAcceptedDuplicateSyncOff
+        case aiChatTermsAcceptedDuplicateSyncOn
 
         // MARK: New Address Bar Picker
         case aiChatNewAddressBarPickerDisplayed
@@ -2311,6 +2360,7 @@ extension Pixel.Event {
         case .dbLocalAuthenticationError: return "m_d_local_auth_error"
 
         case .debugTabSwitcherDidChangeInvalidState: return "m_debug_tabswitcher_didchange_invalidstate"
+        case .debugTabsModelCrossModeMismatch: return "m_debug_tabs-model_cross-mode-mismatch"
 
         case .debugBookmarksMigratedMoreThanOnce: return "m_debug_bookmarks_migrated-more-than-once"
             
@@ -2579,6 +2629,28 @@ extension Pixel.Event {
         case .syncRecoveryAlternativeBackupThisDeviceTapped: return "sync_recovery_alternative_backup_this_device_tapped"
         case .syncRecoveryAlternativeDismissed: return "sync_recovery_alternative_dismissed"
 
+        case .syncAutoRestoreOnboardingPromptShownUnique: return "sync-auto-restore_onboarding_prompt_shown_unique"
+        case .syncAutoRestoreOnboardingRestoreTappedUnique: return "sync-auto-restore_onboarding_restore_tapped_unique"
+        case .syncAutoRestoreOnboardingSkipTappedUnique: return "sync-auto-restore_onboarding_skip_tapped_unique"
+
+        case .syncAutoRestoreToggleShown: return "sync-auto-restore_toggle_shown"
+        case .syncAutoRestoreToggleOptedOut: return "sync-auto-restore_toggle_opted_out"
+
+        case .syncAutoRestoreSettingsReadyShown: return "sync-auto-restore_settings_ready_shown"
+        case .syncAutoRestoreSettingsRestoreTapped: return "sync-auto-restore_settings_restore_tapped"
+        case .syncAutoRestoreSettingsSkipRestoreTapped: return "sync-auto-restore_settings_skip_restore_tapped"
+        case .syncAutoRestoreSettingsCancelled: return "sync-auto-restore_settings_cancelled"
+        case .syncAutoRestoreSettingsManualRecoveryShown: return "sync-auto-restore_settings_manual_recovery_shown"
+
+        case .syncAutoRestoreSettingsPageShown: return "sync-auto-restore_settings_page_shown"
+        case .syncAutoRestoreSettingsPageToggleEnabled: return "sync-auto-restore_settings_page_toggle_enabled"
+        case .syncAutoRestoreSettingsPageToggleDisabled: return "sync-auto-restore_settings_page_toggle_disabled"
+
+        case .syncAutoRestoreSuccess: return "sync-auto-restore_success"
+        case .syncAutoRestoreFailure: return "sync-auto-restore_failure"
+        case .syncAutoRestorePreservedAccountCleared: return "sync-auto-restore_preserved_account_cleared"
+        case .syncAutoRestorePreservedAccountClearFailed: return "sync-auto-restore_preserved_account_clear_failed"
+
         case .syncSetupBarcodeScreenShown: return "sync_setup_barcode_screen_shown"
         case .syncSetupBarcodeScannerSuccess: return "sync_setup_barcode_scanner_success"
         case .syncSetupBarcodeScannerFailed: return "sync_setup_barcode_scanner_failed"
@@ -2816,6 +2888,24 @@ extension Pixel.Event {
         case .bookmarkLaunchedDaily: return "m_bookmark_launched_daily"
         case .newTabPageDisplayedDaily: return "m_new_tab_page_displayed_daily"
 
+        // MARK: NTP after idle
+        case .ntpAfterIdleNTPShownAfterIdle: return "m_ntp_after_idle_ntp_shown_after_idle"
+        case .ntpAfterIdleNTPShownUserInitiated: return "m_ntp_after_idle_ntp_shown_user_initiated"
+        case .ntpAfterIdleReturnToPageTappedAfterIdle: return "m_ntp_after_idle_return_to_page_tapped_after_idle"
+        case .ntpAfterIdleReturnToPageTappedUserInitiated: return "m_ntp_after_idle_return_to_page_tapped_user_initiated"
+        case .ntpAfterIdleBarUsedAfterIdle: return "m_ntp_after_idle_bar_used_from_ntp_after_idle"
+        case .ntpAfterIdleBarUsedUserInitiated: return "m_ntp_after_idle_bar_used_from_ntp_user_initiated"
+        case .ntpAfterIdleToggleUsedAfterIdle: return "m_ntp_after_idle_toggle_used_from_ntp_after_idle"
+        case .ntpAfterIdleToggleUsedUserInitiated: return "m_ntp_after_idle_toggle_used_from_ntp_user_initiated"
+        case .ntpAfterIdleBackButtonUsedAfterIdle: return "m_ntp_after_idle_back_button_used_from_ntp_after_idle"
+        case .ntpAfterIdleBackButtonUsedUserInitiated: return "m_ntp_after_idle_back_button_used_from_ntp_user_initiated"
+        case .ntpAfterIdleAppBackgroundedAfterIdle: return "m_ntp_after_idle_app_backgrounded_from_ntp_after_idle"
+        case .ntpAfterIdleAppBackgroundedUserInitiated: return "m_ntp_after_idle_app_backgrounded_from_ntp_user_initiated"
+        case .ntpAfterIdleTabSwitcherSelectedAfterIdle: return "m_ntp_after_idle_tab_switcher_selected_from_ntp_after_idle"
+        case .ntpAfterIdleTabSwitcherSelectedUserInitiated: return "m_ntp_after_idle_tab_switcher_selected_from_ntp_user_initiated"
+        case .ntpAfterIdleSettingChangedToNewTab: return "m_ntp_after_idle_setting_changed_to_new_tab"
+        case .ntpAfterIdleSettingChangedToLastUsedTab: return "m_ntp_after_idle_setting_changed_to_last_used_tab"
+
         // MARK: DuckPlayer
         case .duckPlayerSettingsOpen: return "m_settings_duckplayer_open"
         case .duckPlayerDailyUniqueView: return "duckplayer_daily-unique-view"
@@ -2881,6 +2971,12 @@ extension Pixel.Event {
             
         // MARK: - WebView Error Page shown
         case .webViewErrorPageShown: return "m_errorpageshown"
+
+        // MARK: - External Scheme Navigation
+        case .webViewExternalSchemeNavigationXSafariHTTPSStay: return "m_webview_external-scheme-navigation_x-safari-https_stay_daily"
+        case .webViewExternalSchemeNavigationXSafariHTTPSOpenInSafari: return "m_webview_external-scheme-navigation_x-safari-https_open-in-safari_daily"
+        case .webViewExternalSchemeNavigationXSafariHTTPSLoopDetected: return "m_webview_external-scheme-navigation_x-safari-https_loop-detected"
+        case .webViewExternalSchemeNavigationXSafariHTTPSLoopOpenInSafari: return "m_webview_external-scheme-navigation_x-safari-https_loop-open-in-safari_daily"
 
         // MARK: - DuckPlayer FE Application Telemetry
         case .duckPlayerLandscapeLayoutImpressions: return "duckplayer_landscape_layout_impressions"
@@ -3019,6 +3115,8 @@ extension Pixel.Event {
         case .aiChatSyncEncryptionError: return "m_aichat_sync_internal_encryption-error"
         case .aiChatSyncDecryptionError: return "m_aichat_sync_internal_decryption-error"
         case .aiChatSyncHistoryEnabledError: return "m_aichat_sync_internal_history_enabled-error"
+        case .aiChatTermsAcceptedDuplicateSyncOff: return "m_aichat_terms_accepted_duplicate_sync_off"
+        case .aiChatTermsAcceptedDuplicateSyncOn: return "m_aichat_terms_accepted_duplicate_sync_on"
 
         // MARK: Lifecycle
         case .appDidTransitionToUnexpectedState: return "m_debug_app-did-transition-to-unexpected-state-4"

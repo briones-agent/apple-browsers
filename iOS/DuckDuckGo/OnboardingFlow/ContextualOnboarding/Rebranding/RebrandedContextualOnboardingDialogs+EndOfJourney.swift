@@ -67,9 +67,11 @@ extension OnboardingRebranding {
                         .frame(maxWidth: Metrics.buttonMaxWidth.build(v: vSizeClass, h: hSizeClass))
                         .buttonStyle(theme.primaryButtonStyle.style)
                     }
+                    .frame(maxWidth: Metrics.buttonMaxWidth.build(v: vSizeClass, h: hSizeClass))
+                    .buttonStyle(theme.primaryButtonStyle.style)
                 }
-                .padding(theme.contextualOnboardingMetrics.containerPadding)
             }
+            .padding(theme.contextualOnboardingMetrics.containerPadding)
             .applyMaxDialogWidth(iPhoneLandscape: theme.contextualOnboardingMetrics.maxContainerWidth, iPad: theme.contextualOnboardingMetrics.maxContainerWidth)
         }
     }
