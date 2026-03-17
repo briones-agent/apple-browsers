@@ -1324,10 +1324,9 @@ extension SettingsViewModel {
             updatedSubscription.entitlements = currentEntitlements
             updatedSubscription.subscriptionFeatures = try await subscriptionManager.currentSubscriptionFeatures(forceRefresh: false)
         } catch SubscriptionManagerError.noTokenAvailable {
-            // 3b. User is not authenticated — reset subscription fields
+            // 3b. User is not authenticated — reset subscription fields (no pixel: user has no account)
             Logger.subscription.debug("No subscription data available - user not authenticated")
             applyNoSubscriptionState(&updatedSubscription)
-            DailyPixel.fireDailyAndCount(pixel: .settingsSubscriptionAccountWithNoSubscriptionFound)
         } catch {
             // 3c. Transient error — keep cached state as-is
             Logger.subscription.error("Failed to fetch Subscription: \(error, privacy: .public)")
