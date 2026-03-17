@@ -192,6 +192,7 @@ extension TabExtensionsBuilder {
             AdClickAttributionTabExtension(inheritedAttribution: args.inheritedAttribution,
                                            userContentControllerFuture: args.userContentControllerFuture,
                                            trackerInfoPublisher: contentBlocking.trackersPublisher.map { $0.request },
+                                           trackerProtectionSubfeaturePublisher: userScripts.map(\.?.trackerProtectionSubfeature).eraseToAnyPublisher(),
                                            dependencies: dependencies.privacyFeatures.contentBlocking)
         }
 

@@ -17,6 +17,7 @@
 //
 
 import Common
+import ContentBlocking
 import Foundation
 import os.log
 import UserScript
@@ -94,6 +95,8 @@ public final class TrackerProtectionSubfeature: NSObject, Subfeature {
     public let featureName: String = TrackerProtectionSubfeature.featureNameValue
     public weak var broker: UserScriptMessageBroker?
     public weak var delegate: TrackerProtectionSubfeatureDelegate?
+    public var currentAdClickAttributionVendor: String?
+    public var currentAdClickAttributionTrackerData: TrackerData?
 
     // MARK: - Subfeature
 

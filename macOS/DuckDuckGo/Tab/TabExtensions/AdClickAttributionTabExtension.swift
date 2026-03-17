@@ -104,6 +104,7 @@ final class AdClickAttributionTabExtension: TabExtension {
     private let dependencies: any AdClickAttributionDependencies
 
     private weak var userContentController: UserContentControllerProtocol?
+    private weak var trackerProtectionSubfeature: TrackerProtectionSubfeature?
     private let dateTimeProvider: () -> Date
 
     private let detection: AdClickAttributionDetecting
@@ -120,6 +121,7 @@ final class AdClickAttributionTabExtension: TabExtension {
     init(inheritedAttribution: AdClickAttributionLogic.State?,
          userContentControllerFuture: some Publisher<some UserContentControllerProtocol, Never>,
          trackerInfoPublisher: some Publisher<DetectedRequest, Never>,
+         trackerProtectionSubfeaturePublisher: AnyPublisher<TrackerProtectionSubfeature?, Never>? = nil,
          dependencies: some AdClickAttributionDependencies,
          dateTimeProvider: @escaping () -> Date = Date.init,
          logicsProvider: (AdClickAttributionDependencies) -> (AdClickLogicProtocol, AdClickAttributionDetecting) = AdClickAttributionTabExtension.makeAdClickAttribution) {
@@ -135,11 +137,15 @@ final class AdClickAttributionTabExtension: TabExtension {
         userContentControllerFuture.sink { [weak self] userContentController in
             self?.delayedInitialization(with: userContentController,
                                         inheritedAttribution: inheritedAttribution,
-                                        trackerInfoPublisher: trackerInfoPublisher)
+                                        trackerInfoPublisher: trackerInfoPublisher,
+                                        trackerProtectionSubfeaturePublisher: trackerProtectionSubfeaturePublisher)
         }.store(in: &cancellables)
     }
 
-    private func delayedInitialization(with userContentController: UserContentControllerProtocol, inheritedAttribution: AdClickAttributionLogic.State?, trackerInfoPublisher: some Publisher<DetectedRequest, Never>) {
+    private func delayedInitialization(with userContentController: UserContentControllerProtocol,
+                                       inheritedAttribution: AdClickAttributionLogic.State?,
+                                       trackerInfoPublisher: some Publisher<DetectedRequest, Never>,
+                                       trackerProtectionSubfeaturePublisher: AnyPublisher<TrackerProtectionSubfeature?, Never>?) {
 
         Logger.contentBlocking.debug("<\(self.logic.debugID)> Performing delayed initialization")
 
@@ -151,6 +157,12 @@ final class AdClickAttributionTabExtension: TabExtension {
         }
 
         logic.onRulesChanged(latestRules: dependencies.contentBlockingManager.currentRules)
+
+        trackerProtectionSubfeaturePublisher?
+            .sink { [weak self] trackerProtectionSubfeature in
+                self?.trackerProtectionSubfeature = trackerProtectionSubfeature
+            }
+            .store(in: &cancellables)
 
         trackerInfoPublisher
             .sink { [weak self] tracker in
@@ -175,8 +187,13 @@ extension AdClickAttributionTabExtension: AdClickAttributionLogicDelegate {
 
         let attributedTempListName = AdClickAttributionRulesProvider.Constants.attributedTempRuleListName
 
+        trackerProtectionSubfeature?.currentAdClickAttributionVendor = vendor
+        trackerProtectionSubfeature?.currentAdClickAttributionTrackerData = rules?.trackerData
+
         guard dependencies.privacyConfigurationManager.privacyConfig.isEnabled(featureKey: .contentBlocking) else {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
+            trackerProtectionSubfeature?.currentAdClickAttributionVendor = nil
+            trackerProtectionSubfeature?.currentAdClickAttributionTrackerData = nil
             return
         }
 

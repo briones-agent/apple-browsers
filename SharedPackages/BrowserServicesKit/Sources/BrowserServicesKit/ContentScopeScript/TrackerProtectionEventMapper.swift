@@ -50,6 +50,31 @@ public struct TrackerProtectionEventMapper {
         )
     }
 
+    public func applyAdAttributionOverrideIfNeeded(
+        _ request: DetectedRequest,
+        tracker: TrackerProtectionSubfeature.TrackerDetection,
+        vendor: String?,
+        attributionTrackerData: TrackerData?
+    ) -> DetectedRequest {
+        guard request.state == .blocked,
+              let vendor,
+              let attributionTrackerData,
+              let pageHost = URL(string: tracker.pageUrl)?.host?.droppingWwwPrefix(),
+              tld.eTLDplus1(pageHost)?.lowercased() == vendor.lowercased(),
+              attributionTrackerData.findTracker(forUrl: tracker.url) != nil else {
+            return request
+        }
+
+        return DetectedRequest(url: request.url,
+                               eTLDplus1: request.eTLDplus1,
+                               ownerName: request.ownerName,
+                               entityName: request.entityName,
+                               category: request.category,
+                               prevalence: request.prevalence,
+                               state: .allowed(reason: .adClickAttribution),
+                               pageUrl: request.pageUrl)
+    }
+
     // MARK: - SurrogateInjection mapping
 
     public func detectedRequest(from surrogate: TrackerProtectionSubfeature.SurrogateInjection) -> DetectedRequest {

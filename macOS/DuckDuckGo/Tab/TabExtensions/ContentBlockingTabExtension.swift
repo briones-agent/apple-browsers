@@ -177,7 +177,13 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
             return
         }
 
-        let detectedRequest = trackerProtectionMapper.detectedRequest(from: tracker)
+        let mappedRequest = trackerProtectionMapper.detectedRequest(from: tracker)
+        let detectedRequest = trackerProtectionMapper.applyAdAttributionOverrideIfNeeded(
+            mappedRequest,
+            tracker: tracker,
+            vendor: subfeature.currentAdClickAttributionVendor,
+            attributionTrackerData: subfeature.currentAdClickAttributionTrackerData
+        )
 
         if TrackerProtectionEventMapper.isThirdPartyRequest(tracker) {
             trackersSubject.send(DetectedTracker(request: detectedRequest, type: .thirdPartyRequest))

@@ -3168,7 +3168,13 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
             return
         }
 
-        let detectedRequest = Self.trackerProtectionMapper.detectedRequest(from: tracker)
+        let mappedRequest = Self.trackerProtectionMapper.detectedRequest(from: tracker)
+        let detectedRequest = Self.trackerProtectionMapper.applyAdAttributionOverrideIfNeeded(
+            mappedRequest,
+            tracker: tracker,
+            vendor: subfeature.currentAdClickAttributionVendor,
+            attributionTrackerData: subfeature.currentAdClickAttributionTrackerData
+        )
 
         if TrackerProtectionEventMapper.isThirdPartyRequest(tracker) {
             privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: detectedRequest)
@@ -3249,10 +3255,14 @@ extension TabViewController: AdClickAttributionLogicDelegate {
                           didRequestRuleApplication rules: ContentBlockerRulesManager.Rules?,
                           forVendor vendor: String?) {
         let attributedTempListName = AdClickAttributionRulesProvider.Constants.attributedTempRuleListName
+        userScripts?.trackerProtectionSubfeature.currentAdClickAttributionVendor = vendor
+        userScripts?.trackerProtectionSubfeature.currentAdClickAttributionTrackerData = rules?.trackerData
 
         guard privacyConfigurationManager.privacyConfig.isEnabled(featureKey: .contentBlocking)
         else {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
+            userScripts?.trackerProtectionSubfeature.currentAdClickAttributionVendor = nil
+            userScripts?.trackerProtectionSubfeature.currentAdClickAttributionTrackerData = nil
             return
         }
 
