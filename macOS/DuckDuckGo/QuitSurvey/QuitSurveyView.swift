@@ -217,19 +217,31 @@ private struct QuitSurveyOptionRow: View {
     }
 }
 
+// MARK: - Inline Checkbox Toggle Style
+
+private struct InlineCheckboxToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button(action: { configuration.isOn.toggle() }) {
+            HStack(spacing: 8) {
+                Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
+                    .foregroundColor(configuration.isOn ? Color(designSystemColor: .accentAltContentPrimary) : Color(designSystemColor: .iconsSecondary))
+                configuration.label
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Domain Toggle Row
 
 private struct DomainToggleRow: View {
     let entry: QuitSurveyDomainEntry
-    let isSelected: Bool
-    let onToggle: () -> Void
+    @Binding var isSelected: Bool
 
     var body: some View {
-        Button(action: onToggle) {
+        Toggle(isOn: $isSelected) {
             HStack(spacing: 8) {
-                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                    .foregroundColor(isSelected ? Color(designSystemColor: .accentAltContentPrimary) : Color(designSystemColor: .iconsSecondary))
-
                 if let favicon = entry.favicon {
                     Image(nsImage: favicon)
                         .resizable()
@@ -259,9 +271,8 @@ private struct DomainToggleRow: View {
                     }
                 }
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .toggleStyle(InlineCheckboxToggleStyle())
     }
 }
 
@@ -272,11 +283,11 @@ private struct OtherDomainRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: { viewModel.toggleOtherDomain() }) {
+            Toggle(isOn: Binding(
+                get: { viewModel.isOtherDomainSelected },
+                set: { _ in viewModel.toggleOtherDomain() }
+            )) {
                 HStack(spacing: 8) {
-                    Image(systemName: viewModel.isOtherDomainSelected ? "checkmark.square.fill" : "square")
-                        .foregroundColor(viewModel.isOtherDomainSelected ? Color(designSystemColor: .accentAltContentPrimary) : Color(designSystemColor: .iconsSecondary))
-
                     Image(systemName: "globe")
                         .frame(width: 16, height: 16)
                         .foregroundColor(Color(designSystemColor: .iconsSecondary))
@@ -285,9 +296,8 @@ private struct OtherDomainRow: View {
                         .systemLabel()
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .toggleStyle(InlineCheckboxToggleStyle())
 
             if viewModel.isOtherDomainSelected {
                 TextField(UserText.quitSurveyAffectedDomainsOtherPlaceholder, text: $viewModel.otherDomainText)
@@ -517,10 +527,11 @@ private struct QuitSurveyNegativeView: View {
             ForEach(viewModel.recentDomains) { entry in
                 DomainToggleRow(
                     entry: entry,
-                    isSelected: viewModel.selectedDomains.contains(entry.domain)
-                ) {
-                    viewModel.toggleDomain(entry.domain)
-                }
+                    isSelected: Binding(
+                        get: { viewModel.selectedDomains.contains(entry.domain) },
+                        set: { _ in viewModel.toggleDomain(entry.domain) }
+                    )
+                )
             }
             OtherDomainRow(viewModel: viewModel)
         }
