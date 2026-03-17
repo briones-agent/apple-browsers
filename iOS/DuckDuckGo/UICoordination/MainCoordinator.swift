@@ -73,7 +73,7 @@ final class MainCoordinator {
     private(set) var webExtensionManager: WebExtensionManaging?
     private(set) var webExtensionEventsCoordinator: WebExtensionEventsCoordinator?
     private var webExtensionFeatureFlagHandler: AnyObject?
-    private var dataImportUserActivityHandler: DataImportUserActivityHandler?
+    private var dataImportUserActivityHandler: DataImportUserActivityHandling?
     private let darkReaderFeatureSettings: DarkReaderFeatureSettings
     private var isSyncingEmbeddedExtensions = false
     private var darkReaderCancellables = Set<AnyCancellable>()

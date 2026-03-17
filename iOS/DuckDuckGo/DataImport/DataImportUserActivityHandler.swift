@@ -2,7 +2,7 @@
 //  DataImportUserActivityHandler.swift
 //  DuckDuckGo
 //
-//  Copyright © 2025 DuckDuckGo. All rights reserved.
+//  Copyright © 2026 DuckDuckGo. All rights reserved.
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
@@ -21,7 +21,12 @@ import Foundation
 import os.log
 import BrowserKit
 
-final class DataImportUserActivityHandler {
+protocol DataImportUserActivityHandling {
+    @discardableResult
+    func handle(_ userActivity: NSUserActivity) -> Bool
+}
+
+final class DataImportUserActivityHandler: DataImportUserActivityHandling {
 
     static var browserKitImportActivityType: String {
         if #available(iOS 26.4, *) {
