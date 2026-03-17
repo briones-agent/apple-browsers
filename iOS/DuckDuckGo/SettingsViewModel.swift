@@ -1324,6 +1324,7 @@ extension SettingsViewModel {
                 updatedSubscription.entitlements = []
                 updatedSubscription.platform = .unknown
                 updatedSubscription.isActiveTrialOffer = false
+                updatedSubscription.isEligibleForTrialOffer = await isUserEligibleForTrialOffer()
                 updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
                 DailyPixel.fireDailyAndCount(pixel: .settingsSubscriptionAccountWithNoSubscriptionFound)
 
@@ -1358,6 +1359,7 @@ extension SettingsViewModel {
             updatedSubscription.entitlements = []
             updatedSubscription.platform = .unknown
             updatedSubscription.isActiveTrialOffer = false
+            updatedSubscription.isEligibleForTrialOffer = await isUserEligibleForTrialOffer()
             updatedSubscription.isWinBackEligible = winBackOfferVisibilityManager.isOfferAvailable
 
             DailyPixel.fireDailyAndCount(pixel: .settingsSubscriptionAccountWithNoSubscriptionFound)
