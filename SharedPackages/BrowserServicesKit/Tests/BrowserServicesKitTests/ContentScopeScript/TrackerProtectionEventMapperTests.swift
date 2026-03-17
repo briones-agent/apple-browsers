@@ -477,4 +477,126 @@ final class TrackerProtectionEventMapperTests: XCTestCase {
             XCTFail("Expected allowed state with ruleException")
         }
     }
+
+    // MARK: - Ad attribution override
+
+    func testAdAttributionOverride_allowlistedHost_overridesToAdClickAttribution() {
+        let tracker = makeTracker(
+            url: "https://convert.ad-company.site/pixel",
+            blocked: true,
+            reason: "default block",
+            pageUrl: "https://www.ad-company.site/product"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: "ad-company.site",
+            allowlistHosts: ["convert.ad-company.site"]
+        )
+        XCTAssertEqual(result.state, .allowed(reason: .adClickAttribution))
+    }
+
+    func testAdAttributionOverride_nonAllowlistedHost_remainsBlocked() {
+        let tracker = makeTracker(
+            url: "https://ad-company.site/tracker.js",
+            blocked: true,
+            reason: "default block",
+            pageUrl: "https://www.ad-company.site/product"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: "ad-company.site",
+            allowlistHosts: ["convert.ad-company.site"]
+        )
+        XCTAssertEqual(result.state, .blocked)
+    }
+
+    func testAdAttributionOverride_noVendor_remainsBlocked() {
+        let tracker = makeTracker(
+            url: "https://convert.ad-company.site/pixel",
+            blocked: true,
+            reason: "default block",
+            pageUrl: "https://www.ad-company.site/product"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: nil,
+            allowlistHosts: ["convert.ad-company.site"]
+        )
+        XCTAssertEqual(result.state, .blocked)
+    }
+
+    func testAdAttributionOverride_emptyAllowlist_remainsBlocked() {
+        let tracker = makeTracker(
+            url: "https://convert.ad-company.site/pixel",
+            blocked: true,
+            reason: "default block",
+            pageUrl: "https://www.ad-company.site/product"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: "ad-company.site",
+            allowlistHosts: []
+        )
+        XCTAssertEqual(result.state, .blocked)
+    }
+
+    func testAdAttributionOverride_vendorMismatch_remainsBlocked() {
+        let tracker = makeTracker(
+            url: "https://convert.ad-company.site/pixel",
+            blocked: true,
+            reason: "default block",
+            pageUrl: "https://www.other-site.com/page"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: "ad-company.site",
+            allowlistHosts: ["convert.ad-company.site"]
+        )
+        XCTAssertEqual(result.state, .blocked)
+    }
+
+    func testAdAttributionOverride_subdomainOfAllowlistedHost_overrides() {
+        let tracker = makeTracker(
+            url: "https://sub.convert.ad-company.site/pixel",
+            blocked: true,
+            reason: "default block",
+            pageUrl: "https://www.ad-company.site/product"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: "ad-company.site",
+            allowlistHosts: ["convert.ad-company.site"]
+        )
+        XCTAssertEqual(result.state, .allowed(reason: .adClickAttribution))
+    }
+
+    func testAdAttributionOverride_alreadyAllowed_noChange() {
+        let tracker = makeTracker(
+            url: "https://convert.ad-company.site/pixel",
+            blocked: false,
+            reason: "matched rule - exception",
+            pageUrl: "https://www.ad-company.site/product"
+        )
+        let request = mapper.detectedRequest(from: tracker)
+        let result = mapper.applyAdAttributionOverrideIfNeeded(
+            request,
+            tracker: tracker,
+            vendor: "ad-company.site",
+            allowlistHosts: ["convert.ad-company.site"]
+        )
+        XCTAssertEqual(result.state, .allowed(reason: .ruleException),
+                       "Already-allowed request should not be overridden")
+    }
 }

@@ -182,7 +182,7 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
             mappedRequest,
             tracker: tracker,
             vendor: subfeature.currentAdClickAttributionVendor,
-            attributionTrackerData: subfeature.currentAdClickAttributionTrackerData
+            allowlistHosts: subfeature.currentAdClickAttributionAllowlistHosts
         )
 
         if TrackerProtectionEventMapper.isThirdPartyRequest(tracker) {

@@ -17,9 +17,7 @@
 //
 
 import Common
-import ContentBlocking
 import Foundation
-import TrackerRadarKit
 import os.log
 import UserScript
 import WebKit
@@ -97,7 +95,7 @@ public final class TrackerProtectionSubfeature: NSObject, Subfeature {
     public weak var broker: UserScriptMessageBroker?
     public weak var delegate: TrackerProtectionSubfeatureDelegate?
     public var currentAdClickAttributionVendor: String?
-    public var currentAdClickAttributionTrackerData: TrackerData?
+    public var currentAdClickAttributionAllowlistHosts: [String] = []
 
     // MARK: - Subfeature
 

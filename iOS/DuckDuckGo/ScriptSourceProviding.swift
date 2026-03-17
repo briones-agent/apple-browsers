@@ -93,7 +93,12 @@ struct DefaultScriptSourceProvider: ScriptSourceProviding {
         syncErrorHandler = dependencies.syncErrorHandler
         webExtensionAvailability = dependencies.webExtensionAvailability
         trackerProtectionDataSource = DefaultTrackerProtectionDataSource(
-            contentBlockingManager: contentBlockingManager
+            contentBlockingManager: contentBlockingManager,
+            additionalRuleLists: [
+                AdClickAttributionRulesSplitter.blockingAttributionRuleListName(
+                    forListNamed: DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
+                ),
+            ]
         )
 
         contentScopeProperties = ContentScopeProperties(gpcEnabled: dependencies.appSettings.sendDoNotSell,

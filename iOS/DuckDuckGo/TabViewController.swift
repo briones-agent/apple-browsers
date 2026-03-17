@@ -3173,7 +3173,7 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
             mappedRequest,
             tracker: tracker,
             vendor: subfeature.currentAdClickAttributionVendor,
-            attributionTrackerData: subfeature.currentAdClickAttributionTrackerData
+            allowlistHosts: subfeature.currentAdClickAttributionAllowlistHosts
         )
 
         if TrackerProtectionEventMapper.isThirdPartyRequest(tracker) {
@@ -3256,13 +3256,15 @@ extension TabViewController: AdClickAttributionLogicDelegate {
                           forVendor vendor: String?) {
         let attributedTempListName = AdClickAttributionRulesProvider.Constants.attributedTempRuleListName
         userScripts?.trackerProtectionSubfeature.currentAdClickAttributionVendor = vendor
-        userScripts?.trackerProtectionSubfeature.currentAdClickAttributionTrackerData = rules?.trackerData
+        userScripts?.trackerProtectionSubfeature.currentAdClickAttributionAllowlistHosts = vendor != nil
+            ? ContentBlocking.shared.adClickAttribution.allowlist.map(\.host)
+            : []
 
         guard privacyConfigurationManager.privacyConfig.isEnabled(featureKey: .contentBlocking)
         else {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
             userScripts?.trackerProtectionSubfeature.currentAdClickAttributionVendor = nil
-            userScripts?.trackerProtectionSubfeature.currentAdClickAttributionTrackerData = nil
+            userScripts?.trackerProtectionSubfeature.currentAdClickAttributionAllowlistHosts = []
             return
         }
 

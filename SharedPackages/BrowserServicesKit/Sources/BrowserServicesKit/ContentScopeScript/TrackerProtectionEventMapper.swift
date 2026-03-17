@@ -19,7 +19,6 @@
 import Common
 import ContentBlocking
 import Foundation
-import TrackerRadarKit
 
 /// Shared converter for C-S-S tracker-protection events to native DetectedRequest.
 /// Eliminates duplicated mapping logic between iOS TabViewController and macOS ContentBlockingTabExtension.
@@ -54,14 +53,16 @@ public struct TrackerProtectionEventMapper {
         _ request: DetectedRequest,
         tracker: TrackerProtectionSubfeature.TrackerDetection,
         vendor: String?,
-        attributionTrackerData: TrackerData?
+        allowlistHosts: [String]
     ) -> DetectedRequest {
         guard request.state == .blocked,
               let vendor,
-              let attributionTrackerData,
+              !allowlistHosts.isEmpty,
               let pageHost = URL(string: tracker.pageUrl)?.host?.droppingWwwPrefix(),
               tld.eTLDplus1(pageHost)?.lowercased() == vendor.lowercased(),
-              attributionTrackerData.findTracker(forUrl: tracker.url) != nil else {
+              let trackerHost = URL(string: tracker.url)?.host,
+              allowlistHosts.contains(where: { trackerHost == $0 || trackerHost.hasSuffix("." + $0) })
+        else {
             return request
         }
 
