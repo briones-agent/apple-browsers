@@ -164,6 +164,7 @@ class MockNewTabDialogSpecProvider: NewTabDialogSpecProvider, SubscriptionPromot
     var dismissCalled = false
     var specToReturn: DaxDialogs.HomeScreenSpec?
     var isShowingSubscriptionPromotion = false
+    var shouldShowSubscriptionPromotion = false
     var subscriptionPromotionDialogSeen = false
 
     func nextHomeScreenMessage() -> DaxDialogs.HomeScreenSpec? {

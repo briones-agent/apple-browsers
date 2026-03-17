@@ -58,6 +58,7 @@ final class ContextualOnboardingLogicMock: ContextualOnboardingLogic, Subscripti
     var isShowingSearchSuggestions: Bool = false
     var isShowingSitesSuggestions: Bool = false
     var isShowingSubscriptionPromotion: Bool = false
+    var shouldShowSubscriptionPromotion: Bool = false
     var shouldShowFireButtonPulse: Bool = false
     var isAddFavoriteFlow: Bool = false
     var isDismissedPublisher = PassthroughSubject<Bool, Never>()
@@ -151,6 +152,8 @@ class DummyDaxDialogsManager: DaxDialogsManaging {
     var isAddFavoriteFlow: Bool = false
 
     var isShowingSubscriptionPromotion: Bool = false
+
+    var shouldShowSubscriptionPromotion: Bool = false
 
     var subscriptionPromotionDialogSeen: Bool = false
 

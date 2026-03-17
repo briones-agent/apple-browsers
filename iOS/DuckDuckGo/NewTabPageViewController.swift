@@ -267,9 +267,11 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
             .filter { $0 }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self,
-                      self.view.window != nil,
-                      self.hostingController == nil else { return }
+                guard let self, self.view.window != nil else { return }
+                // Allow preemption: if the promo should show, dismiss any existing
+                // NTP dialog and present the promo. showNextDaxDialogNew handles
+                // dismissing the current hostingController before presenting.
+                guard self.hostingController == nil || self.daxDialogsManager.shouldShowSubscriptionPromotion else { return }
                 self.presentNextDaxDialog()
             }
             .store(in: &cancellables)

@@ -1455,7 +1455,7 @@ class MainViewController: UIViewController {
             ntpAfterIdleInstrumentation.ntpShown(afterIdle: openedAfterIdle)
         }
 
-        if isNewTab && allowingKeyboard && KeyboardSettings().onNewTab {
+        if isNewTab && allowingKeyboard && KeyboardSettings().onNewTab && !daxDialogsManager.shouldShowSubscriptionPromotion {
             omniBar.beginEditing(animated: true)
         }
 
