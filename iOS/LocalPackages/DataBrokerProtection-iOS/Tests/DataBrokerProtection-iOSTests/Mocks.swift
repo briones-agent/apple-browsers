@@ -41,18 +41,21 @@ final class MockDataBrokerProtectionSubscriptionManaging: DataBrokerProtectionSu
 final class MockContinuedProcessingEventDelegate: DBPContinuedProcessingEventDelegate {
     var onEvent: ((DBPContinuedProcessingEvent) -> Void)?
 
-    func iosManager(_ manager: DataBrokerProtectionIOSManager, didEmit event: DBPContinuedProcessingEvent) {
+    func iosManager(_ manager: DataBrokerProtectionIOSManager, didEmit event: DBPContinuedProcessingEvent) async {
         onEvent?(event)
     }
 }
 
 final class MockContinuedProcessingCoordinator: DBPContinuedProcessingCoordinating {
     var didCallStartInitialRun = false
-    var hasAttachedTask = false
+    var _hasAttachedTask = false
     var startInitialRunError: Error?
     private(set) var receivedProfile: DataBrokerProtectionProfile?
 
-    @MainActor
+    func hasAttachedTask() async -> Bool {
+        _hasAttachedTask
+    }
+
     func startInitialRun(profile: DataBrokerProtectionProfile) async throws {
         didCallStartInitialRun = true
         receivedProfile = profile
@@ -64,7 +67,7 @@ final class MockContinuedProcessingCoordinator: DBPContinuedProcessingCoordinati
 
     func reset() {
         didCallStartInitialRun = false
-        hasAttachedTask = false
+        _hasAttachedTask = false
         startInitialRunError = nil
         receivedProfile = nil
     }

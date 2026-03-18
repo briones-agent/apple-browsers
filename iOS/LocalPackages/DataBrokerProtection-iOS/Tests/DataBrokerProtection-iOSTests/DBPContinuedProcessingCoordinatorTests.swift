@@ -92,12 +92,12 @@ final class DBPContinuedProcessingCoordinatorTests: XCTestCase {
         XCTAssertNil(manager.continuedProcessingDelegate)
     }
 
-    func testWhenExpire_thenStopsContinuedProcessingOperationsAndClearsDelegate() {
+    func testWhenExpire_thenStopsContinuedProcessingOperationsAndClearsDelegate() async {
         let (manager, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
         let sut = DBPContinuedProcessingCoordinator(manager: manager)
         manager.continuedProcessingDelegate = sut
 
-        sut.expire()
+        await sut.expire()
 
         XCTAssertTrue(dependencies.queueManager.didCallStop)
         XCTAssertNil(manager.continuedProcessingDelegate)

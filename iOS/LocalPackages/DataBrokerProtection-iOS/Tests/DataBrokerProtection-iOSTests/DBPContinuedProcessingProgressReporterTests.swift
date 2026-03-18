@@ -19,7 +19,6 @@
 import XCTest
 @testable import DataBrokerProtection_iOS
 
-@MainActor
 final class DBPContinuedProcessingProgressReporterTests: XCTestCase {
 
     func testWhenStartInitialRun_thenReservesFixedFiftyFiftyBudget() {

@@ -32,7 +32,6 @@ import Foundation
 /// Heartbeat consumes the active phase budget one unit at a time. Job completion snaps the phase
 /// forward to at least the sum of all completed jobs' allotted units so the reported progress stays
 /// monotonic and anchored to real work.
-@MainActor
 final class DBPContinuedProcessingProgressReporter {
     struct Snapshot {
         let completed: Int64

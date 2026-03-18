@@ -90,14 +90,17 @@ enum DBPContinuedProcessingPlanBuilder {
         )
 
         let optOutJobs = eligibleJobs.compactMap { $0 as? OptOutJobData }
-        let dataByKey: [BrokerQueryKey: BrokerProfileQueryData] = Dictionary(uniqueKeysWithValues: brokerProfileQueryData.compactMap { queryData -> (BrokerQueryKey, BrokerProfileQueryData)? in
-            guard let brokerId = queryData.dataBroker.id,
-                  let profileQueryId = queryData.profileQuery.id else { return nil }
-            return (
-                BrokerQueryKey(brokerId: brokerId, profileQueryId: profileQueryId),
-                queryData
-            )
-        })
+        let dataByKey: [BrokerQueryKey: BrokerProfileQueryData] = Dictionary(
+            brokerProfileQueryData.compactMap { queryData -> (BrokerQueryKey, BrokerProfileQueryData)? in
+                guard let brokerId = queryData.dataBroker.id,
+                      let profileQueryId = queryData.profileQuery.id else { return nil }
+                return (
+                    BrokerQueryKey(brokerId: brokerId, profileQueryId: profileQueryId),
+                    queryData
+                )
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
 
         let optOutJobIDs = optOutJobs.compactMap { job -> DBPContinuedProcessingPlans.OptOutJobID? in
             guard let extractedProfileId = job.extractedProfile.id else { return nil }
