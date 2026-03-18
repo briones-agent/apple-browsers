@@ -87,9 +87,6 @@ protocol SubscriptionPromotionCoordinating {
     /// Indicates whether the Subscription promotion dialog is currently being displayed
     var isShowingSubscriptionPromotion: Bool { get }
 
-    /// Indicates whether the Subscription promotion dialog should be shown next
-    var shouldShowSubscriptionPromotion: Bool { get }
-
     /// Indicates whether the user has seen the Subscription promotion dialog
     var subscriptionPromotionDialogSeen: Bool { get set }
 }
@@ -529,11 +526,9 @@ final class DaxDialogs: NewTabDialogSpecProvider, ContextualOnboardingLogic, Con
             return nextHomeScreenMessageOverride
         }
 
-        // Users who skipped onboarding bypass the normal Dax dialog flow.
-        // Show the subscription promotion after the 7-day cooldown.
-        if onboardingSubscriptionPromotionHelper.shouldDisplayForSkippedOnboarding && !subscriptionPromotionDialogSeen {
-            return .subscriptionPromotion
-        }
+        // Users who skipped onboarding now see the subscription promo via the
+        // modal prompt coordination system (SubscriptionPromoModalPromptProvider),
+        // which avoids NTP replacement/focus races on launch.
 
         guard isEnabled else { return nil }
 
@@ -687,10 +682,6 @@ extension DaxDialogs: SubscriptionPromotionCoordinating {
     
     var isShowingSubscriptionPromotion: Bool {
         currentHomeSpec == .subscriptionPromotion
-    }
-
-    var shouldShowSubscriptionPromotion: Bool {
-        peekNextHomeScreenMessageExperiment() == .subscriptionPromotion
     }
 
     var subscriptionPromotionDialogSeen: Bool {

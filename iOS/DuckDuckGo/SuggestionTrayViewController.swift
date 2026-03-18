@@ -27,7 +27,6 @@ import BrowserServicesKit
 import PrivacyConfig
 import UIComponents
 import RemoteMessaging
-import Subscription
 import AIChat
 
 class SuggestionTrayViewController: UIViewController {
@@ -115,7 +114,6 @@ class SuggestionTrayViewController: UIViewController {
         let remoteMessagingActionHandler: RemoteMessagingActionHandling
         let remoteMessagingImageLoader: RemoteMessagingImageLoading
         let remoteMessagingPixelReporter: RemoteMessagingPixelReporting?
-        let subscriptionManager: any SubscriptionManager
         let appSettings: AppSettings
         let internalUserCommands: URLBasedDebugCommands
     }

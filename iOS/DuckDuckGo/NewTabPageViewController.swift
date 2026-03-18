@@ -21,10 +21,8 @@ import SwiftUI
 import DDGSync
 import Bookmarks
 import BrowserServicesKit
-import Combine
 import Core
 import RemoteMessaging
-import Subscription
 
 final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTabPage {
 
@@ -52,9 +50,7 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
     private let appSettings: AppSettings
     private let appWidthObserver: AppWidthObserver
 
-    private let subscriptionManager: any SubscriptionManager
     private let internalUserCommands: URLBasedDebugCommands
-    private var cancellables = Set<AnyCancellable>()
 
     var onViewDidAppear: (() -> Void)?
 
@@ -82,7 +78,6 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
         self.daxDialogsManager = daxDialogsManager
         self.appSettings = appSettings
         self.appWidthObserver = appWidthObserver
-        self.subscriptionManager = subscriptionManager
         self.internalUserCommands = internalUserCommands
 
         newTabPageViewModel = NewTabPageViewModel(fireTab: tab.fireTab)
@@ -124,7 +119,6 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
         super.viewDidLoad()
 
         registerForNotifications()
-        subscribeToProductAvailability()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -259,22 +253,6 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
 
     private func presentNextDaxDialog() {
         showNextDaxDialogNew(dialogProvider: daxDialogsManager, factory: newTabDialogFactory)
-    }
-
-    private func subscribeToProductAvailability() {
-        subscriptionManager.hasAppStoreProductsAvailablePublisher
-            .removeDuplicates()
-            .filter { $0 }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self, self.view.window != nil else { return }
-                // Allow preemption: if the promo should show, dismiss any existing
-                // NTP dialog and present the promo. showNextDaxDialogNew handles
-                // dismissing the current hostingController before presenting.
-                guard self.hostingController == nil || self.daxDialogsManager.shouldShowSubscriptionPromotion else { return }
-                self.presentNextDaxDialog()
-            }
-            .store(in: &cancellables)
     }
 
     // MARK: -

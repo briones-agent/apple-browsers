@@ -498,7 +498,6 @@ class MainViewController: UIViewController {
             remoteMessagingActionHandler: remoteMessagingActionHandler,
             remoteMessagingImageLoader: remoteMessagingImageLoader,
             remoteMessagingPixelReporter: remoteMessagingPixelReporter,
-            subscriptionManager: subscriptionManager,
             appSettings: appSettings,
             internalUserCommands: internalUserCommands)
     }()
@@ -1455,7 +1454,7 @@ class MainViewController: UIViewController {
             ntpAfterIdleInstrumentation.ntpShown(afterIdle: openedAfterIdle)
         }
 
-        if isNewTab && allowingKeyboard && KeyboardSettings().onNewTab && !daxDialogsManager.shouldShowSubscriptionPromotion {
+        if isNewTab && allowingKeyboard && KeyboardSettings().onNewTab {
             omniBar.beginEditing(animated: true)
         }
 
