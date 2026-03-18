@@ -37,16 +37,19 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
     private let configProvider: NewTabPageOmnibarConfigProviding
     private let suggestionsProvider: NewTabPageOmnibarSuggestionsProviding
     private let aiChatsProvider: NewTabPageOmnibarAiChatsProviding
+    private let modelsProvider: NewTabPageOmnibarModelsProviding?
     private let actionHandler: NewTabPageOmnibarActionsHandling
     private var cancellables = Set<AnyCancellable>()
 
     public init(configProvider: NewTabPageOmnibarConfigProviding,
                 suggestionsProvider: NewTabPageOmnibarSuggestionsProviding,
                 aiChatsProvider: NewTabPageOmnibarAiChatsProviding,
+                modelsProvider: NewTabPageOmnibarModelsProviding? = nil,
                 actionHandler: NewTabPageOmnibarActionsHandling) {
         self.configProvider = configProvider
         self.suggestionsProvider = suggestionsProvider
         self.aiChatsProvider = aiChatsProvider
+        self.modelsProvider = modelsProvider
         self.actionHandler = actionHandler
         super.init()
 
@@ -77,12 +80,14 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
 
     @MainActor
     private func getConfig(params: Any, original: WKScriptMessage) async throws -> Encodable? {
+        let aiModels = await modelsProvider?.fetchAIModels()
         return NewTabPageDataModel.OmnibarConfig(
             mode: configProvider.mode,
             enableAi: configProvider.isAIChatShortcutEnabled,
             showAiSetting: configProvider.isAIChatSettingVisible,
             showCustomizePopover: configProvider.showCustomizePopover,
-            enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled
+            enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled,
+            aiModels: aiModels
         )
     }
 
@@ -106,7 +111,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             enableAi: configProvider.isAIChatShortcutEnabled,
             showAiSetting: configProvider.isAIChatSettingVisible,
             showCustomizePopover: configProvider.showCustomizePopover,
-            enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled
+            enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled,
+            aiModels: nil
         )
         pushMessage(named: MessageName.onConfigUpdate.rawValue, params: config)
     }
