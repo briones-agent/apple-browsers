@@ -530,6 +530,8 @@ extension MainCoordinator: URLHandling {
             handleOpenPasswords(url: url)
         case .openAIChat:
             AIChatDeepLinkHandler().handleDeepLink(url, on: controller)
+        case .openAIChatVoice:
+            AIChatDeepLinkHandler().handleVoiceDeepLink(url, on: controller)
         default:
             if featureFlagger.isFeatureOn(.canInterceptSyncSetupUrls), let pairingInfo = PairingInfo(url: url) {
                 controller.segueToSettingsSync(with: nil, pairingInfo: pairingInfo)

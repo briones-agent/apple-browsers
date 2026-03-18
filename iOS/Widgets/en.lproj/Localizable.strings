@@ -7,6 +7,12 @@
 /* Title shown to the user when adding the Duck.ai lock screen widget */
 "lock.screen.widget.aichat.title" = "Duck.ai";
 
+/* Description shown to the user when adding the Duck.ai Voice lock screen widget */
+"lock.screen.widget.aichat.voice.description" = "Quickly start a voice chat in Duck.ai";
+
+/* Title shown to the user when adding the Duck.ai Voice lock screen widget */
+"lock.screen.widget.aichat.voice.title" = "Duck.ai Voice";
+
 /* Description shown to the user when adding the Email Protection lock screen widget */
 "lock.screen.widget.email.description" = "Instantly generate a new private Duck Address.";
 

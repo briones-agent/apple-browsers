@@ -231,6 +231,7 @@ struct Widgets: WidgetBundle {
                  FireButtonLockScreenWidget(),
                  FavoritesLockScreenWidget(),
                  AIChatLockScreenWidget(),
+                 AIChatVoiceLockScreenWidget(),
                  PasswordsLockScreenWidget()
              )
     }
@@ -270,6 +271,7 @@ struct VPNBundle: WidgetBundle {
         if #available(iOS 18, *) {
             VPNControlWidget()
             AIChatControlWidget()
+            AIChatVoiceControlWidget()
             SearchControlWidget()
             PasswordsControlWidget()
             FavoritesControlWidget()

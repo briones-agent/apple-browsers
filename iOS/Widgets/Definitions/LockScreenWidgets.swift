@@ -104,3 +104,12 @@ struct AIChatLockScreenWidget: LockScreenWidget {
     let displayName = UserText.lockScreenAIChatTitle
     let description = UserText.lockScreenAIChatDescription
 }
+
+@available(iOSApplicationExtension 16.0, *)
+struct AIChatVoiceLockScreenWidget: LockScreenWidget {
+    let kind = "AIChatVoiceLockScreenWidget"
+    let image = Image(.lockScreenVoice)
+    let deepLink = DeepLinks.openAIChatVoice.appendingParameter(name: WidgetSourceType.sourceKey, value: WidgetSourceType.lockscreenComplication.rawValue)
+    let displayName = UserText.lockScreenAIChatVoiceTitle
+    let description = UserText.lockScreenAIChatVoiceDescription
+}

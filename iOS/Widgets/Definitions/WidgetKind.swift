@@ -29,6 +29,7 @@ enum WidgetKind: String, Codable {
 enum ControlWidgetKind: String, Codable {
     case vpn = "VPNControlWidget"
     case aiChat = "AIChatControlWidget"
+    case aiChatVoice = "AIChatVoiceControlWidget"
     case search = "SearchControlWidget"
     case passwords = "PasswordsControlWidget"
     case favorites = "FavoritesControlWidget"

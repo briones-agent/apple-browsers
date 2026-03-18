@@ -65,6 +65,26 @@ struct AIChatControlWidget: ControlWidgetConfigurable {
 }
 
 @available(iOS 18, *)
+struct AIChatVoiceControlWidget: ControlWidgetConfigurable {
+    let kind: ControlWidgetKind = .aiChatVoice
+    let displayName: LocalizedStringResource = "Duck.ai Voice"
+    let labelText: String = "Duck.ai Voice"
+    let imageName: String = "VoiceSearch-Symbol"
+    let intent = OpenAIChatVoiceIntent()
+
+    struct OpenAIChatVoiceIntent: AppIntent {
+        static var title: LocalizedStringResource = "Duck.ai Voice"
+        static var description: LocalizedStringResource = "Launches Duck.ai Voice from the Control Center."
+        static var openAppWhenRun: Bool = true
+
+        func perform() async throws -> some IntentResult & OpensIntent {
+            await EnvironmentValues().openURL(DeepLinks.openAIChatVoice.appendingParameter(name: WidgetSourceType.sourceKey, value: WidgetSourceType.controlCenter.rawValue))
+            return .result()
+        }
+    }
+}
+
+@available(iOS 18, *)
 struct FireButtonControlWidget: ControlWidgetConfigurable {
     let kind: ControlWidgetKind = .fireButton
     let displayName: LocalizedStringResource = "Fire Button"

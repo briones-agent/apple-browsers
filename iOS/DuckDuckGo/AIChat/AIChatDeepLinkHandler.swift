@@ -36,6 +36,16 @@ struct AIChatDeepLinkHandler {
         }
     }
 
+    /// Handles the Duck.ai Voice deep link by opening duck.ai with voice mode
+    func handleVoiceDeepLink(_ url: URL, on mainViewController: MainViewController) {
+        fireVoicePixel(url)
+
+        let voiceURL = URL.duckAi.appendingParameter(name: "mode", value: "voice-mode")
+        mainViewController.dismiss(animated: true) {
+            mainViewController.loadUrlInNewTab(voiceURL, inheritedAttribution: nil)
+        }
+    }
+
     /// Checks if the AIChatViewController is already presented
     private func isAIChatAlreadyPresented(on mainViewController: MainViewController) -> Bool {
         if let presentedVC = mainViewController.presentedViewController as? RoundedPageSheetContainerViewController,
@@ -61,6 +71,26 @@ struct AIChatDeepLinkHandler {
                 DailyPixel.fireDailyAndCount(pixel: .openAIChatFromWidgetLockScreenComplication)
             case WidgetSourceType.controlCenter.rawValue:
                 DailyPixel.fireDailyAndCount(pixel: .openAIChatFromWidgetControlCenter)
+            default:
+                break
+            }
+        }
+    }
+
+    private func fireVoicePixel(_ url: URL) {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return
+        }
+
+        let queryItems = components.queryItems
+        if let sourceItem = queryItems?.first(where: { $0.name == WidgetSourceType.sourceKey }) {
+            switch sourceItem.value {
+            case WidgetSourceType.quickActions.rawValue:
+                DailyPixel.fireDailyAndCount(pixel: .openAIChatVoiceFromWidgetQuickAction)
+            case WidgetSourceType.lockscreenComplication.rawValue:
+                DailyPixel.fireDailyAndCount(pixel: .openAIChatVoiceFromWidgetLockScreenComplication)
+            case WidgetSourceType.controlCenter.rawValue:
+                DailyPixel.fireDailyAndCount(pixel: .openAIChatVoiceFromWidgetControlCenter)
             default:
                 break
             }
