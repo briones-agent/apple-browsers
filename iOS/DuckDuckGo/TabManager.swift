@@ -243,8 +243,14 @@ class TabManager: TabManaging, TrackerAnimationSuppressing {
                                  inheritedAttribution: AdClickAttributionLogic.State?,
                                  interactionState: Data?) -> TabViewController {
         let configuration = WKWebViewConfiguration.persistent(fireMode: tab.fireTab)
+        let appliedAutoplayBlockingMode: AutoplayBlockingMode?
         if featureFlagger.isFeatureOn(.autoplayBlocking) {
-            configuration.mediaTypesRequiringUserActionForPlayback = autoplaySettings.currentAutoplayBlockingMode.mediaTypesRequiringUserAction
+            appliedAutoplayBlockingMode = autoplaySettings.currentAutoplayBlockingMode
+        } else {
+            appliedAutoplayBlockingMode = nil
+        }
+        if let appliedAutoplayBlockingMode {
+            configuration.mediaTypesRequiringUserActionForPlayback = appliedAutoplayBlockingMode.mediaTypesRequiringUserAction
         }
 
         if #available(iOS 18.4, *), let webExtensionManager = webExtensionManager {
@@ -287,7 +293,8 @@ class TabManager: TabManaging, TrackerAnimationSuppressing {
                                                               privacyStats: privacyStats,
                                                               voiceSearchHelper: voiceSearchHelper,
                                                               darkReaderFeatureSettings: darkReaderFeatureSettings,
-                                                              autoplaySettings: autoplaySettings)
+                                                              autoplaySettings: autoplaySettings,
+                                                              appliedAutoplayBlockingMode: appliedAutoplayBlockingMode)
         controller.applyInheritedAttribution(inheritedAttribution)
         controller.attachWebView(configuration: configuration,
                                  interactionStateData: interactionState,
@@ -368,6 +375,12 @@ class TabManager: TabManaging, TrackerAnimationSuppressing {
 
         let textZoomCoordinator = textZoomCoordinatorProvider.coordinator(for: tab.textZoomContext)
         let autoconsentManagement = autoconsentManagementProvider.management(for: tab.autoconsentContext)
+        let appliedAutoplayBlockingMode: AutoplayBlockingMode?
+        if featureFlagger.isFeatureOn(.autoplayBlocking) {
+            appliedAutoplayBlockingMode = configCopy.mediaTypesRequiringUserActionForPlayback.autoplayBlockingMode
+        } else {
+            appliedAutoplayBlockingMode = nil
+        }
         let controller = TabViewController.loadFromStoryboard(model: tab,
                                                               privacyConfigurationManager: privacyConfigurationManager,
                                                               bookmarksDatabase: bookmarksDatabase,
@@ -396,7 +409,8 @@ class TabManager: TabManaging, TrackerAnimationSuppressing {
                                                               privacyStats: privacyStats,
                                                               voiceSearchHelper: voiceSearchHelper,
                                                               darkReaderFeatureSettings: darkReaderFeatureSettings,
-                                                              autoplaySettings: autoplaySettings)
+                                                              autoplaySettings: autoplaySettings,
+                                                              appliedAutoplayBlockingMode: appliedAutoplayBlockingMode)
         controller.attachWebView(configuration: configCopy,
                                  andLoadRequest: request,
                                  consumeCookies: !currentTabsModel.hasActiveTabs,
@@ -773,6 +787,22 @@ private extension AutoplayBlockingMode {
             return .audio
         case .blockAll:
             return .all
+        }
+    }
+}
+
+private extension WKAudiovisualMediaTypes {
+
+    var autoplayBlockingMode: AutoplayBlockingMode? {
+        switch self {
+        case []:
+            return .allowAll
+        case .audio:
+            return .blockAudio
+        case .all:
+            return .blockAll
+        default:
+            return nil
         }
     }
 }
