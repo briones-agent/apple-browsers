@@ -1527,7 +1527,6 @@
 		9FAD6C032E41D9A600C19EEA /* DefaultBrowserPromptUIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FAD6C022E41D99700C19EEA /* DefaultBrowserPromptUIProvider.swift */; };
 		9FADFC4A2F5FC56400CA16F7 /* DuckSansFont in Frameworks */ = {isa = PBXBuildFile; productRef = 9FADFC492F5FC56400CA16F7 /* DuckSansFont */; };
 		9FADFC602F62385F00CA16F7 /* RebrandedOnboardingView+RestorePromptDialogContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FADFC5F2F62384C00CA16F7 /* RebrandedOnboardingView+RestorePromptDialogContent.swift */; };
-		9FADFC652F62454F00CA16F7 /* 01_Fire_rebranded.json in Resources */ = {isa = PBXBuildFile; fileRef = 9FADFC642F62454F00CA16F7 /* 01_Fire_rebranded.json */; };
 		9FB027122C2526DD009EA190 /* OnboardingView+IntroDialogContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB027112C2526DD009EA190 /* OnboardingView+IntroDialogContent.swift */; };
 		9FB027142C252E0C009EA190 /* OnboardingView+BrowsersComparisonContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB027132C252E0C009EA190 /* OnboardingView+BrowsersComparisonContent.swift */; };
 		9FB0271B2C2927D0009EA190 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB0271A2C2927D0009EA190 /* OnboardingView.swift */; };
@@ -1662,6 +1661,7 @@
 		BB3F734D2F321F4000461429 /* FreeTrialPixelHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3F734C2F321F4000461429 /* FreeTrialPixelHandler.swift */; };
 		BB490ECF2EBDF36B00649B5B /* WinBackOfferFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB490ECE2EBDF36B00649B5B /* WinBackOfferFactory.swift */; };
 		BB631D162DE0D9020099977D /* DesignResourcesKitIcons in Frameworks */ = {isa = PBXBuildFile; productRef = BB631D152DE0D9020099977D /* DesignResourcesKitIcons */; };
+		BB64A3602F6AEBA4006897A2 /* SubscriptionPromoCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB64A35E2F6AEBA4006897A2 /* SubscriptionPromoCoordinatorTests.swift */; };
 		BB6696372E9E6613003CB6AD /* WinBackOffer.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB6696362E9E6613003CB6AD /* WinBackOffer.xcassets */; };
 		BB77957B2E9D4B0B00CF58F4 /* WinBackOfferLaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7795762E9D4B0B00CF58F4 /* WinBackOfferLaunchView.swift */; };
 		BB77957C2E9D4B0B00CF58F4 /* WinBackOfferCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7795782E9D4B0B00CF58F4 /* WinBackOfferCoordinator.swift */; };
@@ -2704,6 +2704,7 @@
 		31FD991A2DCE6AAB00AAC9C7 /* ExperimentalAIChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentalAIChatManager.swift; sourceTree = "<group>"; };
 		33CC9145E578E99B3052757F /* UnifiedToggleInputModelMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedToggleInputModelMenuTests.swift; sourceTree = "<group>"; };
 		362AB8372F69A33700E3F222 /* ActionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionResult.swift; sourceTree = "<group>"; };
+		33CC9145E578E99B3052757F /* UnifiedToggleInputModelMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedToggleInputModelMenuTests.swift; sourceTree = "<group>"; };
 		365E900A2E566C2300BDB0E8 /* AIChatIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatIntent.swift; sourceTree = "<group>"; };
 		365E90122E5673DF00BDB0E8 /* SearchInAppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchInAppIntent.swift; sourceTree = "<group>"; };
 		369809BE2E5635E1007FE895 /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
@@ -4219,6 +4220,7 @@
 		BB3F734C2F321F4000461429 /* FreeTrialPixelHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTrialPixelHandler.swift; sourceTree = "<group>"; };
 		BB490ECE2EBDF36B00649B5B /* WinBackOfferFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinBackOfferFactory.swift; sourceTree = "<group>"; };
 		BB631D142DE0D8B70099977D /* DesignResourcesKitIcons */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = DesignResourcesKitIcons; path = ../SharedPackages/Infrastructure/DesignResourcesKitIcons; sourceTree = SOURCE_ROOT; };
+		BB64A35E2F6AEBA4006897A2 /* SubscriptionPromoCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPromoCoordinatorTests.swift; sourceTree = "<group>"; };
 		BB6696362E9E6613003CB6AD /* WinBackOffer.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = WinBackOffer.xcassets; sourceTree = "<group>"; };
 		BB7795762E9D4B0B00CF58F4 /* WinBackOfferLaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinBackOfferLaunchView.swift; sourceTree = "<group>"; };
 		BB7795782E9D4B0B00CF58F4 /* WinBackOfferCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinBackOfferCoordinator.swift; sourceTree = "<group>"; };
@@ -8583,6 +8585,14 @@
 			path = WinBackOffer;
 			sourceTree = "<group>";
 		};
+		BB64A35F2F6AEBA4006897A2 /* SubscriptionPromo */ = {
+			isa = PBXGroup;
+			children = (
+				BB64A35E2F6AEBA4006897A2 /* SubscriptionPromoCoordinatorTests.swift */,
+			);
+			path = SubscriptionPromo;
+			sourceTree = "<group>";
+		};
 		BB7795772E9D4B0B00CF58F4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -9974,6 +9984,7 @@
 		F12D98401F266B30003C2EE3 /* DuckDuckGo */ = {
 			isa = PBXGroup;
 			children = (
+				BB64A35F2F6AEBA4006897A2 /* SubscriptionPromo */,
 				BBF1BDEC2EA631AD00358243 /* WinBackOffer */,
 				F164BCD32E3CFAF9001DF95A /* AdAttribution */,
 				F17669A21E411D63003D3222 /* Application */,
@@ -13232,6 +13243,7 @@
 				56D0602D2C383FD2003BAEB5 /* OnboardingSuggestedSearchesProviderTests.swift in Sources */,
 				9F5179DA2D545D4300E40B40 /* DaxDialogsOnboardingMigratorTests.swift in Sources */,
 				569437242BDD405400C0881B /* SyncBookmarksAdapterTests.swift in Sources */,
+				BB64A3602F6AEBA4006897A2 /* SubscriptionPromoCoordinatorTests.swift in Sources */,
 				1E3C99D92D9D6C6E009447E2 /* SubscriptionFeatureFlagMappingTests.swift in Sources */,
 				C13EEA202D64E59A001D5DC3 /* ZipContentSelectionViewModelTests.swift in Sources */,
 				858479CD2B87964500D156C1 /* HistoryManagerTests.swift in Sources */,
