@@ -164,7 +164,7 @@ private extension NewTabDaxDialogFactory {
 
         return FadeInView {
             SubscriptionPromotionView(
-                title: onboardingSubscriptionPromotionHelper.promoTitle,
+                title: UserText.SubscriptionPromotionOnboarding.Promo.title,
                 // This is temporary and will be removed after rebranding is launched
                 message: AppDependencyProvider.shared.featureFlagger.isFeatureOn(.paidAIChat) ?  UserText.SubscriptionPromotionOnboarding.Promo.message() : UserText.SubscriptionPromotionOnboarding.Promo.messageDeprecated(),
                 proceedText: proceedButtonText,

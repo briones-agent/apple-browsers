@@ -182,7 +182,8 @@ struct Launching: LaunchingHandling {
 
         // Subscription promo for reinstallers / skipped-onboarding users
         let subscriptionPromoCoordinator = SubscriptionPromoCoordinator(
-            onboardingPromotionHelper: OnboardingSubscriptionPromotionHelper()
+            featureFlagger: featureFlagger,
+            subscriptionManager: AppDependencyProvider.shared.subscriptionManager
         )
         let subscriptionPromoPresenter = SubscriptionPromoPresenter(coordinator: subscriptionPromoCoordinator)
 

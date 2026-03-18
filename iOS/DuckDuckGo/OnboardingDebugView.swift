@@ -167,7 +167,7 @@ final class OnboardingDebugViewModel: ObservableObject {
 
     func markSubscriptionPromoCooldownPassed() {
         statisticsStore.installDate = Calendar.current.date(byAdding: .day,
-                                                            value: -OnboardingSubscriptionPromotionHelper.skipOnboardingCooldownDays,
+                                                            value: -SubscriptionPromoCoordinator.cooldownDays,
                                                             to: Date())
     }
 }

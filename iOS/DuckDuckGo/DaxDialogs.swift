@@ -526,16 +526,12 @@ final class DaxDialogs: NewTabDialogSpecProvider, ContextualOnboardingLogic, Con
             return nextHomeScreenMessageOverride
         }
 
-        // Users who skipped onboarding now see the subscription promo via the
-        // modal prompt coordination system (SubscriptionPromoModalPromptProvider),
-        // which avoids NTP replacement/focus races on launch.
-
         guard isEnabled else { return nil }
 
         // If the user has already seen the end of journey dialog we want to check if the user is eligible to purchase Subscription and if so, display an additional Subscription promotion dialog.
         guard !finalDaxDialogSeen else {
 
-            if onboardingSubscriptionPromotionHelper.isFeatureEnabled && !subscriptionPromotionDialogSeen {
+            if onboardingSubscriptionPromotionHelper.shouldDisplay && !subscriptionPromotionDialogSeen {
                 return .subscriptionPromotion
             }
 
