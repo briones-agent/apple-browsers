@@ -205,13 +205,16 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
 
     func testSubmitChatIsForwardedToHandler() async throws {
         let expectation = expectation(description: "submitChatCalled")
-        (actionHandler as? MockNewTabPageOmnibarActionsHandler)?.submitChatHandler = { chat, target in
+        (actionHandler as? MockNewTabPageOmnibarActionsHandler)?.submitChatHandler = { chat, target, modelId, images in
             XCTAssertEqual(chat, "Hello Chat")
             XCTAssertEqual(target, .newWindow)
+            XCTAssertEqual(modelId, "gpt-4o-mini")
+            XCTAssertEqual(images?.count, 1)
             expectation.fulfill()
         }
 
-        let action = NewTabPageDataModel.SubmitChatAction(chat: "Hello Chat", target: .newWindow)
+        let image = NewTabPageDataModel.SubmitChatImage(data: "base64data", format: "png")
+        let action = NewTabPageDataModel.SubmitChatAction(chat: "Hello Chat", target: .newWindow, modelId: "gpt-4o-mini", images: [image])
         try await messageHelper.handleMessageExpectingNilResponse(named: .submitChat, parameters: action)
         await fulfillment(of: [expectation], timeout: 1)
     }

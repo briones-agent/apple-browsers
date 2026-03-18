@@ -144,7 +144,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         guard let action: NewTabPageDataModel.SubmitChatAction = DecodableHelper.decode(from: params) else {
             return nil
         }
-        await actionHandler.submitChat(action.chat, target: action.target)
+        await actionHandler.submitChat(action.chat, target: action.target, modelId: action.modelId, images: action.images)
         return nil
     }
 
