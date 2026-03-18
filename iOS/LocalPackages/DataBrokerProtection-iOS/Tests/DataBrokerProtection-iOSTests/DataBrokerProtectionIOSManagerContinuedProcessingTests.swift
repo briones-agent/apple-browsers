@@ -152,6 +152,27 @@ final class DataBrokerProtectionIOSManagerContinuedProcessingTests: XCTestCase {
         XCTAssertFalse(dependencies.queueManager.didCallStartImmediateScanOperationsIfPermitted)
     }
 
+    func testWhenSaveProfileAndStartInitialRunAndNoPendingScans_thenProfileIsSavedButNothingRuns() async throws {
+        // Given
+        let continuedProcessingCoordinator = MockContinuedProcessingCoordinator()
+        let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager(
+            continuedProcessingTestConfiguration: .init(
+                coordinator: continuedProcessingCoordinator,
+                shouldUseContinuedProcessingForInitialRun: true
+            )
+        )
+        // No broker data → makeContinuedProcessingInitialRunPlan() returns nil
+        dependencies.database.brokerProfileQueryDataToReturn = []
+
+        // When
+        try await sut.saveProfileAndStartContinuedProcessingInitialRunIfSupported(DBPContinuedProcessingTestUtils.makeProfile())
+
+        // Then — profile is saved but neither continued processing nor immediate scans start
+        XCTAssertTrue(dependencies.database.wasSaveProfileCalled)
+        XCTAssertFalse(continuedProcessingCoordinator.didCallStartInitialRun)
+        XCTAssertFalse(dependencies.queueManager.didCallStartImmediateScanOperationsIfPermitted)
+    }
+
     func testWhenSaveProfileAndStartInitialRunAndContinuedProcessingStartFails_thenFallsBackToImmediateScansWithoutPreparingTwice() async throws {
         // Given
         let continuedProcessingCoordinator = MockContinuedProcessingCoordinator()

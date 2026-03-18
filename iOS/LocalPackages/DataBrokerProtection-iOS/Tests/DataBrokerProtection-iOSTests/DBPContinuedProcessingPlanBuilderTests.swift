@@ -100,6 +100,45 @@ final class DBPContinuedProcessingPlanBuilderTests: XCTestCase {
         ])
     }
 
+    func testWhenMakeOptOutPlanWithDuplicateBrokerQueryPairs_thenDoesNotCrash() {
+        let sharedBrokerId: Int64 = 1
+        let sharedProfileQueryId: Int64 = 1
+
+        // Two entries with the same broker+query ID (e.g., data race or duplicate data)
+        let plan = DBPContinuedProcessingPlanBuilder.makeOptOutPlan(
+            from: [
+                makeBrokerProfileQueryData(
+                    brokerId: sharedBrokerId,
+                    profileQueryId: sharedProfileQueryId,
+                    optOutJobData: [
+                        .mock(
+                            with: .mockWithoutRemovedDate,
+                            brokerId: sharedBrokerId,
+                            profileQueryId: sharedProfileQueryId,
+                            preferredRunDate: .now
+                        )
+                    ]
+                ),
+                makeBrokerProfileQueryData(
+                    brokerId: sharedBrokerId,
+                    profileQueryId: sharedProfileQueryId,
+                    optOutJobData: [
+                        .mock(
+                            with: .mockWithoutRemovedDate,
+                            brokerId: sharedBrokerId,
+                            profileQueryId: sharedProfileQueryId,
+                            preferredRunDate: .now
+                        )
+                    ]
+                )
+            ],
+            priorityDate: .now
+        )
+
+        // Should not crash, and should produce a valid plan
+        XCTAssertGreaterThanOrEqual(plan.optOutCount, 0)
+    }
+
     private func makeBrokerProfileQueryData(
         brokerId: Int64,
         profileQueryId: Int64,
