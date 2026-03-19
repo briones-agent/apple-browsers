@@ -4328,6 +4328,7 @@
 		FD23FD2D2886A81D007F6985 /* AutoconsentManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD23FD2C2886A81D007F6985 /* AutoconsentManagement.swift */; };
 		FEE12B412E520E4D00AD9807 /* PromoHistoryRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */; };
 		FEE12B412E520E4D00AD9809 /* PromoHistoryRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */; };
+		AD3EE48E959D44F9BC616CCD /* UserScriptDisabledStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FF44791C9D4DD799293559 /* UserScriptDisabledStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -6656,6 +6657,7 @@
 		FD23FD2A28816606007F6985 /* AutoconsentMessageProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AutoconsentMessageProtocolTests.swift; path = UnitTests/Autoconsent/AutoconsentMessageProtocolTests.swift; sourceTree = SOURCE_ROOT; };
 		FD23FD2C2886A81D007F6985 /* AutoconsentManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoconsentManagement.swift; sourceTree = "<group>"; };
 		FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoHistoryRecordTests.swift; sourceTree = "<group>"; };
+		D8FF44791C9D4DD799293559 /* UserScriptDisabledStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserScriptDisabledStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -10333,6 +10335,7 @@
 				37E1116C2C578F1B00583C19 /* DuckDuckGoAppStoreDebug.entitlements */,
 				4BA808FF2CDE78F600338EE4 /* DuckDuckGoAppStoreReview.entitlements */,
 				4B5F15032A1570F10060320F /* DuckDuckGoDebug.entitlements */,
+				09C7CBE59846448E888A46DB /* Debug */,
 				4B65143C26392483005B46EB /* Email */,
 				B68412192B6A16030092F66A /* ErrorPage */,
 				AA5FA695275F823900DCE9C9 /* Favicons */,
@@ -12656,6 +12659,14 @@
 				1ED910D42B63BFB300936947 /* IdentityTheftRestorationPagesUserScript.swift */,
 			);
 			path = Subscription;
+			sourceTree = "<group>";
+		};
+		09C7CBE59846448E888A46DB /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				D8FF44791C9D4DD799293559 /* UserScriptDisabledStore.swift */,
+			);
+			path = Debug;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -17721,6 +17732,7 @@
 				B68D21C32ACBC916002DA3C2 /* ContentBlockingMock.swift in Sources */,
 				AA5C1DD1285A154E0089850C /* RecentlyClosedMenu.swift in Sources */,
 				D1EC9FDAACABFE5B574FD557 /* WebViewUserAgentProvider.swift in Sources */,
+				AD3EE48E959D44F9BC616CCD /* UserScriptDisabledStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
