@@ -62,6 +62,9 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
 
     private let contentScopePreferences: ContentScopePreferences
 
+    /// Script class names disabled for this tab only. Session-only; cleared when the tab closes.
+    var perTabDisabled: Set<String> = []
+
     // swiftlint:disable:next cyclomatic_complexity
     init(with sourceProvider: ScriptSourceProviding,
          contentScopePreferences: ContentScopePreferences,
@@ -271,17 +274,19 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
 
     @MainActor
     func loadWKUserScripts() async -> [WKUserScript] {
+        let disabled = perTabDisabled.union(UserScriptDisabledStore.shared.globallyDisabled)
         return await withTaskGroup(of: WKUserScriptBox.self) { @MainActor group in
             var wkUserScripts = [WKUserScript]()
-            userScripts.forEach { userScript in
-                group.addTask { @MainActor in
-                    await userScript.makeWKUserScript()
+            userScripts
+                .filter { !disabled.contains(String(describing: type(of: $0))) }
+                .forEach { userScript in
+                    group.addTask { @MainActor in
+                        await userScript.makeWKUserScript()
+                    }
                 }
-            }
             for await result in group {
                 wkUserScripts.append(result.wkUserScript)
             }
-
             return wkUserScripts
         }
     }
