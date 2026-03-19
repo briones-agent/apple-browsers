@@ -78,6 +78,7 @@ public class BrokenSiteReporter {
         }
 
         let pixelParams = report.getRequestParameters(forReportMode: reportMode)
+        Logger.privacyDashboard.info("Breakage report params: \(pixelParams.sorted(by: { $0.key < $1.key }).map { "\($0.key)=\($0.value)" }.joined(separator: "&"), privacy: .public)")
 
         // report the breakage
         pixelHandler(pixelParams)

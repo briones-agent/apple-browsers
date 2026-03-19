@@ -322,6 +322,9 @@ public class Pixel {
             url = URL.makePixelURL(pixelName: pixelName, includeATB: includedParameters.contains(.atb) )
         }
 
+        let fullURL = url.appendingParameters(newParams, allowedReservedCharacters: allowedQueryReservedCharacters)
+        Logger.pixels.debug("Pixel request URL: \(fullURL.absoluteString, privacy: .public)")
+
         let configuration = APIRequest.Configuration(url: url,
                                                      queryParameters: newParams,
                                                      allowedQueryReservedCharacters: allowedQueryReservedCharacters,

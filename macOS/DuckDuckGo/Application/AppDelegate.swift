@@ -1856,6 +1856,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                        defaults: .netP) { (pixelName: String, headers: [String: String], parameters: [String: String], _, _, onComplete: @escaping PixelKit.CompletionBlock) in
 
             let url = URL.pixelUrl(forPixelNamed: pixelName)
+            let fullURL = url.appendingParameters(parameters)
+            Logger.general.debug("Pixel request URL: \(fullURL.absoluteString, privacy: .public)")
+
             let apiHeaders = APIRequest.Headers(userAgent: userAgent, additionalHeaders: headers)
             let configuration = APIRequest.Configuration(url: url, method: .get, queryParameters: parameters, headers: apiHeaders)
             let request = APIRequest(configuration: configuration)
