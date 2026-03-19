@@ -845,6 +845,8 @@ final class MainMenu: NSMenu {
                 .submenu(RemoteMessagingDebugMenu(configurationURLProvider: configurationURLProvider))
             NSMenuItem(title: "User Scripts") {
                 NSMenuItem(title: "Remove user scripts from selected tab", action: #selector(MainViewController.removeUserScripts))
+                NSMenuItem(title: "Disable Individual Scripts")
+                    .submenu(UserScriptsDebugMenu())
             }
             NSMenuItem(title: "Sync & Backup")
                 .submenu(SyncDebugMenu())
