@@ -40,7 +40,7 @@ extension PermissionType {
 
             return app
         case .autoplayPolicy:
-            return "Autoplay"
+            return UserText.permissionAutoplay
         }
     }
 }
