@@ -157,7 +157,8 @@ final class LaunchActionHandlerTests {
         #expect(shortcutItemHandler.lastHandledShortcutItem == shortcutItem)
     }
 
-    @Test("Handle user activity when LaunchAction is .handleUserActivity")
+    @available(iOS 16, *)
+    @Test("Handle user activity when LaunchAction is .handleUserActivity", .timeLimit(.minutes(1)))
     func handleUserActivity() {
         let userActivity = NSUserActivity(activityType: "BEBrowserDataExchangeImportActivity")
         let action = LaunchAction.handleUserActivity(userActivity)
