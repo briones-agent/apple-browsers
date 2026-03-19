@@ -80,7 +80,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
 
     @MainActor
     private func getConfig(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        let aiModels = await modelsProvider?.fetchAIModels()
+        let aiModelSections = await modelsProvider?.fetchAIModelSections()
         return NewTabPageDataModel.OmnibarConfig(
             mode: configProvider.mode,
             enableAi: configProvider.isAIChatShortcutEnabled,
@@ -88,7 +88,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             showCustomizePopover: configProvider.showCustomizePopover,
             enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled,
             enableAiChatTools: configProvider.isAIChatToolsEnabled,
-            aiModels: aiModels
+            aiModelSections: aiModelSections
         )
     }
 
@@ -114,7 +114,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             showCustomizePopover: configProvider.showCustomizePopover,
             enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled,
             enableAiChatTools: configProvider.isAIChatToolsEnabled,
-            aiModels: nil
+            aiModelSections: nil
         )
         pushMessage(named: MessageName.onConfigUpdate.rawValue, params: config)
     }

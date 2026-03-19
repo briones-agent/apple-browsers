@@ -17,5 +17,5 @@
 //
 
 public protocol NewTabPageOmnibarModelsProviding {
-    func fetchAIModels() async -> [NewTabPageDataModel.AIModel]
+    func fetchAIModelSections() async -> [NewTabPageDataModel.AIModelSection]
 }

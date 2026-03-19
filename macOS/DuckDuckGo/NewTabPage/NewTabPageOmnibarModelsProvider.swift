@@ -21,7 +21,8 @@ import NewTabPage
 import os.log
 import Subscription
 
-/// Fetches AI models from the duck.ai API and resolves access based on the user's local subscription tier.
+/// Fetches AI models from the duck.ai API and builds sectioned model lists
+/// using the shared section builder for the NTP dropdown.
 final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
 
     private let modelsService: AIChatModelsProviding
@@ -35,16 +36,32 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
         self.subscriptionManager = subscriptionManager
     }
 
-    func fetchAIModels() async -> [NewTabPageDataModel.AIModel] {
+    func fetchAIModelSections() async -> [NewTabPageDataModel.AIModelSection] {
         do {
             let remoteModels = try await modelsService.fetchModels()
             let userTier = await resolveUserTier()
-            return remoteModels.map { remoteModel in
-                let hasAccess = remoteModel.accessTier.contains(userTier.rawValue)
-                return NewTabPageDataModel.AIModel(
-                    id: remoteModel.id,
-                    name: remoteModel.name,
-                    entityHasAccess: hasAccess
+            let models = remoteModels.map { AIChatModel(remoteModel: $0, userTier: userTier) }
+            let hasActiveSubscription = userTier != .free
+
+            let sections = AIChatModelSectionBuilder.buildSections(
+                models: models,
+                hasActiveSubscription: hasActiveSubscription,
+                advancedSectionHeader: UserText.aiChatModelPickerAdvancedSectionHeader,
+                basicSectionHeader: UserText.aiChatModelPickerBasicModelsSectionHeader
+            )
+
+            return sections.map { section in
+                NewTabPageDataModel.AIModelSection(
+                    header: section.header,
+                    items: section.items.map { model in
+                        NewTabPageDataModel.AIModelItem(
+                            id: model.id,
+                            name: model.name,
+                            shortName: model.shortName,
+                            isEnabled: model.entityHasAccess,
+                            supportsImageUpload: model.supportsImageUpload
+                        )
+                    }
                 )
             }
         } catch {

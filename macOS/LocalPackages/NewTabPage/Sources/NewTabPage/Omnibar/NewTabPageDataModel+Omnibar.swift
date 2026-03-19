@@ -26,15 +26,29 @@ public extension NewTabPageDataModel {
         case search, ai
     }
 
-    struct AIModel: Codable, Equatable {
+    struct AIModelItem: Codable, Equatable {
         public let id: String
         public let name: String
-        public let entityHasAccess: Bool?
+        public let shortName: String
+        public let isEnabled: Bool
+        public let supportsImageUpload: Bool
 
-        public init(id: String, name: String, entityHasAccess: Bool?) {
+        public init(id: String, name: String, shortName: String, isEnabled: Bool, supportsImageUpload: Bool) {
             self.id = id
             self.name = name
-            self.entityHasAccess = entityHasAccess
+            self.shortName = shortName
+            self.isEnabled = isEnabled
+            self.supportsImageUpload = supportsImageUpload
+        }
+    }
+
+    struct AIModelSection: Codable, Equatable {
+        public let header: String?
+        public let items: [AIModelItem]
+
+        public init(header: String?, items: [AIModelItem]) {
+            self.header = header
+            self.items = items
         }
     }
 
@@ -45,7 +59,7 @@ public extension NewTabPageDataModel {
         let showCustomizePopover: Bool?
         let enableRecentAiChats: Bool?
         let enableAiChatTools: Bool?
-        let aiModels: [AIModel]?
+        let aiModelSections: [AIModelSection]?
     }
 
     // MARK: - omnibar_getSuggestions
