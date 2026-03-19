@@ -86,10 +86,10 @@ final class AIChatContextualSheetCoordinatorTests: XCTestCase {
         func aiChatContextualSheetCoordinator(_ coordinator: AIChatContextualSheetCoordinator, didRequestOpenDownloadWithFileName fileName: String) {
         }
 
-        var fireButtonCallCount = 0
+        var deletedChatIDs: [String] = []
 
-        func aiChatContextualSheetCoordinatorDidRequestFireButton(_ coordinator: AIChatContextualSheetCoordinator) {
-            fireButtonCallCount += 1
+        func aiChatContextualSheetCoordinator(_ coordinator: AIChatContextualSheetCoordinator, didRequestDeleteChatWithID chatID: String) {
+            deletedChatIDs.append(chatID)
         }
     }
 

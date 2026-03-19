@@ -55,7 +55,7 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
     private let downloadManager: DownloadManaging
     private let keyValueStore: KeyValueStoring
     private let appSettings: AppSettings
-    private let daxDialogsManager: DaxDialogsManaging
+    private let daxDialogsManager: DaxDialogsManaging?
     private let source: FireRequest.Source
     private let browsingMode: BrowsingMode
 
@@ -67,7 +67,7 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
          downloadManager: DownloadManaging = AppDependencyProvider.shared.downloadManager,
          keyValueStore: KeyValueStoring = UserDefaults.standard,
          appSettings: AppSettings = AppDependencyProvider.shared.appSettings,
-         daxDialogsManager: DaxDialogsManaging,
+         daxDialogsManager: DaxDialogsManaging? = nil,
          browsingMode: BrowsingMode,
          onConfirm: @escaping (FireRequest) -> Void,
          onCancel: @escaping () -> Void) {
@@ -166,7 +166,7 @@ final class ScopedFireConfirmationViewModel: ObservableObject {
         }
 
         // Skip all subtitles if in onboarding
-        if daxDialogsManager.isShowingFireDialog {
+        if daxDialogsManager?.isShowingFireDialog == true {
             return nil
         }
 

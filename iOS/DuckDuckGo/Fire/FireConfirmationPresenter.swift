@@ -72,40 +72,6 @@ struct FireConfirmationPresenter {
         }
     }
     
-    // MARK: - Contextual Chat Deletion
-
-    @MainActor
-    func presentContextualChatDeleteConfirmation(on viewController: UIViewController,
-                                                 daxDialogsManager: DaxDialogsManaging,
-                                                 onDelete: @escaping () -> Void,
-                                                 onCancel: @escaping () -> Void) {
-        let viewModel = ScopedFireConfirmationViewModel(
-            tabViewModel: nil,
-            source: .browsing,
-            mode: .contextualChat(onDelete: { [weak viewController] in
-                viewController?.dismiss(animated: true) {
-                    onDelete()
-                }
-            }),
-            daxDialogsManager: daxDialogsManager,
-            onConfirm: { _ in },
-            onCancel: { [weak viewController] in
-                viewController?.dismiss(animated: true) {
-                    onCancel()
-                }
-            }
-        )
-
-        let confirmationView = ScopedFireConfirmationView(viewModel: viewModel)
-        let hostingController = makeHostingController(with: confirmationView)
-        let presentingWidth = viewController.view.frame.width
-        configurePresentation(for: hostingController,
-                              source: viewController.view,
-                              sourceRect: .zero,
-                              presentingWidth: presentingWidth)
-        viewController.present(hostingController, animated: true)
-    }
-
     // MARK: - Scope-based Confirmation (burnSingleTab feature flag)
     
     @MainActor

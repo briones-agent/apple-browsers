@@ -4024,32 +4024,12 @@ extension MainViewController: TabDelegate {
         showFireButtonPulse()
     }
 
-    func tabDidRequestFireButton(tab: TabViewController) {
-        let presenter = FireConfirmationPresenter(tabsModel: tabManager.allTabsModel,
-                                                  featureFlagger: featureFlagger,
-                                                  historyManager: historyManager,
-                                                  fireproofing: fireproofing,
-                                                  aiChatSettings: aiChatSettings,
-                                                  keyValueFilesStore: keyValueStore)
-        presenter.presentContextualChatDeleteConfirmation(
-            on: self,
-            daxDialogsManager: daxDialogsManager,
-            onDelete: { [weak tab, weak self] in
-                guard let self, let tab else { return }
-                let coordinator = tab.aiChatContextualSheetCoordinator
-                let chatURL = coordinator.sessionState.contextualChatURL
-                coordinator.clearActiveChat()
-
-                if let chatID = chatURL?.duckAIChatID {
-                    let cleaner = HistoryCleaner(featureFlagger: self.featureFlagger,
-                                                 privacyConfig: self.privacyConfigurationManager)
-                    Task { @MainActor in
-                        await cleaner.deleteAIChat(chatID: chatID)
-                    }
-                }
-            },
-            onCancel: { }
-        )
+    func tabDidRequestDeleteContextualChat(tab: TabViewController, chatID: String) {
+        let cleaner = HistoryCleaner(featureFlagger: featureFlagger,
+                                     privacyConfig: privacyConfigurationManager)
+        Task { @MainActor in
+            await cleaner.deleteAIChat(chatID: chatID)
+        }
     }
     
     func tabDidRequestPrivacyDashboardButtonPulse(tab: TabViewController, animated: Bool) {

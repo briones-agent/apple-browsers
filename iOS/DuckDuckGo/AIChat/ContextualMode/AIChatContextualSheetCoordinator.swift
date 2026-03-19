@@ -47,8 +47,8 @@ protocol AIChatContextualSheetCoordinatorDelegate: AnyObject {
     /// Called when the user requests to open a downloaded file.
     func aiChatContextualSheetCoordinator(_ coordinator: AIChatContextualSheetCoordinator, didRequestOpenDownloadWithFileName fileName: String)
 
-    /// Called when the user taps the fire button on the contextual sheet.
-    func aiChatContextualSheetCoordinatorDidRequestFireButton(_ coordinator: AIChatContextualSheetCoordinator)
+    /// Called when the user confirmed deletion of the contextual chat, providing the chat ID to delete server-side.
+    func aiChatContextualSheetCoordinator(_ coordinator: AIChatContextualSheetCoordinator, didRequestDeleteChatWithID chatID: String)
 }
 
 /// Coordinates the presentation and lifecycle of the contextual AI chat sheet.
@@ -385,10 +385,13 @@ extension AIChatContextualSheetCoordinator: AIChatContextualSheetViewControllerD
         sessionState.handlePromptSubmission(prompt)
     }
 
-    func aiChatContextualSheetViewControllerDidRequestFireButton(_ viewController: AIChatContextualSheetViewController) {
-        viewController.dismiss(animated: true) { [weak self] in
-            guard let self else { return }
-            self.delegate?.aiChatContextualSheetCoordinatorDidRequestFireButton(self)
+    func aiChatContextualSheetViewControllerDidConfirmDeleteChat(_ viewController: AIChatContextualSheetViewController) {
+        let chatURL = sessionState.contextualChatURL
+        clearActiveChat()
+        viewController.dismiss(animated: true)
+
+        if let chatID = chatURL?.duckAIChatID {
+            delegate?.aiChatContextualSheetCoordinator(self, didRequestDeleteChatWithID: chatID)
         }
     }
 }

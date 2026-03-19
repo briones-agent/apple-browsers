@@ -22,6 +22,7 @@ import Combine
 import Core
 import DesignResourcesKit
 import DesignResourcesKitIcons
+import Lottie
 import OSLog
 import SwiftUI
 import UIKit
@@ -66,8 +67,8 @@ protocol AIChatContextualSheetViewControllerDelegate: AnyObject {
     /// Called when the user submits a prompt from native input
     func aiChatContextualSheetViewController(_ viewController: AIChatContextualSheetViewController, didSubmitPrompt prompt: String)
 
-    /// Called when the user taps the fire button to delete the current chat
-    func aiChatContextualSheetViewControllerDidRequestFireButton(_ viewController: AIChatContextualSheetViewController)
+    /// Called when the user confirms chat deletion from the fire button confirmation
+    func aiChatContextualSheetViewControllerDidConfirmDeleteChat(_ viewController: AIChatContextualSheetViewController)
 }
 
 /// Contextual sheet view controller. Configures UX and actions.
@@ -101,6 +102,7 @@ final class AIChatContextualSheetViewController: UIViewController {
     private let voiceSearchHelper: VoiceSearchHelperProtocol
     private let webViewControllerFactory: WebViewControllerFactory
     private let pixelHandler: AIChatContextualModePixelFiring
+    private let appSettings: AppSettings
 
     private lazy var contextualInputViewController = AIChatContextualInputViewController(voiceSearchHelper: voiceSearchHelper)
     private var cancellables = Set<AnyCancellable>()
@@ -116,6 +118,9 @@ final class AIChatContextualSheetViewController: UIViewController {
 
     /// Dimming view added to the presenting view controller's view for contrast
     private var dimmingView: UIView?
+
+    /// Whether the fire confirmation is currently shown
+    private var isShowingFireConfirmation = false
 
     // MARK: - UI Components
 
@@ -246,12 +251,14 @@ final class AIChatContextualSheetViewController: UIViewController {
          aiChatSettings: AIChatSettingsProvider,
          voiceSearchHelper: VoiceSearchHelperProtocol,
          webViewControllerFactory: @escaping WebViewControllerFactory,
-         pixelHandler: AIChatContextualModePixelFiring) {
+         pixelHandler: AIChatContextualModePixelFiring,
+         appSettings: AppSettings = AppDependencyProvider.shared.appSettings) {
         self.sessionState = sessionState
         self.aiChatSettings = aiChatSettings
         self.voiceSearchHelper = voiceSearchHelper
         self.webViewControllerFactory = webViewControllerFactory
         self.pixelHandler = pixelHandler
+        self.appSettings = appSettings
         super.init(nibName: nil, bundle: nil)
         configureModalPresentation()
     }
@@ -334,7 +341,7 @@ final class AIChatContextualSheetViewController: UIViewController {
     }
 
     @objc private func fireButtonTapped() {
-        delegate?.aiChatContextualSheetViewControllerDidRequestFireButton(self)
+        showFireConfirmation()
     }
 
     @objc private func closeButtonTapped() {
@@ -465,6 +472,88 @@ private extension AIChatContextualSheetViewController {
         chipView.configure(state: .attached(title: context.title, favicon: context.favicon))
         chipView.onRemove = onRemove
         return chipView
+    }
+
+    // MARK: - Fire Confirmation
+
+    func showFireConfirmation() {
+        isShowingFireConfirmation = true
+        expandToLargeDetent()
+
+        let viewModel = ScopedFireConfirmationViewModel(
+            tabViewModel: nil,
+            source: .browsing,
+            mode: .contextualChat(onDelete: { [weak self] in
+                self?.handleDeleteChatConfirmed()
+            }),
+            onConfirm: { _ in },
+            onCancel: { [weak self] in
+                self?.dismissFireConfirmation()
+            }
+        )
+
+        let confirmationView = ScopedFireConfirmationView(viewModel: viewModel)
+        let hostingController = UIHostingController(rootView: confirmationView)
+        hostingController.view.backgroundColor = UIColor(designSystemColor: .backgroundTertiary)
+        hostingController.modalTransitionStyle = .coverVertical
+        hostingController.modalPresentationStyle = .pageSheet
+
+        if let sheet = hostingController.sheetPresentationController {
+            if #available(iOS 16.0, *) {
+                let sizingController = UIHostingController(rootView: confirmationView)
+                sizingController.disableSafeArea()
+                let contentHeight = sizingController.sizeThatFits(in: CGSize(width: view.frame.width, height: .infinity)).height
+                sheet.detents = [.custom { context in
+                    min(contentHeight, context.maximumDetentValue * 0.9)
+                }]
+            } else {
+                sheet.detents = [.large()]
+            }
+            sheet.prefersGrabberVisible = false
+            if #unavailable(iOS 26) {
+                sheet.preferredCornerRadius = 24
+            }
+        }
+
+        present(hostingController, animated: true)
+    }
+
+    func dismissFireConfirmation() {
+        isShowingFireConfirmation = false
+        dismiss(animated: true)
+    }
+
+    func handleDeleteChatConfirmed() {
+        isShowingFireConfirmation = false
+        dismiss(animated: true) { [weak self] in
+            self?.playFireAnimationAndDismiss()
+        }
+    }
+
+    func playFireAnimationAndDismiss() {
+        let animationType = appSettings.currentFireButtonAnimation
+        guard let composition = animationType.composition else {
+            delegate?.aiChatContextualSheetViewControllerDidConfirmDeleteChat(self)
+            return
+        }
+
+        let animationView = LottieAnimationView(animation: composition)
+        animationView.contentMode = .scaleAspectFill
+        animationView.animationSpeed = CGFloat(animationType.speed)
+        animationView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(animationView)
+
+        NSLayoutConstraint.activate([
+            animationView.topAnchor.constraint(equalTo: view.topAnchor),
+            animationView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            animationView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            animationView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+
+        animationView.play(fromProgress: 0, toProgress: 1) { [weak self] _ in
+            guard let self else { return }
+            self.delegate?.aiChatContextualSheetViewControllerDidConfirmDeleteChat(self)
+        }
     }
 }
 

@@ -117,7 +117,7 @@ protocol TabDelegate: AnyObject {
     
     func tabDidRequestFireButtonPulse(tab: TabViewController)
 
-    func tabDidRequestFireButton(tab: TabViewController)
+    func tabDidRequestDeleteContextualChat(tab: TabViewController, chatID: String)
 
     func tabDidRequestPrivacyDashboardButtonPulse(tab: TabViewController, animated: Bool)
 
