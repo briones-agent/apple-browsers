@@ -423,6 +423,7 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .aiChatMultiplePageContexts,
                 .aiChatSidebarResizable,
                 .aiChatNtpRecentChats,
+                .aiChatNtpChatTools,
                 .aiChatSidebarFloating,
                 .startupMetrics,
                 .privateProcessName,
