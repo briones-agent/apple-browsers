@@ -132,7 +132,12 @@ final class UserScriptsDebugMenu: NSMenu, NSMenuDelegate {
         }
 
         let allTabs = Application.appDelegate.windowControllersManager.mainWindowControllers
-            .flatMap { $0.mainViewController.tabCollectionViewModel.tabCollection.tabs }
+            .flatMap { wc -> [Tab] in
+                let vm = wc.mainViewController.tabCollectionViewModel
+                let regular = vm.tabCollection.tabs
+                let pinned = vm.pinnedTabsCollection?.tabs ?? []
+                return regular + pinned
+            }
 
         Task { @MainActor in
             for tab in allTabs {
