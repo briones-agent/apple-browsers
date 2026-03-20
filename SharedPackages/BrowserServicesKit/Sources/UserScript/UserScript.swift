@@ -19,6 +19,78 @@
 import Foundation
 import WebKit
 import CryptoKit
+private enum JSFileCache {
+
+    private static let lock = NSLock()
+    private static var storage = [String: String]()
+
+    static func content(forFile file: String, in bundle: Bundle) throws -> String {
+        let cacheKey = bundle.bundlePath + "/" + file
+
+        lock.lock()
+        let cached = storage[cacheKey]
+        lock.unlock()
+
+        if let cached { return cached }
+
+        guard let path = bundle.path(forResource: file, ofType: "js") else {
+            throw UserScriptError.failedToLoadJS(jsFile: file, error: CocoaError(.fileReadNoSuchFile))
+        }
+
+        do {
+            let content = try String(contentsOfFile: path)
+            lock.lock()
+            storage[cacheKey] = content
+            lock.unlock()
+            return content
+        } catch {
+            throw UserScriptError.failedToLoadJS(jsFile: file, error: error)
+        }
+    }
+
+    /// Single-pass replacement of `$TOKEN$`-style placeholders.
+    /// Scans the template's UTF-8 bytes once, matching replacement keys
+    /// at every `$` and copying non-matching regions in bulk.
+    static func applyReplacements(_ template: String, _ replacements: [String: String]) -> String {
+        guard !replacements.isEmpty else { return template }
+
+        let templateUTF8 = Array(template.utf8)
+        let dollar = UInt8(ascii: "$")
+        let keys = replacements.map { (utf8: Array($0.key.utf8), value: Array($0.value.utf8)) }
+
+        var result = [UInt8]()
+        result.reserveCapacity(templateUTF8.count)
+
+        var i = 0
+        while i < templateUTF8.count {
+            if templateUTF8[i] == dollar {
+                var matched = false
+                for entry in keys {
+                    let end = i + entry.utf8.count
+                    if end <= templateUTF8.count,
+                       templateUTF8[i..<end].elementsEqual(entry.utf8) {
+                        result.append(contentsOf: entry.value)
+                        i = end
+                        matched = true
+                        break
+                    }
+                }
+                if !matched {
+                    result.append(templateUTF8[i])
+                    i += 1
+                }
+            } else {
+                let start = i
+                while i < templateUTF8.count && templateUTF8[i] != dollar {
+                    i += 1
+                }
+                result.append(contentsOf: templateUTF8[start..<i])
+            }
+        }
+
+        return String(decoding: result, as: UTF8.self)
+    }
+}
 
 public struct WKUserScriptBox: @unchecked Sendable {
     public let wkUserScript: WKUserScript
@@ -62,20 +134,8 @@ extension UserScript {
     }
 
     public static func loadJS(_ jsFile: String, from bundle: Bundle, withReplacements replacements: [String: String] = [:]) throws -> String {
-
-        let path = bundle.path(forResource: jsFile, ofType: "js")!
-
-        do {
-            var js = try String(contentsOfFile: path)
-
-            for (key, value) in replacements {
-                js = js.replacingOccurrences(of: key, with: value, options: .literal)
-            }
-
-            return js
-        } catch {
-            throw UserScriptError.failedToLoadJS(jsFile: jsFile, error: error)
-        }
+        let js = try JSFileCache.content(forFile: jsFile, in: bundle)
+        return JSFileCache.applyReplacements(js, replacements)
     }
 
     fileprivate nonisolated static func prepareScriptSource(from source: String) -> String {
