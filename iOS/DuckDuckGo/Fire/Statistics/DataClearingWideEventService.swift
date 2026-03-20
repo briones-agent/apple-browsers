@@ -181,6 +181,8 @@ private extension FireRequest {
             return .autoClearOnLaunch
         case .autoClearOnForeground:
             return .autoClearOnForeground
+        case .fireModeAutoClear:
+            return .fireModeAutoClear
         }
     }
 
@@ -193,6 +195,8 @@ private extension FireRequest {
             return .all
         case .fireMode:
             return .fireMode
+        case .normalMode:
+            return .normalMode
         }
     }
 
