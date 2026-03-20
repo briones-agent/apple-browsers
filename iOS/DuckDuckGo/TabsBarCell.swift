@@ -114,7 +114,7 @@ class TabsBarCell: UICollectionViewCell {
             faviconImage.loadFavicon(forDomain: URL.ddg.host, usingCache: .tabs)
             updateEmptyTabLabel(for: model)
             removeButton.accessibilityLabel = closeButtonAccessibilityLabel(for: model)
-        } else if model.isAITab {
+        } else if model.isAITab && AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards) {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
             faviconImage.image = DesignSystemImages.Color.Size24.aiChatGradient
             if let conversationTitle = model.aiChatConversationTitle {

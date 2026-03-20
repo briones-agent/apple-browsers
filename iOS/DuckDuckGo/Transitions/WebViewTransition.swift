@@ -92,9 +92,10 @@ class FromWebViewTransition: WebViewTransition {
             return
         }
 
-        let preview = tab.isAITab ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
+        let isDifferentiatedTabCards = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
+        let preview = (tab.isAITab && isDifferentiatedTabCards) ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
 
-        guard preview != nil || tab.isAITab else {
+        guard preview != nil || (tab.isAITab && isDifferentiatedTabCards) else {
             tabSwitcherViewController.view.alpha = 1
             transitionContext.completeTransition(true)
             return
@@ -177,7 +178,8 @@ class ToWebViewTransition: WebViewTransition {
         imageContainer.frame = tabSwitcherCellFrame(for: layoutAttr)
         imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius
         
-        let preview = tab.isAITab ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
+        let isDifferentiatedTabCards = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
+        let preview = (tab.isAITab && isDifferentiatedTabCards) ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
         if let preview {
             imageView.frame = previewFrame(for: imageContainer.bounds.size,
                                            preview: preview)

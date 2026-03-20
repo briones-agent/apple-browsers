@@ -403,6 +403,8 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
 
     /// Enables page context feature on iPad
     case iPadPageContext
+
+    case differentiatedTabCards
 }
 
 public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {

@@ -436,7 +436,9 @@ final class TabViewCell: UICollectionViewCell {
 
         unread.isHidden = tab.viewed
 
-        if tab.isAITab {
+        let isDifferentiatedTabCards = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
+
+        if tab.isAITab && isDifferentiatedTabCards {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
             removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
             title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
