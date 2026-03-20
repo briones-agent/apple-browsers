@@ -32,9 +32,9 @@ public struct BrokerProfileJobContext: Sendable {
     public let brokerId: Int64
     public let profileQueryId: Int64
     public let extractedProfileId: Int64?
-    public let stepType: StepType
+    public let stepType: StepType?
 
-    public init(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64?, stepType: StepType) {
+    public init(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64?, stepType: StepType?) {
         self.brokerId = brokerId
         self.profileQueryId = profileQueryId
         self.extractedProfileId = extractedProfileId
@@ -189,11 +189,21 @@ public class BrokerProfileJob: Operation, @unchecked Sendable {
             Logger.dataBrokerProtection.log("Running operation: \(String(describing: jobData), privacy: .public)")
 
             let isFreeScan = !(await jobDependencies.isAuthenticatedUser())
+            let stepType: StepType? = {
+                switch jobData {
+                case is ScanJobData:
+                    return .scan
+                case is OptOutJobData:
+                    return .optOut
+                default:
+                    return nil
+                }
+            }()
             let context = BrokerProfileJobContext(
                 brokerId: jobData.brokerId,
                 profileQueryId: jobData.profileQueryId,
                 extractedProfileId: (jobData as? OptOutJobData)?.extractedProfile.id,
-                stepType: jobData is ScanJobData ? .scan : .optOut
+                stepType: stepType
             )
 
             do {

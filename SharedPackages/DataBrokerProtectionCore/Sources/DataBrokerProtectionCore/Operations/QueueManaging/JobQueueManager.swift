@@ -342,6 +342,7 @@ extension JobQueueManager: BrokerProfileJobStatusReportingDelegate {
                                             dataBrokerParent: String?,
                                             isFreeScan: Bool?) {
         operationErrors.append(error)
+        delegate?.queueManagerDidCompleteIndividualJob(self, context: context)
 
         guard let error = error as? DataBrokerProtectionError, let brokerURL, let version else { return }
 
@@ -360,8 +361,6 @@ extension JobQueueManager: BrokerProfileJobStatusReportingDelegate {
         default:
             pixelHandler.fire(.otherError(error: error, dataBroker: brokerURL, version: version, isFreeScan: isFreeScan))
         }
-
-        delegate?.queueManagerDidCompleteIndividualJob(self, context: context)
     }
 
     public func dataBrokerOperationDidCompleteSuccessfully(withBrokerURL brokerURL: String?,
