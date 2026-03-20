@@ -20,6 +20,11 @@
 import Foundation
 import os.log
 import BrowserKit
+import BrowserServicesKit
+import Persistence
+import Bookmarks
+
+typealias DataImportUserActivityResultHandler = (Result<DataImportSummary, Error>) -> Void
 
 protocol DataImportUserActivityHandling {
     @discardableResult
@@ -28,7 +33,47 @@ protocol DataImportUserActivityHandling {
 
 final class DataImportUserActivityHandler: DataImportUserActivityHandling {
 
-    static var browserKitImportActivityType: String {
+    struct Dependencies {
+        let bookmarksDatabase: CoreDataDatabase
+        let favoritesDisplayMode: FavoritesDisplayMode
+    }
+
+    private let dependencies: Dependencies
+    private let onImportResult: DataImportUserActivityResultHandler
+    private var browserKitUserActivityHandler: DataImportUserActivityHandling?
+
+    init(dependencies: Dependencies,
+         onImportResult: @escaping DataImportUserActivityResultHandler,
+         browserKitUserActivityHandler: DataImportUserActivityHandling? = nil) {
+        self.dependencies = dependencies
+        self.onImportResult = onImportResult
+        self.browserKitUserActivityHandler = browserKitUserActivityHandler
+    }
+
+    @discardableResult
+    func handle(_ userActivity: NSUserActivity) -> Bool {
+        switch userActivity.activityType {
+        case BrowserKitUserActivityHandler.activityType:
+            if browserKitUserActivityHandler == nil {
+                browserKitUserActivityHandler = makeBrowserKitUserActivityHandler()
+            }
+            return browserKitUserActivityHandler?.handle(userActivity) ?? false
+        default:
+            return false
+        }
+    }
+
+    private func makeBrowserKitUserActivityHandler() -> DataImportUserActivityHandling {
+        let browserKitImportManager = BrowserKitImportManager(bookmarksDatabase: dependencies.bookmarksDatabase,
+                                                              favoritesDisplayMode: dependencies.favoritesDisplayMode,
+                                                              onImportResult: onImportResult)
+        return BrowserKitUserActivityHandler(browserKitImportManager: browserKitImportManager)
+    }
+}
+
+final class BrowserKitUserActivityHandler: DataImportUserActivityHandling {
+
+    static var activityType: String {
 #if compiler(>=6.3)
         if #available(iOS 26.4, *) {
             return BEBrowserDataImportManager.userActivityType
@@ -37,11 +82,16 @@ final class DataImportUserActivityHandler: DataImportUserActivityHandling {
         return "BEBrowserDataExchangeImportActivity"
     }
 
+    private let browserKitImportManager: BrowserKitImportManaging
     private var lastHandledActivityIdentifier: String?
+
+    init(browserKitImportManager: BrowserKitImportManaging) {
+        self.browserKitImportManager = browserKitImportManager
+    }
 
     @discardableResult
     func handle(_ userActivity: NSUserActivity) -> Bool {
-        guard userActivity.activityType == Self.browserKitImportActivityType else {
+        guard userActivity.activityType == Self.activityType else {
             return false
         }
 
@@ -56,7 +106,7 @@ final class DataImportUserActivityHandler: DataImportUserActivityHandling {
             return true
         }
 
-        NotificationCenter.default.post(name: .didReceiveBrowserKitDataImportActivity, object: userActivity)
+        browserKitImportManager.handleImportRequest(with: importToken)
         return true
     }
 
@@ -77,8 +127,4 @@ final class DataImportUserActivityHandler: DataImportUserActivityHandling {
 #endif
         return nil
     }
-}
-
-extension Notification.Name {
-    static let didReceiveBrowserKitDataImportActivity = Notification.Name("didReceiveBrowserKitDataImportActivity")
 }

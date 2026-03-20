@@ -618,20 +618,33 @@ extension MainCoordinator: UserActivityHandling {
 
     @discardableResult
     func handleUserActivity(_ userActivity: NSUserActivity) -> Bool {
-        switch userActivity.activityType {
-        case DataImportUserActivityHandler.browserKitImportActivityType:
-            if dataImportUserActivityHandler == nil {
-                dataImportUserActivityHandler = makeDataImportUserActivityHandler()
-            }
-            return dataImportUserActivityHandler?.handle(userActivity) ?? false
-        default:
+        if dataImportUserActivityHandler == nil {
+            dataImportUserActivityHandler = makeDataImportUserActivityHandler()
+        }
+
+        guard dataImportUserActivityHandler?.handle(userActivity) == true else {
             Logger.general.debug("Unhandled user activity type: \(userActivity.activityType)")
             return false
         }
+
+        return true
     }
 
     private func makeDataImportUserActivityHandler() -> DataImportUserActivityHandler {
-        DataImportUserActivityHandler()
+        let dependencies = DataImportUserActivityHandler.Dependencies(bookmarksDatabase: controller.bookmarksDatabase,
+                                                                      favoritesDisplayMode: controller.appSettings.favoritesDisplayMode)
+        return DataImportUserActivityHandler(dependencies: dependencies) { [weak self] result in
+            self?.handleDataImportResult(result)
+        }
+    }
+
+    private func handleDataImportResult(_ result: Result<DataImportSummary, Error>) {
+        switch result {
+        case .success(_):
+            Logger.general.debug("Data import success - present summary screen")
+        case .failure(let error):
+            Logger.general.error("Data import failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
 }
