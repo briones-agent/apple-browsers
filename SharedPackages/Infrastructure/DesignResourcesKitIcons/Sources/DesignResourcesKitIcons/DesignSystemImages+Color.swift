@@ -105,6 +105,7 @@ public extension DesignSystemImages {
             public static var thumbsUp: DesignSystemImage { .init(resource: .thumbsUpColor16) }
             public static var thumbsUpNeutral: DesignSystemImage { .init(resource: .thumbsUpNeutralColor16) }
             public static var videoPlayer: DesignSystemImage { .init(resource: .videoPlayerColor16) }
+            public static var videoPlayerBlocked: DesignSystemImage { .init(resource: .videoPlayerBlockedColor16) }
             public static var vpn: DesignSystemImage { .init(resource: .vpnColor16) }
             public static var vpnGray: DesignSystemImage { .init(resource: .vpnGrayColor16) }
             public static var searchFindToggle: DesignSystemImage { .init(resource: .searchFindToggleColor16) }
