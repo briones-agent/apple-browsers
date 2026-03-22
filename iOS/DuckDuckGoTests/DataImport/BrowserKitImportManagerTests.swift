@@ -39,6 +39,7 @@ final class BrowserKitImportManagerTests: XCTestCase {
         try super.tearDownWithError()
     }
 
+    @available(iOS 26.4, *)
     func testWhenStreamContainsMultipleNestedLevelsThenImportPersistsExpectedHierarchy() async throws {
         let token = UUID()
         let mockImportManager = MockBEBrowserDataImportManager(items: makeMultiLevelFixture())
@@ -89,6 +90,7 @@ final class BrowserKitImportManagerTests: XCTestCase {
         XCTAssertNotNil(bookmark(url: "https://example.com/reading-list-item", in: readingList.childrenArray))
     }
 
+    @available(iOS 26.4, *)
     func testWhenStreamThrowsThenImportResultIsFailure() async throws {
         let token = UUID()
         let mockImportManager = MockBEBrowserDataImportManager(items: [], completionError: MockBrowserKitImportError.streamFailed)
@@ -115,6 +117,7 @@ final class BrowserKitImportManagerTests: XCTestCase {
         XCTAssertEqual(mockImportManager.receivedTokens, [token])
     }
 
+    @available(iOS 26.4, *)
     func testWhenStreamContainsOnlyUnsupportedItemsThenImportReturnsZeroBookmarkSummary() async throws {
         let token = UUID()
         let mockImportManager = MockBEBrowserDataImportManager(items: [
@@ -140,6 +143,39 @@ final class BrowserKitImportManagerTests: XCTestCase {
         XCTAssertEqual(bookmarkSummary.duplicate, 0)
         XCTAssertEqual(bookmarkSummary.failed, 0)
         XCTAssertEqual(mockImportManager.receivedTokens, [token])
+    }
+
+    func testWhenPlatformIsPreiOS264ThenImportReturnsUnsupportedPlatform() async throws {
+        if #available(iOS 26.4, *) {
+            throw XCTSkip("Requires pre iOS 26.4 runtime")
+        }
+
+        let token = UUID()
+        let mockImportManager = MockBEBrowserDataImportManager(items: makeMultiLevelFixture())
+        let callbackExpectation = expectation(description: "Import callback")
+        var callbackResult: Result<DataImportSummary, Error>?
+
+        let browserKitImportManager = BrowserKitImportManager(bookmarksDatabase: database,
+                                                              favoritesDisplayMode: .displayNative(.mobile),
+                                                              browserDataImportManager: mockImportManager) { result in
+            callbackResult = result
+            callbackExpectation.fulfill()
+        }
+
+        browserKitImportManager.handleImportRequest(with: token)
+        await fulfillment(of: [callbackExpectation], timeout: 2.0)
+
+        let result = try XCTUnwrap(callbackResult)
+        guard case .failure(let error) = result else {
+            XCTFail("Expected failure result")
+            return
+        }
+
+        if case BrowserKitImportManagerError.unsupportedPlatform = error {
+            XCTAssertEqual(mockImportManager.receivedTokens, [])
+        } else {
+            XCTFail("Expected BrowserKitImportManagerError.unsupportedPlatform")
+        }
     }
 
     private func makeMultiLevelFixture() -> [BrowserKitImportPayloadItem] {

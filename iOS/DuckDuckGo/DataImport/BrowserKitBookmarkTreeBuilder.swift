@@ -195,7 +195,6 @@ struct BrowserKitBookmarkTreeBuilder {
             }
         }
 
-        var resolvedCount = 0
         if !unplacedRecords.isEmpty {
             var remaining = unplacedRecords
             var madeProgress = true
@@ -212,7 +211,6 @@ struct BrowserKitBookmarkTreeBuilder {
                         if unplacedRecord.isFolder {
                             foldersByIdentifier[unplacedRecord.identifier] = unplacedRecord.treeNode
                         }
-                        resolvedCount += 1
                         madeProgress = true
                     } else {
                         nextRemaining.append(unplacedRecord)
@@ -224,9 +222,6 @@ struct BrowserKitBookmarkTreeBuilder {
 
             remaining.forEach { remainingRecord in
                 insert(remainingRecord.treeNode, into: nil, topLevelNodes: &topLevelNodes)
-                if remainingRecord.isFolder {
-                    foldersByIdentifier[remainingRecord.identifier] = remainingRecord.treeNode
-                }
                 signals.unresolvedParentReferences += 1
             }
 
