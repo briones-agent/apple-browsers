@@ -23,6 +23,7 @@ import Bookmarks
 import BrowserServicesKit
 import Core
 import RemoteMessaging
+import Subscription
 
 final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTabPage {
 
