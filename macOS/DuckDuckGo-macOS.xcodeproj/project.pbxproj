@@ -2959,6 +2959,8 @@
 		B568715F2EC528950075A270 /* CABasicAnimationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B568715D2EC528950075A270 /* CABasicAnimationExtension.swift */; };
 		B56871612EC528CF0075A270 /* CATransitionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56871602EC528CF0075A270 /* CATransitionExtension.swift */; };
 		B56871622EC528CF0075A270 /* CATransitionExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56871602EC528CF0075A270 /* CATransitionExtension.swift */; };
+		B57268922F68861A00FEBB76 /* NavigationBarStyleProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57268912F68861A00FEBB76 /* NavigationBarStyleProviding.swift */; };
+		B57268932F68861A00FEBB76 /* NavigationBarStyleProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57268912F68861A00FEBB76 /* NavigationBarStyleProviding.swift */; };
 		B57B12392F4CE34100B610F1 /* StartupMetricsPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57B12382F4CE34100B610F1 /* StartupMetricsPixel.swift */; };
 		B57B123A2F4CE34100B610F1 /* StartupMetricsPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57B12382F4CE34100B610F1 /* StartupMetricsPixel.swift */; };
 		B57B123F2F4CFAFD00B610F1 /* StartupMetricsBuckets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57B123E2F4CFAFD00B610F1 /* StartupMetricsBuckets.swift */; };
@@ -2988,6 +2990,10 @@
 		B5C980FF2F229F5C00655B21 /* XCTOptions+Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C980FE2F229F5C00655B21 /* XCTOptions+Helpers.swift */; };
 		B5CBB60B2EC4F80A006C3F54 /* TabTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CBB60A2EC4F80A006C3F54 /* TabTitleView.swift */; };
 		B5CBB60C2EC4F80A006C3F54 /* TabTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CBB60A2EC4F80A006C3F54 /* TabTitleView.swift */; };
+		B5CCC06D2F649BAF003EB0A2 /* TabBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06C2F649BAF003EB0A2 /* TabBackgroundView.swift */; };
+		B5CCC06E2F649BAF003EB0A2 /* TabBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06C2F649BAF003EB0A2 /* TabBackgroundView.swift */; };
+		B5CCC0702F649BB9003EB0A2 /* TabBackgroundShapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */; };
+		B5CCC0712F649BB9003EB0A2 /* TabBackgroundShapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */; };
 		B5D62C802F55F5B000947DFD /* StartupMetricsExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D62C7F2F55F5B000947DFD /* StartupMetricsExporter.swift */; };
 		B5D62C812F55F5B000947DFD /* StartupMetricsExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D62C7F2F55F5B000947DFD /* StartupMetricsExporter.swift */; };
 		B5DE8DA92EBE292F005C5EF4 /* SpinnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5DE8DA82EBE292F005C5EF4 /* SpinnerView.swift */; };
@@ -5926,6 +5932,7 @@
 		B56776742ED778C600303198 /* FaviconImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconImageView.swift; sourceTree = "<group>"; };
 		B568715D2EC528950075A270 /* CABasicAnimationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CABasicAnimationExtension.swift; sourceTree = "<group>"; };
 		B56871602EC528CF0075A270 /* CATransitionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CATransitionExtension.swift; sourceTree = "<group>"; };
+		B57268912F68861A00FEBB76 /* NavigationBarStyleProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarStyleProviding.swift; sourceTree = "<group>"; };
 		B574243A2EBA8CDF002E5460 /* TabFaviconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabFaviconView.swift; sourceTree = "<group>"; };
 		B57B12382F4CE34100B610F1 /* StartupMetricsPixel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupMetricsPixel.swift; sourceTree = "<group>"; };
 		B57B123E2F4CFAFD00B610F1 /* StartupMetricsBuckets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupMetricsBuckets.swift; sourceTree = "<group>"; };
@@ -5945,6 +5952,8 @@
 		B5C980F92F229EB800655B21 /* XCUIApplication+AllocationStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCUIApplication+AllocationStats.swift"; sourceTree = "<group>"; };
 		B5C980FE2F229F5C00655B21 /* XCTOptions+Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCTOptions+Helpers.swift"; sourceTree = "<group>"; };
 		B5CBB60A2EC4F80A006C3F54 /* TabTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabTitleView.swift; sourceTree = "<group>"; };
+		B5CCC06C2F649BAF003EB0A2 /* TabBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBackgroundView.swift; sourceTree = "<group>"; };
+		B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBackgroundShapeView.swift; sourceTree = "<group>"; };
 		B5D62C7F2F55F5B000947DFD /* StartupMetricsExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupMetricsExporter.swift; sourceTree = "<group>"; };
 		B5DE8DA82EBE292F005C5EF4 /* SpinnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerView.swift; sourceTree = "<group>"; };
 		B5DFC5372F608D45001AB6AA /* UITests+Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITests+Helpers.swift"; sourceTree = "<group>"; };
@@ -10710,6 +10719,8 @@
 				40E090D60EAB41E8BB22CA88 /* DuckAIChromeButtonsPreferences.swift */,
 				F0A1D3C5B7E94AA1A2B3C4D5 /* DuckAIChromeButtonsVisibilityManager.swift */,
 				AA7412B024D0B3AC00D22FE0 /* TabBarViewItem.swift */,
+				B5CCC06C2F649BAF003EB0A2 /* TabBackgroundView.swift */,
+				B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */,
 				AA9E9A5D25A4867200D1959D /* TabDragAndDropManager.swift */,
 				B574243A2EBA8CDF002E5460 /* TabFaviconView.swift */,
 				311B262628E73E0A00FD181A /* TabShadowConfig.swift */,
@@ -11940,6 +11951,7 @@
 				BB7BAABB2DDBAD4F004A5A58 /* IconsProviding.swift */,
 				B5ACEDAB2E8DC635008EC8B9 /* MockThemeManager.swift */,
 				BBB891E52DAEC1B6001A42DF /* MoreOptionsMenuIconsProviding.swift */,
+				B57268912F68861A00FEBB76 /* NavigationBarStyleProviding.swift */,
 				BB7BAABE2DDBADB1004A5A58 /* NavigationToolbarIconsProviding.swift */,
 				BB0DA4BE2DB12F7600AB9C29 /* PrivacyShieldAddressBarStyleProviding.swift */,
 				B5ECC1952EF1D24B0046A1C7 /* ScriptStyleProvider.swift */,
@@ -14598,6 +14610,7 @@
 				BBFB72802C48047C0088884C /* SortBookmarksViewModel.swift in Sources */,
 				37197EA72942443D00394917 /* AuthenticationAlert.swift in Sources */,
 				37C7493A2D55FE710065B48B /* HistoryViewActionsHandler.swift in Sources */,
+				B5CCC06E2F649BAF003EB0A2 /* TabBackgroundView.swift in Sources */,
 				1DA6D0FE2A1FF9A100540406 /* HTTPCookie.swift in Sources */,
 				3706FAFC293F65D500E42796 /* DownloadListItem.swift in Sources */,
 				BB7C38462F322455008D6FEC /* FreeTrialPixelHandler.swift in Sources */,
@@ -14877,6 +14890,7 @@
 				37E477902EF006E6006369D6 /* MemoryUsageMonitor.swift in Sources */,
 				CC951AEB2EB528490047E245 /* DefaultBrowserAndDockPromptService.swift in Sources */,
 				3706FB83293F65D500E42796 /* NSApplicationExtension.swift in Sources */,
+				B5CCC0712F649BB9003EB0A2 /* TabBackgroundShapeView.swift in Sources */,
 				E274EFF72E1D55D500373C41 /* NewTabPageOmnibarSuggestionsProvider.swift in Sources */,
 				CCC87D6D2E1412D70091344D /* ChromiumTopSitesReader.swift in Sources */,
 				37197EA42942441D00394917 /* NewWindowPolicy.swift in Sources */,
@@ -15383,6 +15397,7 @@
 				3706FC60293F65D500E42796 /* TabBarCollectionView.swift in Sources */,
 				3706FC61293F65D500E42796 /* NSAlertExtension.swift in Sources */,
 				8440B2B72EF136D200E32722 /* QuitSurveyPresenter.swift in Sources */,
+				B57268932F68861A00FEBB76 /* NavigationBarStyleProviding.swift in Sources */,
 				3706FC62293F65D500E42796 /* ThirdPartyBrowser.swift in Sources */,
 				840B66862F3A020F001E20C6 /* SparkleUpdateMenuItemFactory.swift in Sources */,
 				3706FC63293F65D500E42796 /* CircularProgressView.swift in Sources */,
@@ -16774,6 +16789,7 @@
 				7BCB90C22C18626E008E3543 /* VPNControllerXPCClient+ConvenienceInitializers.swift in Sources */,
 				4B9DB0202A983B24000927DB /* ProductWaitlistRequest.swift in Sources */,
 				7BBBD8992ED8DA51003A7DA5 /* NotificationIconFetcher.swift in Sources */,
+				B5CCC06D2F649BAF003EB0A2 /* TabBackgroundView.swift in Sources */,
 				37B904752E2A532000E5DAF7 /* NavigationPixelNavigationResponder.swift in Sources */,
 				7B60B0022C5145EC008E32A3 /* VPNUIActionHandler.swift in Sources */,
 				98779A0029999B64005D8EB6 /* Bookmark.xcdatamodeld in Sources */,
@@ -17053,6 +17069,7 @@
 				B6BCC53B2AFD15DF002C5499 /* DataImportProfilePicker.swift in Sources */,
 				3158B1562B0BF75D00AF130C /* DataBrokerProtectionFeatureGatekeeper.swift in Sources */,
 				B6B5F5842B03580A008DB58A /* RequestFilePermissionView.swift in Sources */,
+				B5CCC0702F649BB9003EB0A2 /* TabBackgroundShapeView.swift in Sources */,
 				B55D8E5E2EE77688009083D9 /* BundleExtension.swift in Sources */,
 				37E307AB2D0745DB00599500 /* PrivacyStatsErrorHandler.swift in Sources */,
 				4B1E6EEE27AB5E5100F51793 /* PasswordManagementListSection.swift in Sources */,
@@ -17558,6 +17575,7 @@
 				7B1E81A027C8874900FF0E60 /* ContentOverlayViewController.swift in Sources */,
 				CD2AB5C12C8222F40019EB49 /* MaliciousSiteProtectionPreferences.swift in Sources */,
 				CCAA80342F5B290400BB58F4 /* DefaultBrowserAndDockPromptUIHosting.swift in Sources */,
+				B57268922F68861A00FEBB76 /* NavigationBarStyleProviding.swift in Sources */,
 				CCAA80352F5B290400BB58F4 /* DefaultBrowserAndDockPromoDelegate.swift in Sources */,
 				372D15EC2D00FA1A00A11576 /* AppearancePreferences+NewTabPage.swift in Sources */,
 				C1DAF3B52B9A44860059244F /* AutofillPopoverPresenter.swift in Sources */,
