@@ -447,14 +447,22 @@ final class TabViewCell: UICollectionViewCell {
             if let conversationTitle = tab.aiChatConversationTitle {
                 link?.isHidden = false
                 link?.text = conversationTitle
+                aiChatTitleLabel?.text = conversationTitle
+                aiChatPreviewContainer.isHidden = self.preview == nil
+                self.preview?.isHidden = true
+                self.preview?.image = nil
             } else {
                 link?.isHidden = true
+                aiChatPreviewContainer.isHidden = true
+                self.preview?.isHidden = false
+                if let preview = preview {
+                    self.updatePreviewToDisplay(image: preview)
+                    self.preview?.contentMode = .scaleAspectFill
+                    self.preview?.image = preview
+                } else {
+                    self.preview?.image = nil
+                }
             }
-
-            self.preview?.isHidden = true
-            self.preview?.image = nil
-            aiChatTitleLabel?.text = tab.aiChatConversationTitle
-            aiChatPreviewContainer.isHidden = self.preview == nil
 
             removeButton.isHidden = false
 
