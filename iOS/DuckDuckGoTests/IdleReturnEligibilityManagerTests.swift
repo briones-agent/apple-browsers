@@ -105,6 +105,40 @@ struct IdleReturnEligibilityManagerTests {
         #expect(manager.isEligibleForNTPAfterIdle())
     }
 
+    // MARK: - isEscapeHatchEligible
+
+    @Test("When feature flag on and onboarding done then isEscapeHatchEligible returns true")
+    func whenFeatureOnAndOnboardingDoneThenEscapeHatchEligibleReturnsTrue() {
+        let manager = makeManager(featureOn: true, hasSeenOnboarding: true, isStillOnboarding: false)
+        #expect(manager.isEscapeHatchEligible())
+    }
+
+    @Test("When feature flag off then isEscapeHatchEligible returns false")
+    func whenFeatureOffThenEscapeHatchEligibleReturnsFalse() {
+        let manager = makeManager(featureOn: false)
+        #expect(!manager.isEscapeHatchEligible())
+    }
+
+    @Test("When onboarding not seen then isEscapeHatchEligible returns false")
+    func whenOnboardingNotSeenThenEscapeHatchEligibleReturnsFalse() {
+        let manager = makeManager(featureOn: true, hasSeenOnboarding: false)
+        #expect(!manager.isEscapeHatchEligible())
+    }
+
+    @Test("When contextual onboarding active then isEscapeHatchEligible returns false")
+    func whenContextualOnboardingActiveThenEscapeHatchEligibleReturnsFalse() {
+        let manager = makeManager(featureOn: true, isStillOnboarding: true)
+        #expect(!manager.isEscapeHatchEligible())
+    }
+
+    @Test("When effective option is Last Used Tab then isEscapeHatchEligible still returns true")
+    func whenLastUsedTabThenEscapeHatchEligibleStillReturnsTrue() {
+        let manager = makeManager(featureOn: true, effectiveOption: .lastUsedTab)
+        #expect(manager.isEscapeHatchEligible())
+    }
+
+    // MARK: - effectiveAfterInactivityOption
+
     @Test("effectiveAfterInactivityOption returns value from resolver")
     func effectiveAfterInactivityOptionReturnsValueFromResolver() {
         let managerNewTab = makeManager(effectiveOption: .newTab)

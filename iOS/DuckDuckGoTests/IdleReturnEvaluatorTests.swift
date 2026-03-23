@@ -25,11 +25,16 @@ import PrivacyConfig
 
 final class MockIdleReturnEligibilityManager: IdleReturnEligibilityManaging {
     var isEligibleForNTPAfterIdleResult = true
+    var isEscapeHatchEligibleResult = true
     var effectiveAfterInactivityOptionResult: AfterInactivityOption = .newTab
     var idleThresholdSecondsResult = 300
 
     func isEligibleForNTPAfterIdle() -> Bool {
         isEligibleForNTPAfterIdleResult
+    }
+
+    func isEscapeHatchEligible() -> Bool {
+        isEscapeHatchEligibleResult
     }
 
     func effectiveAfterInactivityOption() -> AfterInactivityOption {

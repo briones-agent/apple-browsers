@@ -1359,7 +1359,7 @@ class MainViewController: UIViewController {
 
     // TODO: - Adjust this to support cross-mode hatches
     private func buildEscapeHatch(sourceTabViewController: TabViewController? = nil) -> EscapeHatchModel? {
-        guard idleReturnEligibilityManager.isEligibleForNTPAfterIdle() else {
+        guard idleReturnEligibilityManager.isEscapeHatchEligible() else {
             return nil
         }
         let currentTab = tabManager.currentTabsModel.currentTab
@@ -3626,7 +3626,7 @@ extension MainViewController: OmniBarDelegate {
     }
 
     func escapeHatchForEditingState() -> EscapeHatchModel? {
-        guard idleReturnEligibilityManager.isEligibleForNTPAfterIdle(),
+        guard idleReturnEligibilityManager.isEscapeHatchEligible(),
               tabManager.currentTabsModel.currentTab?.link == nil else {
             return nil
         }

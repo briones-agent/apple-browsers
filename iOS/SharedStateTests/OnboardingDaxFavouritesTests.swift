@@ -40,6 +40,7 @@ import AIChatTestingUtilities
 
 private final class MockIdleReturnEligibilityManagerForMainVC: IdleReturnEligibilityManaging {
     func isEligibleForNTPAfterIdle() -> Bool { false }
+    func isEscapeHatchEligible() -> Bool { false }
     func effectiveAfterInactivityOption() -> AfterInactivityOption { .lastUsedTab }
     func idleThresholdSeconds() -> Int { 60 }
 }

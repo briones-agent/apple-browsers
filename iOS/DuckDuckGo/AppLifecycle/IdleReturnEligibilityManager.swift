@@ -24,6 +24,7 @@ import PrivacyConfig
 
 protocol IdleReturnEligibilityManaging {
     func isEligibleForNTPAfterIdle() -> Bool
+    func isEscapeHatchEligible() -> Bool
     func effectiveAfterInactivityOption() -> AfterInactivityOption
     func idleThresholdSeconds() -> Int
 }
@@ -65,12 +66,18 @@ final class IdleReturnEligibilityManager: IdleReturnEligibilityManaging {
         self.isStillOnboarding = isStillOnboarding
     }
 
-    /// Gates NTP-after-idle on linear onboarding completion and contextual
-    /// onboarding not actively showing NTP dialogs.
-    func isEligibleForNTPAfterIdle() -> Bool {
+    /// Gates escape hatch visibility on feature flag and onboarding completion,
+    /// regardless of the after-inactivity setting.
+    func isEscapeHatchEligible() -> Bool {
         tutorialSettings.hasSeenOnboarding
             && !isStillOnboarding()
             && featureFlagger.isFeatureOn(.showNTPAfterIdleReturn)
+    }
+
+    /// Gates NTP-after-idle on linear onboarding completion, contextual
+    /// onboarding not actively showing NTP dialogs, and the `.newTab` setting.
+    func isEligibleForNTPAfterIdle() -> Bool {
+        isEscapeHatchEligible()
             && effectiveAfterInactivityOption() == .newTab
     }
 
