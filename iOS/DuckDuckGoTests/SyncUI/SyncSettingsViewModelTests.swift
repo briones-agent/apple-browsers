@@ -541,7 +541,7 @@ final class SyncSettingsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.simplifiedSyncAnotherDevicePromptDismissButtonTitle, UserText.simplifiedSyncAnotherDeviceRemind)
 
         delegate.simplifiedSyncAnotherDevicePromptState = .remindedOnce
-        XCTAssertEqual(sut.simplifiedSyncAnotherDevicePromptDismissButtonTitle, UserText.simplifiedSyncAnotherDeviceDismiss)
+        XCTAssertEqual(sut.simplifiedSyncAnotherDevicePromptDismissButtonTitle, UserText.simplifiedSyncAnotherDeviceNoThanks)
     }
 
     private func makeSut(autoRestoreProvider: MockSyncAutoRestoreHandler,

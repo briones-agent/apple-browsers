@@ -245,7 +245,7 @@ public struct UserText {
     static let simplifiedSyncAnotherDeviceTitle = NotLocalizedString("sync.simplified.another.device.title", bundle: Bundle.module, value: "Sync your data with another device?", comment: "Prompt title after enabling sync")
     static let simplifiedSyncAnotherDeviceBody = NotLocalizedString("sync.simplified.another.device.body", bundle: Bundle.module, value: "Your bookmarks, autofill data, and Duck.ai chats are securely backed up. Now keep them in sync with your computer or tablet.", comment: "Prompt body text after enabling sync")
     static let simplifiedSyncAnotherDeviceRemind = NotLocalizedString("sync.simplified.another.device.remind", bundle: Bundle.module, value: "Remind Me Later", comment: "Prompt secondary button on first show")
-    static let simplifiedSyncAnotherDeviceDismiss = NotLocalizedString("sync.simplified.another.device.dismiss", bundle: Bundle.module, value: "Dismiss", comment: "Prompt secondary button on second show")
+    static let simplifiedSyncAnotherDeviceNoThanks = NotLocalizedString("sync.simplified.another.device.nothanks", bundle: Bundle.module, value: "No Thanks", comment: "Prompt secondary button on second show")
 
     // Sync Get Other Devices
     static let syncGetOtherDevicesScreenTitle = NSLocalizedString("sync.get.other.devices.screen.title", bundle: Bundle.module, value: "Get DuckDuckGo", comment: "Title of screen with share links for users to download DuckDuckGo on other devices")

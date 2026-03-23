@@ -38,7 +38,7 @@ public enum SyncAnotherDevicePromptState: Int {
         case .notYetShown:
             return UserText.simplifiedSyncAnotherDeviceRemind
         case .remindedOnce, .dismissed:
-            return UserText.simplifiedSyncAnotherDeviceDismiss
+            return UserText.simplifiedSyncAnotherDeviceNoThanks
         }
     }
 
@@ -418,7 +418,7 @@ public class SyncSettingsViewModel: ObservableObject {
     }
 
     public var simplifiedSyncAnotherDevicePromptDismissButtonTitle: String {
-        delegate?.simplifiedSyncAnotherDevicePromptState.dismissButtonTitle ?? UserText.simplifiedSyncAnotherDeviceDismiss
+        delegate?.simplifiedSyncAnotherDevicePromptState.dismissButtonTitle ?? UserText.simplifiedSyncAnotherDeviceNoThanks
     }
 
     public func checkAndShowSyncWithAnotherDevicePrompt() {
