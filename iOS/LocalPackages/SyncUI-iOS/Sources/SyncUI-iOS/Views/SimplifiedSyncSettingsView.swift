@@ -187,16 +187,30 @@ extension SimplifiedSyncSettingsView {
     @ViewBuilder
     var syncToggleSection: some View {
         Section {
-            Toggle(isOn: Binding(
-                get: { model.isSyncEnabled },
-                set: { _ in
-                    // To be implemented
-                }
-            )) {
+            HStack {
                 Text(UserText.simplifiedSyncToggleTitle)
                     .daxBodyRegular()
+                Spacer()
+                if model.isBusy {
+                    Text(UserText.simplifiedSyncConnecting)
+                        .daxBodyRegular()
+                        .foregroundColor(Color(designSystemColor: .textSecondary))
+                        .transition(.opacity)
+                }
+                Toggle("", isOn: Binding(
+                    get: { model.isSyncEnabled },
+                    set: { newValue in
+                        if newValue {
+                            model.enableSyncToggleTapped()
+                        } else {
+                            model.disableSyncToggleTapped()
+                        }
+                    }
+                ))
+                .labelsHidden()
             }
-            .disabled(!model.isSyncEnabled && !model.isAccountCreationAvailable)
+            .animation(.easeInOut(duration: 0.3), value: model.isBusy)
+            .disabled(model.isBusy || (!model.isSyncEnabled && !model.isAccountCreationAvailable))
         }
     }
 

@@ -503,7 +503,9 @@ private final class MockSyncSettingsViewModelDelegate: SyncManagementViewModelDe
     func showRecoveryPDF() {}
     func shareRecoveryPDF() {}
     func createAccountAndStartSyncing(optionsViewModel: SyncSettingsViewModel) {}
+    func simplifiedCreateAccountAndStartSyncing(optionsViewModel: SyncSettingsViewModel) {}
     func confirmAndDisableSync() async -> Bool { true }
+    func simplifiedConfirmAndDisableSync() async -> Bool { true }
     func confirmAndDeleteAllData() async -> Bool { true }
     func confirmRemoveDevice(_ device: SyncSettingsViewModel.Device) async -> Bool { true }
     func removeDevice(_ device: SyncSettingsViewModel.Device) {}

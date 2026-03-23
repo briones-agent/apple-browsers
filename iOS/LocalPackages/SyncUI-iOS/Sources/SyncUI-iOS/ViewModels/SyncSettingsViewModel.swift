@@ -48,6 +48,10 @@ public protocol SyncManagementViewModelDelegate: AnyObject {
     func fireAutoRestorePixel(event: SyncSettingsViewModel.AutoRestorePixelEvent)
     func shareLink(for url: URL, with message: String, from rect: CGRect)
 
+    // Simplified sync setup experiment
+    func simplifiedCreateAccountAndStartSyncing(optionsViewModel: SyncSettingsViewModel)
+    func simplifiedConfirmAndDisableSync() async -> Bool
+
     var syncBookmarksPausedTitle: String? { get }
     var syncCredentialsPausedTitle: String? { get }
     var syncCreditCardsPausedTitle: String? { get }
@@ -116,6 +120,7 @@ public class SyncSettingsViewModel: ObservableObject {
     public enum SyncSetupEntryPoint: Equatable {
         case backup
         case pairing
+        case simplifiedToggle
     }
 
     public enum PreservedAccountContinuation: Equatable {
@@ -143,7 +148,7 @@ public class SyncSettingsViewModel: ObservableObject {
     @Published public var invalidCredentialsTitles: [String] = []
     @Published public var invalidCreditCardsTitles: [String] = []
 
-    @Published var isBusy = false
+    @Published public var isBusy = false
     @Published var recoveryCode = ""
 
     @Published public var isDataSyncingAvailable: Bool = true
@@ -325,6 +330,8 @@ public class SyncSettingsViewModel: ObservableObject {
                 isSyncWithSetUpSheetVisible = true
             case .pairing:
                 delegate?.showSyncWithAnotherDevice()
+            case .simplifiedToggle:
+                beginSimplifiedSyncSetup()
             }
         case .recover:
             isRecoverSyncedDataSheetVisible = true
@@ -352,6 +359,33 @@ public class SyncSettingsViewModel: ObservableObject {
     public func startSyncPressed() {
         isBusy = true
         delegate?.createAccountAndStartSyncing(optionsViewModel: self)
+    }
+
+    public func enableSyncToggleTapped() {
+        guard !isBusy else { return }
+        guard isAccountCreationAvailable else { return }
+        Task { @MainActor in
+            await beginFlow(for: .setup(.simplifiedToggle))
+        }
+    }
+
+    @MainActor
+    public func beginSimplifiedSyncSetup() {
+        guard let delegate else { return }
+        isBusy = true
+        delegate.simplifiedCreateAccountAndStartSyncing(optionsViewModel: self)
+    }
+
+    public func disableSyncToggleTapped() {
+        guard !isBusy else { return }
+        isBusy = true
+        Task { @MainActor in
+            defer { isBusy = false }
+            guard await commonAuthenticate() else { return }
+            if await delegate?.simplifiedConfirmAndDisableSync() == true {
+                isSyncEnabled = false
+            }
+        }
     }
 
     public func copyCode() {

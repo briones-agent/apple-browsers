@@ -189,6 +189,28 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         }
     }
 
+    func simplifiedCreateAccountAndStartSyncing(optionsViewModel: SyncSettingsViewModel) {
+        Task { @MainActor in
+            defer { optionsViewModel.isBusy = false }
+            do {
+                guard await self.performDeferredPreservedAccountCleanupIfNeeded() else {
+                    return
+                }
+                try await self.syncService.createAccount(deviceName: self.deviceName, deviceType: self.deviceType)
+                let additionalParameters = self.source.map { ["source": $0] } ?? [:]
+                try await Pixel.fire(pixel: .syncSignupDirect, withAdditionalParameters: additionalParameters, includedParameters: [.appVersion])
+                AutofillOnboardingExperimentPixelReporter().fireSyncEnabled(true)
+                optionsViewModel.syncEnabled(recoveryCode: self.recoveryCode)
+                self.refreshDevices(clearDevices: false)
+                ActionMessageView.present(message: UserText.simplifiedSyncEnabledToast, onDidDismiss: {
+                    optionsViewModel.checkAndShowSyncWithAnotherDevicePrompt()
+                })
+            } catch {
+                await self.handleError(SyncErrorMessage.unableToSyncToServer, error: error, event: .syncSignupError)
+            }
+        }
+    }
+
     @MainActor
     func handleError(_ type: SyncErrorMessage, error: Error?, event: Pixel.Event?) async {
         await withCheckedContinuation { continuation in
@@ -492,6 +514,8 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             viewModel.isSyncWithSetUpSheetVisible = true
         case .pairing:
             showSyncWithAnotherDevice()
+        case .simplifiedToggle:
+            viewModel.beginSimplifiedSyncSetup()
         }
     }
 
@@ -651,6 +675,35 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         }
     }
 
+    func simplifiedConfirmAndDisableSync() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            let alert = UIAlertController(title: UserText.simplifiedSyncTurnOffTitle,
+                                          message: UserText.simplifiedSyncTurnOffMessage,
+                                          preferredStyle: .alert)
+            let cancelAction = UIAlertAction(title: UserText.actionCancel, style: .cancel) { _ in
+                continuation.resume(returning: false)
+            }
+            let turnOffAction = UIAlertAction(title: UserText.simplifiedSyncTurnOffAction, style: .default) { _ in
+                Task { @MainActor in
+                    do {
+                        try await self.syncService.disconnect()
+                        Pixel.fire(pixel: .syncDisabled)
+                        AutofillOnboardingExperimentPixelReporter().fireSyncEnabled(false)
+                        self.syncPausedStateManager.syncDidTurnOff()
+                        self.resetSimplifiedSyncAnotherDevicePromptState()
+                        continuation.resume(returning: true)
+                    } catch {
+                        await self.handleError(SyncErrorMessage.unableToTurnSyncOff, error: error, event: .syncLogoutError)
+                        continuation.resume(returning: false)
+                    }
+                }
+            }
+            alert.addAction(cancelAction)
+            alert.addAction(turnOffAction)
+            self.present(alert, animated: true)
+        }
+    }
+
     func confirmAndDeleteAllData() async -> Bool {
         let deviceCount = viewModel.devices.count
         return await withCheckedContinuation { continuation in
@@ -737,6 +790,8 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 return .syncBackup
             case .pairing:
                 return .syncPairing
+            case .simplifiedToggle:
+                return .syncBackup
             }
         case .recover:
             return .syncRecover
