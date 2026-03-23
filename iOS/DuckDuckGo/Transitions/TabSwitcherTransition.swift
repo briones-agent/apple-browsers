@@ -18,6 +18,8 @@
 //
 
 import UIKit
+import Core
+import BrowserServicesKit
 
 class TabSwitcherTransition: NSObject, UIViewControllerAnimatedTransitioning {
     
@@ -91,8 +93,10 @@ class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDele
                                             tabSwitcherViewController: tabSwitcherVC)
         }
         
+        let isDifferentiatedAITabCards = tabSwitcherVC.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
         return FromWebViewTransition(mainViewController: mainVC,
-                                     tabSwitcherViewController: tabSwitcherVC)
+                                     tabSwitcherViewController: tabSwitcherVC,
+                                     isDifferentiatedAITabCards: isDifferentiatedAITabCards)
     }
 
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
@@ -101,7 +105,9 @@ class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDele
         if let tab = tabSwitcherVC.tabsModel.currentTab, tab.link == nil {
             return ToHomeScreenTransition(tabSwitcherViewController: tabSwitcherVC)
         }
-        return ToWebViewTransition(tabSwitcherViewController: tabSwitcherVC)
+        let isDifferentiatedAITabCards = tabSwitcherVC.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
+        return ToWebViewTransition(tabSwitcherViewController: tabSwitcherVC,
+                                   isDifferentiatedAITabCards: isDifferentiatedAITabCards)
     }
 }
 

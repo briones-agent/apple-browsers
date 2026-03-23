@@ -412,7 +412,8 @@ final class TabViewCell: UICollectionViewCell {
     func update(withTab tab: Tab,
                 isSelectionModeEnabled: Bool,
                 preview: UIImage?,
-                isFireModeEnabled: Bool) {
+                isFireModeEnabled: Bool,
+                isDifferentiatedAITabCards: Bool = false) {
         accessibilityElements = [ title as Any, removeButton as Any ]
 
         self.tab = tab
@@ -436,9 +437,7 @@ final class TabViewCell: UICollectionViewCell {
 
         unread.isHidden = tab.viewed
 
-        let isDifferentiatedTabCards = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
-
-        if tab.isAITab && isDifferentiatedTabCards {
+        if tab.isAITab && isDifferentiatedAITabCards {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
             removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
             title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
@@ -455,8 +454,26 @@ final class TabViewCell: UICollectionViewCell {
             self.preview?.isHidden = true
             self.preview?.image = nil
             aiChatTitleLabel?.text = tab.aiChatConversationTitle
-            aiChatPreviewContainer.isHidden = preview == nil
+            aiChatPreviewContainer.isHidden = self.preview == nil
 
+            removeButton.isHidden = false
+
+        } else if tab.isAITab {
+            aiChatPreviewContainer.isHidden = true
+            let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
+            removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
+            title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
+            title.text = aiChatTitle
+            favicon.image = DesignSystemImages.Color.Size24.aiChatGradient
+            link?.isHidden = true
+            self.preview?.isHidden = false
+            if let preview = preview {
+                self.updatePreviewToDisplay(image: preview)
+                self.preview?.contentMode = .scaleAspectFill
+                self.preview?.image = preview
+            } else {
+                self.preview?.image = nil
+            }
             removeButton.isHidden = false
 
         } else if tab.link == nil {

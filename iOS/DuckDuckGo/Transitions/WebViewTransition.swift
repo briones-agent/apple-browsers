@@ -58,10 +58,13 @@ class WebViewTransition: TabSwitcherTransition {
 class FromWebViewTransition: WebViewTransition {
     
     private let mainViewController: MainViewController
+    private let isDifferentiatedAITabCards: Bool
     
     init(mainViewController: MainViewController,
-         tabSwitcherViewController: TabSwitcherViewController) {
+         tabSwitcherViewController: TabSwitcherViewController,
+         isDifferentiatedAITabCards: Bool = false) {
         self.mainViewController = mainViewController
+        self.isDifferentiatedAITabCards = isDifferentiatedAITabCards
 
         super.init(tabSwitcherViewController: tabSwitcherViewController)
     }
@@ -92,10 +95,9 @@ class FromWebViewTransition: WebViewTransition {
             return
         }
 
-        let isDifferentiatedTabCards = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
-        let preview = (tab.isAITab && isDifferentiatedTabCards) ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
+        let preview = (tab.isAITab && isDifferentiatedAITabCards) ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
 
-        guard preview != nil || (tab.isAITab && isDifferentiatedTabCards) else {
+        guard preview != nil || (tab.isAITab && isDifferentiatedAITabCards) else {
             tabSwitcherViewController.view.alpha = 1
             transitionContext.completeTransition(true)
             return
@@ -153,6 +155,14 @@ class FromWebViewTransition: WebViewTransition {
 
 class ToWebViewTransition: WebViewTransition {
 
+    private let isDifferentiatedAITabCards: Bool
+
+    init(tabSwitcherViewController: TabSwitcherViewController,
+         isDifferentiatedAITabCards: Bool = false) {
+        self.isDifferentiatedAITabCards = isDifferentiatedAITabCards
+        super.init(tabSwitcherViewController: tabSwitcherViewController)
+    }
+
     override func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
         prepareSubviews(using: transitionContext)
         
@@ -178,8 +188,7 @@ class ToWebViewTransition: WebViewTransition {
         imageContainer.frame = tabSwitcherCellFrame(for: layoutAttr)
         imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius
         
-        let isDifferentiatedTabCards = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards)
-        let preview = (tab.isAITab && isDifferentiatedTabCards) ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
+        let preview = (tab.isAITab && isDifferentiatedAITabCards) ? nil : tabSwitcherViewController.previewsSource.preview(for: tab)
         if let preview {
             imageView.frame = previewFrame(for: imageContainer.bounds.size,
                                            preview: preview)
