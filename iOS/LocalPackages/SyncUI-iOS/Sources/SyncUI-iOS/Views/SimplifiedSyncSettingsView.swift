@@ -285,10 +285,7 @@ extension SimplifiedSyncSettingsView {
 
     @ViewBuilder
     var syncEnabledSections: some View {
-        if model.devices.isEmpty == false {
-            syncedDevicesSection
-        }
-
+        syncedDevicesSection
         getDesktopBrowserSection(source: .activated)
         bookmarksSection
         recoverySection
@@ -387,6 +384,10 @@ extension SimplifiedSyncSettingsView {
     @ViewBuilder
     var syncedDevicesSection: some View {
         Section {
+            if model.devices.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
             devicesList
         } header: {
             HStack {
