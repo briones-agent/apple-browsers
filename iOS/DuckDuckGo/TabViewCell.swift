@@ -442,7 +442,7 @@ final class TabViewCell: UICollectionViewCell {
             removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
             title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
             title.text = aiChatTitle
-            favicon.loadFavicon(forDomain: tab.link?.url.host, usingCache: .tabs)
+            favicon.image = DesignSystemImages.Color.Size24.aiChatGradient
 
             if let conversationTitle = tab.aiChatConversationTitle {
                 link?.isHidden = false
@@ -459,14 +459,14 @@ final class TabViewCell: UICollectionViewCell {
             removeButton.isHidden = false
 
         } else if tab.isAITab {
-            aiChatPreviewContainer.isHidden = true
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
             removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
             title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
             title.text = aiChatTitle
             favicon.image = DesignSystemImages.Color.Size24.aiChatGradient
+
             link?.isHidden = true
-            self.preview?.isHidden = false
+
             if let preview = preview {
                 self.updatePreviewToDisplay(image: preview)
                 self.preview?.contentMode = .scaleAspectFill
@@ -474,6 +474,7 @@ final class TabViewCell: UICollectionViewCell {
             } else {
                 self.preview?.image = nil
             }
+
             removeButton.isHidden = false
 
         } else if tab.link == nil {
