@@ -27,6 +27,7 @@ import Persistence
 import BrowserServicesKit
 import RemoteMessaging
 import RemoteMessagingTestsUtils
+import SubscriptionTestingUtilities
 
 @testable import Configuration
 
