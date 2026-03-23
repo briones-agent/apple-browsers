@@ -1105,6 +1105,16 @@ extension MainViewController {
         }
 
         aiChatCoordinator.closeFloatingWindow(for: tab.uuid)
+
+        // When closing the last tab in a Fire Window, close the window
+        // directly so the inferno animation plays with tab content still
+        // visible — matching the cmd+shift+w / red traffic light behavior.
+        if tabCollectionViewModel.isBurner,
+           tabCollectionViewModel.tabCollection.tabs.count == 1 {
+            view.window?.performClose(nil)
+            return
+        }
+
         tabCollectionViewModel.remove(at: index)
     }
 
