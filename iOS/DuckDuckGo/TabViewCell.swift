@@ -443,7 +443,7 @@ final class TabViewCell: UICollectionViewCell {
             removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
             title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
             title.text = aiChatTitle
-            favicon.image = DesignSystemImages.Color.Size24.aiChatGradient
+            favicon.loadFavicon(forDomain: tab.link?.url.host, usingCache: .tabs)
 
             if let conversationTitle = tab.aiChatConversationTitle {
                 link?.isHidden = false

@@ -116,7 +116,7 @@ class TabsBarCell: UICollectionViewCell {
             removeButton.accessibilityLabel = closeButtonAccessibilityLabel(for: model)
         } else if model.isAITab && AppDependencyProvider.shared.featureFlagger.isFeatureOn(.aiChatDifferentiatedTabCards) {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
-            faviconImage.image = DesignSystemImages.Color.Size24.aiChatGradient
+            faviconImage.loadFavicon(forDomain: model.link?.url.host, usingCache: .tabs)
             if let conversationTitle = model.aiChatConversationTitle {
                 label.text = "\(aiChatTitle) - \(conversationTitle)"
             } else {
