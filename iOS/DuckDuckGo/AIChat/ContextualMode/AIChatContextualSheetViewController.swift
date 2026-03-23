@@ -24,6 +24,7 @@ import DesignResourcesKit
 import DesignResourcesKitIcons
 import Lottie
 import OSLog
+import PrivacyConfig
 import SwiftUI
 import UIKit
 
@@ -103,6 +104,7 @@ final class AIChatContextualSheetViewController: UIViewController {
     private let webViewControllerFactory: WebViewControllerFactory
     private let pixelHandler: AIChatContextualModePixelFiring
     private let appSettings: AppSettings
+    private let featureFlagger: FeatureFlagger
 
     private lazy var contextualInputViewController = AIChatContextualInputViewController(voiceSearchHelper: voiceSearchHelper)
     private var cancellables = Set<AnyCancellable>()
@@ -252,13 +254,15 @@ final class AIChatContextualSheetViewController: UIViewController {
          voiceSearchHelper: VoiceSearchHelperProtocol,
          webViewControllerFactory: @escaping WebViewControllerFactory,
          pixelHandler: AIChatContextualModePixelFiring,
-         appSettings: AppSettings = AppDependencyProvider.shared.appSettings) {
+         appSettings: AppSettings = AppDependencyProvider.shared.appSettings,
+         featureFlagger: FeatureFlagger = AppDependencyProvider.shared.featureFlagger) {
         self.sessionState = sessionState
         self.aiChatSettings = aiChatSettings
         self.voiceSearchHelper = voiceSearchHelper
         self.webViewControllerFactory = webViewControllerFactory
         self.pixelHandler = pixelHandler
         self.appSettings = appSettings
+        self.featureFlagger = featureFlagger
         super.init(nibName: nil, bundle: nil)
         configureModalPresentation()
     }
@@ -734,7 +738,13 @@ private extension AIChatContextualSheetViewController {
 
         headerView.addSubview(rightButtonContainer)
         rightButtonContainer.addSubview(rightButtonStack)
-        rightButtonStack.addArrangedSubview(fireButton)
+        if featureFlagger.isFeatureOn(for: FeatureFlag.aiChatContextualFireButton) {
+            rightButtonStack.addArrangedSubview(fireButton)
+            NSLayoutConstraint.activate([
+                fireButton.widthAnchor.constraint(equalToConstant: Constants.headerButtonSize),
+                fireButton.heightAnchor.constraint(equalToConstant: Constants.headerButtonSize),
+            ])
+        }
         rightButtonStack.addArrangedSubview(closeButton)
 
         view.addSubview(contentContainerView)
@@ -782,9 +792,6 @@ private extension AIChatContextualSheetViewController {
             rightButtonStack.leadingAnchor.constraint(equalTo: rightButtonContainer.leadingAnchor),
             rightButtonStack.trailingAnchor.constraint(equalTo: rightButtonContainer.trailingAnchor),
             rightButtonStack.bottomAnchor.constraint(equalTo: rightButtonContainer.bottomAnchor),
-
-            fireButton.widthAnchor.constraint(equalToConstant: Constants.headerButtonSize),
-            fireButton.heightAnchor.constraint(equalToConstant: Constants.headerButtonSize),
 
             closeButton.widthAnchor.constraint(equalToConstant: Constants.headerButtonSize),
             closeButton.heightAnchor.constraint(equalToConstant: Constants.headerButtonSize),

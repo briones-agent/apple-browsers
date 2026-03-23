@@ -208,7 +208,8 @@ private extension AIChatContextualSheetCoordinator {
                 guard let self else { return nil }
                 return self.makeWebViewController()
             },
-            pixelHandler: pixelHandler
+            pixelHandler: pixelHandler,
+            featureFlagger: featureFlagger
         )
         sheetVC.delegate = self
         sheetViewController = sheetVC
