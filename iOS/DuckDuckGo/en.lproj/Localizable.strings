@@ -1024,15 +1024,6 @@
 /* Close All Tabs */
 "close.all.tabs" = "Close All Tabs";
 
-/* Button to confirm deleting a contextual AI chat */
-"contextual.chat.delete.confirmation.button" = "Delete Chat";
-
-/* Subtitle for the confirmation dialog when deleting a contextual AI chat */
-"contextual.chat.delete.confirmation.subtitle" = "You can't undo this action";
-
-/* Title for the confirmation dialog when deleting a contextual AI chat */
-"contextual.chat.delete.confirmation.title" = "Delete this chat?";
-
 /* Button to continue the onboarding process */
 "contextual.onboarding.addToDock.buttons.skip" = "Skip";
 
