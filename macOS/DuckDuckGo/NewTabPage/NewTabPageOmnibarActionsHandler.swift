@@ -16,7 +16,6 @@
 //  limitations under the License.
 //
 
-import AIChat
 import NewTabPage
 import AppKit
 import Suggestions
