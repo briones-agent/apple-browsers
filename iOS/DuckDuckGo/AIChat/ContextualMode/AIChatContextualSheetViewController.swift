@@ -738,6 +738,7 @@ private extension AIChatContextualSheetViewController {
                 webVC.loadChatURL(defaultURL)
                 isWebViewVisible = false
             }
+            fireButton.isHidden = true
             if contextualInputViewController.parent != nil {
                 updateChipUI(chipState: viewState.chipState)
             } else {
@@ -748,6 +749,7 @@ private extension AIChatContextualSheetViewController {
             if !isWebViewVisible {
                 transitionToWebView()
             }
+            fireButton.isHidden = false
         }
 
     }
@@ -798,6 +800,7 @@ private extension AIChatContextualSheetViewController {
         rightButtonContainer.addSubview(rightButtonStack)
         if featureFlagger.isFeatureOn(for: FeatureFlag.aiChatContextualFireButton) {
             rightButtonStack.addArrangedSubview(fireButton)
+            fireButton.isHidden = true
             NSLayoutConstraint.activate([
                 fireButton.widthAnchor.constraint(equalToConstant: Constants.headerButtonSize),
                 fireButton.heightAnchor.constraint(equalToConstant: Constants.headerButtonSize),
