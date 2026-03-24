@@ -1750,6 +1750,44 @@ struct UserText {
     static let aiChatHistoryNewVoiceChat = NSLocalizedString("ai.chat.history.new.voice.chat", value: "New Voice Chat", comment: "Menu item in the Duck.ai history menu to start a new chat in voice mode")
     static let aiChatHistoryRecentChats = NSLocalizedString("ai.chat.history.recent.chats", value: "Recent Chats", comment: "Section header in the Duck.ai history menu for recent chat sessions")
     static let aiChatHistorySettings = NSLocalizedString("ai.chat.history.settings", value: "Settings…", comment: "Menu item in the Duck.ai history menu to open Duck.ai settings")
+
+    // MARK: - AI Chat History Sidebar
+    static let aiChatHistorySidebarTitle = NSLocalizedString(
+        "ai.chat.history.sidebar.title",
+        value: "Duck.ai",
+        comment: "Title shown in the header of the Duck.ai chat history sidebar"
+    )
+    static let aiChatHistorySidebarNewChat = NSLocalizedString(
+        "ai.chat.history.sidebar.new.chat",
+        value: "New Chat",
+        comment: "Button label for starting a new Duck.ai chat from the history sidebar"
+    )
+    static let aiChatHistorySidebarNewVoiceChat = NSLocalizedString(
+        "ai.chat.history.sidebar.new.voice.chat",
+        value: "New Voice Chat",
+        comment: "Button label for starting a new Duck.ai voice chat from the history sidebar"
+    )
+    static let aiChatHistorySidebarNewImage = NSLocalizedString(
+        "ai.chat.history.sidebar.new.image",
+        value: "New Image",
+        comment: "Button label for starting a new Duck.ai image chat from the history sidebar"
+    )
+    static let aiChatHistorySidebarChatsHeader = NSLocalizedString(
+        "ai.chat.history.sidebar.chats.header",
+        value: "Chats",
+        comment: "Section header label above the chat list in the history sidebar"
+    )
+    static let aiChatHistorySidebarNoChats = NSLocalizedString(
+        "ai.chat.history.sidebar.no.chats",
+        value: "No recent chats",
+        comment: "Empty state message when there are no Duck.ai chats in the history sidebar"
+    )
+    static let aiChatHistorySidebarSettingsAndMore = NSLocalizedString(
+        "ai.chat.history.sidebar.settings.and.more",
+        value: "Settings & More",
+        comment: "Footer button label for opening Duck.ai settings from the history sidebar"
+    )
+
     static let downloadsShortcutTooltip = NSLocalizedString("tooltip.downloads.shortcut", value: "Downloads", comment: "Tooltip for the downloads shortcut")
 
     static let addItemTooltip = NSLocalizedString("tooltip.autofill.add-item", value: "Add item", comment: "Tooltip for the Add Item button")

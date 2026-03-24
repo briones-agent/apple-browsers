@@ -1784,6 +1784,83 @@
         }
       }
     },
+    "ai.chat.history.sidebar.chats.header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chats"
+          }
+        }
+      }
+    },
+    "ai.chat.history.sidebar.new.chat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Chat"
+          }
+        }
+      }
+    },
+    "ai.chat.history.sidebar.new.image" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Image"
+          }
+        }
+      }
+    },
+    "ai.chat.history.sidebar.new.voice.chat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Voice Chat"
+          }
+        }
+      }
+    },
+    "ai.chat.history.sidebar.no.chats" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No recent chats"
+          }
+        }
+      }
+    },
+    "ai.chat.history.sidebar.settings.and.more" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings & More"
+          }
+        }
+      }
+    },
+    "ai.chat.history.sidebar.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duck.ai"
+          }
+        }
+      }
+    },
     "aichat.address-bar.ask-button.title" : {
       "comment" : "Title for button to ask Duck.ai",
       "extractionState" : "extracted_with_value",
@@ -17233,6 +17310,9 @@
           }
         }
       }
+    },
+    "Close" : {
+
     },
     "close.all.other.tabs" : {
       "comment" : "Menu item",
