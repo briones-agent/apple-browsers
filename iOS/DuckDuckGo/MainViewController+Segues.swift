@@ -412,9 +412,7 @@ extension MainViewController {
                                         importScreen: importScreen,
                                         syncService: syncService) { [weak self] source in
             guard let self else { return }
-            dismissPresentedDataImportSummaryIfNeeded {
-                self.segueToSettingsSync(with: source)
-            }
+            self.segueToSettingsSync(with: source)
         } onCompletion: { }
     }
 
@@ -566,24 +564,6 @@ extension MainViewController {
         }
     }
 
-    private func dismissPresentedDataImportSummaryIfNeeded(completion: @escaping () -> Void) {
-        let topMostViewController = topMostPresentedViewController(startingFrom: self)
-        guard topMostViewController is DataImportSummaryViewController else {
-            completion()
-            return
-        }
-
-        topMostViewController.dismiss(animated: true, completion: completion)
-    }
-
-    private func topMostPresentedViewController(startingFrom rootViewController: UIViewController) -> UIViewController {
-        var currentViewController = rootViewController
-        while let presentedViewController = currentViewController.presentedViewController {
-            currentViewController = presentedViewController
-        }
-        return currentViewController
-    }
-    
 }
 
 // Exists to fire a did disappear notification for settings when the controller did disappear
