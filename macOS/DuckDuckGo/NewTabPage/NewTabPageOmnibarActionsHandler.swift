@@ -121,6 +121,10 @@ final class NewTabPageOmnibarActionsHandler: NewTabPageOmnibarActionsHandling {
     func submitChat(_ chat: String, target: NewTabPage.NewTabPageDataModel.OpenTarget, modelId: String?, images: [NewTabPage.NewTabPageDataModel.SubmitChatImage]?) {
         firePixel(NewTabPagePixel.promptSubmitted)
 
+        if let images, !images.isEmpty {
+            PixelKit.fire(AIChatPixel.aiChatNtpSubmitWithImage(imageCount: images.count), frequency: .dailyAndCount, includeAppVersionParameter: true)
+        }
+
         let tabOpener = AIChatTabOpener(
             promptHandler: promptHandler,
             aiChatTabManaging: windowControllersManager

@@ -174,6 +174,9 @@ final class NewTabPageOmnibarConfigProvider: NewTabPageOmnibarConfigProviding {
         set {
             do {
                 try keyValueStore.set(newValue, forKey: Key.newTabPageSelectedModelId.rawValue)
+                if newValue != nil {
+                    PixelKit.fire(AIChatPixel.aiChatNtpModelSelected, frequency: .dailyAndCount, includeAppVersionParameter: true)
+                }
             } catch {
                 Logger.newTabPageOmnibar.error("Failed to set selectedModelId in keyValueStore: \(error.localizedDescription)")
             }
