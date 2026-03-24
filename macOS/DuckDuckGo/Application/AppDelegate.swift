@@ -1525,6 +1525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             let allowCustomUpdateFeed = buildType.isDebugBuild || buildType.isReviewBuild
+
             let sparkleUpdateController = sparkleFactory.instantiate(
                 internalUserDecider: internalUserDecider,
                 featureFlagger: featureFlagger,
@@ -1532,6 +1533,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 notificationPresenter: notificationPresenter,
                 keyValueStore: UserDefaults.standard,
                 allowCustomUpdateFeed: allowCustomUpdateFeed,
+                isAutoUpdatePaused: { [featureFlagger] in
+                    if buildType.isDebugBuild {
+                        return !featureFlagger.isFeatureOn(.autoUpdateInDEBUG)
+                    } else if buildType.isReviewBuild {
+                        return !featureFlagger.isFeatureOn(.autoUpdateInREVIEW)
+                    } else {
+                        return false
+                    }
+                },
                 wideEvent: wideEvent,
                 isOnboardingFinished: { OnboardingActionsManager.isOnboardingFinished },
                 openUpdatesPage: { [windowControllersManager] in
