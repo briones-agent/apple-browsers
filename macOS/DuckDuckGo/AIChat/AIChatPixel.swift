@@ -195,6 +195,9 @@ enum AIChatPixel: PixelKitEvent {
     /// Event Trigger: User confirms deletion of a recent chat suggestion in the address bar
     case aiChatRecentChatDeleteConfirmed
 
+    /// Event Trigger: User cancels deletion of a recent chat suggestion in the address bar
+    case aiChatRecentChatDeleteCancelled
+
     // MARK: - Toggle popover pixels
 
     /// Event Trigger: The toggle popover is shown to the user
@@ -368,6 +371,8 @@ enum AIChatPixel: PixelKitEvent {
             return "aichat_recent_chat_delete_button_clicked"
         case .aiChatRecentChatDeleteConfirmed:
             return "aichat_recent_chat_delete_confirmed"
+        case .aiChatRecentChatDeleteCancelled:
+            return "aichat_recent_chat_delete_cancelled"
         case .aiChatTogglePopoverShown:
             return "aichat_toggle_popover_shown"
         case .aiChatTogglePopoverDismissButtonClicked:
@@ -458,6 +463,7 @@ enum AIChatPixel: PixelKitEvent {
                 .aiChatRecentChatSelectedKeyboard,
                 .aiChatRecentChatDeleteButtonClicked,
                 .aiChatRecentChatDeleteConfirmed,
+                .aiChatRecentChatDeleteCancelled,
                 .aiChatTogglePopoverShown,
                 .aiChatTogglePopoverDismissButtonClicked,
                 .aiChatTogglePopoverCustomizeButtonClicked,
@@ -557,6 +563,7 @@ enum AIChatPixel: PixelKitEvent {
                 .aiChatRecentChatSelectedKeyboard,
                 .aiChatRecentChatDeleteButtonClicked,
                 .aiChatRecentChatDeleteConfirmed,
+                .aiChatRecentChatDeleteCancelled,
                 .aiChatTogglePopoverShown,
                 .aiChatTogglePopoverDismissButtonClicked,
                 .aiChatTogglePopoverCustomizeButtonClicked,

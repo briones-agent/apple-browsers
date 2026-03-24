@@ -154,5 +154,12 @@
         "triggers": ["other"],
         "suffixes": ["daily_count"],
         "parameters": ["appVersion", "pixelSource"]
+    },
+    "m_mac_aichat_recent_chat_delete_cancelled": {
+        "description": "Fired when user cancels deletion of a recent chat suggestion in the address bar",
+        "owners": ["Bunn"],
+        "triggers": ["other"],
+        "suffixes": ["daily_count"],
+        "parameters": ["appVersion", "pixelSource"]
     }
 }

@@ -435,7 +435,11 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 alert.addButton(withTitle: UserText.cancel, response: .cancel, keyEquivalent: .escape)
 
                 alert.beginSheetModal(for: window) { [weak self] response in
-                    guard let self, response == .OK else { return }
+                    guard let self else { return }
+                    guard response == .OK else {
+                        PixelKit.fire(AIChatPixel.aiChatRecentChatDeleteCancelled, frequency: .dailyAndCount, includeAppVersionParameter: true)
+                        return
+                    }
                     PixelKit.fire(AIChatPixel.aiChatRecentChatDeleteConfirmed, frequency: .dailyAndCount, includeAppVersionParameter: true)
                     self.omnibarController.suggestionsViewModel.removeSuggestion(suggestion)
                     Task { @MainActor in
