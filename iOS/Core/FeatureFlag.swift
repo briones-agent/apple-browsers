@@ -131,6 +131,9 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866712841283
     case privacyProOnboardingPromotion
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213569392605475
+    case subscriptionPromoForReinstallers
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866464085187
     case syncSetupBarcodeIsUrlBased
 
@@ -190,6 +193,9 @@ public enum FeatureFlag: String {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866714634010
     case newDeviceSyncPrompt
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212887107244162?focus=true
+    case syncAutoRestore
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866468857577
     case winBackOffer
@@ -283,9 +289,6 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212388316840466?focus=true
     case showWhatsNewPromptOnDemand
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212697212804653?focus=true
-    case aiChatAtb
-    
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212556727029805
     case enhancedDataClearingSettings
 
@@ -352,10 +355,16 @@ public enum FeatureFlag: String {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213554455515126?focus=true
     case customXSafariRedirectHandling
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213617478454569?focus=true
+    case simplifiedSyncSetupExperiment
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213433942918287?focus=true
+    case duckAIVoiceShortcut
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
-    public var defaultValue: Bool {
+    public var defaultValue: FeatureFlagDefaultValue {
         switch self {
         case .canScanUrlBasedSyncSetupBarcodes,
              .canInterceptSyncSetupUrls,
@@ -380,10 +389,14 @@ extension FeatureFlag: FeatureFlagDescribing {
              .tabSwitcherTrackerCount,
              .iPadDuckaiOnTab,
              .suppressTrackerAnimationOnColdStart,
-             .customXSafariRedirectHandling:
-            true
+             .customXSafariRedirectHandling,
+             .syncAutoRestore,
+             .subscriptionPromoForReinstallers:
+            .enabled
+        case .crashReportOptInStatusResetting:
+            .internalOnly
         default:
-            false
+            .disabled
         }
     }
 
@@ -393,6 +406,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             UITestExperimentCohort.self
         case .autofillOnboardingExperiment:
             AutofillOnboardingExperimentCohort.self
+        case .simplifiedSyncSetupExperiment:
+            SimplifiedSyncSetupExperimentCohort.self
         default:
             nil
         }
@@ -411,6 +426,11 @@ extension FeatureFlag: FeatureFlagDescribing {
         case variant3
     }
 
+    public enum SimplifiedSyncSetupExperimentCohort: String, FeatureFlagCohortDescribing {
+        case control
+        case treatment
+    }
+
     public static var localOverrideStoreName: String = "com.duckduckgo.app.featureFlag.localOverrides"
 
     public var supportsLocalOverriding: Bool {
@@ -419,6 +439,7 @@ extension FeatureFlag: FeatureFlagDescribing {
              .maliciousSiteProtection,
              .autocompleteAttributeSupport,
              .privacyProOnboardingPromotion,
+             .subscriptionPromoForReinstallers,
              .duckPlayerNativeUI,
              .autofillPasswordVariantCategorization,
              .syncSetupBarcodeIsUrlBased,
@@ -470,11 +491,12 @@ extension FeatureFlag: FeatureFlagDescribing {
              .showWhatsNewPromptOnDemand,
              .wideEventPostEndpoint,
              .dataImportSummarySyncPromotion,
-             .aiChatAtb,
+
              .enhancedDataClearingSettings,
              .genericBackgroundTask,
              .tabSwitcherTrackerCount,
              .burnSingleTab,
+             .syncAutoRestore,
              .uiTestFeatureFlag,
              .freeTrialConversionWideEvent,
              .uiTestExperiment,
@@ -486,7 +508,9 @@ extension FeatureFlag: FeatureFlagDescribing {
              .supportsSyncChatsDeletion,
              .fireMode,
              .suppressTrackerAnimationOnColdStart,
-             .customXSafariRedirectHandling:
+             .customXSafariRedirectHandling,
+             .simplifiedSyncSetupExperiment,
+             .duckAIVoiceShortcut:
             return true
         case .showSettingsCompleteSetupSection:
             if #available(iOS 18.2, *) {
@@ -597,7 +621,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .dbpClickActionDelayReductionOptimization:
             return .remoteReleasable(.subfeature(DBPSubfeature.clickActionDelayReductionOptimization))
         case .crashReportOptInStatusResetting:
-            return .internalOnly()
+            return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.crashReportOptInStatusResetting))
         case .syncSeamlessAccountSwitching:
             return .remoteReleasable(.subfeature(SyncSubfeature.seamlessAccountSwitching))
         case .maliciousSiteProtection:
@@ -610,6 +634,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(AIChatSubfeature.experimentalAddressBar))
         case .privacyProOnboardingPromotion:
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.privacyProOnboardingPromotion))
+        case .subscriptionPromoForReinstallers:
+            return .remoteReleasable(.subfeature(PrivacyProSubfeature.subscriptionPromoForReinstallers))
         case .syncSetupBarcodeIsUrlBased:
             return .remoteReleasable(.subfeature(SyncSubfeature.syncSetupBarcodeIsUrlBased))
         case .canScanUrlBasedSyncSetupBarcodes:
@@ -644,6 +670,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(AIChatSubfeature.showAIChatAddressBarChoiceScreen))
         case .newDeviceSyncPrompt:
             return .remoteReleasable(.subfeature(SyncSubfeature.newDeviceSyncPrompt))
+        case .syncAutoRestore:
+            return .remoteReleasable(.subfeature(SyncSubfeature.syncAutoRestore))
         case .winBackOffer:
             return .remoteReleasable(.subfeature(PrivacyProSubfeature.winBackOffer))
         case .blackFridayCampaign:
@@ -708,8 +736,7 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.feature(.duckAiChatHistory))
         case .showWhatsNewPromptOnDemand:
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.showWhatsNewPromptOnDemand))
-        case .aiChatAtb:
-            return .remoteReleasable(.subfeature(AIChatSubfeature.aiChatAtb))
+
         case .enhancedDataClearingSettings:
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.enhancedDataClearingSettings))
         case .wideEventPostEndpoint:
@@ -748,6 +775,10 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.suppressTrackerAnimationOnColdStart))
         case .customXSafariRedirectHandling:
             return .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.customXSafariRedirectHandling))
+        case .simplifiedSyncSetupExperiment:
+            return .remoteReleasable(.subfeature(SyncSubfeature.simplifiedSyncSetupExperiment))
+        case .duckAIVoiceShortcut:
+            return .remoteReleasable(.subfeature(AIChatSubfeature.voiceShortcut))
         }
     }
 }

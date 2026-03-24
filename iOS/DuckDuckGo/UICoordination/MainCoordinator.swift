@@ -21,6 +21,7 @@ import Foundation
 import Core
 import Combine
 import BrowserServicesKit
+import PixelKit
 import PrivacyConfig
 import Subscription
 import Persistence
@@ -61,6 +62,9 @@ final class MainCoordinator {
     private let launchSourceManager: LaunchSourceManaging
     private let onboardingSearchExperienceSelectionHandler: OnboardingSearchExperienceSelectionHandler
     private let privacyStats: PrivacyStatsProviding
+    private let wideEvent: WideEventManaging
+    private let voiceSessionStateManager: VoiceSessionStateProviding
+    private let voiceShortcutFeature: DuckAIVoiceShortcutFeatureProviding
 
     private(set) var webExtensionManager: WebExtensionManaging?
     private(set) var webExtensionEventsCoordinator: WebExtensionEventsCoordinator?
@@ -85,6 +89,7 @@ final class MainCoordinator {
          contentScopeExperimentManager: ContentScopeExperimentsManaging,
          aiChatSettings: AIChatSettings,
          fireproofing: Fireproofing,
+         favicons: FaviconManaging,
          subscriptionManager: any SubscriptionManager = AppDependencyProvider.shared.subscriptionManager,
          maliciousSiteProtectionService: MaliciousSiteProtectionService,
          customConfigurationURLProvider: CustomConfigurationURLProviding,
@@ -100,21 +105,26 @@ final class MainCoordinator {
          productSurfaceTelemetry: ProductSurfaceTelemetry,
          whatsNewRepository: WhatsNewMessageRepository,
          sharedSecureVault: (any AutofillSecureVault)? = nil,
+         syncAutoRestoreDecisionManager: SyncAutoRestoreDecisionManaging = AppDependencyProvider.shared.syncAutoRestoreDecisionManager,
+         wideEvent: WideEventManaging
     ) throws {
         self.subscriptionManager = subscriptionManager
         self.featureFlagger = featureFlagger
         self.darkReaderFeatureSettings = AppDarkReaderFeatureSettings(featureFlagger: featureFlagger,
                                                                       privacyConfigurationManager: privacyConfigurationManager)
         self.modalPromptCoordinationService = modalPromptCoordinationService
+        self.wideEvent = wideEvent
+        self.voiceSessionStateManager = VoiceSessionStateManager()
+        self.voiceShortcutFeature = DuckAIVoiceShortcutFeature(featureFlagger: featureFlagger)
         let homePageConfiguration = HomePageConfiguration(variantManager: AppDependencyProvider.shared.variantManager,
                                                           remoteMessagingStore: remoteMessagingService.remoteMessagingClient.store,
                                                           subscriptionDataReporter: reportingService.subscriptionDataReporter,
                                                           isStillOnboarding: { daxDialogsManager.isStillOnboarding() })
         let previewsSource = DefaultTabPreviewsSource()
         let tabsPersistence = try TabsModelPersistence()
-        let tabsModel = try Self.prepareTabsModel(previewsSource: previewsSource, tabsPersistence: tabsPersistence)
-        let historyManager = try Self.makeHistoryManager(tabsModel: tabsModel)
-        reportingService.subscriptionDataReporter.injectTabsModel(tabsModel)
+        let tabsModelProvider = try Self.prepareTabsModel(previewsSource: previewsSource, tabsPersistence: tabsPersistence, featureFlagger: featureFlagger)
+        let historyManager = try Self.makeHistoryManager(tabsModel: tabsModelProvider.aggregateTabsModel)
+        reportingService.subscriptionDataReporter.injectTabsModel(tabsModelProvider.aggregateTabsModel)
         let daxDialogsFactory = ContextualDaxDialogsProvider(featureFlagger: featureFlagger,
                                                          contextualOnboardingLogic: daxDialogs,
                                                          contextualOnboardingPixelReporter: reportingService.onboardingPixelReporter)
@@ -131,8 +141,7 @@ final class MainCoordinator {
             onboardingSearchExperienceProvider: OnboardingSearchExperience()
         )
         self.privacyStats = PrivacyStats(databaseProvider: PrivacyStatsDatabase())
-        tabManager = TabManager(model: tabsModel,
-                                persistence: tabsPersistence,
+        tabManager = TabManager(tabsModelProvider: tabsModelProvider,
                                 previewsSource: previewsSource,
                                 interactionStateSource: interactionStateSource,
                                 privacyConfigurationManager: privacyConfigurationManager,
@@ -152,6 +161,7 @@ final class MainCoordinator {
                                 autoconsentManagementProvider: autoconsentManagementProvider,
                                 websiteDataManager: websiteDataManager,
                                 fireproofing: fireproofing,
+                                favicons: favicons,
                                 maliciousSiteProtectionManager: maliciousSiteProtectionService.manager,
                                 maliciousSiteProtectionPreferencesManager: maliciousSiteProtectionService.preferencesManager,
                                 featureDiscovery: DefaultFeatureDiscovery(wasUsedBeforeStorage: UserDefaults.standard),
@@ -170,6 +180,7 @@ final class MainCoordinator {
                                         syncService: syncService.sync,
                                         bookmarksDatabaseCleaner: syncService.syncDataProviders.bookmarksAdapter.databaseCleaner,
                                         fireproofing: fireproofing,
+                                        favicons: favicons,
                                         textZoomCoordinatorProvider: textZoomCoordinatorProvider,
                                         autoconsentManagementProvider: autoconsentManagementProvider,
                                         historyManager: historyManager,
@@ -177,7 +188,12 @@ final class MainCoordinator {
                                         privacyConfigurationManager: privacyConfigurationManager,
                                         appSettings: AppDependencyProvider.shared.appSettings,
                                         privacyStats: privacyStats,
-                                        aiChatSyncCleaner: syncService.aiChatSyncCleaner)
+                                        aiChatSyncCleaner: syncService.aiChatSyncCleaner,
+                                        wideEvent: wideEvent)
+        let syncAutoRestoreHandler = SyncAutoRestoreHandler(
+            decisionManager: syncAutoRestoreDecisionManager,
+            syncService: syncService.sync
+        )
         let aiChatAddressBarExperience = AIChatAddressBarExperience(featureFlagger: featureFlagger, aiChatSettings: aiChatSettings)
         let idleReturnEligibilityManager = IdleReturnEligibilityManager(
             featureFlagger: featureFlagger,
@@ -204,8 +220,10 @@ final class MainCoordinator {
                                         voiceSearchHelper: voiceSearchHelper,
                                         featureFlagger: featureFlagger,
                                         idleReturnEligibilityManager: idleReturnEligibilityManager,
+                                        syncAutoRestoreHandler: syncAutoRestoreHandler,
                                         contentScopeExperimentsManager: contentScopeExperimentManager,
                                         fireproofing: fireproofing,
+                                        favicons: favicons,
                                         textZoomCoordinatorProvider: textZoomCoordinatorProvider,
                                         websiteDataManager: websiteDataManager,
                                         appDidFinishLaunchingStartTime: didFinishLaunchingStartTime,
@@ -371,7 +389,7 @@ final class MainCoordinator {
         controller.setWebExtensionManager(nil)
     }
 
-    private static func makeHistoryManager(tabsModel: TabsModel) throws -> HistoryManaging {
+    private static func makeHistoryManager(tabsModel: TabsModelReading) throws -> HistoryManaging {
         let provider = AppDependencyProvider.shared
         switch HistoryManager.make(isAutocompleteEnabledByUser: provider.appSettings.autocomplete,
                                    isRecentlyVisitedSitesEnabledByUser: provider.appSettings.recentlyVisitedSites,
@@ -386,22 +404,29 @@ final class MainCoordinator {
 
     private static func prepareTabsModel(previewsSource: TabPreviewsSource = DefaultTabPreviewsSource(),
                                          tabsPersistence: TabsModelPersisting,
-                                         appSettings: AppSettings = AppDependencyProvider.shared.appSettings) throws -> TabsModel {
+                                         featureFlagger: FeatureFlagger,
+                                         appSettings: AppSettings = AppDependencyProvider.shared.appSettings) throws -> TabsModelProviding {
         let isPadDevice = UIDevice.current.userInterfaceIdiom == .pad
-        let tabsModel: TabsModel
+        let normalModel: TabsModel
+        let fireModel: TabsModel
+
         if AutoClearSettingsModel(settings: appSettings) != nil {
-            tabsModel = TabsModel(desktop: isPadDevice)
-            tabsPersistence.clear()
-            tabsPersistence.save(model: tabsModel)
-            previewsSource.removeAllPreviews()
+            normalModel = TabsModel(desktop: isPadDevice, mode: .normal)
+            fireModel = TabsModel(desktop: isPadDevice, mode: .fire)
+            tabsPersistence.clearAll()
+            _ = tabsPersistence.save(model: normalModel, for: .normal)
+            _ = tabsPersistence.save(model: fireModel, for: .fire)
+            _ = previewsSource.removeAllPreviews()
         } else {
-            if let storedModel = try tabsPersistence.getTabsModel() {
-                tabsModel = storedModel
-            } else {
-                tabsModel = TabsModel(desktop: isPadDevice)
-            }
+            normalModel = try tabsPersistence.getTabsModel(for: .normal)
+                ?? TabsModel(desktop: isPadDevice, mode: .normal)
+            fireModel = try tabsPersistence.getTabsModel(for: .fire)
+                ?? TabsModel(desktop: isPadDevice, mode: .fire)
         }
-        return tabsModel
+        return TabsModelProvider(normalTabsModel: normalModel,
+                                 fireModeTabsModel: fireModel,
+                                 persistence: tabsPersistence,
+                                 featureFlagger: featureFlagger)
     }
 
     private static func makeTextZoomCoordinatorProvider() -> TextZoomCoordinatorProvider {
@@ -600,6 +625,10 @@ extension MainCoordinator: ShortcutItemHandling {
 extension MainCoordinator: IdleReturnLaunchDelegate {
 
     func showNewTabPageAfterIdleReturn() {
+        if voiceShortcutFeature.isAvailable, voiceSessionStateManager.isVoiceSessionActive {
+            return
+        }
+
         controller.prepareForIdleReturnNTP { [weak self] in
             guard let self else { return }
             self.controller.newTab(reuseExisting: true, allowingKeyboard: true, openedAfterIdle: true)
