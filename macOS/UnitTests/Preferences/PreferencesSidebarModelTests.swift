@@ -118,12 +118,22 @@ final class PreferencesSidebarModelTests: XCTestCase {
             aiChatPreferences: mockAIChatPreferences,
             aboutPreferences: AboutPreferences(internalUserDecider: mockFeatureFlagger.internalUserDecider, featureFlagger: mockFeatureFlagger, windowControllersManager: windowControllersManager, keyValueStore: InMemoryThrowingKeyValueStore()),
             accessibilityPreferences: AccessibilityPreferences(),
-            duckPlayerPreferences: DuckPlayerPreferences(
-                persistor: DuckPlayerPreferencesPersistorMock(),
-                privacyConfigurationManager: MockPrivacyConfigurationManaging(),
-                internalUserDecider: mockFeatureFlagger.internalUserDecider
-            ),
-            youTubeAdBlockingPreferences: YouTubeAdBlockingPreferences(),
+            duckPlayerPreferences: {
+                let prefs = DuckPlayerPreferences(
+                    persistor: DuckPlayerPreferencesPersistorMock(),
+                    privacyConfigurationManager: MockPrivacyConfigurationManaging(),
+                    internalUserDecider: mockFeatureFlagger.internalUserDecider
+                )
+                return prefs
+            }(),
+            youTubeAdBlockingPreferences: {
+                let prefs = DuckPlayerPreferences(
+                    persistor: DuckPlayerPreferencesPersistorMock(),
+                    privacyConfigurationManager: MockPrivacyConfigurationManaging(),
+                    internalUserDecider: mockFeatureFlagger.internalUserDecider
+                )
+                return YouTubeAdBlockingPreferences(duckPlayerPreferences: prefs)
+            }(),
             winBackOfferVisibilityManager: mockWinBackOfferVisibilityManager
         )
     }
@@ -148,12 +158,22 @@ final class PreferencesSidebarModelTests: XCTestCase {
             aiChatPreferences: mockAIChatPreferences,
             aboutPreferences: AboutPreferences(internalUserDecider: mockFeatureFlagger.internalUserDecider, featureFlagger: mockFeatureFlagger, windowControllersManager: windowControllersManager, keyValueStore: InMemoryThrowingKeyValueStore()),
             accessibilityPreferences: AccessibilityPreferences(),
-            duckPlayerPreferences: DuckPlayerPreferences(
-                persistor: DuckPlayerPreferencesPersistorMock(),
-                privacyConfigurationManager: MockPrivacyConfigurationManaging(),
-                internalUserDecider: mockFeatureFlagger.internalUserDecider
-            ),
-            youTubeAdBlockingPreferences: YouTubeAdBlockingPreferences(),
+            duckPlayerPreferences: {
+                let prefs = DuckPlayerPreferences(
+                    persistor: DuckPlayerPreferencesPersistorMock(),
+                    privacyConfigurationManager: MockPrivacyConfigurationManaging(),
+                    internalUserDecider: mockFeatureFlagger.internalUserDecider
+                )
+                return prefs
+            }(),
+            youTubeAdBlockingPreferences: {
+                let prefs = DuckPlayerPreferences(
+                    persistor: DuckPlayerPreferencesPersistorMock(),
+                    privacyConfigurationManager: MockPrivacyConfigurationManaging(),
+                    internalUserDecider: mockFeatureFlagger.internalUserDecider
+                )
+                return YouTubeAdBlockingPreferences(duckPlayerPreferences: prefs)
+            }(),
             winBackOfferVisibilityManager: mockWinBackOfferVisibilityManager
         )
     }
@@ -189,12 +209,22 @@ final class PreferencesSidebarModelTests: XCTestCase {
             aiChatPreferences: mockAIChatPreferences,
             aboutPreferences: AboutPreferences(internalUserDecider: mockFeatureFlagger.internalUserDecider, featureFlagger: mockFeatureFlagger, windowControllersManager: windowControllersManager, keyValueStore: InMemoryThrowingKeyValueStore()),
             accessibilityPreferences: AccessibilityPreferences(),
-            duckPlayerPreferences: DuckPlayerPreferences(
-                persistor: DuckPlayerPreferencesPersistorMock(),
-                privacyConfigurationManager: MockPrivacyConfigurationManaging(),
-                internalUserDecider: mockFeatureFlagger.internalUserDecider
-            ),
-            youTubeAdBlockingPreferences: YouTubeAdBlockingPreferences(),
+            duckPlayerPreferences: {
+                let prefs = DuckPlayerPreferences(
+                    persistor: DuckPlayerPreferencesPersistorMock(),
+                    privacyConfigurationManager: MockPrivacyConfigurationManaging(),
+                    internalUserDecider: mockFeatureFlagger.internalUserDecider
+                )
+                return prefs
+            }(),
+            youTubeAdBlockingPreferences: {
+                let prefs = DuckPlayerPreferences(
+                    persistor: DuckPlayerPreferencesPersistorMock(),
+                    privacyConfigurationManager: MockPrivacyConfigurationManaging(),
+                    internalUserDecider: mockFeatureFlagger.internalUserDecider
+                )
+                return YouTubeAdBlockingPreferences(duckPlayerPreferences: prefs)
+            }(),
             winBackOfferVisibilityManager: mockWinBackOfferVisibilityManager
         )
     }

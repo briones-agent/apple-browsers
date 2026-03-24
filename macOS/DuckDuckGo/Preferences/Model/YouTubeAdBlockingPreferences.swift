@@ -23,17 +23,15 @@ import Foundation
 import Persistence
 import PixelKit
 import PrivacyConfig
+import SwiftUI
 
 struct YouTubeAdBlockingSettings: StoringKeys {
     let youTubeAdBlockingEnabled = StorageKey<Bool>(.youTubeAdBlockingEnabled)
 }
 
 final class YouTubeAdBlockingPreferences: ObservableObject {
-    private let internalUserDecider: InternalUserDecider
-    private let duckPlayerContingencyHandler: DuckPlayerContingencyHandler
-    private let privacyConfigurationManager: PrivacyConfigurationManaging
     private var settings: any KeyedStoring<YouTubeAdBlockingSettings>
-    private var duckPlayerPersistor: DuckPlayerPreferencesPersistor
+    private var cancellables = Set<AnyCancellable>()
 
     @Published
     var youTubeAdBlockingEnabled: Bool {
@@ -42,94 +40,68 @@ final class YouTubeAdBlockingPreferences: ObservableObject {
         }
     }
 
-    @Published
+    var duckPlayerPreferences: DuckPlayerPreferences
+
     var duckPlayerMode: DuckPlayerMode {
-        didSet {
-            duckPlayerPersistor.duckPlayerModeBool = duckPlayerMode.boolValue
-        }
+        get { duckPlayerPreferences.duckPlayerMode }
+        set { duckPlayerPreferences.duckPlayerMode = newValue }
     }
 
-    @Published
     var duckPlayerAutoplay: Bool {
-        didSet {
-            duckPlayerPersistor.duckPlayerAutoplay = duckPlayerAutoplay
-            if duckPlayerAutoplay {
-                PixelKit.fire(GeneralPixel.duckPlayerAutoplaySettingsOn, doNotEnforcePrefix: true)
-            } else {
-                PixelKit.fire(GeneralPixel.duckPlayerAutoplaySettingsOff, doNotEnforcePrefix: true)
-            }
-        }
+        get { duckPlayerPreferences.duckPlayerAutoplay }
+        set { duckPlayerPreferences.duckPlayerAutoplay = newValue }
     }
 
-    @Published
     var duckPlayerOpenInNewTab: Bool {
-        didSet {
-            duckPlayerPersistor.duckPlayerOpenInNewTab = duckPlayerOpenInNewTab
-            if duckPlayerOpenInNewTab {
-                PixelKit.fire(GeneralPixel.duckPlayerNewTabSettingsOn, doNotEnforcePrefix: true)
-            } else {
-                PixelKit.fire(GeneralPixel.duckPlayerNewTabSettingsOff, doNotEnforcePrefix: true)
-            }
-        }
+        get { duckPlayerPreferences.duckPlayerOpenInNewTab }
+        set { duckPlayerPreferences.duckPlayerOpenInNewTab = newValue }
     }
 
     var shouldDisplayAutoPlaySettings: Bool {
-        privacyConfigurationManager.privacyConfig.isSubfeatureEnabled(DuckPlayerSubfeature.autoplay) || internalUserDecider.isInternalUser
+        duckPlayerPreferences.shouldDisplayAutoPlaySettings
     }
 
     var isOpenInNewTabSettingsAvailable: Bool {
-        privacyConfigurationManager.privacyConfig.isSubfeatureEnabled(DuckPlayerSubfeature.openInNewTab) || internalUserDecider.isInternalUser
+        duckPlayerPreferences.isOpenInNewTabSettingsAvailable
     }
 
     var isNewTabSettingsAvailable: Bool {
-        duckPlayerMode != .disabled
+        duckPlayerPreferences.isNewTabSettingsAvailable
     }
 
     var youtubeOverlayInteracted: Bool {
-        didSet {
-            duckPlayerPersistor.youtubeOverlayInteracted = youtubeOverlayInteracted
-        }
+        get { duckPlayerPreferences.youtubeOverlayInteracted }
+        set { duckPlayerPreferences.youtubeOverlayInteracted = newValue }
     }
 
     var youtubeOverlayAnyButtonPressed: Bool {
-        didSet {
-            duckPlayerPersistor.youtubeOverlayAnyButtonPressed = youtubeOverlayAnyButtonPressed
-        }
+        get { duckPlayerPreferences.youtubeOverlayAnyButtonPressed }
+        set { duckPlayerPreferences.youtubeOverlayAnyButtonPressed = newValue }
     }
 
     var shouldDisplayContingencyMessage: Bool {
-        duckPlayerContingencyHandler.shouldDisplayContingencyMessage
+        duckPlayerPreferences.shouldDisplayContingencyMessage
     }
 
     func reset() {
-        youtubeOverlayAnyButtonPressed = false
-        youtubeOverlayInteracted = false
-        duckPlayerMode = .alwaysAsk
-        duckPlayerOpenInNewTab = true
-        duckPlayerAutoplay = true
+        duckPlayerPreferences.reset()
     }
 
     @MainActor
     func openLearnMoreContingencyURL() {
-        guard let url = duckPlayerContingencyHandler.learnMoreURL else { return }
-        PixelKit.fire(GeneralPixel.duckPlayerContingencyLearnMoreClicked, doNotEnforcePrefix: true)
-        Application.appDelegate.windowControllersManager.show(url: url, source: .ui, newTab: true)
+        duckPlayerPreferences.openLearnMoreContingencyURL()
     }
 
     init(settings: (any KeyedStoring<YouTubeAdBlockingSettings>)? = nil,
-         duckPlayerPersistor: DuckPlayerPreferencesPersistor = DuckPlayerPreferencesUserDefaultsPersistor(),
-         privacyConfigurationManager: PrivacyConfigurationManaging = NSApp.delegateTyped.privacyFeatures.contentBlocking.privacyConfigurationManager,
-         internalUserDecider: InternalUserDecider = NSApp.delegateTyped.internalUserDecider) {
+         duckPlayerPreferences: DuckPlayerPreferences? = nil) {
         self.settings = if let settings { settings } else { UserDefaults.standard.keyedStoring() }
-        self.duckPlayerPersistor = duckPlayerPersistor
+        self.duckPlayerPreferences = duckPlayerPreferences ?? DuckPlayerPreferences()
         youTubeAdBlockingEnabled = self.settings.youTubeAdBlockingEnabled ?? true
-        duckPlayerMode = .init(duckPlayerPersistor.duckPlayerModeBool)
-        youtubeOverlayInteracted = duckPlayerPersistor.youtubeOverlayInteracted
-        youtubeOverlayAnyButtonPressed = duckPlayerPersistor.youtubeOverlayAnyButtonPressed
-        duckPlayerAutoplay = duckPlayerPersistor.duckPlayerAutoplay
-        duckPlayerOpenInNewTab = duckPlayerPersistor.duckPlayerOpenInNewTab
-        self.privacyConfigurationManager = privacyConfigurationManager
-        self.internalUserDecider = internalUserDecider
-        self.duckPlayerContingencyHandler = DefaultDuckPlayerContingencyHandler(privacyConfigurationManager: privacyConfigurationManager)
+
+        self.duckPlayerPreferences.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
 }

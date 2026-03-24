@@ -56,7 +56,6 @@ extension Preferences {
         }
 
         private func firePixelIfNeeded(oldMode: DuckPlayerMode, newMode: DuckPlayerMode) {
-            print("firePixelIfNeeded(oldMode: \(oldMode), newMode: \(newMode))")
             guard oldMode != newMode else { return }
 
             switch newMode {
@@ -83,7 +82,6 @@ extension Preferences {
 
                 // Duck Player Section
                 PreferencePaneSection(UserText.duckPlayer) {
-
                     TextMenuItemCaption(UserText.duckPlayerExplanation)
 
                     if model.shouldDisplayContingencyMessage {
@@ -102,7 +100,7 @@ extension Preferences {
                     ToggleMenuItem(UserText.duckPlayerEnableToggle, isOn: isDuckPlayerEnabledBinding)
                         .accessibilityIdentifier("DuckPlayer.enableToggle")
 
-                    if isDuckPlayerEnabledBinding.wrappedValue {
+                    if model.duckPlayerMode != .disabled {
                         ToggleMenuItem(UserText.duckPlayerAlwaysOpenToggle, isOn: isAlwaysOpenBinding)
                             .padding(.leading, 19)
                             .accessibilityIdentifier("DuckPlayer.alwaysOpenToggle")
