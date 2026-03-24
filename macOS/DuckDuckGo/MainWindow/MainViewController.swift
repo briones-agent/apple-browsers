@@ -326,7 +326,6 @@ final class MainViewController: NSViewController {
         addAndLayoutChild(navigationBarViewController, into: mainView.navigationBarContainerView)
         addAndLayoutChild(browserTabViewController, into: mainView.webContainerView)
         addAndLayoutChild(findInPageViewController, into: mainView.findInPageContainerView)
-        addAndLayoutChild(fireViewController, into: mainView.fireContainerView)
         addAndLayoutChild(aiChatOmnibarContainerViewController, into: mainView.aiChatOmnibarContainerView)
         addAndLayoutChild(aiChatOmnibarTextContainerViewController, into: mainView.aiChatOmnibarTextContainerView)
     }
@@ -380,6 +379,10 @@ final class MainViewController: NSViewController {
         registerForBookmarkBarPromptNotifications()
 
         adjustFirstResponder(force: true)
+
+        if fireViewController.parent == nil {
+            addAndLayoutChild(fireViewController, into: mainView.fireContainerView)
+        }
     }
 
     var bookmarkBarPromptObserver: Any?
