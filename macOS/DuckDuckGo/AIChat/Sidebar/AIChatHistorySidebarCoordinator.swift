@@ -166,7 +166,7 @@ final class AIChatHistorySidebarCoordinator {
             aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .currentTab)
         }
 
-        viewModel.onSettings = { _ in
+        viewModel.onSettings = { [weak self] in
             Application.appDelegate.windowControllersManager.showPreferencesTab(withSelectedPane: .aiChat)
         }
     }

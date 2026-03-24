@@ -49,14 +49,7 @@ struct AIChatHistorySidebarView: View {
             Text(UserText.aiChatHistorySidebarTitle)
                 .font(.headline)
             Spacer()
-            Button {
-                viewModel.onClose?()
-            } label: {
-                Image(systemName: "xmark")
-                    .imageScale(.medium)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
+            CloseButton(action: { viewModel.onClose?() })
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -66,40 +59,38 @@ struct AIChatHistorySidebarView: View {
 
     private var actionRows: some View {
         VStack(spacing: 0) {
-            actionRow(
-                title: UserText.aiChatHistorySidebarNewChat,
-                icon: Image(nsImage: DesignSystemImages.Glyphs.Size16.aiChatAdd),
-                action: { viewModel.onNewChat?() }
-            )
-            actionRow(
-                title: UserText.aiChatHistorySidebarNewVoiceChat,
-                icon: Image(nsImage: DesignSystemImages.Glyphs.Size16.permissionMicrophone),
-                action: { viewModel.onNewVoiceChat?() }
-            )
-            actionRow(
-                title: UserText.aiChatHistorySidebarNewImage,
-                icon: Image(nsImage: DesignSystemImages.Glyphs.Size16.image),
-                action: { viewModel.onNewImageChat?() }
-            )
+            HoverRow(action: { viewModel.onNewChat?() }) {
+                HStack(spacing: 8) {
+                    Image(nsImage: DesignSystemImages.Glyphs.Size16.aiChatAdd)
+                        .renderingMode(.template)
+                        .frame(width: 16, height: 16)
+                    Text(UserText.aiChatHistorySidebarNewChat)
+                        .font(.body)
+                    Spacer()
+                }
+            }
+            HoverRow(action: { viewModel.onNewVoiceChat?() }) {
+                HStack(spacing: 8) {
+                    Image(nsImage: DesignSystemImages.Glyphs.Size16.permissionMicrophone)
+                        .renderingMode(.template)
+                        .frame(width: 16, height: 16)
+                    Text(UserText.aiChatHistorySidebarNewVoiceChat)
+                        .font(.body)
+                    Spacer()
+                }
+            }
+            HoverRow(action: { viewModel.onNewImageChat?() }) {
+                HStack(spacing: 8) {
+                    Image(nsImage: DesignSystemImages.Glyphs.Size16.image)
+                        .renderingMode(.template)
+                        .frame(width: 16, height: 16)
+                    Text(UserText.aiChatHistorySidebarNewImage)
+                        .font(.body)
+                    Spacer()
+                }
+            }
         }
         .padding(.vertical, 4)
-    }
-
-    private func actionRow(title: String, icon: Image, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                icon
-                    .renderingMode(.template)
-                    .frame(width: 16, height: 16)
-                Text(title)
-                    .font(.body)
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Chats Section
@@ -134,17 +125,60 @@ struct AIChatHistorySidebarView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(viewModel.chats) { suggestion in
-                        chatRow(suggestion)
+                        ChatRow(suggestion: suggestion, onSelected: { viewModel.onChatSelected?(suggestion.chatId) })
                     }
                 }
             }
         }
     }
 
-    private func chatRow(_ suggestion: AIChatSuggestion) -> some View {
-        Button {
-            viewModel.onChatSelected?(suggestion.chatId)
-        } label: {
+    // MARK: - Footer
+
+    private var footerView: some View {
+        HoverRow(action: { viewModel.onSettings?() }) {
+            HStack(spacing: 8) {
+                Image(nsImage: DesignSystemImages.Glyphs.Size16.aiChatSettings)
+                    .renderingMode(.template)
+                    .frame(width: 16, height: 16)
+                Text(UserText.aiChatHistorySidebarSettingsAndMore)
+                    .font(.body)
+                Spacer()
+            }
+        }
+    }
+}
+
+// MARK: - Reusable Components
+
+/// A tappable row that highlights on hover.
+private struct HoverRow<Content: View>: View {
+    let action: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            content()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(isHovered ? Color.controlsFillPrimary : Color.clear)
+        .onHover { isHovered = $0 }
+    }
+}
+
+/// A single chat history row with hover highlight.
+private struct ChatRow: View {
+    let suggestion: AIChatSuggestion
+    let onSelected: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onSelected) {
             HStack(spacing: 8) {
                 Text(suggestion.title)
                     .font(.body)
@@ -163,26 +197,27 @@ struct AIChatHistorySidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background(isHovered ? Color.controlsFillPrimary : Color.clear)
+        .onHover { isHovered = $0 }
     }
+}
 
-    // MARK: - Footer
+/// The header close button with a rounded hover highlight.
+private struct CloseButton: View {
+    let action: () -> Void
 
-    private var footerView: some View {
-        Button {
-            viewModel.onSettings?()
-        } label: {
-            HStack(spacing: 8) {
-                Image(nsImage: DesignSystemImages.Glyphs.Size16.aiChatSettings)
-                    .renderingMode(.template)
-                    .frame(width: 16, height: 16)
-                Text(UserText.aiChatHistorySidebarSettingsAndMore)
-                    .font(.body)
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .imageScale(.medium)
+                .padding(5)
+                .background(isHovered ? Color.controlsFillPrimary : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Close")
+        .onHover { isHovered = $0 }
     }
 }

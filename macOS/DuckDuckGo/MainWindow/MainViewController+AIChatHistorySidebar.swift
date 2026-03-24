@@ -18,6 +18,8 @@
 
 import AIChat
 import Combine
+import Foundation
+import AppKit
 
 extension MainViewController {
 
