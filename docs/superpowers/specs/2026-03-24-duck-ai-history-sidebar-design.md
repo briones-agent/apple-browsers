@@ -110,9 +110,10 @@ The `fetchTask` is stored as `private var fetchTask: Task<Void, Never>?` on the 
 
 **`fetchAndPublish()`:**
 1. Call `await suggestionsReader.fetchSuggestions(query: nil)`.
-   - `query` is `String?`; `nil` means "no text filter — return chats from the last week" (server-side behaviour).
-   - `AIChatSuggestionsReader` already caps the result to `historySettings.maxHistoryCount` when calling the underlying `SuggestionsReader`. **Do not apply `prefix` again** — use the returned arrays as-is.
-   - Returns `(pinned: [AIChatSuggestion], recent: [AIChatSuggestion])`.
+   - `suggestionsReader` is typed as `AIChatSuggestionsReading` (the macOS-level protocol in `macOS/DuckDuckGo/AIChat/Suggestions/AIChatSuggestionsReader.swift`), **not** the lower-level `SuggestionsReading` from SharedPackages.
+   - `AIChatSuggestionsReading.fetchSuggestions(query: String?)` returns `(pinned: [AIChatSuggestion], recent: [AIChatSuggestion])` directly — no `maxChats` parameter, no `Result` wrapper. Internally the reader already passes `maxHistoryCount` to the underlying `SuggestionsReader` and handles errors by returning empty arrays.
+   - `query: nil` means "no text filter — return chats from the last week" (applied server-side).
+   - **Do not apply `prefix` in the coordinator** — the returned arrays are already capped.
 2. Check for cancellation: `guard !Task.isCancelled else { return }`.
 3. Merge: `let all = pinned + recent`.
 4. Sort by `timestamp` descending (`nil` treated as `.distantPast`). **Pinned items are NOT hoisted** — they appear in chronological order alongside recent items. `isPinned` on a suggestion only controls whether the pin icon is shown in the row view; it has no effect on ordering or grouping.
