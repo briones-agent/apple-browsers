@@ -21,29 +21,31 @@ import WebKit
 
 /// Owns the standalone floating duck.ai window and its WKWebView.
 /// Not tab-backed — navigates duck.ai directly via URL.
+@MainActor
 final class AIChatStandaloneFloatingWindowController: NSWindowController {
 
     // MARK: - Constants
 
     private enum Constants {
         static let defaultSize = NSSize(width: 400, height: 600)
-        static let frameUserDefaultsKey = "aiChatStandaloneFloatingWindowFrame"
+        static let frameUserDefaultsKey = "ai-chat.standalone-floating-window.frame"
     }
 
     // MARK: - Private
 
     private let webView: WKWebView
     private var currentURL: URL?
+    private let keyValueStore: KeyValueStoring
 
     // MARK: - Init
 
-    init() {
+    init(keyValueStore: KeyValueStoring = UserDefaults.standard) {
+        self.keyValueStore = keyValueStore
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         config.processPool = WKProcessPool()
 
         let wv = WKWebView(frame: .zero, configuration: config)
-        wv.translatesAutoresizingMaskIntoConstraints = false
         self.webView = wv
 
         let initialRect = NSRect(origin: .zero, size: Constants.defaultSize)
@@ -51,16 +53,7 @@ final class AIChatStandaloneFloatingWindowController: NSWindowController {
 
         super.init(window: floatingWindow)
 
-        let contentVC = NSViewController()
-        contentVC.view = NSView()
-        contentVC.view.addSubview(wv)
-        NSLayoutConstraint.activate([
-            wv.topAnchor.constraint(equalTo: contentVC.view.topAnchor),
-            wv.leadingAnchor.constraint(equalTo: contentVC.view.leadingAnchor),
-            wv.trailingAnchor.constraint(equalTo: contentVC.view.trailingAnchor),
-            wv.bottomAnchor.constraint(equalTo: contentVC.view.bottomAnchor),
-        ])
-        floatingWindow.contentViewController = contentVC
+        floatingWindow.contentView = wv
         floatingWindow.delegate = self
 
         restoreFrameOrCenter()
@@ -74,7 +67,7 @@ final class AIChatStandaloneFloatingWindowController: NSWindowController {
     /// If the URL is already loaded, only brings the window to front.
     func open(url: URL) {
         window?.makeKeyAndOrderFront(nil)
-        if url.absoluteString != currentURL?.absoluteString {
+        if url != currentURL {
             currentURL = url
             webView.load(URLRequest(url: url))
         }
@@ -89,10 +82,19 @@ final class AIChatStandaloneFloatingWindowController: NSWindowController {
     // MARK: - Frame Persistence
 
     private func restoreFrameOrCenter() {
-        if let stored = UserDefaults.standard.string(forKey: Constants.frameUserDefaultsKey) {
+        if let stored = keyValueStore.object(forKey: Constants.frameUserDefaultsKey) as? String {
             let rect = NSRectFromString(stored)
             if rect != .zero {
-                window?.setFrame(rect, display: false)
+                let screen = NSScreen.main ?? NSScreen.screens.first
+                if let visibleFrame = screen?.visibleFrame {
+                    let w = max(1, min(rect.width, visibleFrame.width))
+                    let h = max(1, min(rect.height, visibleFrame.height))
+                    let x = max(visibleFrame.minX, min(rect.origin.x, visibleFrame.maxX - w))
+                    let y = max(visibleFrame.minY, min(rect.origin.y, visibleFrame.maxY - h))
+                    window?.setFrame(NSRect(x: x, y: y, width: w, height: h), display: false)
+                } else {
+                    window?.setFrame(rect, display: false)
+                }
                 return
             }
         }
@@ -101,7 +103,7 @@ final class AIChatStandaloneFloatingWindowController: NSWindowController {
 
     private func persistFrame() {
         guard let frame = window?.frame else { return }
-        UserDefaults.standard.set(NSStringFromRect(frame), forKey: Constants.frameUserDefaultsKey)
+        keyValueStore.set(NSStringFromRect(frame), forKey: Constants.frameUserDefaultsKey)
     }
 }
 
@@ -115,7 +117,4 @@ extension AIChatStandaloneFloatingWindowController: NSWindowDelegate {
         return false
     }
 
-    func windowWillClose(_ notification: Notification) {
-        persistFrame()
-    }
 }

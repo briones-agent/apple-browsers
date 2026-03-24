@@ -35,5 +35,9 @@ final class AIChatStandaloneFloatingWindow: NSWindow {
         animationBehavior = .documentWindow
         collectionBehavior = [.fullScreenNone]
         minSize = NSSize(width: 320, height: 480)
+        isReleasedWhenClosed = false
     }
+
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }
