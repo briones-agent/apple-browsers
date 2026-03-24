@@ -24,7 +24,6 @@ import SwiftUI
 struct AIChatLauncherView: View {
 
     @ObservedObject var viewModel: AIChatLauncherViewModel
-    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,7 +36,6 @@ struct AIChatLauncherView: View {
             footerRow
         }
         .background(Color(designSystemColor: .surfacePrimary))
-        .onAppear { isSearchFocused = true }
     }
 
     // MARK: - Search Row
@@ -50,8 +48,6 @@ struct AIChatLauncherView: View {
                 .frame(width: 16, height: 16)
             TextField(UserText.aiChatLauncherSearchPlaceholder, text: $viewModel.searchText)
                 .textFieldStyle(.plain)
-                .focused($isSearchFocused)
-                .onSubmit { viewModel.activateSelection() }
             Text("⌘K")
                 .font(.caption2)
                 .foregroundColor(.secondary)
@@ -133,7 +129,7 @@ struct AIChatLauncherView: View {
                     }
                 }
                 .frame(maxHeight: 240)
-                .onChange(of: viewModel.selectedIndex) { _, newIndex in
+                .onChange(of: viewModel.selectedIndex) { newIndex in
                     if let idx = newIndex {
                         withAnimation { proxy.scrollTo(idx, anchor: .center) }
                     }

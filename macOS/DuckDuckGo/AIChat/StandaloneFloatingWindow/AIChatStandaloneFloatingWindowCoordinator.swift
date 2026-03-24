@@ -17,6 +17,7 @@
 //
 
 import AIChat
+import Foundation
 
 /// Owned by MainViewController. Lazily creates the standalone floating window
 /// and builds duck.ai URLs for launcher selections.

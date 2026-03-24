@@ -17,6 +17,7 @@
 //
 
 import AppKit
+import Persistence
 import WebKit
 
 /// Owns the standalone floating duck.ai window and its WKWebView.
