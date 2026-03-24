@@ -286,7 +286,7 @@ final class MainWindowController: NSWindowController {
             newParentView.layer?.masksToBounds = true
             newParentView.addSubview(tabBarViewController.view)
         } else {
-            newParentView.addSubview(tabBarViewController.view, positioned: .below, relativeTo: mainViewController.fireViewController.view)
+            newParentView.addSubview(tabBarViewController.view, positioned: .below, relativeTo: mainViewController.mainView.fireContainerView)
         }
 
         // enable Tab Bar appear as an AX child of the Window
