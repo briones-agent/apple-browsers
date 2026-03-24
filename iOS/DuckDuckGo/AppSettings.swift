@@ -127,6 +127,8 @@ protocol AppSettings: AnyObject, OnboardingDebugAppSettings {
     var duckPlayerNativeUIWasUsed: Bool { get set }
     var duckPlayerNativeUISettingsMapped: Bool { get set }
 
+    var youTubeAdBlockingEnabled: Bool { get set }
+
     var autoClearAIChatHistory: Bool { get set }
 }
 
