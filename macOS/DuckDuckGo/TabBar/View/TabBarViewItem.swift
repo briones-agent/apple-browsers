@@ -141,7 +141,7 @@ final class TabBarItemCellView: NSView {
     }
 
     private enum TextFieldMaskGradientSize {
-        static let width: CGFloat = 6
+        static let width: CGFloat = 32
         static let trailingSpace: CGFloat = 0
         static let trailingSpaceWithButton: CGFloat = 20
         static let trailingSpaceWithPermissionAndButton: CGFloat = 40
