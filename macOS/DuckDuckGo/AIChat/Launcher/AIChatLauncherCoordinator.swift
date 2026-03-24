@@ -31,6 +31,7 @@ final class AIChatLauncherCoordinator: ObservableObject {
 
     private let floatingWindowCoordinator: AIChatStandaloneFloatingWindowCoordinator
     private let suggestionsReader: AIChatSuggestionsReading
+    private let onSettingsRequested: () -> Void
 
     // MARK: - Private State
 
@@ -46,10 +47,12 @@ final class AIChatLauncherCoordinator: ObservableObject {
 
     init(
         floatingWindowCoordinator: AIChatStandaloneFloatingWindowCoordinator,
-        suggestionsReader: AIChatSuggestionsReading
+        suggestionsReader: AIChatSuggestionsReading,
+        onSettingsRequested: @escaping () -> Void
     ) {
         self.floatingWindowCoordinator = floatingWindowCoordinator
         self.suggestionsReader = suggestionsReader
+        self.onSettingsRequested = onSettingsRequested
         wireClosures()
     }
 
@@ -105,7 +108,7 @@ final class AIChatLauncherCoordinator: ObservableObject {
     private func centerPanel(in window: NSWindow) {
         let panelSize = panel.frame.size
         let windowFrame = window.frame
-        let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = window.screen ?? NSScreen.main ?? NSScreen.screens.first else { return }
         let screenFrame = screen.visibleFrame
 
         var x = windowFrame.midX - panelSize.width / 2
@@ -134,12 +137,12 @@ final class AIChatLauncherCoordinator: ObservableObject {
 
     private func removeDimOverlay() {
         guard let dim = dimView else { return }
-        dimView = nil
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.15
             dim.animator().alphaValue = 0
-        }, completionHandler: {
+        }, completionHandler: { [weak self] in
             dim.removeFromSuperview()
+            if self?.dimView === dim { self?.dimView = nil }
         })
     }
 
@@ -222,8 +225,9 @@ final class AIChatLauncherCoordinator: ObservableObject {
         }
 
         viewModel.onSettings = { [weak self] in
-            self?.closeLauncher()
-            Application.appDelegate.windowControllersManager.showPreferencesTab(withSelectedPane: .aiChat)
+            guard let self else { return }
+            closeLauncher()
+            onSettingsRequested()
         }
 
         viewModel.onChatSelected = { [weak self] chatId in
