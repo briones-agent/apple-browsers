@@ -112,6 +112,8 @@ final class HoverTrackingArea: NSTrackingArea {
                 if !animated || view.isMouseDown || view.isMouseOver && !view.animatesOnMouseOver {
                     layer.removeAllAnimations()
                     context.duration = 0.0
+                } else if let duration = view.animationDuration {
+                    context.duration = duration
                 }
 
                 layer.backgroundColor = color.cgColor
@@ -250,4 +252,10 @@ protocol Hoverable: NSView, HoverableProperties {
 
     func backgroundLayer(createIfNeeded: Bool) -> CALayer?
 
+    var animationDuration: TimeInterval? { get }
+
+}
+
+extension Hoverable {
+    var animationDuration: TimeInterval? { nil }
 }

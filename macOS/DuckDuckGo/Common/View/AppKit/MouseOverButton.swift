@@ -41,6 +41,7 @@ internal class MouseOverButton: NSButton, Hoverable {
     @IBInspectable dynamic var cornerRadius: CGFloat = 0
     @IBInspectable dynamic var backgroundInset: NSPoint = .zero
     @IBInspectable dynamic var animatesOnMouseOver: Bool = false
+    dynamic var animationDuration: TimeInterval?
 
     @IBInspectable var mouseOverTintColor: NSColor? {
         didSet {
