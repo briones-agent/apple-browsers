@@ -1700,6 +1700,42 @@
         }
       }
     },
+    "ai.chat.history.new.chat" : {
+      "comment" : "Menu item in the Duck.ai history menu to start a new chat",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Chat"
+          }
+        }
+      }
+    },
+    "ai.chat.history.new.image.chat" : {
+      "comment" : "Menu item in the Duck.ai history menu to start a new chat in image mode",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Image Chat"
+          }
+        }
+      }
+    },
+    "ai.chat.history.new.voice.chat" : {
+      "comment" : "Menu item in the Duck.ai history menu to start a new chat in voice mode",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New Voice Chat"
+          }
+        }
+      }
+    },
     "ai.chat.history.no.recent.chats" : {
       "comment" : "Shown in the Duck.ai history menu when there are no chat sessions to display",
       "extractionState" : "extracted_with_value",
@@ -1708,6 +1744,30 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "No recent chats"
+          }
+        }
+      }
+    },
+    "ai.chat.history.recent.chats" : {
+      "comment" : "Section header in the Duck.ai history menu for recent chat sessions",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Recent Chats"
+          }
+        }
+      }
+    },
+    "ai.chat.history.settings" : {
+      "comment" : "Menu item in the Duck.ai history menu to open Duck.ai settings",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Settings…"
           }
         }
       }
@@ -4240,6 +4300,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Поиск"
+          }
+        }
+      }
+    },
+    "aichat.voice-button.tooltip" : {
+      "comment" : "Tooltip for the voice chat button in the AI chat omnibar",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Start New Voice Chat"
           }
         }
       }

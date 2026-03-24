@@ -23,4 +23,5 @@ public enum AIChatURLParameters {
     public static let toolChoiceName = "toolChoice"
     public static let modeName = "mode"
     public static let voiceModeValue = "voice"
+    public static let imageModeValue = "image"
 }

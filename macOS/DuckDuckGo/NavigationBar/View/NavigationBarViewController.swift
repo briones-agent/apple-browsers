@@ -1233,8 +1233,11 @@ final class NavigationBarViewController: NSViewController {
                 pinned: suggestions.pinned,
                 recent: suggestions.recent,
                 target: self,
-                action: #selector(didSelectAIChatHistoryItem(_:)),
-                showAllAction: #selector(showAllDuckAIChats)
+                chatAction: #selector(didSelectAIChatHistoryItem(_:)),
+                newChatAction: #selector(openNewDuckAIChat),
+                newImageChatAction: #selector(openNewDuckAIImageChat),
+                newVoiceChatAction: #selector(openNewDuckAIVoiceChat),
+                settingsAction: #selector(openDuckAISettingsPane)
             )
             menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
         }
@@ -1245,8 +1248,34 @@ final class NavigationBarViewController: NSViewController {
         NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .existingChat(chatId: chatId), behavior: .currentTab)
     }
 
-    @objc private func showAllDuckAIChats() {
-        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(AIChatRemoteSettings().aiChatURL), behavior: .currentTab)
+    @objc private func openNewDuckAIChat() {
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .currentTab)
+    }
+
+    @objc private func openNewDuckAIImageChat() {
+        let url = buildDuckAIModeURL(mode: AIChatURLParameters.imageModeValue)
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .currentTab)
+    }
+
+    @objc private func openNewDuckAIVoiceChat() {
+        let url = buildDuckAIModeURL(mode: AIChatURLParameters.voiceModeValue)
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .currentTab)
+    }
+
+    @objc private func openDuckAISettingsPane() {
+        Application.appDelegate.windowControllersManager.showPreferencesTab(withSelectedPane: .aiChat)
+    }
+
+    private func buildDuckAIModeURL(mode: String) -> URL {
+        let settings = AIChatRemoteSettings()
+        guard var components = URLComponents(url: settings.aiChatURL, resolvingAgainstBaseURL: false) else {
+            return settings.aiChatURL
+        }
+        var queryItems = components.queryItems ?? []
+        queryItems.removeAll { $0.name == AIChatURLParameters.modeName }
+        queryItems.append(URLQueryItem(name: AIChatURLParameters.modeName, value: mode))
+        components.queryItems = queryItems
+        return components.url ?? settings.aiChatURL
     }
 
     private func subscribeToSelectedTabViewModel() {

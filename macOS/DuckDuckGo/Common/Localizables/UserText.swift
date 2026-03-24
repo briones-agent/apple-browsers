@@ -1745,6 +1745,11 @@ struct UserText {
     static let aiChatHistoryButtonTooltip = NSLocalizedString("tooltip.ai.chat.history", value: "Duck.ai Chat History", comment: "Tooltip for the Duck.ai chat history button in the navigation bar")
     static let aiChatHistoryNoRecentChats = NSLocalizedString("ai.chat.history.no.recent.chats", value: "No recent chats", comment: "Shown in the Duck.ai history menu when there are no chat sessions to display")
     static let aiChatHistoryShowAll = NSLocalizedString("ai.chat.history.show.all", value: "Show all Duck.ai chats", comment: "Menu item at the bottom of the Duck.ai chat history menu that opens duck.ai")
+    static let aiChatHistoryNewChat = NSLocalizedString("ai.chat.history.new.chat", value: "New Chat", comment: "Menu item in the Duck.ai history menu to start a new chat")
+    static let aiChatHistoryNewImageChat = NSLocalizedString("ai.chat.history.new.image.chat", value: "New Image Chat", comment: "Menu item in the Duck.ai history menu to start a new chat in image mode")
+    static let aiChatHistoryNewVoiceChat = NSLocalizedString("ai.chat.history.new.voice.chat", value: "New Voice Chat", comment: "Menu item in the Duck.ai history menu to start a new chat in voice mode")
+    static let aiChatHistoryRecentChats = NSLocalizedString("ai.chat.history.recent.chats", value: "Recent Chats", comment: "Section header in the Duck.ai history menu for recent chat sessions")
+    static let aiChatHistorySettings = NSLocalizedString("ai.chat.history.settings", value: "Settings…", comment: "Menu item in the Duck.ai history menu to open Duck.ai settings")
     static let downloadsShortcutTooltip = NSLocalizedString("tooltip.downloads.shortcut", value: "Downloads", comment: "Tooltip for the downloads shortcut")
 
     static let addItemTooltip = NSLocalizedString("tooltip.autofill.add-item", value: "Add item", comment: "Tooltip for the Add Item button")
