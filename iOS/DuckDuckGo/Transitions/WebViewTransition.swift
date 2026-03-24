@@ -58,10 +58,11 @@ class WebViewTransition: TabSwitcherTransition {
 class FromWebViewTransition: WebViewTransition {
     
     private let mainViewController: MainViewController
-
+    
     init(mainViewController: MainViewController,
          tabSwitcherViewController: TabSwitcherViewController) {
         self.mainViewController = mainViewController
+
         super.init(tabSwitcherViewController: tabSwitcherViewController)
     }
     
@@ -85,15 +86,9 @@ class FromWebViewTransition: WebViewTransition {
         let indexPath = IndexPath(row: rowIndex, section: 0)
         tabSwitcherViewController.collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
 
-        guard let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath) else {
-            tabSwitcherViewController.view.alpha = 1
-            transitionContext.completeTransition(true)
-            return
-        }
-
-        let preview = tabSwitcherViewController.previewsSource.preview(for: tab)
-
-        guard preview != nil else {
+        guard let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath),
+              let preview = tabSwitcherViewController.previewsSource.preview(for: tab)
+        else {
             tabSwitcherViewController.view.alpha = 1
             transitionContext.completeTransition(true)
             return
@@ -110,13 +105,7 @@ class FromWebViewTransition: WebViewTransition {
                                            forAddressBarPosition: mainViewController.appSettings.currentAddressBarPosition,
                                            byHeight: -mainViewController.omniBar.barView.expectedHeight)
         imageView.frame = imageContainer.bounds
-
-        if let preview {
-            imageView.image = preview
-        } else {
-            imageView.image = nil
-            imageContainer.backgroundColor = UIColor(designSystemColor: .surfaceCanvas)
-        }
+        imageView.image = preview
 
         UIView.animateKeyframes(withDuration: TabSwitcherTransition.Constants.duration, delay: 0, options: .calculationModeLinear, animations: {
 
@@ -124,11 +113,7 @@ class FromWebViewTransition: WebViewTransition {
                 let containerFrame = self.tabSwitcherCellFrame(for: layoutAttr)
                 self.imageContainer.frame = containerFrame
                 self.imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius
-                if let preview {
-                    self.imageView.frame = self.previewFrame(for: containerFrame.size, preview: preview)
-                } else {
-                    self.imageView.frame = CGRect(origin: .zero, size: containerFrame.size)
-                }
+                self.imageView.frame = self.previewFrame(for: containerFrame.size, preview: preview)
             }
             
             UIView.addKeyframe(withRelativeStartTime: 0.3, relativeDuration: 0.7) {
@@ -151,10 +136,6 @@ class FromWebViewTransition: WebViewTransition {
 
 class ToWebViewTransition: WebViewTransition {
 
-    override init(tabSwitcherViewController: TabSwitcherViewController) {
-        super.init(tabSwitcherViewController: tabSwitcherViewController)
-    }
-
     override func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
         prepareSubviews(using: transitionContext)
         
@@ -174,6 +155,7 @@ class ToWebViewTransition: WebViewTransition {
         
         solidBackground.backgroundColor = theme.backgroundColor
         solidBackground.frame = webView.bounds
+        // Put overlay above webview to hide its content till the end of the transition
         solidBackground.removeFromSuperview()
         webView.addSubview(solidBackground)
         
@@ -181,15 +163,13 @@ class ToWebViewTransition: WebViewTransition {
         imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius
         
         let preview = tabSwitcherViewController.previewsSource.preview(for: tab)
-        if let preview {
+        if let preview = preview {
             imageView.frame = previewFrame(for: imageContainer.bounds.size,
                                            preview: preview)
-            imageView.image = preview
         } else {
             imageView.frame = CGRect(origin: .zero, size: imageContainer.bounds.size)
-            imageView.image = nil
-            imageContainer.backgroundColor = UIColor(designSystemColor: .surfaceCanvas)
         }
+        imageView.image = preview
         
         if !tabSwitcherSettings.isGridViewEnabled {
             self.imageView.alpha = 0
