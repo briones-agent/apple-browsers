@@ -62,8 +62,13 @@ extension UserScript {
     }
 
     public static func loadJS(_ jsFile: String, from bundle: Bundle, withReplacements replacements: [String: String] = [:]) throws -> String {
-        let js = try JSFileCache.content(forFile: jsFile, in: bundle)
-        return JSFileCache.applyReplacements(js, replacements)
+        var js = try JSFileCache.content(forFile: jsFile, in: bundle)
+
+        for (key, value) in replacements {
+            js = js.replacingOccurrences(of: key, with: value, options: .literal)
+        }
+
+        return js
     }
 
     fileprivate nonisolated static func prepareScriptSource(from source: String) -> String {

@@ -22,59 +22,6 @@ import XCTest
 
 class JSFileCacheTests: XCTestCase {
 
-    // MARK: - applyReplacements
-
-    func testSingleTokenReplacement() {
-        let template = "var config = $CONFIG$;"
-        let result = JSFileCache.applyReplacements(template, ["$CONFIG$": "{\"enabled\":true}"])
-        XCTAssertEqual(result, "var config = {\"enabled\":true};")
-    }
-
-    func testMultipleReplacements() {
-        let template = "var a = $A$; var b = $B$;"
-        let result = JSFileCache.applyReplacements(template, ["$A$": "1", "$B$": "2"])
-        XCTAssertEqual(result, "var a = 1; var b = 2;")
-    }
-
-    func testRepeatedTokenReplacedAtAllOccurrences() {
-        let template = "$TOKEN$ and $TOKEN$"
-        let result = JSFileCache.applyReplacements(template, ["$TOKEN$": "value"])
-        XCTAssertEqual(result, "value and value")
-    }
-
-    func testEmptyReplacementsReturnsTemplateUnchanged() {
-        let template = "var x = $KEEP$;"
-        let result = JSFileCache.applyReplacements(template, [:])
-        XCTAssertEqual(result, template)
-    }
-
-    func testUnmatchedDollarSignPassesThrough() {
-        let template = "price is $5 and $TOKEN$ is replaced"
-        let result = JSFileCache.applyReplacements(template, ["$TOKEN$": "value"])
-        XCTAssertEqual(result, "price is $5 and value is replaced")
-    }
-
-    func testAdjacentTokensReplacedCorrectly() {
-        let template = "$A$$B$"
-        let result = JSFileCache.applyReplacements(template, ["$A$": "first", "$B$": "second"])
-        XCTAssertEqual(result, "firstsecond")
-    }
-
-    func testNoTokensInTemplate() {
-        let template = "no tokens here"
-        let result = JSFileCache.applyReplacements(template, ["$TOKEN$": "value"])
-        XCTAssertEqual(result, "no tokens here")
-    }
-
-    func testUnicodeInTemplateAndReplacements() {
-        let template = "var label = $LABEL$; var emoji = \u{1F600}; var config = $CONFIG$;"
-        let result = JSFileCache.applyReplacements(template, [
-            "$LABEL$": "\"Datenschutz-Einstellungen\"",
-            "$CONFIG$": "{\"emoji\":\"\u{1F525}\",\"cjk\":\"\u{4E16}\u{754C}\"}"
-        ])
-        XCTAssertEqual(result, "var label = \"Datenschutz-Einstellungen\"; var emoji = \u{1F600}; var config = {\"emoji\":\"\u{1F525}\",\"cjk\":\"\u{4E16}\u{754C}\"};")
-    }
-
     // MARK: - content(forFile:in:)
 
     func testContentReturnsFileFromBundle() throws {
