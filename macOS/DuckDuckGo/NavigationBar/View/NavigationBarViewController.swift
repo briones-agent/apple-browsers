@@ -166,6 +166,7 @@ final class NavigationBarViewController: NSViewController {
     private let aiChatCoordinator: AIChatCoordinating
 
     var onAIChatHistoryButtonClicked: (() -> Void)?
+    var onAIChatLauncherButtonClicked: (() -> Void)?
 
     private lazy var aiChatHistoryButton: MouseOverButton = {
         let button = MouseOverButton(frame: .zero)
@@ -181,6 +182,22 @@ final class NavigationBarViewController: NSViewController {
         button.toolTip = UserText.aiChatHistoryButtonTooltip
         return button
     }()
+
+    private lazy var aiChatLauncherButton: MouseOverButton = {
+        let button = MouseOverButton(frame: .zero)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.image = .aiChat
+        button.imageScaling = .scaleProportionallyDown
+        button.bezelStyle = .shadowlessSquare
+        button.isBordered = false
+        button.sendAction(on: .leftMouseDown)
+        button.target = self
+        button.action = #selector(aiChatLauncherButtonAction(_:))
+        button.setAccessibilityIdentifier("NavigationBarViewController.aiChatLauncherButton")
+        button.toolTip = UserText.aiChatLauncherButtonTooltip
+        return button
+    }()
+
     private let defaultBrowserPreferences: DefaultBrowserPreferences
     private let downloadsPreferences: DownloadsPreferences
     private let tabsPreferences: TabsPreferences
@@ -1055,6 +1072,7 @@ final class NavigationBarViewController: NSViewController {
         optionsButton.toolTip = UserText.applicationMenuTooltip
 
         setupAIChatHistoryButton()
+        setupAIChatLauncherButton()
 
         navigationButtons.spacing = theme.navigationToolbarButtonsSpacing
         setupNavigationButtonIcons()
@@ -1219,6 +1237,37 @@ final class NavigationBarViewController: NSViewController {
         aiChatHistoryButton.normalTintColor = colorsProvider.iconsColor
         aiChatHistoryButton.mouseOverColor = colorsProvider.buttonMouseOverColor
         aiChatHistoryButton.mouseDownColor = colorsProvider.buttonMouseDownColor
+    }
+
+    private func setupAIChatLauncherButton() {
+        if aiChatLauncherButton.superview == nil {
+            let insertIndex: Int
+            if let historyIdx = navigationButtons.arrangedSubviews.firstIndex(of: aiChatHistoryButton) {
+                insertIndex = historyIdx + 1
+            } else {
+                insertIndex = navigationButtons.arrangedSubviews.firstIndex(of: goBackButton) ?? 0
+            }
+            navigationButtons.insertArrangedSubview(aiChatLauncherButton, at: insertIndex)
+
+            let size = theme.addressBarStyleProvider.addressBarButtonSize
+            NSLayoutConstraint.activate([
+                aiChatLauncherButton.widthAnchor.constraint(equalToConstant: size),
+                aiChatLauncherButton.heightAnchor.constraint(equalToConstant: size)
+            ])
+        }
+
+        let colorsProvider = theme.colorsProvider
+        aiChatLauncherButton.normalTintColor = colorsProvider.iconsColor
+        aiChatLauncherButton.mouseOverColor = colorsProvider.buttonMouseOverColor
+        aiChatLauncherButton.mouseDownColor = colorsProvider.buttonMouseDownColor
+    }
+
+    func updateAIChatLauncherButtonState(isActive: Bool) {
+        aiChatLauncherButton.isHighlighted = isActive
+    }
+
+    @IBAction private func aiChatLauncherButtonAction(_ sender: NSButton) {
+        onAIChatLauncherButtonClicked?()
     }
 
     func updateAIChatHistoryButtonState(isActive: Bool) {
