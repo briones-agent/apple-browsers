@@ -1,5 +1,5 @@
 //
-//  MockNewTabPageTabPreloader.swift
+//  AnimationsAvailabilityDecider.swift
 //
 //  Copyright © 2025 DuckDuckGo. All rights reserved.
 //
@@ -16,24 +16,21 @@
 //  limitations under the License.
 //
 
-import XCTest
-@testable import DuckDuckGo_Privacy_Browser
+import AppKit
+import FeatureFlags
+import PrivacyConfig
 
-final class MockNewTabPageTabPreloader: NewTabPageTabPreloading {
+struct AnimationsAvailabilityDecider {
 
-    var didCallNewTab = false
-    let tabToReturn = Tab(content: .newtab, shouldLoadInBackground: true, burnerMode: .regular)
+    private let featureFlagger: FeatureFlagger
+    private let osMajorVersion: Int
 
-    @MainActor
-    func newTab() -> Tab? {
-        didCallNewTab = true
-        return tabToReturn
+    init(featureFlagger: FeatureFlagger, osVersion: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion) {
+        self.featureFlagger = featureFlagger
+        self.osMajorVersion = osVersion.majorVersion
     }
 
-    // satisfy the protocol
-    @MainActor
-    func reloadTab() { }
-
-    @MainActor
-    func reloadTab(force: Bool) { }
+    var displaysTabsAnimations: Bool {
+        featureFlagger.isFeatureOn(.tabAnimations) && osMajorVersion >= 12
+    }
 }
