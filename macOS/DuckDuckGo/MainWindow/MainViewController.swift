@@ -495,8 +495,12 @@ final class MainViewController: NSViewController {
         tabBarViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
         navigationBarViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
         browserTabViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
-        findInPageViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
-        fireViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
+        if isLazyVar(named: "findInPageViewController", initializedIn: self) {
+            findInPageViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
+        }
+        if isLazyVar(named: "fireViewController", initializedIn: self) {
+            fireViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
+        }
         bookmarksBarViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
         aiChatOmnibarContainerViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
         aiChatOmnibarTextContainerViewController.ensureObjectDeallocated(after: 1.0, do: .interrupt)
