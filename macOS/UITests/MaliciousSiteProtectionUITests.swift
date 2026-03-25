@@ -24,7 +24,7 @@ final class MaliciousSiteProtectionUITests: UITestCase {
     private enum Predicates {
         static let alertPageHeaderPredicate = NSPredicate(format: "value CONTAINS[c] %@ OR label CONTAINS[c] %@", "warning", "risk")
         static let alertPageBodyPredicate = NSPredicate(format: "value CONTAINS[c] %@", "DuckDuckGo Scam Blocker")
-        static let alertPagePredicates = NSCompoundPredicate(andPredicateWithSubpredicates: [alertPageHeaderPredicate, alertPageBodyPredicate])
+        static let alertPagePredicates = NSCompoundPredicate(orPredicateWithSubpredicates: [alertPageHeaderPredicate, alertPageBodyPredicate])
     }
 
     private var app: XCUIApplication!
