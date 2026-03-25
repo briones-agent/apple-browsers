@@ -1435,6 +1435,483 @@
     <!-- ── Common Components ── -->
     <section id="common-components">
       <h2>Common Components</h2>
+
+      <!-- ── Reusable Workflows subsection ── -->
+      <div style="margin-bottom:2.5rem;">
+        <div class="section-header">
+          <h3 style="font-size:1.15rem;font-weight:700;color:#0f172a;">Reusable Workflows</h3>
+          <button class="toggle-all" onclick="toggleAllPanels('common-components', true)">Expand All</button>
+        </div>
+        <p style="color:#475569;margin-bottom:1.25rem;">Shared <code>workflow_call</code> workflows invoked by the orchestrating flows above. Each can also be triggered directly via <code>workflow_dispatch</code> where noted.</p>
+
+        <!-- 1. macos_release.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>macos_release.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Release Dispatcher</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Fans out to DMG and App Store builds running in parallel. Called by Code Freeze, Internal Release Bump, and Hotfix as the <code>prepare_release</code> job.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>Yes (dispatch &amp; call)</td><td>—</td><td>Asana release task URL</td></tr>
+              <tr><td><code>skip-appstore</code></td><td>boolean</td><td>No</td><td><code>false</code></td><td>Skip App Store release and only make a DMG build</td></tr>
+              <tr><td><code>destination</code></td><td>string</td><td>No</td><td><code>testflight</code></td><td>Upload destination (TestFlight or App Store)</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No (call only)</td><td>—</td><td>Branch name</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No (call only)</td><td>—</td><td>Commit SHA to build</td></tr>
+            </table>
+
+            <h4>Secrets passed through</h4>
+            <p style="font-size:0.875rem;color:#475569;">
+              <code>APPLE_API_KEY_BASE64</code>, <code>APPLE_API_KEY_ID</code>, <code>APPLE_API_KEY_ISSUER</code>,
+              <code>ASANA_ACCESS_TOKEN</code>, <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_ACCESS_KEY_ID_RELEASE_S3</code>,
+              <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SECRET_ACCESS_KEY_RELEASE_S3</code>,
+              <code>MATCH_PASSWORD</code>, <code>MM_WEBHOOK_URL</code>,
+              <code>SSH_PRIVATE_KEY_FASTLANE_MATCH</code>, <code>SSH_PRIVATE_KEY_DUCKSANS_FONT</code>
+            </p>
+
+            <h4>Jobs</h4>
+            <table class="info-table">
+              <tr><th>Job</th><th>Calls</th><th>Condition</th><th>Key inputs</th></tr>
+              <tr>
+                <td><code>dmg-release</code></td>
+                <td><code>macos_build_notarized.yml</code></td>
+                <td>Always</td>
+                <td><code>release-type: release</code>, <code>create-dmg: true</code></td>
+              </tr>
+              <tr>
+                <td><code>appstore-release</code></td>
+                <td><code>macos_build_appstore.yml</code></td>
+                <td><code>inputs.skip-appstore != 'true'</code></td>
+                <td><code>destination</code> from input (default: <code>testflight</code>)</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. macos_build_notarized.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>macos_build_notarized.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Notarized DMG Build</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Archives the app, notarizes it, and optionally creates and uploads a DMG to S3.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>release-type</code></td><td>choice: <code>review</code> / <code>release</code> / <code>alpha</code></td><td>No</td><td><code>review</code> (dispatch), <code>release</code> (call)</td><td>Build type</td></tr>
+              <tr><td><code>create-dmg</code></td><td>boolean</td><td>No</td><td><code>false</code> (dispatch), <code>true</code> (call)</td><td>Whether to produce a DMG image</td></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>No</td><td>—</td><td>Asana release task URL</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No</td><td>—</td><td>Branch to check out</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No</td><td>—</td><td>Exact commit to build</td></tr>
+              <tr><td><code>build-number-override</code></td><td>string</td><td>No</td><td>—</td><td>Override build number (used for Alpha builds)</td></tr>
+              <tr><td><code>skip-notify</code></td><td>boolean</td><td>No</td><td><code>false</code></td><td>Skip Mattermost notification</td></tr>
+            </table>
+
+            <h4>Job: <code>export-notarized-app</code></h4>
+            <table class="info-table">
+              <tr><td><strong>Runner</strong></td><td><code>macos-26-xlarge</code></td></tr>
+            </table>
+            <ol>
+              <li>Register SSH keys (<code>SSH_PRIVATE_KEY_FASTLANE_MATCH</code>, <code>SSH_PRIVATE_KEY_DUCKSANS_FONT</code>) for private repos</li>
+              <li>Check out code with submodules at the specified commit or branch</li>
+              <li>Sync code signing assets — lane is determined by <code>release-type</code>:
+                <ul style="margin:0.25rem 0 0.25rem 1.5rem;">
+                  <li><code>release</code> → <span class="fastlane-badge">sync_signing_dmg_release</span></li>
+                  <li><code>review</code> → <span class="fastlane-badge">sync_signing_dmg_review</span></li>
+                  <li><code>alpha</code> → <span class="fastlane-badge">sync_signing_dmg_alpha</span></li>
+                </ul>
+                Retry logic: first attempt uses <code>continue-on-error: true</code>; if it fails the step is retried once.
+              </li>
+              <li>Select Xcode version</li>
+              <li>For <code>alpha</code>: override version to <code>9999.9.9</code> and optionally override the build number; add commit SHA to the Info.plist</li>
+              <li>Archive and notarize via <code>./scripts/archive.sh &lt;release-type&gt;</code></li>
+              <li>For official releases (<code>release-type: release</code> on a release/hotfix branch): generate Sentry grouping rules and upload to S3 dSYM bucket</li>
+              <li>Upload dSYMs to S3:
+                <ul style="margin:0.25rem 0 0.25rem 1.5rem;">
+                  <li>Official or alpha → main dSYM bucket (<code>s3</code>)</li>
+                  <li>Review/test builds → test builds bucket (<code>s3testbuilds</code>)</li>
+                </ul>
+              </li>
+              <li>If official release: log to Asana task via <span class="fastlane-badge">asana_log_message</span> with template <code>debug-symbols-uploaded</code></li>
+            </ol>
+
+            <h4>Job: <code>create-dmg</code></h4>
+            <table class="info-table">
+              <tr><td><strong>Runner</strong></td><td><code>macos-26</code></td></tr>
+              <tr><td><strong>Condition</strong></td><td><code>create-dmg: true</code></td></tr>
+              <tr><td><strong>Needs</strong></td><td><code>export-notarized-app</code></td></tr>
+            </table>
+            <ol>
+              <li>Download notarized app artifact from <code>export-notarized-app</code></li>
+              <li>Extract <code>.app.tar.xz</code> bundle and rename to expected app name</li>
+              <li>Create DMG using the <code>create-dmg</code> Homebrew tool with APFS filesystem, release-type-specific volume icon, and custom background</li>
+              <li>Upload DMG artifact and upload to S3:
+                <ul style="margin:0.25rem 0 0.25rem 1.5rem;">
+                  <li>Official → release bucket; alpha → <code>alpha/</code> subfolder in release bucket</li>
+                  <li>Test builds → test builds bucket path, acl <code>public-read</code></li>
+                </ul>
+              </li>
+              <li>For official builds with Asana URL: log via <span class="fastlane-badge">asana_log_message</span> with template <code>dmg-uploaded</code></li>
+              <li>For test builds with Asana URL: post DMG URL as a comment via <span class="fastlane-badge">asana_add_comment</span></li>
+            </ol>
+
+            <h4>Job: <code>mattermost</code></h4>
+            <table class="info-table">
+              <tr><td><strong>Runner</strong></td><td><code>macos-26</code></td></tr>
+              <tr><td><strong>Condition</strong></td><td><code>always()</code> unless <code>skip-notify: true</code></td></tr>
+              <tr><td><strong>Needs</strong></td><td><code>export-notarized-app</code>, <code>create-dmg</code></td></tr>
+            </table>
+            <p>Sends a Mattermost notification via <span class="fastlane-badge">mattermost_send_message</span>. Template: <code>notarized-build-complete</code> on success, <code>notarized-build-failed</code> on failure. Skipped on cancellation.</p>
+
+            <h4>Artifacts produced</h4>
+            <ul style="margin:0.5rem 0 0.5rem 1.5rem;font-size:0.875rem;">
+              <li>Notarized app: <code>DuckDuckGo-&lt;release-type&gt;-&lt;version&gt;.app.tar.xz</code></li>
+              <li>dSYM zip: <code>DuckDuckGo-&lt;release-type&gt;-dSYM-&lt;version&gt;</code></li>
+              <li>DMG: <code>DuckDuckGo-&lt;release-type&gt;-&lt;version&gt;.dmg</code> (when <code>create-dmg: true</code>)</li>
+              <li>DMG URL text file: <code>dmg_url</code> (alpha builds only)</li>
+            </ul>
+
+            <div class="troubleshoot">
+              <h4>Signing Sync Failures</h4>
+              <p>Retry logic exists but can still fail after two attempts. Check that <code>SSH_PRIVATE_KEY_FASTLANE_MATCH</code> has access to the match certificate repository. Verify <code>MATCH_PASSWORD</code> is correct. The signing lane is determined by <code>release-type</code> — confirm the correct lane exists in the Fastfile (<code>sync_signing_dmg_release</code>, <code>sync_signing_dmg_review</code>, or <code>sync_signing_dmg_alpha</code>).</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. macos_build_appstore.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>macos_build_appstore.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">App Store Build &amp; Upload</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Builds the App Store package and uploads it to TestFlight or App Store Connect.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>destination</code></td><td>choice: <code>testflight</code> / <code>testflight_review</code> / <code>testflight_alpha</code> / <code>appstore</code></td><td>No</td><td><code>testflight</code></td><td>Upload destination</td></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>No</td><td>—</td><td>Asana release task URL</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No</td><td>—</td><td>Branch to check out</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No</td><td>—</td><td>Exact commit to build</td></tr>
+              <tr><td><code>build-number-override</code></td><td>string</td><td>No</td><td>—</td><td>Override build number (Alpha builds)</td></tr>
+              <tr><td><code>skip-notify</code></td><td>boolean</td><td>No</td><td><code>false</code></td><td>Skip Mattermost notification</td></tr>
+            </table>
+
+            <h4>Concurrency</h4>
+            <p style="font-size:0.875rem;color:#475569;">
+              Build job: <code>macos-appstore-build-&lt;destination&gt;</code> (cancel-in-progress: true)<br>
+              Upload job: <code>macos-appstore-upload-&lt;destination&gt;</code> (cancel-in-progress: true)
+            </p>
+
+            <h4>Job: <code>build</code></h4>
+            <table class="info-table">
+              <tr><td><strong>Runner</strong></td><td><code>macos-26-xlarge</code></td></tr>
+            </table>
+            <ol>
+              <li>Check out code with submodules</li>
+              <li>Assert release or hotfix branch — required for <code>appstore</code> and <code>testflight</code> destinations; review/alpha destinations skip this check</li>
+              <li>Register SSH keys for private repos</li>
+              <li>Sync code signing assets</li>
+              <li>Select Xcode version</li>
+              <li>For <code>testflight_alpha</code>: override version to <code>9999.9.9</code> and optionally override build number; add commit SHA to Info.plist</li>
+              <li>Archive via <span class="fastlane-badge">build_&lt;destination&gt;</span> lane (e.g. <span class="fastlane-badge">build_testflight</span>, <span class="fastlane-badge">build_appstore</span>)</li>
+              <li>Upload build artifacts (dSYM zip, <code>.pkg</code>) as GitHub Actions artifacts (<code>retention-days: 1</code>)</li>
+            </ol>
+
+            <h4>Job: <code>upload</code></h4>
+            <table class="info-table">
+              <tr><td><strong>Runner</strong></td><td><code>macos-26</code></td></tr>
+              <tr><td><strong>Condition</strong></td><td><code>always()</code> — cannot be cancelled while running</td></tr>
+              <tr><td><strong>Needs</strong></td><td><code>build</code></td></tr>
+            </table>
+            <ol>
+              <li>Download build artifacts from <code>build</code> job</li>
+              <li>Upload to App Store Connect via <span class="fastlane-badge">upload_&lt;destination&gt;</span> lane (e.g. <span class="fastlane-badge">upload_testflight</span>)</li>
+              <li>Upload dSYMs artifact to GitHub Actions</li>
+              <li>Upload dSYMs to S3 main dSYM bucket (official destinations only)</li>
+              <li>Log to Asana via <span class="fastlane-badge">asana_log_message</span> with template <code>debug-symbols-uploaded</code> (when Asana URL provided and upload succeeded)</li>
+              <li>Send Mattermost notification via <span class="fastlane-badge">mattermost_send_message</span>: <code>public-release-complete</code> or <code>public-release-failed</code> (skipped if <code>skip-notify: true</code>)</li>
+            </ol>
+
+            <h4>Artifacts produced</h4>
+            <ul style="margin:0.5rem 0 0.5rem 1.5rem;font-size:0.875rem;">
+              <li>dSYM zip: <code>DuckDuckGo-&lt;destination&gt;-dSYM-&lt;version&gt;</code></li>
+              <li>Build artifact: <code>appstore-artifacts</code> (dSYM zip + <code>.pkg</code>, <code>retention-days: 1</code>)</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 4. macos_tag_release.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>macos_tag_release.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Tag &amp; Merge</span>
+            <span class="fastlane-badge">tag_release</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Creates a git tag, a GitHub release with auto-generated notes, merges the release branch back to base (prerelease), or deletes the release branch (public release).</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>Yes</td><td>—</td><td>Asana release task URL</td></tr>
+              <tr><td><code>base-branch</code></td><td>string</td><td>No</td><td><code>main</code></td><td>Target branch for merge (override for testing only)</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No</td><td>—</td><td>Release branch name</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No</td><td>—</td><td>Exact commit to tag</td></tr>
+              <tr><td><code>prerelease</code></td><td>boolean</td><td>Yes</td><td>—</td><td><code>true</code> for internal releases, <code>false</code> for public</td></tr>
+              <tr><td><code>ignore-unreleased-changes</code></td><td>boolean</td><td>No</td><td><code>false</code></td><td>Ignore unreleased CHANGELOG entries when tagging a public release</td></tr>
+              <tr><td><code>internal-release-bump</code></td><td>boolean</td><td>No (call only)</td><td><code>false</code></td><td>Marks this as a subsequent internal release bump for the current week</td></tr>
+            </table>
+
+            <h4>Secrets required (call)</h4>
+            <p style="font-size:0.875rem;color:#475569;"><code>ASANA_ACCESS_TOKEN</code>, <code>GHA_ELEVATED_PERMISSIONS_TOKEN</code></p>
+
+            <h4>Job: <code>tag-release</code> (runner: <code>macos-26</code>)</h4>
+            <ol>
+              <li>Check out code with full history (<code>fetch-depth: 0</code>) and submodules</li>
+              <li>Assert release or hotfix branch — exits with error if the branch is neither <code>release/*</code> nor <code>hotfix/*</code></li>
+              <li>Validate commit SHA belongs to the branch (if <code>commit-sha</code> provided) — uses <code>git merge-base --is-ancestor</code></li>
+              <li>Run <span class="fastlane-badge">tag_release</span> with <code>platform:macos</code>, <code>is_prerelease</code>, <code>base_branch</code>, <code>ignore_untagged_commits</code>, <code>is_internal_release_bump</code></li>
+            </ol>
+
+            <h4>What <span class="fastlane-badge">tag_release</span> does</h4>
+            <ul style="margin:0.5rem 0 0.5rem 1.5rem;font-size:0.875rem;">
+              <li><strong>Prerelease (internal):</strong> creates tag <code>&lt;version&gt;-&lt;build&gt;+macos</code>, creates draft GitHub release with auto-generated notes, merges tag to base branch (<code>main</code>)</li>
+              <li><strong>Public release:</strong> unfreezes branch (deletes draft GitHub release), creates tag <code>&lt;version&gt;+macos</code>, creates non-draft GitHub release, deletes the release branch</li>
+            </ul>
+
+            <h4>Outputs</h4>
+            <table class="info-table">
+              <tr><th>Output</th><th>Description</th></tr>
+              <tr><td><code>tag</code></td><td>Created tag string — also stored as a GitHub Actions artifact named <code>tag</code></td></tr>
+              <tr><td><code>stop_workflow</code></td><td>Set to <code>true</code> when the downstream publish workflow should be skipped (e.g. no changes since last tag); stored as artifact named <code>stop_workflow</code></td></tr>
+            </table>
+
+            <h4>Asana templates used</h4>
+            <ul style="margin:0.5rem 0 0.5rem 1.5rem;font-size:0.875rem;">
+              <li><code>internal-release-complete</code> / <code>internal-release-complete-with-tasks</code></li>
+              <li><code>public-release-tagged</code></li>
+              <li><code>merge-failed</code></li>
+              <li><code>delete-branch-failed</code></li>
+              <li><code>internal-release-tag-failed</code> — action item created (only when <code>internal-release-bump: true</code>)</li>
+              <li><code>run-publish-dmg-release</code> — action item created on tag failure during internal-release-bump context</li>
+            </ul>
+
+            <div class="troubleshoot">
+              <h4>Tag Conflicts &amp; Merge Failures</h4>
+              <p><strong>Tag already exists:</strong> Delete the existing tag from the repository before re-running the workflow (<code>git push --delete origin &lt;tag&gt;</code>).</p>
+              <p><strong>Merge conflicts:</strong> Resolve conflicts locally on the release branch, push the resolved state, then manually re-trigger <code>macos_tag_release.yml</code>.</p>
+              <p><strong>Branch deletion failure:</strong> An Asana action item is created automatically using the <code>delete-branch-failed</code> template instructing the DRI to manually delete the branch.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. macos_publish_dmg_release.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>macos_publish_dmg_release.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Publish to Sparkle</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Generates a Sparkle appcast entry for the new release, uploads it and the DMG to S3, creates validation tasks in Asana, and (for public/hotfix) creates DMG variants.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span> (with <code>release-type</code> choice)
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Dispatch inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>Yes</td><td>Asana release task URL</td></tr>
+              <tr><td><code>base-branch</code></td><td>string</td><td>No</td><td>Base branch (default: <code>main</code>)</td></tr>
+              <tr><td><code>tag</code></td><td>string</td><td>Yes</td><td>Tag to publish (format: <code>x.y.z-b+macos</code> or <code>x.y.z+macos</code>)</td></tr>
+              <tr><td><code>release-type</code></td><td>choice: <code>internal</code> / <code>public</code> / <code>hotfix</code></td><td>Yes</td><td>Determines which Sparkle channel and appcast flag to use</td></tr>
+              <tr><td><code>ignore-unreleased-changes</code></td><td>boolean</td><td>No</td><td>Ignore unreleased changes during public release tagging</td></tr>
+            </table>
+
+            <h4>Call inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>Yes</td><td>Asana release task URL</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No</td><td>Branch name (used when checking out and for optional tag lookup)</td></tr>
+            </table>
+
+            <h4>Jobs</h4>
+
+            <p style="margin-top:0.75rem;font-weight:600;">1. <code>tag-public-release</code></p>
+            <table class="info-table">
+              <tr><td><strong>Calls</strong></td><td><code>macos_tag_release.yml</code></td></tr>
+              <tr><td><strong>Condition</strong></td><td>Dispatch only; <code>release-type</code> is not empty and is not <code>internal</code></td></tr>
+            </table>
+            <p style="font-size:0.875rem;color:#475569;">Runs <code>macos_tag_release.yml</code> with <code>prerelease: false</code> — creates the public tag and cleans up the release branch.</p>
+
+            <p style="margin-top:0.75rem;font-weight:600;">2. <code>stop-workflow-if-needed</code></p>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.5rem;">Downloads the <code>stop_workflow</code> artifact from <code>tag-public-release</code>. If found, outputs <code>stop_workflow: true</code> to prevent downstream jobs from running.</p>
+
+            <p style="margin-top:0.75rem;font-weight:600;">3. <code>publish-to-sparkle</code> (runner: <code>macos-26-xlarge</code>, timeout: 10 min)</p>
+            <ol>
+              <li>Check out <code>main</code> branch (release branch may have been deleted after public tagging)</li>
+              <li>Download <code>tag</code> artifact (when <code>tag</code> input is empty — workflow_call path); or use the <code>tag</code> dispatch input directly</li>
+              <li>Verify tag format regex: <code>^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(\+[a-zA-Z0-9._-]+)?$</code></li>
+              <li>Optionally check out the release branch if it still exists on the remote</li>
+              <li>Extract Asana task ID via <span class="fastlane-badge">asana_extract_task_id</span></li>
+              <li>Fetch and validate release notes from Asana task API — errors if empty or still contains the placeholder <code>&lt;-- Add release notes here --&gt;</code></li>
+              <li>Set up Sparkle tools (downloads from the Sparkle GitHub release at version from <code>vars.SPARKLE_VERSION</code>)</li>
+              <li>Fetch DMG from S3 CDN (skipped for <code>public</code> release type — already on S3)</li>
+              <li>Run <code>appcastManager.swift</code> with the appropriate flag:
+                <ul style="margin:0.25rem 0 0.25rem 1.5rem;">
+                  <li><code>internal</code> → <code>--release-to-internal-channel</code></li>
+                  <li><code>public</code> → <code>--release-to-public-channel</code></li>
+                  <li><code>hotfix</code> → <code>--release-hotfix-to-public-channel</code></li>
+                </ul>
+              </li>
+              <li>Back up existing <code>appcast2.xml</code> from S3 CDN, then upload updated appcast and files via <code>upload_to_s3.sh</code></li>
+              <li>Upload appcast patch artifact (<code>appcast2-&lt;version&gt;.patch</code>)</li>
+              <li>For public/hotfix only:
+                <ul style="margin:0.25rem 0 0.25rem 1.5rem;">
+                  <li>Send release annotation pixel via <code>send-release-annotation-pixel</code> action</li>
+                  <li>Create Asana release notification task in the Deployments project</li>
+                  <li>Run <span class="fastlane-badge">update_asana_for_release</span> with <code>release_type: public</code> to update App Board task to Done section</li>
+                </ul>
+              </li>
+              <li>Create Asana validation task via <span class="fastlane-badge">asana_create_action_item</span>:
+                <ul style="margin:0.25rem 0 0.25rem 1.5rem;">
+                  <li>Success: <code>validate-check-for-updates-internal</code> or <code>validate-check-for-updates-public</code></li>
+                  <li>Failure: <code>appcast-failed-internal</code>, <code>appcast-failed-public</code>, or <code>appcast-failed-hotfix</code></li>
+                </ul>
+              </li>
+              <li>Upload appcast patch, old appcast XML, and release notes to the Asana validation task as attachments</li>
+              <li>Add completion comment to release task via <span class="fastlane-badge">asana_add_comment</span></li>
+            </ol>
+
+            <p style="margin-top:0.75rem;font-weight:600;">4. <code>create-variants</code></p>
+            <table class="info-table">
+              <tr><td><strong>Calls</strong></td><td><code>macos_create_variants.yml</code></td></tr>
+              <tr><td><strong>Condition</strong></td><td>Dispatch only; <code>release-type</code> is not empty and is not <code>internal</code></td></tr>
+              <tr><td><strong>Needs</strong></td><td><code>publish-to-sparkle</code></td></tr>
+            </table>
+
+            <div class="troubleshoot">
+              <h4>Appcast &amp; S3 Failures</h4>
+              <p>On failure, an Asana action item is created automatically using templates <code>appcast-failed-internal</code>, <code>appcast-failed-public</code>, or <code>appcast-failed-hotfix</code> — instructing the DRI to re-run the publish step manually.</p>
+              <p><strong>Recovery checklist:</strong> Verify S3 credentials (<code>AWS_ACCESS_KEY_ID_RELEASE_S3</code>, <code>AWS_SECRET_ACCESS_KEY_RELEASE_S3</code>). Confirm the DMG exists at the expected S3/CDN path. Validate the appcast XML is well-formed. Check that the Sparkle private key secret is set. Then manually trigger <code>macos_publish_dmg_release.yml</code> with <code>asana-task-url</code>, <code>tag</code>, and <code>release-type</code> inputs.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. macos_create_variants.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>macos_create_variants.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">DMG Variants</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Creates DMG variants with different ATB and Origin parameters for distribution channels (e.g. partner installs). Only called for public and hotfix releases.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span> (no inputs; secrets inherited)
+            </p>
+
+            <h4>Jobs</h4>
+            <table class="info-table">
+              <tr><th>Job</th><th>Runner</th><th>Purpose</th></tr>
+              <tr><td><code>set-up-variants</code></td><td><code>macos-26</code></td><td>Fetches variant config from two Asana sources (<code>DMG_VARIANTS_LIST_TASK_ID</code> for ATB variants, <code>DMG_VARIANTS_ORIGIN_SECTION_ID</code> for origin variants) via <code>asana-get-build-variants-list</code> action; outputs two JSON matrices (<code>build-variants-1</code>, <code>build-variants-2</code>)</td></tr>
+              <tr><td><code>download-dmg-and-upload-artifact</code></td><td><code>macos-26</code></td><td>Downloads the release DMG from <code>vars.RELEASE_DMG_URL</code> and re-uploads as artifact <code>duckduckgo-dmg</code></td></tr>
+              <tr><td><code>create-variants-1</code></td><td>via <code>macos_create_variant.yml</code></td><td>Matrix strategy over <code>build-variants-1</code> — creates variants with <code>atb-variant</code> and <code>origin-variant</code> parameters</td></tr>
+              <tr><td><code>create-variants-2</code></td><td>via <code>macos_create_variant.yml</code></td><td>Matrix strategy over <code>build-variants-2</code> — runs in parallel with <code>create-variants-1</code>; <code>fail-fast: false</code></td></tr>
+              <tr><td><code>mattermost</code></td><td><code>macos-26</code></td><td>Sends <code>variants-release-published</code> or <code>variants-release-failed</code> notification after both matrix jobs complete</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- 7. report_failed_release_workflow.yml -->
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>report_failed_release_workflow.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Failure Reporter</span>
+            <span class="fastlane-badge">asana_report_failed_workflow</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Reports release workflow failures to Asana. Called by orchestrating workflows in their <code>report_failure</code> jobs via <code>if: always()</code>.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge">workflow_call</span> only — not directly dispatchable
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td><code>asana-task-id</code></td><td>string</td><td>Yes</td><td>Asana release task GID (not the URL)</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>Yes</td><td>Branch name — used for checkout and context</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No</td><td>Commit SHA for identifying the build that failed</td></tr>
+              <tr><td><code>platform</code></td><td>string</td><td>Yes</td><td><code>ios</code> or <code>macos</code> — determines working directory</td></tr>
+              <tr><td><code>workflow-name</code></td><td>string</td><td>Yes</td><td>Human-readable workflow name (e.g. <code>"code freeze"</code>) used in the failure comment</td></tr>
+            </table>
+
+            <h4>Secrets required</h4>
+            <p style="font-size:0.875rem;color:#475569;"><code>ASANA_ACCESS_TOKEN</code></p>
+
+            <h4>Job: <code>report_failure</code> (runner: <code>macos-26</code>)</h4>
+            <ol>
+              <li>Determine working directory from <code>platform</code> input (<code>iOS</code> or <code>macOS</code>)</li>
+              <li>Check out code at the specified branch</li>
+              <li>Set up Ruby and Bundler dependencies</li>
+              <li>Run <span class="fastlane-badge">asana_report_failed_workflow</span> with platform, branch, commit SHA, github handle, task ID, workflow name, and workflow URL (including run attempt number)</li>
+            </ol>
+
+            <h4>What <span class="fastlane-badge">asana_report_failed_workflow</span> does</h4>
+            <ul style="margin:0.5rem 0 0.5rem 1.5rem;font-size:0.875rem;">
+              <li>Determines the assignee from the Asana task, the commit author, or the workflow actor (in that priority order)</li>
+              <li>Adds relevant users as followers on the release task</li>
+              <li>Posts a template-based failure comment using the <code>workflow-failed</code> template, including the workflow URL and context</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+      <!-- Task 7 will add more subsections here (Fastlane plugin actions, Freeze mechanism, Sparkle pipeline) -->
     </section>
 
     <!-- ── Quick Reference ── -->
