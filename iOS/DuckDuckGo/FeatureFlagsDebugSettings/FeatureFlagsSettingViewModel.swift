@@ -39,12 +39,16 @@ class FeatureFlagsSettingViewModel: ObservableObject {
     }
 
     init() {
+        self.isInternalUser = featureFlagger.internalUserDecider.isInternalUser
         self.featureFlags = FeatureFlag.allCases.filter { $0.supportsLocalOverriding && $0.cohortType == nil }.sorted(by: { $0.rawValue < $1.rawValue })
         self.experiments = FeatureFlag.allCases.filter { $0.supportsLocalOverriding && $0.cohortType != nil }.sorted(by: { $0.rawValue < $1.rawValue })
     }
 
-    var isInternalUser: Bool {
-        return featureFlagger.internalUserDecider.isInternalUser
+    @Published var isInternalUser: Bool {
+        didSet {
+            (featureFlagger.internalUserDecider as? DefaultInternalUserDecider)?
+                .debugSetInternalUserState(isInternalUser)
+        }
     }
 
     func isFeatureEnabled(_ flag: FeatureFlag) -> Bool {
