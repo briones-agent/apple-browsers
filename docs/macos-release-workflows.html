@@ -533,7 +533,333 @@
 
     <!-- ── Code Freeze ── -->
     <section id="code-freeze">
-      <h2>Code Freeze</h2>
+      <div class="section-header">
+        <h2>Code Freeze</h2>
+        <button class="toggle-all" onclick="toggleAllPanels('code-freeze', true)">Expand All</button>
+      </div>
+      <p style="color:#475569;margin-bottom:1rem;">Weekly scheduled release — creates a release branch, runs tests, builds DMG and App Store packages, tags the release, and publishes to Sparkle.</p>
+
+      <p style="margin-bottom:0.5rem;">
+        <span class="trigger-badge trigger-badge--auto">Scheduled — cron <code>0 0 * * 1</code> (Monday 00:00 UTC)</span>
+        <span class="trigger-badge trigger-badge--manual">Manual — workflow_dispatch</span>
+      </p>
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:0.25rem;"><strong>File:</strong> <code>macos_code_freeze.yml</code></p>
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:0.25rem;"><strong>Gate:</strong> Scheduled runs only proceed when <code>MACOS_AUTOMATIC_CODE_FREEZE == '1'</code>; manual dispatch always runs.</p>
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:0.25rem;"><strong>Dispatch inputs:</strong> <code>version</code> (optional string — new release version, calculated automatically if omitted)</p>
+      <p style="font-size:0.875rem;color:#475569;margin-bottom:1.5rem;"><strong>Concurrency:</strong> <code>macos-release</code> (cancel-in-progress: false)</p>
+
+      <!-- Flowchart -->
+      <div class="flow-chart">
+        <div class="flow-step flow-step--asana">check_automatic_freeze</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step flow-step--asana">
+          create_release_branch
+          <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-parallel">
+          <div class="flow-step flow-step--test">
+            run_tests
+            <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+          </div>
+          <div class="flow-step flow-step--test">
+            ui_tests
+            <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+          </div>
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step flow-step--build">increment_build_number</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step flow-step--build">
+          prepare_release
+          <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-parallel">
+          <div class="flow-step flow-step--build">DMG Build</div>
+          <div class="flow-step flow-step--build">App Store Build</div>
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step flow-step--publish">
+          tag_and_merge
+          <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step flow-step--publish">
+          publish_release
+          <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step flow-step--conditional flow-step--asana" style="border-left-style:dashed;">
+          report_failure
+          <span style="font-size:0.75em;color:#64748b;margin-left:0.3em;">(if any prior job failed)</span>
+          <a href="#" onclick="scrollToSection('common-components');return false;" style="font-size:0.75em;margin-left:0.4em;text-decoration:none;" title="See Common Components">↗</a>
+        </div>
+      </div>
+
+      <!-- Job Detail Panels -->
+
+      <!-- check_automatic_freeze -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>check_automatic_freeze</strong>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Runner</strong></td><td><code>ubuntu-latest</code></td></tr>
+            <tr><td><strong>Condition</strong></td><td><code>workflow_dispatch</code> OR <code>MACOS_AUTOMATIC_CODE_FREEZE == '1'</code></td></tr>
+          </table>
+          <h4>Purpose</h4>
+          <p>Gate step that prevents the rest of the workflow from running on scheduled triggers when automatic code freeze is disabled. For manual <code>workflow_dispatch</code> triggers, this step always passes. No fastlane actions are invoked.</p>
+          <h4>Steps</h4>
+          <ol>
+            <li>Prints a confirmation message: <em>"Automatic code freeze is enabled or workflow was triggered manually"</em></li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- create_release_branch -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>create_release_branch</strong>
+          <span class="fastlane-badge">start_new_release</span>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Runner</strong></td><td><code>macos-26-xlarge</code></td></tr>
+            <tr><td><strong>Timeout</strong></td><td>10 minutes</td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>check_automatic_freeze</code></td></tr>
+          </table>
+          <h4>Steps</h4>
+          <ol>
+            <li>Checks out repo with full history (<code>fetch-depth: 0</code>) and all submodules</li>
+            <li>Asserts that the workflow is running on the <code>main</code> branch</li>
+            <li>Sets up Ruby and Bundler dependencies</li>
+            <li>Runs <span class="fastlane-badge">start_new_release</span> with <code>platform:macos</code>, optional <code>version</code> input, <code>github_handle</code>, and <code>target_section_id</code></li>
+          </ol>
+          <h4>What <code>start_new_release</code> does</h4>
+          <ol>
+            <li>Determines the new version: bumps the minor version number, or uses the provided <code>version</code> input</li>
+            <li>Creates <code>release/macos/&lt;version&gt;</code> branch from <code>main</code> and pushes it</li>
+            <li>Updates embedded files (e.g. privacy config) on the branch</li>
+            <li>Updates <code>Configuration/Version.xcconfig</code> with the new version</li>
+            <li>Calls <code>find_release_dri</code> to determine the Asana user to assign the task to</li>
+            <li>Creates a new Asana release task from template (ID: <code>1206127427850447</code>), assigned to the release DRI</li>
+            <li>Updates the Asana release task with the commit log since the last public release (tasks included in this release)</li>
+          </ol>
+          <h4>Outputs</h4>
+          <table class="info-table">
+            <tr><th>Output</th><th>Description</th></tr>
+            <tr><td><code>release_branch_name</code></td><td>Name of the newly created branch, e.g. <code>release/macos/1.2.3</code></td></tr>
+            <tr><td><code>asana_task_id</code></td><td>Asana task ID of the newly created release task</td></tr>
+            <tr><td><code>asana_task_url</code></td><td>Full URL of the Asana release task</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="troubleshoot">
+        <h4>⚠️ Branch Creation Failures</h4>
+        <p><strong>What can go wrong:</strong> The release branch already exists (from a previous failed run), or there is a version conflict.</p>
+        <p><strong>Recovery:</strong> Check whether <code>release/macos/&lt;version&gt;</code> exists in GitHub. If it is stale, delete it. Then re-run the workflow.</p>
+      </div>
+
+      <!-- run_tests -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>run_tests</strong>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Calls</strong></td><td><code>macos_pr_checks.yml</code> — <a href="#" onclick="scrollToSection('common-components');return false;">see Common Components ↗</a></td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code></td></tr>
+            <tr><td><strong>Branch</strong></td><td>From <code>create_release_branch.outputs.release_branch_name</code></td></tr>
+          </table>
+          <h4>Purpose</h4>
+          <p>Runs unit tests and static analysis checks on the release branch, including ShellCheck and BATS shell script tests. Both <code>run_tests</code> and <code>ui_tests</code> run in parallel after the release branch is created.</p>
+        </div>
+      </div>
+
+      <!-- ui_tests -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>ui_tests</strong>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Calls</strong></td><td><code>macos_ui_tests.yml</code></td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code></td></tr>
+            <tr><td><strong>Branch</strong></td><td>From <code>create_release_branch.outputs.release_branch_name</code></td></tr>
+          </table>
+          <h4>Purpose</h4>
+          <p>Runs UI automation tests on the release branch. Runs in parallel with <code>run_tests</code>. Uses a matrix strategy to run tests across macOS versions.</p>
+        </div>
+      </div>
+
+      <!-- increment_build_number -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>increment_build_number</strong>
+          <span class="fastlane-badge">bump_build_number</span>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Runner</strong></td><td><code>macos-26-xlarge</code></td></tr>
+            <tr><td><strong>Timeout</strong></td><td>10 minutes</td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code>, <code>run_tests</code></td></tr>
+          </table>
+          <h4>Steps</h4>
+          <ol>
+            <li>Checks out the release branch (by name from <code>create_release_branch</code> outputs)</li>
+            <li>Sets up Ruby and Bundler dependencies</li>
+            <li>Runs <span class="fastlane-badge">bump_build_number</span> with <code>platform:macos</code></li>
+          </ol>
+          <h4>What <code>bump_build_number</code> does</h4>
+          <ol>
+            <li>Fetches the latest build number from TestFlight via the App Store Connect API</li>
+            <li>Fetches the latest build number from the Sparkle appcast XML</li>
+            <li>Picks the highest of the two, then increments it by 1</li>
+            <li>Updates <code>Configuration/BuildNumber.xcconfig</code> (<code>CURRENT_PROJECT_VERSION</code>) with the new value</li>
+            <li>Pushes the commit to the release branch on the remote</li>
+          </ol>
+          <h4>Outputs</h4>
+          <table class="info-table">
+            <tr><th>Output</th><th>Description</th></tr>
+            <tr><td><code>commit_sha</code></td><td>SHA of the commit that bumped the build number — used by downstream jobs to check out the exact build</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- prepare_release -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>prepare_release</strong>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Calls</strong></td><td><code>macos_release.yml</code> — <a href="#" onclick="scrollToSection('common-components');return false;">see Common Components ↗</a></td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code>, <code>increment_build_number</code></td></tr>
+            <tr><td><strong>Inputs</strong></td><td><code>asana-task-url</code> (from <code>create_release_branch</code>), <code>branch</code>, <code>commit-sha</code> (from <code>increment_build_number</code>)</td></tr>
+          </table>
+          <h4>Purpose</h4>
+          <p>Orchestrates the full build phase by calling the reusable <code>macos_release.yml</code> workflow, which fans out to two parallel builds:</p>
+          <ul style="margin:0.5rem 0 0.5rem 1.5rem;">
+            <li><strong>DMG Build</strong> — calls <code>macos_build_notarized.yml</code> with <code>release-type: release</code> and <code>create-dmg: true</code>. Archives, notarizes, and uploads the DMG to S3.</li>
+            <li><strong>App Store Build</strong> — calls <code>macos_build_appstore.yml</code> with <code>destination: testflight</code>. Builds and submits to TestFlight.</li>
+          </ul>
+          <h4>Asana Actions</h4>
+          <p><span class="fastlane-badge">asana_log_message</span> — logs build status (debug symbols uploaded, DMG uploaded) to the Asana release task with template <code>debug-symbols-uploaded</code> and <code>dmg-uploaded</code>.</p>
+        </div>
+      </div>
+
+      <div class="troubleshoot">
+        <h4>⚠️ Signing &amp; Build Failures</h4>
+        <p><strong>What can go wrong:</strong> Code signing sync failure (the workflow has retry logic but can still fail), archive or notarization timeout.</p>
+        <p><strong>Auto:</strong> <span class="fastlane-badge">asana_log_message</span> logs build status to the Asana release task regardless of outcome.</p>
+        <p><strong>Recovery:</strong> Check match repo SSH access. Verify that the <code>MATCH_PASSWORD</code> and <code>SSH_PRIVATE_KEY_FASTLANE_MATCH</code> secrets are current. Re-run the failed jobs in GitHub Actions.</p>
+      </div>
+
+      <!-- tag_and_merge -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>tag_and_merge</strong>
+          <span class="fastlane-badge">tag_release</span>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Calls</strong></td><td><code>macos_tag_release.yml</code> — <a href="#" onclick="scrollToSection('common-components');return false;">see Common Components ↗</a></td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code>, <code>increment_build_number</code>, <code>prepare_release</code></td></tr>
+            <tr><td><strong>Inputs</strong></td><td><code>asana-task-url</code>, <code>branch</code>, <code>commit-sha</code>, <code>base-branch</code> (default: <code>main</code>), <code>prerelease: true</code></td></tr>
+          </table>
+          <h4>Steps</h4>
+          <ol>
+            <li>Validates that the workflow is running on a release branch</li>
+            <li>Validates the commit SHA belongs to the release branch</li>
+            <li>Runs <span class="fastlane-badge">tag_release</span> with <code>platform:macos</code>, <code>is_prerelease:true</code>, and <code>is_scheduled_release</code></li>
+          </ol>
+          <h4>What <code>tag_release</code> does</h4>
+          <ol>
+            <li>Creates a prerelease tag in format <code>&lt;version&gt;-&lt;build&gt;+macos</code> (e.g. <code>1.2.3-456+macos</code>)</li>
+            <li>Creates a GitHub Release with the tag and auto-generated release notes</li>
+            <li>Merges the release branch back into <code>main</code></li>
+            <li>Stores the tag name as an artifact for downstream use</li>
+          </ol>
+          <h4>Outputs</h4>
+          <table class="info-table">
+            <tr><th>Output</th><th>Description</th></tr>
+            <tr><td><code>tag</code></td><td>The created tag string (also stored as a GitHub Actions artifact)</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="troubleshoot">
+        <h4>⚠️ Tag &amp; Merge Failures</h4>
+        <p><strong>What can go wrong:</strong> Merge conflicts between the release branch and <code>main</code>, or the tag already exists from a previous run.</p>
+        <p><strong>Auto:</strong> <span class="fastlane-badge">asana_create_action_item</span> with template <code>internal-release-tag-failed</code> — creates a subtask assigned to the release DRI with manual merge instructions. (Only fires on internal-release-bump context; not on code freeze.)</p>
+        <p><strong>Recovery:</strong> Resolve conflicts locally on the release branch and push. Then manually trigger <code>macos_tag_release.yml</code> with the release branch name and the Asana task URL as inputs.</p>
+      </div>
+
+      <!-- publish_release -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>publish_release</strong>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Calls</strong></td><td><code>macos_publish_dmg_release.yml</code> — <a href="#" onclick="scrollToSection('common-components');return false;">see Common Components ↗</a></td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code>, <code>tag_and_merge</code></td></tr>
+            <tr><td><strong>Inputs</strong></td><td><code>asana-task-url</code>, <code>branch</code></td></tr>
+          </table>
+          <h4>Steps</h4>
+          <ol>
+            <li>Downloads the tag artifact created by <code>tag_and_merge</code></li>
+            <li>Fetches and validates release notes from the Asana task</li>
+            <li>Sets up Sparkle tools</li>
+            <li>Fetches the DMG from S3</li>
+            <li>Generates the Sparkle appcast entry using <code>--release-to-internal-channel</code> flag (internal channel only)</li>
+            <li>Uploads updated appcast and DMG to S3 via <code>upload_to_s3.sh</code></li>
+            <li>Creates an Asana validation task via <span class="fastlane-badge">asana_create_action_item</span> with template <code>validate-check-for-updates-internal</code></li>
+            <li>Logs release status to the Asana task via <span class="fastlane-badge">asana_log_message</span></li>
+            <li>Adds a completion comment to the release task via <span class="fastlane-badge">asana_add_comment</span></li>
+          </ol>
+          <h4>Asana Actions</h4>
+          <p>On success: creates a subtask with template <code>validate-check-for-updates-internal</code> (prompts DRI to verify the internal update channel). Uploads the appcast diff patch and old appcast XML as task attachments.</p>
+        </div>
+      </div>
+
+      <div class="troubleshoot">
+        <h4>⚠️ Publish &amp; Appcast Failures</h4>
+        <p><strong>What can go wrong:</strong> Appcast generation failure (malformed XML, missing DMG), S3 upload failure, or Asana update failure.</p>
+        <p><strong>Auto:</strong> <span class="fastlane-badge">asana_create_action_item</span> with template <code>appcast-failed-internal</code> — notifies the DRI that the appcast step failed and includes recovery instructions.</p>
+        <p><strong>Recovery:</strong> Verify S3 credentials (<code>AWS_ACCESS_KEY_ID_RELEASE_S3</code>, <code>AWS_SECRET_ACCESS_KEY_RELEASE_S3</code>). Check appcast XML format. Manually trigger <code>macos_publish_dmg_release.yml</code> with inputs: <code>asana-task-url</code>, <code>tag</code> (from the <code>tag_and_merge</code> step), <code>release-type: internal</code>.</p>
+      </div>
+
+      <!-- report_failure -->
+      <div class="panel">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <span class="chevron">▶</span>
+          <strong>report_failure</strong>
+          <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">conditional — runs if any prior job failed</span>
+        </div>
+        <div class="panel-body">
+          <table class="info-table">
+            <tr><td><strong>Calls</strong></td><td><code>report_failed_release_workflow.yml</code> — <a href="#" onclick="scrollToSection('common-components');return false;">see Common Components ↗</a></td></tr>
+            <tr><td><strong>Condition</strong></td><td><code>if: always()</code> AND any of <code>run_tests</code>, <code>increment_build_number</code>, <code>prepare_release</code>, <code>tag_and_merge</code>, or <code>publish_release</code> resulted in <code>failure</code></td></tr>
+            <tr><td><strong>Needs</strong></td><td><code>create_release_branch</code>, <code>run_tests</code>, <code>increment_build_number</code>, <code>prepare_release</code>, <code>tag_and_merge</code>, <code>publish_release</code></td></tr>
+            <tr><td><strong>Inputs</strong></td><td><code>platform: macos</code>, <code>workflow-name: "code freeze"</code>, <code>asana-task-id</code>, <code>branch</code>, <code>commit-sha</code></td></tr>
+          </table>
+          <h4>Purpose</h4>
+          <p>Always-running cleanup job that reports workflow failures back to Asana. Uses <span class="fastlane-badge">asana_report_failed_workflow</span> to add a failure comment to the release task and notify relevant users.</p>
+        </div>
+      </div>
+
     </section>
 
     <!-- ── Internal Release Bump ── -->
