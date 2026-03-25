@@ -88,6 +88,10 @@ extension Pixel {
         case tabSwitcherSwipeCloseTab
         case tabSwitchLongPressNewTab
         case tabSwitcherOpenedDaily
+        case tabManagerSwitchToAITab
+        case tabManagerSwitchToWebTab
+        case tabManagerCloseAITab
+        case tabManagerCloseWebTab
 
         // MARK: KeyValueFiles Store
         case keyValueFileStoreSupportDirAccessError
@@ -859,6 +863,8 @@ extension Pixel {
         case debugWebsiteDataStoresNotClearedMultiple
         case debugWebsiteDataStoresNotClearedOne
         case debugWebsiteDataStoresCleared
+        case fireRemoveAllContainersAfterDelaySuccess
+        case fireRemoveAllContainersAfterDelayFailure
 
         case debugBookmarksMigratedMoreThanOnce
 
@@ -1433,6 +1439,9 @@ extension Pixel {
         case openAIChatFromIconShortcut
         case openAIChatFromTabManager
 
+        case voiceEntryPointTapped
+        case voiceSessionStarted
+
         case aiChatSettingsVoiceTurnedOff
         case aiChatSettingsVoiceTurnedOn
         case aiChatSettingsAddressBarTurnedOff
@@ -1749,6 +1758,10 @@ extension Pixel.Event {
         case .tabSwitcherSwipeCloseTab: return "m_tab_manager_close_tab_swipe"
         case .tabSwitchLongPressNewTab: return "m_tab_manager_long_press_new_tab"
         case .tabSwitcherOpenedDaily: return "m_tab_manager_opened_daily"
+        case .tabManagerSwitchToAITab: return "m_tab_manager_switch_to_ai_tab"
+        case .tabManagerSwitchToWebTab: return "m_tab_manager_switch_to_web_tab"
+        case .tabManagerCloseAITab: return "m_tab_manager_close_ai_tab"
+        case .tabManagerCloseWebTab: return "m_tab_manager_close_web_tab"
 
         case .settingsDoNotSellShown: return "ms_dns"
         case .settingsDoNotSellOn: return "ms_dns_on"
@@ -2447,6 +2460,8 @@ extension Pixel.Event {
         case .debugWebsiteDataStoresNotClearedMultiple: return "m_d_wkwebsitedatastoresnotcleared_multiple"
         case .debugWebsiteDataStoresNotClearedOne: return "m_d_wkwebsitedatastoresnotcleared_one"
         case .debugWebsiteDataStoresCleared: return "m_d_wkwebsitedatastorescleared"
+        case .fireRemoveAllContainersAfterDelaySuccess: return "m_fire_clear_website_data_remove_all_containers_after_delay_success"
+        case .fireRemoveAllContainersAfterDelayFailure: return "m_fire_clear_website_data_remove_all_containers_after_delay_failure"
 
         case .debugFailedToCreateAppConfigurationUserDefaultsInAIChatSettingsMigration: return "m_debug_failed-to-create-app-configuration-during-aichat-settings-migration"
 
@@ -2995,6 +3010,8 @@ extension Pixel.Event {
         case .browsingMenuAIChatWebPage: return "m_aichat_menu_webpage"
         case .openAIChatFromIconShortcut: return "m_aichat-icon-shortcut"
         case .openAIChatFromTabManager: return "m_aichat_tabmanager_icon"
+        case .voiceEntryPointTapped: return "m_aichat_voice_entry_point_tapped"
+        case .voiceSessionStarted: return "m_aichat_voice_session_started"
         case .aiChatSettingsVoiceTurnedOff: return "m_aichat_settings_voice_turned_off"
         case .aiChatSettingsVoiceTurnedOn: return "m_aichat_settings_voice_turned_on"
         case .aiChatSettingsAddressBarTurnedOff: return "m_aichat_settings_address_bar_turned_off"
