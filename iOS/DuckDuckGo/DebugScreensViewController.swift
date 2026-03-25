@@ -52,7 +52,7 @@ struct DebugScreensView: View {
             }
             .listRowBackground(Color(designSystemColor: .surface))
 
-            if model.filtered.isEmpty {
+            if model.filtered.isEmpty && model.filteredFeatureFlags.isEmpty {
                 DebugTogglesView(model: model)
                     .listRowBackground(Color(designSystemColor: .surface))
 
@@ -71,6 +71,37 @@ struct DebugScreensView: View {
                 DebugScreensListView(model: model, sectionTitle: "Actions", screens: model.actions)
             } else {
                 DebugScreensListView(model: model, sectionTitle: "Results", screens: model.filtered)
+
+                if !model.filteredFeatureFlags.isEmpty {
+                    Section(header: Text(verbatim: "Feature Flags")) {
+                        ForEach(model.filteredFeatureFlags, id: \.self) { flag in
+                            HStack {
+                                Toggle(
+                                    isOn: Binding(
+                                        get: { model.isFeatureFlagEnabled(flag) },
+                                        set: { _ in model.toggleFeatureFlag(flag) }
+                                    )
+                                ) {
+                                    VStack(alignment: .leading) {
+                                        Text(verbatim: flag.rawValue)
+                                            .font(.headline)
+                                        Text(verbatim: "Default: \(model.featureFlagDefaultValue(flag))")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                Button(action: {
+                                    model.resetFeatureFlagOverride(flag)
+                                }, label: {
+                                    Text(verbatim: "Reset")
+                                        .padding()
+                                })
+                                .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .listRowBackground(Color(designSystemColor: .surface))
+                }
             }
         }
         .searchable(text: $model.filter, prompt: "Filter")
