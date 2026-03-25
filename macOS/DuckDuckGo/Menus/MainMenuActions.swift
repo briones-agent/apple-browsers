@@ -1581,10 +1581,21 @@ extension MainViewController {
 
     // MARK: - Debug
 
+    private static let debugTabURLs: [URL] = [
+        .duckDuckGo,
+        URL(string: "https://www.apple.com")!,
+        URL(string: "https://www.microsoft.com")!,
+        URL(string: "https://www.google.com")!,
+        URL(string: "https://www.nasa.gov")!,
+        URL(string: "https://github.com/")!,
+    ]
+
     @objc func addDebugTabs(_ sender: AnyObject) {
         let numberOfTabs = sender.representedObject as? Int ?? 1
-        (1...numberOfTabs).forEach { _ in
-            let tab = Tab(content: .url(.duckDuckGo, credential: nil, source: .ui))
+        let urls = Self.debugTabURLs
+        (0..<numberOfTabs).forEach { i in
+            let url = urls[i % urls.count]
+            let tab = Tab(content: .url(url, credential: nil, source: .ui))
             tabCollectionViewModel.append(tab: tab)
         }
     }

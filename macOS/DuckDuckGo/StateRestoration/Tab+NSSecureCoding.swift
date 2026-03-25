@@ -68,7 +68,7 @@ extension Tab: NSSecureCoding {
     }
 
     func encode(with coder: NSCoder) {
-        guard webView.configuration.websiteDataStore.isPersistent == true else { return }
+        guard !burnerMode.isBurner else { return }
 
         coder.encode(uuid, forKey: NSSecureCodingKeys.uuid)
         content.urlForWebView.map(coder.encode(forKey: NSSecureCodingKeys.url))
