@@ -60,6 +60,13 @@ struct DebugScreensView: View {
                     DebugScreensListView(model: model, sectionTitle: "Pinned", screens: model.pinnedScreens)
                 }
 
+                Section {
+                    Label("Swipe left on any item below to pin it for quick access.", systemImage: "hand.point.left")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .listRowBackground(Color(designSystemColor: .surface))
+
                 DebugScreensListView(model: model, sectionTitle: "Screens", screens: model.unpinnedScreens)
                 DebugScreensListView(model: model, sectionTitle: "Actions", screens: model.actions)
             } else {
