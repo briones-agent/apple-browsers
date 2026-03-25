@@ -78,36 +78,59 @@ struct SettingsYouTubeAdBlockingView: View {
             }
 
             if !viewModel.duckPlayerNativeUI.wrappedValue {
-                Section {
-                    SettingsPickerCellView(label: UserText.settingsOpenVideosInDuckPlayerLabel,
-                                           options: DuckPlayerMode.allCases,
-                                           selectedOption: viewModel.duckPlayerModeBinding)
+                Section(header: Text(UserText.duckPlayerFeatureName),
+                        footer: Text(UserText.duckPlayerExplanation)) {
+                    SettingsCellView(
+                        label: UserText.duckPlayerEnableToggle,
+                        accessory: .toggle(isOn: viewModel.isDuckPlayerEnabledBinding)
+                    )
+                    .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
+                }
+
+                if viewModel.state.duckPlayerMode != .disabled {
+                    Section {
+                        SettingsCellView(
+                            label: UserText.duckPlayerAlwaysOpenToggle,
+                            accessory: .toggle(isOn: viewModel.isAlwaysOpenBinding)
+                        )
                         .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
 
-                    if viewModel.state.duckPlayerOpenInNewTabEnabled {
-                            SettingsCellView(label: UserText.settingsOpenDuckPlayerNewTabLabel,
-                                            accessory: .toggle(isOn: viewModel.duckPlayerOpenInNewTabBinding))
+                        if viewModel.state.duckPlayerOpenInNewTabEnabled {
+                            SettingsCellView(
+                                label: UserText.settingsOpenDuckPlayerNewTabLabel,
+                                accessory: .toggle(isOn: viewModel.duckPlayerOpenInNewTabBinding)
+                            )
+                        }
                     }
                 }
             } else {
                 Section(header: Text(UserText.duckPlayerFeatureName),
-                        footer: Text(UserText.duckPlayerSearchResultsFooter)) {
-                    SettingsCellView(label: UserText.duckPlayerSearchResultsLabel,
-                                     accessory: .toggle(isOn: viewModel.duckPlayerNativeUISERPEnabled))
-                                     .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
-                }
-
-                Section(footer: Text(UserText.duckPlayerYoutubeFooter)) {
-                SettingsPickerCellView(label: UserText.duckPlayerYoutubeLabel,
-                                       options: NativeDuckPlayerYoutubeMode.allCases,
-                                       selectedOption: viewModel.duckPlayerNativeYoutubeModeBinding)
+                        footer: Text(UserText.duckPlayerEnableFooter)) {
+                    SettingsCellView(
+                        label: UserText.duckPlayerEnableToggle,
+                        accessory: .toggle(isOn: viewModel.isShowDuckPlayerOnYoutubeBinding)
+                    )
                     .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
                 }
 
-                Section(footer: Text(UserText.duckPlayerAutoplayFooter)) {
-                    SettingsCellView(label: UserText.duckPlayerAutoplayLabel,
-                                    accessory: .toggle(isOn: viewModel.duckPlayerAutoplay))
-                                    .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
+                if viewModel.state.duckPlayerNativeYoutubeMode != .never {
+                    Section {
+                        SettingsCellView(
+                            label: UserText.duckPlayerAlwaysOpenToggle,
+                            accessory: .toggle(isOn: viewModel.isOpenAutomaticallyBinding)
+                        )
+                        .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
+
+                        SettingsCellView(label: UserText.duckPlayerAutoplayLabel,
+                                        accessory: .toggle(isOn: viewModel.duckPlayerAutoplay))
+                        .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
+                    }
+
+                    Section(footer: Text(UserText.duckPlayerSearchResultsFooter)) {
+                        SettingsCellView(label: UserText.duckPlayerSearchResultsLabel,
+                                         accessory: .toggle(isOn: viewModel.duckPlayerNativeUISERPEnabled))
+                        .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
+                    }
                 }
             }
 

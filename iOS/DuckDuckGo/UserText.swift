@@ -1924,6 +1924,10 @@ public struct UserText {
 
     public static let duckPlayerAskLabel = NSLocalizedString("duckPlayer.ask.label", value: "Ask every time", comment: "Text displayed when DuckPlayer is in 'Ask' mode.")
     public static let duckPlayerDisabledLabel = NSLocalizedString("duckPlayer.never.label", value: "Never", comment: "Text displayed when DuckPlayer is in off.")
+    public static let duckPlayerEnableToggle = NSLocalizedString("duckplayer.settings.enable-toggle", value: "Enable Duck Player", comment: "Toggle to enable Duck Player")
+    public static let duckPlayerEnableFooter = NSLocalizedString("duckplayer.settings.enable-footer", value: "Duck Player provides a cleaner viewing experience and prevents viewing activity from influencing your YouTube recommendations.", comment: "Footer text for Enable Duck Player toggle")
+    public static let duckPlayerAlwaysOpenToggle = NSLocalizedString("duckplayer.settings.always-open-toggle", value: "Always open YouTube videos in Duck Player", comment: "Toggle to always open videos in Duck Player")
+    public static let duckPlayerExplanation = NSLocalizedString("duckplayer.settings.explanation", value: "Duck Player lets you watch YouTube without targeted ads and prevents viewing activity from influencing your recommendations.", comment: "Explanation footer for Duck Player settings")
     public static let settingsOpenVideosInDuckPlayerLabel = NSLocalizedString("duckplayer.settings.open-videos-in", value: "Open YouTube Videos in Duck Player", comment: "Settings screen cell text for DuckPlayer settings")
     public static let duckPlayerFeatureName = NSLocalizedString("duckplayer.settings.title", value: "Duck Player", comment: "Settings screen cell text for DuckPlayer settings")
 
@@ -1970,7 +1974,7 @@ public struct UserText {
 
     // YouTube Ad Blocking
     public static let youTubeAdBlockingTitle = NSLocalizedString("youtube.ad.blocking.title", value: "YouTube Ad Blocking", comment: "Settings screen title for YouTube Ad Blocking")
-    public static let youTubeAdBlockingExplanation = NSLocalizedString("youtube.ad.blocking.explanation", value: "DuckDuckGo removes video ads on YouTube and keeps what you watch private from advertisers.", comment: "Explanation text for YouTube Ad Blocking feature")
+    public static let youTubeAdBlockingExplanation = NSLocalizedString("youtube.ad.blocking.explanation", value: "DuckDuckGo removes video ads on YouTube, so you can watch videos without interruption.", comment: "Explanation text for YouTube Ad Blocking feature")
     public static let youTubeAdBlockingToggle = NSLocalizedString("youtube.ad.blocking.toggle", value: "Block ads on YouTube", comment: "Toggle label for enabling/disabling YouTube ad blocking")
 
     // Duck Player View
@@ -1989,6 +1993,8 @@ public struct UserText {
     public static let duckPlayerTabAlertTitle = NSLocalizedString("duckplayer.settings.tab.alert.title", value: "Important!", comment: "Title for the alert when changing Duck Player variant")
     public static let duckPlayerTabAlertMessage = NSLocalizedString("duckplayer.settings.tab.alert.message", value: "Please close all tabs for this setting to take effect.", comment: "Message for the alert when changing Duck Player variant")
     public static let duckPlayerTabAlertOK = NSLocalizedString("duckplayer.settings.tab.alert.ok", value: "OK", comment: "OK button text for the alert when changing Duck Player variant")
+    public static let duckPlayerShowOnYoutubeToggle = NSLocalizedString("duckplayer.settings.show-on-youtube-toggle", value: "Show Duck Player on YouTube", comment: "Toggle to show Duck Player on YouTube")
+    public static let duckPlayerOpenAutomaticallyToggle = NSLocalizedString("duckplayer.settings.open-automatically-toggle", value: "Open automatically", comment: "Toggle to automatically open videos in Duck Player")
     public static let duckPlayerNativeYoutubeModeAuto = NSLocalizedString("duckplayer.settings.youtube.mode.auto", value: "Open Automatically", comment: "Text for the auto mode in Duck Player settings")
     public static let duckPlayerNativeYoutubeModeAsk = NSLocalizedString("duckplayer.settings.youtube.mode.ask", value: "Let me choose", comment: "Text for the ask mode in Duck Player settings")
     public static let duckPlayerNativeYoutubeModeNever = NSLocalizedString("duckplayer.settings.youtube.mode.never", value: "Don't Show", comment: "Text for the never mode in Duck Player settings")

@@ -481,7 +481,7 @@ final class SettingsViewModel: ObservableObject {
             set: {
                 self.appSettings.duckPlayerMode = $0
                 self.state.duckPlayerMode = $0
-                
+
                 switch self.state.duckPlayerMode {
                 case .alwaysAsk:
                     Pixel.fire(pixel: Pixel.Event.duckPlayerSettingBackToDefault)
@@ -495,7 +495,59 @@ final class SettingsViewModel: ObservableObject {
             }
         )
     }
-    
+
+    var isDuckPlayerEnabledBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: {
+                return self.state.duckPlayerMode != .disabled
+            },
+            set: { newValue in
+                let oldMode = self.state.duckPlayerMode ?? .alwaysAsk
+                let newMode: DuckPlayerMode = newValue ? .alwaysAsk : .disabled
+
+                self.appSettings.duckPlayerMode = newMode
+                self.state.duckPlayerMode = newMode
+
+                if oldMode != newMode {
+                    switch newMode {
+                    case .enabled:
+                        Pixel.fire(pixel: .duckPlayerSettingAlwaysSettings)
+                    case .alwaysAsk:
+                        Pixel.fire(pixel: .duckPlayerSettingBackToDefault)
+                    case .disabled:
+                        Pixel.fire(pixel: .duckPlayerSettingNeverSettings)
+                    }
+                }
+            }
+        )
+    }
+
+    var isAlwaysOpenBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: {
+                return self.state.duckPlayerMode == .enabled
+            },
+            set: { newValue in
+                let oldMode = self.state.duckPlayerMode ?? .alwaysAsk
+                let newMode: DuckPlayerMode = newValue ? .enabled : .alwaysAsk
+
+                self.appSettings.duckPlayerMode = newMode
+                self.state.duckPlayerMode = newMode
+
+                if oldMode != newMode {
+                    switch newMode {
+                    case .enabled:
+                        Pixel.fire(pixel: .duckPlayerSettingAlwaysSettings)
+                    case .alwaysAsk:
+                        Pixel.fire(pixel: .duckPlayerSettingBackToDefault)
+                    case .disabled:
+                        Pixel.fire(pixel: .duckPlayerSettingNeverSettings)
+                    }
+                }
+            }
+        )
+    }
+
     var duckPlayerOpenInNewTabBinding: Binding<Bool> {
         Binding<Bool>(
             get: { self.state.duckPlayerOpenInNewTab },
@@ -568,6 +620,58 @@ final class SettingsViewModel: ObservableObject {
                     self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeChoose)
                 case .never:
                     self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeDontShow)
+                }
+            }
+        )
+    }
+
+    var isShowDuckPlayerOnYoutubeBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: {
+                return self.state.duckPlayerNativeYoutubeMode != .never
+            },
+            set: { newValue in
+                let oldMode = self.state.duckPlayerNativeYoutubeMode
+                let newMode: NativeDuckPlayerYoutubeMode = newValue ? .ask : .never
+
+                self.appSettings.duckPlayerNativeYoutubeMode = newMode
+                self.state.duckPlayerNativeYoutubeMode = newMode
+
+                if oldMode != newMode {
+                    switch newMode {
+                    case .auto:
+                        self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeAutomatic)
+                    case .ask:
+                        self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeChoose)
+                    case .never:
+                        self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeDontShow)
+                    }
+                }
+            }
+        )
+    }
+
+    var isOpenAutomaticallyBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: {
+                return self.state.duckPlayerNativeYoutubeMode == .auto
+            },
+            set: { newValue in
+                let oldMode = self.state.duckPlayerNativeYoutubeMode
+                let newMode: NativeDuckPlayerYoutubeMode = newValue ? .auto : .ask
+
+                self.appSettings.duckPlayerNativeYoutubeMode = newMode
+                self.state.duckPlayerNativeYoutubeMode = newMode
+
+                if oldMode != newMode {
+                    switch newMode {
+                    case .auto:
+                        self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeAutomatic)
+                    case .ask:
+                        self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeChoose)
+                    case .never:
+                        self.duckPlayerPixelHandler.fire(.duckPlayerNativeSettingsYoutubeDontShow)
+                    }
                 }
             }
         )
