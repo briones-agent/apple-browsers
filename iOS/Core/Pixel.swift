@@ -219,7 +219,7 @@ public class Pixel {
         case vpn
     }
 
-    public static var isDryRun = PixelKitConfig.isDryRun(isProductionBuild: BuildFlags.isProductionBuild)
+    public static var isDryRun = false
 
     private static var isInternalUser: Bool {
         DefaultInternalUserDecider(store: InternalUserStore()).isInternalUser
