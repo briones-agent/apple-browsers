@@ -440,6 +440,95 @@
     <!-- ── Overview ── -->
     <section id="overview">
       <h2>Overview</h2>
+
+      <div class="overview-cards">
+
+        <!-- Code Freeze card -->
+        <div class="flow-card" onclick="scrollToSection('code-freeze')">
+          <h3>Code Freeze</h3>
+          <span class="trigger-badge trigger-badge--auto">Scheduled — Mon 00:00 UTC</span>
+
+          <div class="flow-chart">
+            <div class="flow-step flow-step--asana">Check Freeze Enabled</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--asana">Create Release Branch</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-parallel">
+              <div class="flow-step flow-step--test">Unit Tests</div>
+              <div class="flow-step flow-step--test">UI Tests</div>
+            </div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--build">Increment Build Number</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-parallel">
+              <div class="flow-step flow-step--build">DMG Build</div>
+              <div class="flow-step flow-step--build">App Store Build</div>
+            </div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--publish">Tag &amp; Merge</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--publish">Publish to Sparkle</div>
+          </div>
+
+          <p><strong>Branch:</strong> <code>release/macos/*</code></p>
+          <p><strong>Concurrency:</strong> <code>macos-release</code></p>
+        </div>
+
+        <!-- Internal Bump card -->
+        <div class="flow-card" onclick="scrollToSection('internal-bump')">
+          <h3>Internal Release Bump</h3>
+          <span class="trigger-badge trigger-badge--push">Push to release/*</span>
+
+          <div class="flow-chart">
+            <div class="flow-step flow-step--asana">Validate Conditions</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--test">Unit Tests</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--build">Increment Build Number</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-parallel">
+              <div class="flow-step flow-step--build">DMG Build</div>
+              <div class="flow-step flow-step--build">App Store Build</div>
+            </div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--publish">Tag &amp; Merge</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--publish">Publish to Sparkle</div>
+          </div>
+
+          <p><strong>Branch:</strong> <code>release/macos/*</code></p>
+          <p><strong>Concurrency:</strong> <code>macos-release</code></p>
+        </div>
+
+        <!-- Hotfix card -->
+        <div class="flow-card" onclick="scrollToSection('hotfix')">
+          <h3>Hotfix</h3>
+          <span class="trigger-badge trigger-badge--manual">Manual Dispatch</span>
+
+          <div class="flow-chart">
+            <div class="flow-step flow-step--asana">Create Hotfix Branch</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--asana">Assert Branch</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--test">Run Tests</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--asana">Bump &amp; Update Asana</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-parallel">
+              <div class="flow-step flow-step--build">DMG Build</div>
+              <div class="flow-step flow-step--build">App Store Build</div>
+            </div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--publish">Tag &amp; Merge</div>
+            <div class="flow-arrow"></div>
+            <div class="flow-step flow-step--conditional">Publish — Manual</div>
+          </div>
+
+          <p><strong>Branch:</strong> <code>hotfix/macos/*</code></p>
+          <p><strong>Concurrency:</strong> <code>macos-release</code></p>
+        </div>
+
+      </div>
     </section>
 
     <!-- ── Code Freeze ── -->
