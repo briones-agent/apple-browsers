@@ -116,7 +116,7 @@ class TabsBarCell: UICollectionViewCell {
             removeButton.accessibilityLabel = closeButtonAccessibilityLabel(for: model)
         } else if model.isAITab {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
-            faviconImage.image = DesignSystemImages.Color.Size24.duckAI
+            faviconImage.image = UIImage(resource: .duckAIDefault)
             if let conversationTitle = model.aiChatConversationTitle {
                 label.text = "\(aiChatTitle) - \(conversationTitle)"
             } else {

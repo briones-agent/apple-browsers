@@ -404,14 +404,15 @@ final class TabViewCell: UICollectionViewCell {
 
         if tab.isAITab {
             let aiChatTitle = UserText.omnibarFullAIChatModeDisplayTitle
-            removeButton.accessibilityLabel = UserText.closeTab(withTitle: aiChatTitle, atAddress: "")
-            title.accessibilityLabel = UserText.openTab(withTitle: aiChatTitle, atAddress: "")
-            title.text = aiChatTitle
-            favicon.image = DesignSystemImages.Color.Size24.duckAI
+            let displayTitle = tab.aiChatConversationTitle ?? aiChatTitle
+            removeButton.accessibilityLabel = UserText.closeTab(withTitle: displayTitle, atAddress: "")
+            title.accessibilityLabel = UserText.openTab(withTitle: displayTitle, atAddress: "")
+            title.text = displayTitle
+            favicon.image = UIImage(resource: .duckAIDefault)
 
-            if let conversationTitle = tab.aiChatConversationTitle {
+            if tab.aiChatConversationTitle != nil {
                 link?.isHidden = false
-                link?.text = conversationTitle
+                link?.text = aiChatTitle
             } else {
                 link?.isHidden = true
             }
