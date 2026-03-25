@@ -23,6 +23,7 @@
       --color-asana:   #f97316;
       --color-publish: #a855f7;
       --color-trouble: #ef4444;
+      --color-muted:   #64748b;
     }
 
     /* ── Layout ────────────────────────────────────────────────────────── */
@@ -69,6 +70,12 @@
       text-decoration: none;
       border-left: 3px solid transparent;
       transition: color 0.15s, background 0.15s;
+    }
+
+    .sidebar nav a.sub-link {
+      padding-left: 1.75rem;
+      font-size: 0.8rem;
+      color: #64748b;
     }
 
     .sidebar nav a:hover {
@@ -423,6 +430,10 @@
       <a href="#internal-bump"      onclick="scrollToSection('internal-bump')">Internal Release Bump</a>
       <a href="#hotfix"             onclick="scrollToSection('hotfix')">Hotfix</a>
       <a href="#common-components"  onclick="scrollToSection('common-components')">Common Components</a>
+      <a href="#reusable-workflows" class="sub-link" onclick="scrollToSection('reusable-workflows')">Reusable Workflows</a>
+      <a href="#fastlane-plugin-actions" class="sub-link" onclick="scrollToSection('fastlane-plugin-actions')">Fastlane Plugin Actions</a>
+      <a href="#freeze-mechanism"   class="sub-link" onclick="scrollToSection('freeze-mechanism')">Freeze Mechanism</a>
+      <a href="#sparkle-pipeline"   class="sub-link" onclick="scrollToSection('sparkle-pipeline')">Sparkle Pipeline</a>
       <a href="#quick-reference"    onclick="scrollToSection('quick-reference')">Quick Reference</a>
     </div>
   </nav>
@@ -1439,7 +1450,7 @@
       <!-- ── Reusable Workflows subsection ── -->
       <div style="margin-bottom:2.5rem;">
         <div class="section-header">
-          <h3 style="font-size:1.15rem;font-weight:700;color:#0f172a;">Reusable Workflows</h3>
+          <h3 id="reusable-workflows" style="font-size:1.15rem;font-weight:700;color:#0f172a;">Reusable Workflows</h3>
           <button class="toggle-all" onclick="toggleAllPanels('common-components', true)">Expand All</button>
         </div>
         <p style="color:#475569;margin-bottom:1.25rem;">Shared <code>workflow_call</code> workflows invoked by the orchestrating flows above. Each can also be triggered directly via <code>workflow_dispatch</code> where noted.</p>
@@ -2386,6 +2397,8 @@
               <tr><td><code>notarized-build-failed</code></td><td>Build failure notification</td><td>After failed notarized build</td></tr>
               <tr><td><code>public-release-complete</code></td><td>Public release published notification</td><td>After public Sparkle publish</td></tr>
               <tr><td><code>public-release-failed</code></td><td>Public release failure notification</td><td>When public release fails</td></tr>
+              <tr><td><code>variants-release-published</code></td><td>DMG variants created successfully</td><td>After variant creation completes</td></tr>
+              <tr><td><code>variants-release-failed</code></td><td>DMG variant creation failed</td><td>When variant creation fails</td></tr>
             </tbody>
           </table>
         </div>
