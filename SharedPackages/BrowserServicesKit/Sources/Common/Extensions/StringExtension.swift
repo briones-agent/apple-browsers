@@ -510,6 +510,44 @@ public extension StringProtocol {
             .joined(separator: ".")
     }
 
+    // MARK: Replacements
+
+    /// Replaces all occurrences of the given keys with their values in a single pass.
+    ///
+    /// Unlike calling `replacingOccurrences(of:with:)` in a loop, this performs all
+    /// substitutions in one traversal so replacement values are never re-expanded.
+    /// Longer keys are matched first to avoid partial matches.
+    func applyingReplacements(_ replacements: [String: String]) -> String {
+        guard !replacements.isEmpty else { return String(self) }
+
+        let pattern = replacements.keys
+            .filter { !$0.isEmpty }
+            .sorted { $0.count > $1.count }
+            .map { NSRegularExpression.escapedPattern(for: $0) }
+            .joined(separator: "|")
+
+        guard !pattern.isEmpty else { return String(self) }
+
+        // Pattern is built from escaped literals joined by "|", so this cannot fail.
+        // swiftlint:disable:next force_try
+        let regex = try! NSRegularExpression(pattern: pattern)
+
+        let string = String(self)
+        let nsRange = NSRange(string.startIndex..., in: string)
+        var result = ""
+        var lastEnd = string.startIndex
+
+        regex.enumerateMatches(in: string, range: nsRange) { match, _, _ in
+            guard let match = match, let matchRange = Range(match.range, in: string) else { return }
+            result += string[lastEnd..<matchRange.lowerBound]
+            result += replacements[String(string[matchRange])]!
+            lastEnd = matchRange.upperBound
+        }
+
+        result += string[lastEnd...]
+        return result
+    }
+
     // MARK: Prefix/Suffix
     func trimmingWhitespace() -> String {
         return trimmingCharacters(in: .whitespacesAndNewlines)
