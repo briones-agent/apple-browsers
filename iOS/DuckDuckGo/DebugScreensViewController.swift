@@ -42,6 +42,13 @@ struct DebugScreensView: View {
 
     var body: some View {
         List {
+            Section {
+                Label("Shake your device or press \u{2303}\u{2318}Z in the Simulator to open this screen quickly.", systemImage: "info.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .listRowBackground(Color(designSystemColor: .surface))
+
             if model.filtered.isEmpty {
                 DebugTogglesView(model: model)
                     .listRowBackground(Color(designSystemColor: .surface))
