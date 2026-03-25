@@ -128,13 +128,13 @@ private extension TabBackgroundShapeView {
             return nil
         }
 
-        guard shouldDisplayRamps, let tabRampSize else {
-            return displaysTopRoundedCorners ?
-                .tabBackground(in: bounds, cornerRadius: tabCornerRadius) :
-                CGPath(roundedRect: bounds, cornerWidth: tabCornerRadius, cornerHeight: tabCornerRadius, transform: nil)
+        if shouldDisplayRamps, let tabRampSize {
+            return .tabBackground(in: bounds, cornerRadius: tabCornerRadius, rampSize: tabRampSize)
         }
 
-        return .tabBackground(in: bounds, cornerRadius: tabCornerRadius, rampSize: tabRampSize)
+        return displaysTopRoundedCorners ?
+            .tabBackground(in: bounds, cornerRadius: tabCornerRadius) :
+            CGPath(roundedRect: bounds, cornerWidth: tabCornerRadius, cornerHeight: tabCornerRadius, transform: nil)
     }
 }
 
