@@ -1591,9 +1591,14 @@
             <span class="chevron">▶</span>
             <strong>macos_release.yml</strong>
             <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Release Dispatcher</span>
+            <span class="platform-badge platform-badge--macos">macOS</span>
           </div>
           <div class="panel-body">
             <p style="margin-bottom:0.75rem;">Fans out to DMG and App Store builds running in parallel. Called by Code Freeze, Internal Release Bump, and Hotfix as the <code>prepare_release</code> job.</p>
+
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.75rem 1rem;margin-bottom:0.75rem;font-size:0.875rem;">
+              <strong>iOS equivalent:</strong> iOS does not use a fan-out dispatcher. Instead, <code>ios_release.yml</code> is a single workflow that builds and uploads the app to TestFlight or App Store in one job. See <a href="#ios_release">ios_release.yml</a> below.
+            </div>
 
             <h4>Triggers</h4>
             <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
@@ -1645,6 +1650,7 @@
             <span class="chevron">▶</span>
             <strong>macos_build_notarized.yml</strong>
             <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Notarized DMG Build</span>
+            <span class="platform-badge platform-badge--macos">macOS only</span>
           </div>
           <div class="panel-body">
             <p style="margin-bottom:0.75rem;">Archives the app, notarizes it, and optionally creates and uploads a DMG to S3.</p>
@@ -1744,6 +1750,7 @@
             <span class="chevron">▶</span>
             <strong>macos_build_appstore.yml</strong>
             <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">App Store Build &amp; Upload</span>
+            <span class="platform-badge platform-badge--macos">macOS only</span>
           </div>
           <div class="panel-body">
             <p style="margin-bottom:0.75rem;">Builds the App Store package and uploads it to TestFlight or App Store Connect.</p>
@@ -1820,6 +1827,10 @@
           <div class="panel-body">
             <p style="margin-bottom:0.75rem;">Creates a git tag, a GitHub release with auto-generated notes, merges the release branch back to base (prerelease), or deletes the release branch (public release).</p>
 
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.75rem 1rem;margin-bottom:0.75rem;font-size:0.875rem;">
+              <strong>iOS equivalents:</strong> iOS has <code>ios_tag_release.yml</code> (same structure, passes <code>platform:ios</code> to the <span class="fastlane-badge">tag_release</span> action) plus a wrapper <code>ios_tag_release_update_asana.yml</code> that combines tagging with Asana updates in a single workflow. macOS performs these as separate steps. See <a href="#ios_tag_release_update_asana">ios_tag_release_update_asana.yml</a> below.
+            </div>
+
             <h4>Triggers</h4>
             <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
               <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
@@ -1887,6 +1898,7 @@
             <span class="chevron">▶</span>
             <strong>macos_publish_dmg_release.yml</strong>
             <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Publish to Sparkle</span>
+            <span class="platform-badge platform-badge--macos">macOS only</span>
           </div>
           <div class="panel-body">
             <p style="margin-bottom:0.75rem;">Generates a Sparkle appcast entry for the new release, uploads it and the DMG to S3, creates validation tasks in Asana, and (for public/hotfix) creates DMG variants.</p>
@@ -1983,6 +1995,7 @@
             <span class="chevron">▶</span>
             <strong>macos_create_variants.yml</strong>
             <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">DMG Variants</span>
+            <span class="platform-badge platform-badge--macos">macOS only</span>
           </div>
           <div class="panel-body">
             <p style="margin-bottom:0.75rem;">Creates DMG variants with different ATB and Origin parameters for distribution channels (e.g. partner installs). Only called for public and hotfix releases.</p>
@@ -2048,6 +2061,162 @@
               <li>Adds relevant users as followers on the release task</li>
               <li>Posts a template-based failure comment using the <code>workflow-failed</code> template, including the workflow URL and context</li>
             </ul>
+          </div>
+        </div>
+
+        <!-- 8. ios_release.yml -->
+        <div class="panel" id="ios_release">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>ios_release.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">iOS Release Build</span>
+            <span class="platform-badge platform-badge--ios">iOS</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Builds the iOS app and uploads it to TestFlight or App Store Connect. Unlike the macOS fan-out architecture, this is a single self-contained workflow — there is no separate dispatcher. Called by Code Freeze, Internal Release Bump, and Hotfix as the <code>prepare_release</code> job.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>destination</code></td><td>choice: <code>appstore</code> / <code>testflight</code></td><td>No</td><td><code>testflight</code></td><td>Upload destination</td></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>Yes (call); No (dispatch)</td><td>—</td><td>Asana release task URL</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No (call only)</td><td>—</td><td>Branch name</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No (call only)</td><td>—</td><td>Commit SHA to build</td></tr>
+              <tr><td><code>measure-app-size</code></td><td>boolean</td><td>No (call only)</td><td><code>false</code></td><td>Whether to measure and report app sizes after the build</td></tr>
+            </table>
+
+            <h4>Job: <code>make-release</code> (runner: <code>macos-26-xlarge</code>)</h4>
+            <ol>
+              <li>Validates the branch pattern — exits with error unless branch matches <code>release/*</code>, <code>hotfix/*</code>, or <code>coldfix/*</code></li>
+              <li>Registers SSH keys for private repos (<code>SSH_PRIVATE_KEY_FASTLANE_MATCH</code>, <code>SSH_PRIVATE_KEY_DUCKSANS_FONT</code>)</li>
+              <li>Archives and uploads the app via <span class="fastlane-badge">release_testflight</span> or <span class="fastlane-badge">release_appstore</span> depending on <code>destination</code></li>
+              <li>Reads version and build number from <code>Configuration/Version.xcconfig</code> and <code>Configuration/BuildNumber.xcconfig</code></li>
+              <li>Renames and uploads dSYMs to both the Asana release task (as attachment) and to S3 dSYM bucket</li>
+              <li>Generates Sentry grouping rules and uploads to S3 (<code>continue-on-error: true</code>)</li>
+              <li>Measures app size (optional) via <code>measure-app-size</code> action — reports download and installation size pixels (<code>continue-on-error: true</code>)</li>
+              <li>Sends Mattermost notification (<code>public-release-complete</code> or <code>public-release-failed</code>) using <span class="fastlane-badge">mattermost_send_message</span></li>
+            </ol>
+
+            <h4>Artifacts produced</h4>
+            <ul style="margin:0.5rem 0 0.5rem 1.5rem;font-size:0.875rem;">
+              <li>dSYM zip: <code>DuckDuckGo-&lt;destination&gt;-dSYM-&lt;version&gt;.&lt;build&gt;</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 9. ios_tag_release_update_asana.yml -->
+        <div class="panel" id="ios_tag_release_update_asana">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>ios_tag_release_update_asana.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">iOS Tag &amp; Asana Update</span>
+            <span class="platform-badge platform-badge--ios">iOS</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Wrapper workflow that combines tagging the release and updating Asana in a single orchestrated flow. On macOS these are separate steps; iOS merges them here.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs (workflow_call)</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>asana-task-url</code></td><td>string</td><td>Yes</td><td>—</td><td>Asana release task URL</td></tr>
+              <tr><td><code>release-type</code></td><td>string: <code>internal</code> / <code>public</code> / <code>hotfix</code></td><td>Yes</td><td>—</td><td>Determines prerelease flag and Asana update behaviour</td></tr>
+              <tr><td><code>base-branch</code></td><td>string</td><td>No</td><td><code>main</code></td><td>Base branch (override for testing)</td></tr>
+              <tr><td><code>branch</code></td><td>string</td><td>No</td><td>—</td><td>Release branch name</td></tr>
+              <tr><td><code>commit-sha</code></td><td>string</td><td>No</td><td>—</td><td>Exact commit to tag</td></tr>
+              <tr><td><code>internal-release-bump</code></td><td>boolean</td><td>No</td><td><code>false</code></td><td>Marks this as a subsequent internal bump for the current week</td></tr>
+            </table>
+
+            <h4>Jobs</h4>
+
+            <p style="margin-top:0.75rem;font-weight:600;">1. <code>tag-release</code></p>
+            <table class="info-table">
+              <tr><td><strong>Calls</strong></td><td><code>ios_tag_release.yml</code></td></tr>
+            </table>
+            <p style="font-size:0.875rem;color:#475569;">Passes <code>prerelease: true</code> when <code>release-type == 'internal'</code>, <code>false</code> otherwise. Uses the same <span class="fastlane-badge">tag_release</span> action as the macOS counterpart but with <code>platform:ios</code>.</p>
+
+            <p style="margin-top:0.75rem;font-weight:600;">2. <code>stop-workflow-if-needed</code></p>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.5rem;">Downloads the <code>stop_workflow</code> artifact produced by <code>tag-release</code>. If present, outputs <code>stop_workflow: true</code> to prevent downstream Asana update from running.</p>
+
+            <p style="margin-top:0.75rem;font-weight:600;">3. <code>update-asana-for-release</code> (runner: <code>macos-26-xlarge</code>, timeout: 10 min)</p>
+            <ol>
+              <li>Checks out <code>main</code> (release branch may have been deleted for public releases)</li>
+              <li>Downloads the <code>tag</code> artifact from <code>tag-release</code> if no tag input was provided</li>
+              <li>Validates tag format against regex <code>^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(\+[a-zA-Z0-9._-]+)?$</code></li>
+              <li>Optionally checks out the release branch if it still exists on the remote</li>
+              <li>For <strong>internal</strong> releases: runs <code>scripts/get_tasks_in_last_internal_release.sh</code> to find tasks since the last internal release tag, then posts an Asana comment using template <code>internal-release-complete-with-tasks</code> or <code>internal-release-complete</code></li>
+              <li>For <strong>public/hotfix</strong> releases: calls <span class="fastlane-badge">update_asana_for_release</span> with <code>platform:ios</code> and <code>release_type:public</code> to move tasks to the Done section, then sends a release annotation pixel and creates an Asana notification task in the Deployments project</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- 10. ios_upload_version_metadata.yml -->
+        <div class="panel" id="ios_upload_version_metadata">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>ios_upload_version_metadata.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">iOS Metadata Upload</span>
+            <span class="platform-badge platform-badge--ios">iOS</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Uploads the current App Store version metadata to the CDN. Called at the start of the iOS code freeze workflow to ensure release metadata is published before the build begins.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Job: <code>upload-metadata</code> (runner: <code>macos-26</code>, timeout: 5 min)</h4>
+            <ol>
+              <li>Check out code with submodules</li>
+              <li>Set up Ruby and Bundler</li>
+              <li>Run <span class="fastlane-badge">upload_appstore_version_metadata</span> — fetches current version metadata from App Store Connect using Apple API keys and uploads it to S3/CDN</li>
+            </ol>
+
+            <p style="font-size:0.875rem;color:#475569;margin-top:0.5rem;">Concurrency group: <code>${{ github.workflow }}</code> with <code>cancel-in-progress: true</code>.</p>
+          </div>
+        </div>
+
+        <!-- 11. ios_promote_testflight.yml -->
+        <div class="panel" id="ios_promote_testflight">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">▶</span>
+            <strong>ios_promote_testflight.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">Promote TestFlight to App Store</span>
+            <span class="platform-badge platform-badge--ios">iOS</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Promotes the latest TestFlight build to the App Store without re-building. Mirrors <code>macos_promote_testflight.yml</code> which does the same for macOS. Can optionally freeze the release branch after promoting.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span> only
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>freeze-release</code></td><td>boolean</td><td>No</td><td><code>true</code></td><td>Whether to freeze the release branch after promoting</td></tr>
+            </table>
+
+            <h4>Job: <code>promote-testflight-to-appstore</code> (runner: <code>macos-26</code>)</h4>
+            <ol>
+              <li>Sparse checkout — only fetches <code>.github/</code>, <code>iOS/Gemfile</code>, <code>iOS/Gemfile.lock</code>, <code>iOS/fastlane/</code>, <code>iOS/scripts/</code></li>
+              <li>Runs <span class="fastlane-badge">promote_latest_testflight_to_appstore</span> via Fastlane</li>
+              <li>If <code>freeze-release: true</code>: runs <span class="fastlane-badge">freeze_release_branch</span> with <code>platform:ios</code> — creates a draft GitHub release as a freeze signal (see <a href="#freeze-mechanism">Freeze Mechanism</a>)</li>
+            </ol>
           </div>
         </div>
 
@@ -2148,14 +2317,17 @@
       </div>
 
       <!-- ── Release Branch Freeze Mechanism ── -->
-      <h3 id="freeze-mechanism" style="margin-top: 2.5rem;">Release Branch Freeze Mechanism</h3>
-      <p style="margin: 0.5rem 0 1.25rem; color: var(--color-muted);">The freeze mechanism prevents further internal releases once a version is ready for public release. Without it, any push to the release branch would trigger another internal bump, potentially overwriting the build that QA has already validated.</p>
+      <h3 id="freeze-mechanism" style="margin-top: 2.5rem;">Release Branch Freeze Mechanism <span class="platform-badge platform-badge--both">Both platforms</span></h3>
+      <p style="margin: 0.5rem 0 0.75rem; color: var(--color-muted);">The freeze mechanism prevents further internal releases once a version is ready for public release. Without it, any push to the release branch would trigger another internal bump, potentially overwriting the build that QA has already validated.</p>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.875rem;">
+        The freeze mechanism works identically for both platforms. The <span class="fastlane-badge">freeze_release_branch</span> action creates a draft GitHub release tagged with the platform suffix (e.g. <code>7.5.0+macos</code> or <code>7.5.0+ios</code>). Both <code>ios_promote_testflight.yml</code> and <code>macos_promote_testflight.yml</code> can trigger freezing via their <code>freeze-release</code> input.
+      </div>
 
       <div style="background: #f8fafc; border-radius: 8px; padding: 1.25rem 1.5rem; border: 1px solid #e2e8f0;">
         <ol style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">
           <li style="margin-bottom: 0.75rem;">
             <strong>Freezing.</strong>
-            Triggered automatically by <code>macos_promote_testflight.yml</code> when <code>freeze-release</code> is <code>true</code> (the default). After promoting a TestFlight build to the App Store, the action <code>freeze_release_branch</code> runs and creates a <strong>draft GitHub release</strong> named <code>&lt;version&gt;+&lt;platform&gt;</code> (e.g., <code>7.5.0+macos</code>). This draft release is never published — it exists purely as a machine-readable signal.
+            Triggered automatically by <code>macos_promote_testflight.yml</code> or <code>ios_promote_testflight.yml</code> when <code>freeze-release</code> is <code>true</code> (the default). After promoting a TestFlight build to the App Store, the action <code>freeze_release_branch</code> runs and creates a <strong>draft GitHub release</strong> named <code>&lt;version&gt;+&lt;platform&gt;</code> (e.g., <code>7.5.0+macos</code> or <code>7.5.0+ios</code>). This draft release is never published — it exists purely as a machine-readable signal.
           </li>
           <li style="margin-bottom: 0.75rem;">
             <strong>Blocking.</strong>
@@ -2186,8 +2358,11 @@
       </div>
 
       <!-- ── Sparkle / Appcast Pipeline ── -->
-      <h3 id="sparkle-pipeline" style="margin-top: 2.5rem;">Sparkle / Appcast Pipeline</h3>
-      <p style="margin: 0.5rem 0 1.25rem; color: var(--color-muted);">macOS uses the <a href="https://sparkle-project.org" target="_blank">Sparkle framework</a> for over-the-air updates. The pipeline generates and publishes an appcast XML file to S3 so that existing installs can discover new builds.</p>
+      <h3 id="sparkle-pipeline" style="margin-top: 2.5rem;">Sparkle / Appcast Pipeline <span class="platform-badge platform-badge--macos">macOS only</span></h3>
+      <p style="margin: 0.5rem 0 0.75rem; color: var(--color-muted);">macOS uses the <a href="https://sparkle-project.org" target="_blank">Sparkle framework</a> for over-the-air updates. The pipeline generates and publishes an appcast XML file to S3 so that existing installs can discover new builds.</p>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.875rem;">
+        <strong>iOS has no equivalent.</strong> iOS distributes updates exclusively through TestFlight and the App Store. There is no Sparkle appcast, no DMG, and no S3 update feed for the iOS app.
+      </div>
 
       <div style="background: #f8fafc; border-radius: 8px; padding: 1.25rem 1.5rem; border: 1px solid #e2e8f0;">
 
