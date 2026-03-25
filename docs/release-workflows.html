@@ -492,7 +492,7 @@
         <!-- Code Freeze card -->
         <div class="flow-card" onclick="scrollToSection('code-freeze')">
           <h3>Code Freeze</h3>
-          <span class="trigger-badge trigger-badge--auto">Scheduled — Mon 00:00 UTC (macOS)</span>
+          <span class="trigger-badge trigger-badge--auto">Scheduled — Mon 01:00 UTC (macOS)</span>
           <span class="trigger-badge trigger-badge--auto">Scheduled — Mon 01:00 UTC (iOS)</span>
 
           <div class="flow-chart">
@@ -544,8 +544,7 @@
         <!-- Hotfix card -->
         <div class="flow-card" onclick="scrollToSection('hotfix')">
           <h3>Hotfix</h3>
-          <span class="trigger-badge trigger-badge--manual">Manual Dispatch</span>
-          <span class="trigger-badge trigger-badge--manual">Manual Dispatch</span>
+          <span class="trigger-badge trigger-badge--manual">Manual Dispatch (iOS + macOS)</span>
 
           <div class="flow-chart">
             <div class="flow-step flow-step--asana">Create Hotfix Branch</div>
@@ -579,7 +578,7 @@
       <p style="color:#475569;margin-bottom:1rem;">Weekly scheduled release — creates a release branch, runs tests, builds packages, tags the release, and distributes to users. Covers both macOS and iOS platforms; the pipelines are structurally identical with a few platform-specific steps.</p>
 
       <p style="margin-bottom:0.5rem;">
-        <span class="trigger-badge trigger-badge--auto">Scheduled — <span class="platform-badge platform-badge--macos">macOS</span> cron <code>0 0 * * 1</code> (Monday 00:00 UTC)</span>
+        <span class="trigger-badge trigger-badge--auto">Scheduled — <span class="platform-badge platform-badge--macos">macOS</span> cron <code>0 1 * * 1</code> (Monday 01:00 UTC)</span>
         <span class="trigger-badge trigger-badge--auto">Scheduled — <span class="platform-badge platform-badge--ios">iOS</span> cron <code>0 1 * * 1</code> (Monday 01:00 UTC)</span>
         <span class="trigger-badge trigger-badge--manual">Manual — workflow_dispatch</span>
       </p>
@@ -2170,7 +2169,7 @@
             <span class="platform-badge platform-badge--ios">iOS</span>
           </div>
           <div class="panel-body">
-            <p style="margin-bottom:0.75rem;">Uploads the current App Store version metadata to the CDN. Called at the start of the iOS code freeze workflow to ensure release metadata is published before the build begins.</p>
+            <p style="margin-bottom:0.75rem;">Uploads the current App Store version metadata to the CDN. Called <strong>automatically</strong> at the start of the iOS Code Freeze workflow to ensure release metadata is published before the build begins. (Contrast with macOS, where this is a separate manual step — see <a href="#macos_upload_version_metadata">macos_upload_version_metadata.yml</a>.)</p>
 
             <h4>Triggers</h4>
             <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
@@ -2186,6 +2185,45 @@
             </ol>
 
             <p style="font-size:0.875rem;color:#475569;margin-top:0.5rem;">Concurrency group: <code>${{ github.workflow }}</code> with <code>cancel-in-progress: true</code>.</p>
+          </div>
+        </div>
+
+        <!-- 10b. macos_upload_version_metadata.yml -->
+        <div class="panel" id="macos_upload_version_metadata">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <span class="chevron">&#9658;</span>
+            <strong>macos_upload_version_metadata.yml</strong>
+            <span style="font-size:0.8em;color:#64748b;margin-left:0.5em;">macOS Metadata Upload</span>
+            <span class="platform-badge platform-badge--macos">macOS</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin-bottom:0.75rem;">Uploads the current App Store version metadata to the CDN. Unlike iOS (where this is called automatically at the start of Code Freeze), the macOS version is a <strong>standalone workflow</strong> — it is typically triggered <strong>manually ~1 day after the App Store release reaches 100% of users</strong>.</p>
+
+            <h4>Triggers</h4>
+            <p style="font-size:0.875rem;color:#475569;margin-bottom:0.75rem;">
+              <span class="trigger-badge trigger-badge--manual">workflow_dispatch</span>
+              <span class="trigger-badge">workflow_call</span>
+            </p>
+
+            <h4>Inputs</h4>
+            <table class="info-table">
+              <tr><th>Input</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+              <tr><td><code>is_critical</code></td><td>boolean</td><td>No</td><td><code>false</code></td><td>Mark this release as critical (for hotfixes)</td></tr>
+            </table>
+
+            <h4>Job: <code>upload-metadata</code> (runner: <code>macos-15</code>, timeout: 5 min)</h4>
+            <ol>
+              <li>Check out code with submodules</li>
+              <li>Set up Ruby and Bundler</li>
+              <li>Run <span class="fastlane-badge">upload_appstore_version_metadata</span> with <code>is_critical</code> flag — fetches current version metadata from App Store Connect using Apple API keys and uploads it to S3/CDN</li>
+            </ol>
+
+            <p style="font-size:0.875rem;color:#475569;margin-top:0.5rem;">Concurrency group: <code>${{ github.workflow }}</code> with <code>cancel-in-progress: true</code>.</p>
+
+            <div class="troubleshoot">
+              <h4>&#9888;&#65039; When to run this</h4>
+              <p>This workflow is <strong>not</strong> part of the Code Freeze or Internal Release Bump pipelines. Run it manually after the macOS App Store release has been rolled out to 100% of users (typically done via App Store Connect). The <code>is_critical</code> flag should be set to <code>true</code> for hotfix releases.</p>
+            </div>
           </div>
         </div>
 
@@ -2405,7 +2443,7 @@
         <h2>Quick Reference</h2>
         <button class="toggle-all" onclick="toggleAllPanels('quick-reference', true)">Expand All</button>
       </div>
-      <p style="color:#475569;margin-bottom:1.5rem;">Consolidated reference tables for branch names, tag formats, concurrency groups, secrets, Asana templates, and configuration files used across the macOS release workflows.</p>
+      <p style="color:#475569;margin-bottom:1.5rem;">Consolidated reference tables for branch names, tag formats, concurrency groups, secrets, Asana templates, and configuration files used across the iOS and macOS release workflows.</p>
 
       <!-- 1. Branch Naming -->
       <div class="panel open">
@@ -2424,14 +2462,24 @@
             </thead>
             <tbody>
               <tr>
+                <td><code>release/ios/&lt;version&gt;</code></td>
+                <td><code>release/ios/7.180.0</code></td>
+                <td>iOS Code Freeze, Internal Release Bump</td>
+              </tr>
+              <tr>
+                <td><code>hotfix/ios/&lt;version&gt;</code></td>
+                <td><code>hotfix/ios/7.180.1</code></td>
+                <td>iOS Hotfix</td>
+              </tr>
+              <tr>
                 <td><code>release/macos/&lt;version&gt;</code></td>
                 <td><code>release/macos/7.5.0</code></td>
-                <td>Code Freeze, Internal Release Bump</td>
+                <td>macOS Code Freeze, Internal Release Bump</td>
               </tr>
               <tr>
                 <td><code>hotfix/macos/&lt;version&gt;</code></td>
                 <td><code>hotfix/macos/7.5.1</code></td>
-                <td>Hotfix</td>
+                <td>macOS Hotfix</td>
               </tr>
             </tbody>
           </table>
@@ -2455,18 +2503,28 @@
             </thead>
             <tbody>
               <tr>
-                <td>Prerelease (internal)</td>
+                <td>iOS prerelease (internal)</td>
+                <td><code>&lt;version&gt;-&lt;build&gt;+ios</code></td>
+                <td><code>7.180.0-100+ios</code></td>
+              </tr>
+              <tr>
+                <td>iOS public release</td>
+                <td><code>&lt;version&gt;+ios</code></td>
+                <td><code>7.180.0+ios</code></td>
+              </tr>
+              <tr>
+                <td>macOS prerelease (internal)</td>
                 <td><code>&lt;version&gt;-&lt;build&gt;+macos</code></td>
                 <td><code>7.5.0-100+macos</code></td>
               </tr>
               <tr>
-                <td>Public release</td>
+                <td>macOS public release</td>
                 <td><code>&lt;version&gt;+macos</code></td>
                 <td><code>7.5.0+macos</code></td>
               </tr>
             </tbody>
           </table>
-          <p style="font-size:0.8rem;color:#64748b;margin-top:0.5rem;">For public releases, a <em>promoted tag</em> (<code>&lt;version&gt;-&lt;build&gt;+macos</code>) is also recorded alongside the public tag. The freeze draft release uses the format <code>&lt;version&gt;+macos</code> (same as the public tag format) and is a draft GitHub release that is never published.</p>
+          <p style="font-size:0.8rem;color:#64748b;margin-top:0.5rem;">For public releases, a <em>promoted tag</em> (<code>&lt;version&gt;-&lt;build&gt;+{platform}</code>) is also recorded alongside the public tag. The freeze draft release uses the format <code>&lt;version&gt;+{platform}</code> (same as the public tag format) and is a draft GitHub release that is never published.</p>
         </div>
       </div>
 
@@ -2487,23 +2545,33 @@
             </thead>
             <tbody>
               <tr>
-                <td><code>macos-release</code></td>
+                <td><code>ios-release</code> <span class="platform-badge platform-badge--ios">iOS</span></td>
+                <td>No (waits)</td>
+                <td>Code Freeze, Internal Release Bump, Hotfix Build</td>
+              </tr>
+              <tr>
+                <td><code>ios_hotfix</code> <span class="platform-badge platform-badge--ios">iOS</span></td>
+                <td>No (waits)</td>
+                <td>Hotfix branch creation (phase 1)</td>
+              </tr>
+              <tr>
+                <td><code>macos-release</code> <span class="platform-badge platform-badge--macos">macOS</span></td>
                 <td>No (waits)</td>
                 <td>Code Freeze, Internal Release Bump, Hotfix, Tag Release</td>
               </tr>
               <tr>
-                <td><code>macos-appstore-build-{destination}</code></td>
+                <td><code>macos-appstore-build-{destination}</code> <span class="platform-badge platform-badge--macos">macOS</span></td>
                 <td>Yes (cancels older)</td>
                 <td>App Store build jobs</td>
               </tr>
               <tr>
-                <td><code>macos-appstore-upload-{destination}</code></td>
+                <td><code>macos-appstore-upload-{destination}</code> <span class="platform-badge platform-badge--macos">macOS</span></td>
                 <td>Yes (cancels older)</td>
                 <td>App Store upload jobs</td>
               </tr>
             </tbody>
           </table>
-          <p style="font-size:0.8rem;color:#64748b;margin-top:0.5rem;"><code>{destination}</code> is one of <code>appstore</code>, <code>testflight</code>, or <code>alpha</code> depending on the build target.</p>
+          <p style="font-size:0.8rem;color:#64748b;margin-top:0.5rem;">macOS <code>{destination}</code> is one of <code>appstore</code>, <code>testflight</code>, or <code>alpha</code> depending on the build target.</p>
         </div>
       </div>
 
@@ -2607,12 +2675,16 @@
             </thead>
             <tbody>
               <tr>
+                <td><code>IOS_AUTOMATIC_CODE_FREEZE</code></td>
+                <td>Enable / disable the scheduled iOS code freeze (<code>1</code> = enabled)</td>
+              </tr>
+              <tr>
                 <td><code>MACOS_AUTOMATIC_CODE_FREEZE</code></td>
-                <td>Enable / disable the scheduled code freeze (<code>1</code> = enabled)</td>
+                <td>Enable / disable the scheduled macOS code freeze (<code>1</code> = enabled)</td>
               </tr>
               <tr>
                 <td><code>MACOS_ALPHA_BUILD_NUMBER</code></td>
-                <td>Tracks the current alpha build number</td>
+                <td>Tracks the current macOS alpha build number</td>
               </tr>
             </tbody>
           </table>
@@ -2728,20 +2800,20 @@
               <tr>
                 <td><code>Configuration/Version.xcconfig</code></td>
                 <td><code>MARKETING_VERSION</code></td>
-                <td>App version number (e.g., <code>7.5.0</code>)</td>
+                <td>App version number — shared by both iOS and macOS (e.g., <code>7.5.0</code>)</td>
               </tr>
               <tr>
                 <td><code>Configuration/BuildNumber.xcconfig</code></td>
                 <td><code>CURRENT_PROJECT_VERSION</code></td>
-                <td>Build number (e.g., <code>100</code>)</td>
+                <td>Build number — shared by both iOS and macOS (e.g., <code>100</code>)</td>
               </tr>
               <tr>
-                <td><code>Configuration/App/Sparkle.xcconfig</code></td>
+                <td><code>Configuration/App/Sparkle.xcconfig</code> <span class="platform-badge platform-badge--macos">macOS</span></td>
                 <td><code>SPARKLE_URL_RELEASE</code></td>
                 <td>Appcast URL for public releases: <code>staticcdn.duckduckgo.com/macos-desktop-browser/appcast2.xml</code></td>
               </tr>
               <tr>
-                <td><code>Configuration/App/Sparkle.xcconfig</code></td>
+                <td><code>Configuration/App/Sparkle.xcconfig</code> <span class="platform-badge platform-badge--macos">macOS</span></td>
                 <td><code>SPARKLE_URL_ALPHA</code></td>
                 <td>Appcast URL for alpha/internal releases: <code>staticcdn.duckduckgo.com/macos-desktop-browser/alpha/appcast-alpha.xml</code></td>
               </tr>
