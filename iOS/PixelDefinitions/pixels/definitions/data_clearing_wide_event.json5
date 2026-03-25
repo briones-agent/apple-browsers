@@ -16,6 +16,11 @@
             "wideEventSampleRate",
             "wideEventIsFirstDailyOccurrence",
             "wideEventFeatureStatus",
+            "wideEventErrorDomain",
+            "wideEventErrorCode",
+            "wideEventErrorDescription",
+            "wideEventUnderlyingErrorDomain",
+            "wideEventUnderlyingErrorCode",
             "wideEventMetaVersion",
 
             // Wide event type identifier
