@@ -414,7 +414,7 @@ jobs:
         run: |
           output=$(python3 scripts/translation-pr-checks/check_deleted_string_translations.py --platform iOS 2>&1)
           echo "$output"
-          if echo "$output" | grep -q "orphaned translations found"; then
+          if echo "$output" | grep -q "Deleted strings with orphaned translations found"; then
             echo "has_orphans=true" >> "$GITHUB_OUTPUT"
             # Escape newlines for GitHub Actions output
             EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
