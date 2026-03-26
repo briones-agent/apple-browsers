@@ -33,15 +33,11 @@ extension OnboardingView {
         static let legacyTitleToPickerTopPadding: CGFloat = 8
         static let rebrandedTitleToPickerTopPadding: CGFloat = 16
         static let fieldToFirstChipTopPadding: CGFloat = 16
-        static let interChipSpacing: CGFloat = 8
         static let queryFieldBottomPadding: CGFloat = -8
         static let queryFieldTopPadding: CGFloat = -12
         static let queryFieldContentSpacing: CGFloat = 8
         static let queryFieldHorizontalPadding: CGFloat = 16
         static let queryFieldVerticalPadding: CGFloat = 16.33
-        static let suggestionChipLeadingPadding: CGFloat = 14
-        static let suggestionChipTrailingPadding: CGFloat = 16
-        static let suggestionChipContentSpacing: CGFloat = 8
         static let disabledPrimaryActionOpacity: CGFloat = 0.3
 
         // MARK: Sizing
@@ -52,19 +48,12 @@ extension OnboardingView {
         static let pickerBottomPadding: CGFloat = 4
         static let singleLineFieldHeight: CGFloat = 26
         static let multilineFieldHeight: CGFloat = 56
-        static let legacyChipHeight: CGFloat = 32
-        static let rebrandedChipHeight: CGFloat = 32
         static let queryFieldActionButtonSize: CGFloat = 28
         static let queryFieldCornerRadius: CGFloat = 14
         static let queryFieldInnerBorderInset: CGFloat = 2
-        static let suggestionChipIconSize: CGFloat = 16
         static let maxSuggestionCount = 3
-        static let legacyChipCornerRadius: CGFloat = 12
-        static let rebrandedChipCornerRadius: CGFloat = 32
         static let legacyQueryFieldBorderWidth: CGFloat = 2
         static let rebrandedQueryFieldBorderWidth: CGFloat = 1
-        static let legacySuggestionChipBorderWidth: CGFloat = 1
-        static let rebrandedSuggestionChipBorderWidth: CGFloat = 1.5
 
         // MARK: Animation
         static let initialToggleStartDelay: TimeInterval = 0.8
@@ -76,7 +65,6 @@ extension OnboardingView {
         static let suggestionRevealFallbackDelayAfterFocus: TimeInterval = 0.4
         static let pickerSelectionAnimationDuration: TimeInterval = 0.22
         static let contentFadeAnimationDuration: TimeInterval = 0.2
-        static let suggestionTransitionScale: CGFloat = 0.96
         static let suggestionSpringMass: CGFloat = 0.7
         static let suggestionSpringStiffness: CGFloat = 180
         static let suggestionSpringDamping: CGFloat = 14
@@ -104,6 +92,7 @@ extension OnboardingView {
         private let visualStyle: VisualStyle
         private var animateTitle: Binding<Bool>
         @StateObject private var pickerViewModel: ImageSegmentedPickerViewModel
+        private let suggestionsViewModel = OnboardingDuckAIExperimentSuggestionsViewModel()
 
         // MARK: State
         @State private var query = ""
@@ -273,10 +262,6 @@ extension OnboardingView {
             visualStyle == .rebranded ? Metrics.rebrandedQueryFieldBorderWidth : Metrics.legacyQueryFieldBorderWidth
         }
 
-        private var suggestionChipBorderWidth: CGFloat {
-            visualStyle == .rebranded ? Metrics.rebrandedSuggestionChipBorderWidth : Metrics.legacySuggestionChipBorderWidth
-        }
-
         private var initialInputFocusDelayAfterAppear: TimeInterval {
             visualStyle == .rebranded ? Metrics.rebrandedInitialInputFocusDelayAfterAppear : Metrics.legacyInitialInputFocusDelayAfterAppear
         }
@@ -408,55 +393,15 @@ extension OnboardingView {
         }
 
         private var suggestionChips: some View {
-            VStack(spacing: Metrics.interChipSpacing) {
-                if visibleSuggestionCount >= 1 {
-                    suggestionChip(
-                        isDuckAISelected
-                        ? UserText.Onboarding.DuckAIQueryExperiment.suggestionOption1
-                        : UserText.Onboarding.DuckAIQueryExperiment.searchSuggestionOption1,
-                        promptSource: .option1,
-                        icon: suggestionIcon
-                    )
-                    .transition(suggestionTransition)
+            OnboardingSuggestionChips(
+                viewModel: suggestionsViewModel,
+                isDuckAIMode: isDuckAISelected,
+                visibleCount: visibleSuggestionCount,
+                visualStyle: visualStyle,
+                onItemTap: { item, promptSource in
+                    openSelectedExperience(prompt: item.title, autoSend: true, promptSource: promptSource)
                 }
-                if visibleSuggestionCount >= 2 {
-                    suggestionChip(
-                        isDuckAISelected
-                        ? UserText.Onboarding.DuckAIQueryExperiment.suggestionOption2
-                        : UserText.Onboarding.DuckAIQueryExperiment.searchSuggestionOption2,
-                        promptSource: .option2,
-                        icon: suggestionIcon
-                    )
-                    .transition(suggestionTransition)
-                }
-                if visibleSuggestionCount >= 3 {
-                    suggestionChip(
-                        UserText.Onboarding.DuckAIQueryExperiment.suggestionSurpriseMe,
-                        promptSource: .option3,
-                        icon: DesignSystemImages.Glyphs.Size16.wand
-                    )
-                    .transition(suggestionTransition)
-                }
-            }
-        }
-
-        private var suggestionIcon: UIImage {
-            isDuckAISelected ? DesignSystemImages.Glyphs.Size16.aiChat : DesignSystemImages.Glyphs.Size24.findSearchSmall
-        }
-
-        private var suggestionTransition: AnyTransition {
-            .asymmetric(
-                insertion: .scale(scale: Metrics.suggestionTransitionScale, anchor: .top).combined(with: .opacity),
-                removal: .opacity
             )
-        }
-
-        private var suggestionChipHeight: CGFloat {
-            visualStyle == .rebranded ? Metrics.rebrandedChipHeight : Metrics.legacyChipHeight
-        }
-
-        private var suggestionChipCornerRadius: CGFloat {
-            visualStyle == .rebranded ? Metrics.rebrandedChipCornerRadius : Metrics.legacyChipCornerRadius
         }
 
         private var suggestionAppearanceAnimation: Animation {
@@ -466,36 +411,6 @@ extension OnboardingView {
                 damping: Metrics.suggestionSpringDamping,
                 initialVelocity: Metrics.suggestionSpringInitialVelocity
             )
-        }
-
-        private func suggestionChip(_ title: String, promptSource: DuckAIQueryExperimentPromptSource, icon: UIImage) -> some View {
-            Button {
-                openSelectedExperience(prompt: title, autoSend: true, promptSource: promptSource)
-            } label: {
-                HStack(spacing: Metrics.suggestionChipContentSpacing) {
-                    Image(uiImage: icon)
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: Metrics.suggestionChipIconSize, height: Metrics.suggestionChipIconSize)
-                    Text(title)
-                        .font(Font(UIFont.daxBodyBold()))
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .foregroundColor(accentColor)
-                .padding(.leading, Metrics.suggestionChipLeadingPadding)
-                .padding(.trailing, Metrics.suggestionChipTrailingPadding)
-                .frame(maxWidth: .infinity)
-                .frame(height: suggestionChipHeight)
-                // Make the whole button area tappable, when there's no background.
-                .contentShape(Rectangle())
-                .overlay(
-                    RoundedRectangle(cornerRadius: suggestionChipCornerRadius)
-                        .strokeBorder(accentColor, lineWidth: suggestionChipBorderWidth)
-                )
-            }
-            .buttonStyle(OutlinedSuggestionChipButtonStyle(cornerRadius: suggestionChipCornerRadius))
         }
 
         // MARK: Actions
@@ -789,17 +704,104 @@ private struct OnboardingQueryField: UIViewRepresentable {
     }
 }
 
-// MARK: - OutlinedSuggestionChipButtonStyle
-private struct OutlinedSuggestionChipButtonStyle: ButtonStyle {
-    private let cornerRadius: CGFloat
+// MARK: - Suggestion View Model
 
-    init(cornerRadius: CGFloat = 12) {
-        self.cornerRadius = cornerRadius
+struct OnboardingDuckAIExperimentSuggestionsViewModel {
+    private let searchSuggestionsProvider: OnboardingSuggestionsItemsProviding
+    private let duckAISuggestionsProvider: OnboardingSuggestionsItemsProviding
+
+    init(
+        searchSuggestionsProvider: OnboardingSuggestionsItemsProviding = OnboardingSuggestedSearchesProvider(),
+        duckAISuggestionsProvider: OnboardingSuggestionsItemsProviding = OnboardingDuckAISuggestionsProvider()
+    ) {
+        self.searchSuggestionsProvider = searchSuggestionsProvider
+        self.duckAISuggestionsProvider = duckAISuggestionsProvider
     }
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? Color(designSystemColor: .accent).opacity(0.1) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    func itemsList(for isDuckAIMode: Bool) -> [ContextualOnboardingListItem] {
+        isDuckAIMode ? duckAISuggestionsProvider.list : searchSuggestionsProvider.list
+    }
+}
+
+
+// MARK: - OnboardingSuggestionChips
+
+private enum OnboardingSuggestionsChipsMetrics {
+    static let suggestionTransitionScale: CGFloat = 0.96
+    static let suggestionChipIconSize: CGSize = CGSize(width: 16, height: 16)
+    static let interChipSpacing: CGFloat = 8
+}
+
+private struct OnboardingSuggestionChips: View {
+    let viewModel: OnboardingDuckAIExperimentSuggestionsViewModel
+    let isDuckAIMode: Bool
+    let visibleCount: Int
+    let visualStyle: OnboardingView.DuckAIExperimentSearchContent.VisualStyle
+    let onItemTap: (ContextualOnboardingListItem, DuckAIQueryExperimentPromptSource) -> Void
+
+    // MARK: Computed Properties
+    private var visibleItems: [ContextualOnboardingListItem] {
+        Array(viewModel.itemsList(for: isDuckAIMode).prefix(visibleCount))
+    }
+
+    private var suggestionTransition: AnyTransition {
+        .asymmetric(
+            insertion: .scale(scale: OnboardingSuggestionsChipsMetrics.suggestionTransitionScale, anchor: .top).combined(with: .opacity),
+            removal: .opacity
+        )
+    }
+
+    private func promptSource(for index: Int) -> DuckAIQueryExperimentPromptSource {
+        switch index {
+        case 0: return .option1
+        case 1: return .option2
+        case 2: return .option3
+        default: return .custom
+        }
+    }
+
+    // MARK: Body
+    var body: some View {
+        VStack(spacing: OnboardingSuggestionsChipsMetrics.interChipSpacing) {
+            ForEach(Array(visibleItems.enumerated()), id: \.offset) { index, item in
+                if visualStyle == .legacy {
+                    legacyButton(for: item, at: index)
+                } else {
+                    rebrandedButton(for: item, at: index)
+                }
+            }
+        }
+    }
+
+    // MARK: Subviews
+    @ViewBuilder
+    private func legacyButton(for item: ContextualOnboardingListItem, at index: Int) -> some View {
+        OnboardingBorderedButton(
+            content: {
+                HStack {
+                    Image(uiImage: item.image)
+                        .frame(width: OnboardingSuggestionsChipsMetrics.suggestionChipIconSize.width, height: OnboardingSuggestionsChipsMetrics.suggestionChipIconSize.height)
+                    Text(item.visibleTitle)
+                        .frame(alignment: .leading)
+                    Spacer(minLength: 0)
+                }
+            },
+            action: { handleItemTap(item, at: index) }
+        )
+        .transition(suggestionTransition)
+    }
+
+    @ViewBuilder
+    private func rebrandedButton(for item: ContextualOnboardingListItem, at index: Int) -> some View {
+        OnboardingRebranding.ContextualOnboardingListViewItem(
+            item: item,
+            iconSize: OnboardingSuggestionsChipsMetrics.suggestionChipIconSize,
+            action: { handleItemTap(item, at: index) }
+        )
+        .transition(suggestionTransition)
+    }
+
+    private func handleItemTap(_ item: ContextualOnboardingListItem, at index: Int) {
+        onItemTap(item, promptSource(for: index))
     }
 }
