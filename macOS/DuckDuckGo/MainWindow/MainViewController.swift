@@ -347,6 +347,7 @@ final class MainViewController: NSViewController {
         addAndLayoutChild(browserTabViewController, into: mainView.webContainerView)
         addAndLayoutChild(aiChatOmnibarContainerViewController, into: mainView.aiChatOmnibarContainerView)
         addAndLayoutChild(aiChatOmnibarTextContainerViewController, into: mainView.aiChatOmnibarTextContainerView)
+        _ = fireViewController
     }
 
     override func viewDidLoad() {
