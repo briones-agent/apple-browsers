@@ -17,7 +17,6 @@
 //
 //
 
-#if DEBUG
 import WebKit
 
 final class DuckAILocalServerFetchBridge: NSObject, WKScriptMessageHandlerWithReply {
@@ -117,4 +116,3 @@ final class DuckAILocalServerFetchBridge: NSObject, WKScriptMessageHandlerWithRe
         return WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     }
 }
-#endif

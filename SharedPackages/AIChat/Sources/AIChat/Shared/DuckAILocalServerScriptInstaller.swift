@@ -44,14 +44,10 @@ public enum DuckAILocalServerScriptInstaller {
         )
         controller.addUserScript(migrationUserScript)
 
-        var bridge: AnyObject?
-#if DEBUG
         let fetchBridge = DuckAILocalServerFetchBridge()
         controller.addScriptMessageHandler(fetchBridge, contentWorld: .page, name: DuckAILocalServerFetchBridge.handlerName)
         controller.addUserScript(DuckAILocalServerFetchBridge.fetchOverrideScript)
-        bridge = fetchBridge
-#endif
-        return bridge
+        return fetchBridge
     }
 
     /// Returns the port injection JavaScript string for use with `evaluateJavaScript`.
@@ -77,7 +73,6 @@ public enum DuckAILocalServerScriptInstaller {
     /// The returned `AnyObject?` must be retained for the lifetime of the webview.
     /// Returns `(bridge, js)` on DEBUG builds, `(nil, nil)` on release.
     public static func installFetchBridge(on webView: WKWebView) -> (retainer: AnyObject?, javaScript: String?) {
-#if DEBUG
         let bridge = DuckAILocalServerFetchBridge()
         webView.configuration.userContentController.addScriptMessageHandler(
             bridge,
@@ -85,9 +80,6 @@ public enum DuckAILocalServerScriptInstaller {
             name: DuckAILocalServerFetchBridge.handlerName
         )
         return (bridge, DuckAILocalServerFetchBridge.fetchOverrideScript.source)
-#else
-        return (nil, nil)
-#endif
     }
 
     private static func migrationScript(port: UInt16) -> String {
