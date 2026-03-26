@@ -73,7 +73,7 @@ struct BrowserKitBookmarkTreeBuilder {
         let isFolder: Bool
     }
 
-    private static let readingListFolderTitle = "Reading List"
+    private static let readingListFolderTitle = UserText.bookmarkReadingListFolderTitle
     private static let rootFolderParentIdentifier = "0"
 
     func build(bookmarks: [BrowserKitBookmarkNode],
