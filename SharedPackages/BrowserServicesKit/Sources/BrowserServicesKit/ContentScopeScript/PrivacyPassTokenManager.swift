@@ -16,6 +16,7 @@
 //  limitations under the License.
 //
 
+import ActCore
 import Foundation
 import os.log
 
@@ -30,6 +31,7 @@ public enum PrivacyPassError: LocalizedError {
     case invalidServerResponse
     case insufficientCredits
     case challengeParsingFailed(String)
+    case ffiError(String)
 
     public var errorDescription: String? {
         switch self {
@@ -49,6 +51,8 @@ public enum PrivacyPassError: LocalizedError {
             return "Insufficient credits"
         case .challengeParsingFailed(let detail):
             return "Challenge parsing failed: \(detail)"
+        case .ffiError(let detail):
+            return "ACT FFI error: \(detail)"
         }
     }
 }
@@ -60,9 +64,6 @@ public enum PrivacyPassError: LocalizedError {
 /// The full protocol flow:
 /// 1. **Issuance**: `act_pre_issuance_new` → `act_issuance_request` → HTTP POST `/token-request` → `act_complete_issuance`
 /// 2. **Spending**: `act_spend` → HTTP POST `/token-spend` → `act_complete_refund`
-///
-/// This prototype uses pure HTTP orchestration; the Rust FFI (`act-core`) handles
-/// crypto validation in the test server.
 public protocol PrivacyPassTokenManaging: AnyObject {
     func hasCredential(for issuerOrigin: String) -> Bool
     func issueCredential(for issuerOrigin: String) async throws
@@ -73,8 +74,8 @@ public protocol PrivacyPassTokenManaging: AnyObject {
 
 public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
 
-    /// Stored credential data per issuer origin (in-memory for prototype).
-    private var credentials: [String: Data] = [:]
+    private var credentialCBOR: [String: Data] = [:]
+    private var publicKeyCBOR: [String: Data] = [:]
     private let lock = NSLock()
     private let session: URLSession
 
@@ -85,106 +86,209 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
     public func hasCredential(for issuerOrigin: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return credentials[issuerOrigin] != nil
+        return credentialCBOR[issuerOrigin] != nil
     }
 
-    /// Runs the full ACT issuance flow against the issuer.
-    ///
-    /// 1. Fetches the issuer's public key from `/public-key`
-    /// 2. POSTs an issuance request to `/token-request`
-    /// 3. Stores the resulting CreditToken (CBOR blob) keyed by issuer origin
-    ///
-    /// In production these steps would interleave with Rust FFI calls:
-    /// `act_pre_issuance_new`, `act_issuance_request`, `act_complete_issuance`.
     public func issueCredential(for issuerOrigin: String) async throws {
         guard let issuerBaseURL = URL(string: issuerOrigin) else {
             throw PrivacyPassError.issuerURLInvalid(issuerOrigin)
         }
 
-        let publicKeyCBOR = try await fetchPublicKey(from: issuerBaseURL)
+        let pkData = try await fetchPublicKey(from: issuerBaseURL)
         Logger.privacyPass.debug("Fetched public key from \(issuerOrigin, privacy: .public)")
 
-        // In production: act_pre_issuance_new() → act_issuance_request(pre, params)
-        let issuancePayload = try JSONSerialization.data(withJSONObject: ["cbor": publicKeyCBOR])
+        let pk = try pkData.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> OpaquePointer in
+            guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                throw PrivacyPassError.ffiError("public key buffer empty")
+            }
+            guard let ptr = act_public_key_from_cbor(base, raw.count) else {
+                throw PrivacyPassError.ffiError("act_public_key_from_cbor returned nil")
+            }
+            return ptr
+        }
+        defer { act_public_key_free(pk) }
+
+        guard let pre = act_pre_issuance_new() else {
+            throw PrivacyPassError.ffiError("act_pre_issuance_new returned nil")
+        }
+        defer { act_pre_issuance_free(pre) }
+
+        guard let params = act_params_new("duckduckgo", "privacy-pass", "prototype", "2026-03") else {
+            throw PrivacyPassError.ffiError("act_params_new returned nil")
+        }
+        defer { act_params_free(params) }
+
+        var requestBuf = act_issuance_request(pre, params)
+        guard let requestData = bufferToData(requestBuf) else {
+            act_buffer_free(requestBuf)
+            throw PrivacyPassError.ffiError("act_issuance_request returned empty buffer")
+        }
+        act_buffer_free(requestBuf)
+
+        let requestBase64 = requestData.base64EncodedString()
+        let issuancePayload = try JSONSerialization.data(withJSONObject: ["cbor": requestBase64])
 
         let tokenRequestURL = issuerBaseURL.appendingPathComponent("token-request")
-        var request = URLRequest(url: tokenRequestURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = issuancePayload
+        var httpRequest = URLRequest(url: tokenRequestURL)
+        httpRequest.httpMethod = "POST"
+        httpRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        httpRequest.httpBody = issuancePayload
 
-        let (data, response) = try await session.data(for: request)
+        let (responseData, response) = try await session.data(for: httpRequest)
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw PrivacyPassError.issuanceRequestFailed("HTTP \(statusCode)")
         }
 
-        // In production: act_complete_issuance(pre, params, pk, requestCBOR, responseCBOR)
+        guard let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+              let responseCborBase64 = json["cbor"] as? String,
+              let responseCborData = Data(base64Encoded: responseCborBase64) else {
+            throw PrivacyPassError.invalidServerResponse
+        }
+
+        let token: OpaquePointer = try requestData.withUnsafeBytes { (reqRaw: UnsafeRawBufferPointer) in
+            try responseCborData.withUnsafeBytes { (respRaw: UnsafeRawBufferPointer) in
+                guard let reqBase = reqRaw.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                      let respBase = respRaw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                    throw PrivacyPassError.ffiError("buffer base address nil")
+                }
+                guard let t = act_complete_issuance(pre, params, pk,
+                                                    reqBase, reqRaw.count,
+                                                    respBase, respRaw.count) else {
+                    throw PrivacyPassError.ffiError("act_complete_issuance returned nil")
+                }
+                return t
+            }
+        }
+        defer { act_credit_token_free(token) }
+
+        var tokenBuf = act_credit_token_to_cbor(token)
+        guard let tokenData = bufferToData(tokenBuf) else {
+            act_buffer_free(tokenBuf)
+            throw PrivacyPassError.ffiError("act_credit_token_to_cbor returned empty buffer")
+        }
+        act_buffer_free(tokenBuf)
+
         lock.lock()
-        credentials[issuerOrigin] = data
+        credentialCBOR[issuerOrigin] = tokenData
+        publicKeyCBOR[issuerOrigin] = pkData
         lock.unlock()
 
         Logger.privacyPass.debug("Stored credential for \(issuerOrigin, privacy: .public)")
     }
 
-    /// Spends 1 credit from the stored credential for the given issuer.
-    ///
-    /// 1. POSTs the spend proof to `/token-spend`
-    /// 2. Receives a refund response and updates the stored credential
-    /// 3. Returns the base64-encoded spend proof for the `Authorization` header
-    ///
-    /// In production these steps would use:
-    /// `act_spend`, then `act_complete_refund` with the server's refund response.
     public func spend(for issuerOrigin: String) async throws -> String {
         guard let issuerBaseURL = URL(string: issuerOrigin) else {
             throw PrivacyPassError.issuerURLInvalid(issuerOrigin)
         }
 
         lock.lock()
-        guard let credentialData = credentials[issuerOrigin] else {
+        guard let storedTokenCBOR = credentialCBOR[issuerOrigin],
+              let storedPKCBOR = publicKeyCBOR[issuerOrigin] else {
             lock.unlock()
             throw PrivacyPassError.noCredentialForIssuer(issuerOrigin)
         }
         lock.unlock()
 
-        // In production: act_spend(token, params, charge=1) → SpendProof + PreRefund
+        let token: OpaquePointer = try storedTokenCBOR.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                throw PrivacyPassError.ffiError("token buffer empty")
+            }
+            guard let t = act_credit_token_from_cbor(base, raw.count) else {
+                throw PrivacyPassError.ffiError("act_credit_token_from_cbor returned nil")
+            }
+            return t
+        }
+        defer { act_credit_token_free(token) }
+
+        guard let params = act_params_new("duckduckgo", "privacy-pass", "prototype", "2026-03") else {
+            throw PrivacyPassError.ffiError("act_params_new returned nil")
+        }
+        defer { act_params_free(params) }
+
+        let pk: OpaquePointer = try storedPKCBOR.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                throw PrivacyPassError.ffiError("pk buffer empty")
+            }
+            guard let ptr = act_public_key_from_cbor(base, raw.count) else {
+                throw PrivacyPassError.ffiError("act_public_key_from_cbor returned nil")
+            }
+            return ptr
+        }
+        defer { act_public_key_free(pk) }
+
+        var spendResult = act_spend(token, params, 1)
+        guard let spendProofData = bufferToData(spendResult.spend_proof_cbor) else {
+            act_buffer_free(spendResult.spend_proof_cbor)
+            if let preRefund = spendResult.pre_refund { act_pre_refund_free(preRefund) }
+            throw PrivacyPassError.ffiError("act_spend returned empty spend proof")
+        }
+        act_buffer_free(spendResult.spend_proof_cbor)
+
+        guard let preRefund = spendResult.pre_refund else {
+            throw PrivacyPassError.ffiError("act_spend returned nil pre_refund")
+        }
+        defer { act_pre_refund_free(preRefund) }
+
         let spendPayload = try JSONSerialization.data(
-            withJSONObject: ["cbor": credentialData.base64EncodedString()])
+            withJSONObject: ["cbor": spendProofData.base64EncodedString()])
 
         let tokenSpendURL = issuerBaseURL.appendingPathComponent("token-spend")
-        var request = URLRequest(url: tokenSpendURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = spendPayload
+        var httpRequest = URLRequest(url: tokenSpendURL)
+        httpRequest.httpMethod = "POST"
+        httpRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        httpRequest.httpBody = spendPayload
 
-        let (data, response) = try await session.data(for: request)
+        let (responseData, response) = try await session.data(for: httpRequest)
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw PrivacyPassError.spendRequestFailed("HTTP \(statusCode)")
         }
 
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let spendProofBase64 = json["spend_proof"] as? String else {
+        guard let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+              let refundCborBase64 = json["cbor"] as? String,
+              let refundCborData = Data(base64Encoded: refundCborBase64) else {
             throw PrivacyPassError.invalidServerResponse
         }
 
-        // In production: act_complete_refund(preRefund, params, spendProofCBOR, refundCBOR, pk)
-        if let refundCBOR = json["refund_cbor"] as? String,
-           let refundData = Data(base64Encoded: refundCBOR) {
-            lock.lock()
-            credentials[issuerOrigin] = refundData
-            lock.unlock()
-            Logger.privacyPass.debug("Updated credential after refund for \(issuerOrigin, privacy: .public)")
+        let newToken: OpaquePointer = try spendProofData.withUnsafeBytes { (spRaw: UnsafeRawBufferPointer) in
+            try refundCborData.withUnsafeBytes { (rfRaw: UnsafeRawBufferPointer) in
+                guard let spBase = spRaw.baseAddress?.assumingMemoryBound(to: UInt8.self),
+                      let rfBase = rfRaw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                    throw PrivacyPassError.ffiError("refund buffer base address nil")
+                }
+                guard let t = act_complete_refund(preRefund, params,
+                                                  spBase, spRaw.count,
+                                                  rfBase, rfRaw.count,
+                                                  pk) else {
+                    throw PrivacyPassError.ffiError("act_complete_refund returned nil")
+                }
+                return t
+            }
         }
+        defer { act_credit_token_free(newToken) }
 
-        return spendProofBase64
+        var newTokenBuf = act_credit_token_to_cbor(newToken)
+        guard let newTokenData = bufferToData(newTokenBuf) else {
+            act_buffer_free(newTokenBuf)
+            throw PrivacyPassError.ffiError("act_credit_token_to_cbor returned empty buffer")
+        }
+        act_buffer_free(newTokenBuf)
+
+        lock.lock()
+        credentialCBOR[issuerOrigin] = newTokenData
+        lock.unlock()
+
+        Logger.privacyPass.debug("Updated credential after refund for \(issuerOrigin, privacy: .public)")
+
+        return spendProofData.base64EncodedString()
     }
 
     // MARK: - Private
 
-    private func fetchPublicKey(from issuerBaseURL: URL) async throws -> String {
+    private func fetchPublicKey(from issuerBaseURL: URL) async throws -> Data {
         let publicKeyURL = issuerBaseURL.appendingPathComponent("public-key")
         let (data, response) = try await session.data(from: publicKeyURL)
         guard let httpResponse = response as? HTTPURLResponse,
@@ -194,11 +298,17 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
         }
 
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let cborBase64 = json["cbor"] as? String else {
+              let cborBase64 = json["cbor"] as? String,
+              let cborData = Data(base64Encoded: cborBase64) else {
             throw PrivacyPassError.publicKeyFetchFailed("Invalid response format")
         }
 
-        return cborBase64
+        return cborData
+    }
+
+    private func bufferToData(_ buf: ActBuffer) -> Data? {
+        guard let ptr = buf.data else { return nil }
+        return Data(bytes: ptr, count: buf.len)
     }
 }
 

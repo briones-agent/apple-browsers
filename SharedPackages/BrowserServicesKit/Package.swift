@@ -77,6 +77,18 @@ let package = Package(
             url: "https://github.com/duckduckgo/GRDB.swift/releases/download/2.4.2/GRDB.xcframework.zip",
             checksum: "5380265b0e70f0ed28eb1e12640eb6cde5e4bfd39893c86b31f8d17126887174"
         ),
+        .binaryTarget(
+            name: "ActCoreBinary",
+            path: "Sources/ActCoreBinary/ActCore.xcframework"
+        ),
+        .target(
+            name: "ActCore",
+            dependencies: ["ActCoreBinary"],
+            publicHeadersPath: "include",
+            linkerSettings: [
+                .unsafeFlags(["-Xlinker", "-no_compact_unwind"])
+            ]
+        ),
         .target(
             name: "BrowserServicesKit",
             dependencies: [
@@ -92,7 +104,8 @@ let package = Package(
                 "SecureStorage",
                 "Subscription",
                 "PixelKit",
-                "Navigation"
+                "Navigation",
+                "ActCore"
             ],
             resources: [
                 .process("ContentBlocking/UserScripts/contentblockerrules.js"),
