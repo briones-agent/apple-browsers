@@ -67,7 +67,9 @@ public enum PrivacyPassError: LocalizedError {
 public protocol PrivacyPassTokenManaging: AnyObject {
     func hasCredential(for issuerOrigin: String) -> Bool
     func issueCredential(for issuerOrigin: String) async throws
+    func issueCredential(for issuerOrigin: String, tokenKeyBase64url: String) async throws
     func spend(for issuerOrigin: String) async throws -> String
+    func spendRaw(for issuerOrigin: String) async throws -> Data
 }
 
 // MARK: - Implementation
@@ -95,7 +97,23 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
         }
 
         let pkData = try await fetchPublicKey(from: issuerBaseURL)
-        Logger.privacyPass.debug("Fetched public key from \(issuerOrigin, privacy: .public)")
+        try await performIssuance(for: issuerOrigin, issuerBaseURL: issuerBaseURL, pkData: pkData)
+    }
+
+    public func issueCredential(for issuerOrigin: String, tokenKeyBase64url: String) async throws {
+        guard let issuerBaseURL = URL(string: issuerOrigin) else {
+            throw PrivacyPassError.issuerURLInvalid(issuerOrigin)
+        }
+
+        guard let pkData = base64urlDecode(tokenKeyBase64url) else {
+            throw PrivacyPassError.publicKeyFetchFailed("Invalid base64url token-key")
+        }
+
+        try await performIssuance(for: issuerOrigin, issuerBaseURL: issuerBaseURL, pkData: pkData)
+    }
+
+    private func performIssuance(for issuerOrigin: String, issuerBaseURL: URL, pkData: Data) async throws {
+        Logger.privacyPass.debug("Using public key for \(issuerOrigin, privacy: .public)")
 
         let pk = try pkData.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> OpaquePointer in
             guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
@@ -286,6 +304,14 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
         return spendProofData.base64EncodedString()
     }
 
+    public func spendRaw(for issuerOrigin: String) async throws -> Data {
+        let base64String = try await spend(for: issuerOrigin)
+        guard let data = Data(base64Encoded: base64String) else {
+            throw PrivacyPassError.ffiError("Failed to decode spend proof from base64")
+        }
+        return data
+    }
+
     // MARK: - Private
 
     private func fetchPublicKey(from issuerBaseURL: URL) async throws -> Data {
@@ -309,6 +335,17 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
     private func bufferToData(_ buf: ActBuffer) -> Data? {
         guard let ptr = buf.data else { return nil }
         return Data(bytes: ptr, count: buf.len)
+    }
+
+    private func base64urlDecode(_ input: String) -> Data? {
+        var base64 = input
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = base64.count % 4
+        if remainder > 0 {
+            base64.append(contentsOf: String(repeating: "=", count: 4 - remainder))
+        }
+        return Data(base64Encoded: base64)
     }
 }
 

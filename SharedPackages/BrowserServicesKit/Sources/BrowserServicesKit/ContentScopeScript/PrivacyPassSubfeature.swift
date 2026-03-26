@@ -16,17 +16,21 @@
 //  limitations under the License.
 //
 
+import CommonCrypto
 import Foundation
 import os.log
+import Security
 import WebKit
 
 // MARK: - Challenge Model
 
-/// Parsed parameters from a `WWW-Authenticate: PrivateToken` header.
+/// Parsed parameters from a `WWW-Authenticate: PrivateToken` header (RFC 9577).
 public struct PrivacyPassChallenge {
     public let issuerURL: String
-    public let tokenType: String?
-    public let challenge: String?
+    public let tokenType: UInt16
+    public let tokenKey: String
+    public let redemptionContext: Data
+    public let rawTokenChallenge: Data
 }
 
 // MARK: - Challenge Handler
@@ -64,21 +68,22 @@ public final class PrivacyPassChallengeHandler {
 
     // MARK: - Parsing
 
-    /// Extracts issuer URL, token-type, and challenge value from the
-    /// `WWW-Authenticate` header.
+    /// Extracts challenge and token-key from the `WWW-Authenticate` header per RFC 9577.
     ///
     /// Expected format:
     /// ```
-    /// PrivateToken challenge=<base64>, issuer="<url>", token-type=<int>
+    /// PrivateToken challenge=<base64url TokenChallenge>, token-key=<base64url public key CBOR>
     /// ```
+    ///
+    /// The `TokenChallenge` binary struct contains:
+    /// `token_type (2 BE) | issuer_name_len (2 BE) | issuer_name | redemption_context (32)`
     public func parseChallenge(from response: HTTPURLResponse) throws -> PrivacyPassChallenge {
         guard let wwwAuth = response.value(forHTTPHeaderField: "WWW-Authenticate") else {
             throw PrivacyPassError.challengeParsingFailed("Missing WWW-Authenticate header")
         }
 
-        var issuerURL: String?
-        var tokenType: String?
-        var challengeValue: String?
+        var challengeB64URL: String?
+        var tokenKeyB64URL: String?
 
         let paramString = wwwAuth
             .replacingOccurrences(of: "PrivateToken", with: "")
@@ -95,44 +100,116 @@ public final class PrivacyPassChallengeHandler {
             let value = keyValue[1].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
 
             switch key {
-            case "issuer":
-                issuerURL = value
-            case "token-type":
-                tokenType = value
             case "challenge":
-                challengeValue = value
+                challengeB64URL = value
+            case "token-key":
+                tokenKeyB64URL = value
             default:
                 break
             }
         }
 
-        guard let issuer = issuerURL else {
-            throw PrivacyPassError.challengeParsingFailed("Missing issuer in WWW-Authenticate: \(wwwAuth)")
+        guard let challengeB64 = challengeB64URL,
+              let challengeData = Self.base64urlDecode(challengeB64) else {
+            throw PrivacyPassError.challengeParsingFailed("Missing or invalid challenge in WWW-Authenticate: \(wwwAuth)")
         }
 
-        return PrivacyPassChallenge(issuerURL: issuer, tokenType: tokenType, challenge: challengeValue)
+        guard let tokenKeyB64 = tokenKeyB64URL else {
+            throw PrivacyPassError.challengeParsingFailed("Missing token-key in WWW-Authenticate: \(wwwAuth)")
+        }
+
+        guard challengeData.count >= 4 else {
+            throw PrivacyPassError.challengeParsingFailed("TokenChallenge too short")
+        }
+
+        let tokenType = UInt16(challengeData[0]) << 8 | UInt16(challengeData[1])
+        let issuerNameLen = Int(UInt16(challengeData[2]) << 8 | UInt16(challengeData[3]))
+
+        guard challengeData.count >= 4 + issuerNameLen + 32 else {
+            throw PrivacyPassError.challengeParsingFailed("TokenChallenge truncated")
+        }
+
+        let issuerName = String(data: challengeData[4..<(4 + issuerNameLen)], encoding: .utf8)
+            ?? String(data: challengeData[4..<(4 + issuerNameLen)], encoding: .ascii) ?? ""
+
+        let redemptionStart = 4 + issuerNameLen
+        let redemptionContext = challengeData[redemptionStart..<(redemptionStart + 32)]
+
+        return PrivacyPassChallenge(
+            issuerURL: issuerName,
+            tokenType: tokenType,
+            tokenKey: tokenKeyB64,
+            redemptionContext: Data(redemptionContext),
+            rawTokenChallenge: challengeData)
+    }
+
+    // MARK: - Base64url
+
+    private static func base64urlDecode(_ input: String) -> Data? {
+        var base64 = input
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = base64.count % 4
+        if remainder > 0 {
+            base64.append(contentsOf: String(repeating: "=", count: 4 - remainder))
+        }
+        return Data(base64Encoded: base64)
+    }
+
+    static func base64urlEncode(_ data: Data) -> String {
+        data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "="))
     }
 
     // MARK: - Full Challenge Flow
 
     /// Handles a Privacy Pass challenge end-to-end.
     ///
+    /// - Extracts the issuer public key from `token-key` in the challenge header.
     /// - Issues a credential with the issuer if none is stored.
-    /// - Spends 1 credit.
-    /// - Returns the full `Authorization` header value (`PrivateToken token=<base64>`).
+    /// - Spends 1 credit to get a SpendProof.
+    /// - Wraps the SpendProof in a Token struct (RFC 9577).
+    /// - Returns the full `Authorization` header value (`PrivateToken token=<base64url Token>`).
     public func handleChallenge(from response: HTTPURLResponse) async throws -> String {
         let challenge = try parseChallenge(from: response)
         Logger.privacyPass.debug("Privacy Pass challenge from issuer: \(challenge.issuerURL, privacy: .public)")
 
         if !tokenManager.hasCredential(for: challenge.issuerURL) {
-            Logger.privacyPass.debug("No credential — starting issuance with \(challenge.issuerURL, privacy: .public)")
-            try await tokenManager.issueCredential(for: challenge.issuerURL)
+            Logger.privacyPass.debug("No credential - starting issuance with \(challenge.issuerURL, privacy: .public)")
+            try await tokenManager.issueCredential(for: challenge.issuerURL, tokenKeyBase64url: challenge.tokenKey)
         }
 
-        let spendProof = try await tokenManager.spend(for: challenge.issuerURL)
-        let authorization = "PrivateToken token=\(spendProof)"
+        let spendProofData = try await tokenManager.spendRaw(for: challenge.issuerURL)
+
+        var tokenStruct = Data()
+        var tokenTypeBE = challenge.tokenType.bigEndian
+        tokenStruct.append(Data(bytes: &tokenTypeBE, count: 2))
+
+        var nonce = Data(count: 32)
+        nonce.withUnsafeMutableBytes { _ = SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        tokenStruct.append(nonce)
+
+        var challengeDigest = Data(count: 32)
+        let rawChallenge = challenge.rawTokenChallenge
+        challengeDigest = sha256(rawChallenge)
+        tokenStruct.append(challengeDigest)
+
+        tokenStruct.append(spendProofData)
+
+        let tokenB64URL = Self.base64urlEncode(tokenStruct)
+        let authorization = "PrivateToken token=\(tokenB64URL)"
         Logger.privacyPass.debug("Generated authorization for \(challenge.issuerURL, privacy: .public)")
         return authorization
+    }
+
+    private func sha256(_ data: Data) -> Data {
+        var hash = [UInt8](repeating: 0, count: 32)
+        data.withUnsafeBytes {
+            _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash)
+        }
+        return Data(hash)
     }
 
     /// Builds a `URLRequest` that retries the original URL with the authorization token.
