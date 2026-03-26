@@ -44,6 +44,7 @@ final class UserScripts: UserScriptsProvider {
     let subscriptionNavigationHandler: SubscriptionURLNavigationHandler
     let serpSettingsUserScript: SERPSettingsUserScript
     let pageContextUserScript: PageContextUserScript
+    let privacyPassSubfeature: PrivacyPassSubfeature
 
     var specialPages: SpecialPagesUserScript?
     var duckPlayer: DuckPlayerControlling? {
@@ -108,6 +109,7 @@ final class UserScripts: UserScriptsProvider {
         serpSettingsUserScript = SERPSettingsUserScript(serpSettingsProviding: SERPSettingsProvider(aiChatProvider: aiChatSettings, featureFlagger: featureFlagger))
 
         pageContextUserScript = PageContextUserScript()
+        privacyPassSubfeature = PrivacyPassSubfeature(tokenManager: MockPrivacyPassTokenManager())
 
         subscriptionNavigationHandler = SubscriptionURLNavigationHandler()
         let subscriptionFeatureFlagAdapter = SubscriptionUserScriptFeatureFlagAdapter(featureFlagger: featureFlagger)
@@ -123,6 +125,7 @@ final class UserScripts: UserScriptsProvider {
         contentScopeUserScriptIsolated.registerSubfeature(delegate: serpSettingsUserScript)
         contentScopeUserScript.registerSubfeature(delegate: printingSubfeature)
         contentScopeUserScript.registerSubfeature(delegate: pageContextUserScript)
+        contentScopeUserScriptIsolated.registerSubfeature(delegate: privacyPassSubfeature)
 
         // Special pages - Such as Duck Player
         specialPages = SpecialPagesUserScript()

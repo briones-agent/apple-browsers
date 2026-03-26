@@ -58,6 +58,7 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
     let historyViewUserScript: HistoryViewUserScript
     let serpSettingsUserScript: SERPSettingsUserScript?
     let faviconScript = FaviconUserScript()
+    let privacyPassSubfeature: PrivacyPassSubfeature
 
     private let contentScopePreferences: ContentScopePreferences
 
@@ -90,6 +91,7 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
             debugHost: aiChatDebugURLSettings.customURLHostname
         )
         serpSettingsUserScript = SERPSettingsUserScript(serpSettingsProviding: SERPSettingsProvider())
+        privacyPassSubfeature = PrivacyPassSubfeature(tokenManager: MockPrivacyPassTokenManager())
 
         let isGPCEnabled = sourceProvider.webTrackingProtectionPreferences.isGPCEnabled
         let privacyConfig = sourceProvider.privacyConfigurationManager.privacyConfig
@@ -193,6 +195,8 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
         if let serpSettingsUserScript {
             contentScopeUserScriptIsolated.registerSubfeature(delegate: serpSettingsUserScript)
         }
+
+        contentScopeUserScriptIsolated.registerSubfeature(delegate: privacyPassSubfeature)
 
         if let specialPages = specialPages {
 
