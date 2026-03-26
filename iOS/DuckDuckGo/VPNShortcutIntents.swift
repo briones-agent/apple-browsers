@@ -104,7 +104,7 @@ struct EnableVPNIntent: ForegroundContinuableIntent {
 
                 DailyPixel.fireDailyAndCount(pixel: .vpnShortcutConnectCancelled)
 
-                let dialog = IntentDialog(stringLiteral: UserText.vpnNeedsToBeEnabledFromApp)
+                let dialog = IntentDialog(stringLiteral: "You need to enable the VPN from the DuckDuckGo App.")
                 throw needsToContinueInForegroundError(dialog) {
                     await UIApplication.shared.open(AppDeepLinkSchemes.openVPN.url)
                 }

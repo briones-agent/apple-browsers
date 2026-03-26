@@ -81,7 +81,7 @@ struct WidgetEnableVPNIntent: AppIntent {
         var errorDescription: String? {
             switch self {
             case .cancelled:
-                return UserText.vpnNeedsToBeEnabledFromApp
+                return "You need to enable the VPN from the DuckDuckGo App."
             }
         }
     }
