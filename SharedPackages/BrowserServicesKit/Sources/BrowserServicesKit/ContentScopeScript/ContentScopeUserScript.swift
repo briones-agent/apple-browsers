@@ -97,7 +97,7 @@ public final class ContentScopeProperties: Encodable {
     public let features: [String: ContentScopeFeature]
     public var currentCohorts: [ContentScopeExperimentData]
     public let themeVariant: String?
-    public let trackerData: TrackerData?
+    public var trackerData: TrackerData?
 
     public init(gpcEnabled: Bool,
                 sessionKey: String,
@@ -282,6 +282,10 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
                                       config: WebkitMessagingConfig,
                                       privacyConfigurationJSONGenerator: CustomisedPrivacyConfigurationJSONGenerating?
     ) throws -> String {
+        if scriptContext != .contentScope {
+            properties.trackerData = nil
+        }
+
         let privacyConfigJsonData = privacyConfigurationJSONGenerator?.privacyConfiguration ?? privacyConfigurationManager.currentConfig
         guard let privacyConfigJson = String(data: privacyConfigJsonData, encoding: .utf8),
               let userUnprotectedDomains = try? JSONEncoder().encode(privacyConfigurationManager.privacyConfig.userUnprotectedDomains),

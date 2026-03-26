@@ -23,9 +23,9 @@ import TrackerRadarKit
 
 /// Source of tracker data for the C-S-S trackerProtection feature.
 ///
-/// Provides the full tracker data set (not the surrogate-filtered subset)
-/// for injection into the privacy config.  Surrogates are bundled statically
-/// inside C-S-S at build time and no longer supplied by native code.
+/// `trackerData` provides the full merged TDS for native classification.
+/// `encodedTrackerData` provides the surrogate-filtered subset for JS injection.
+/// These are separate datasets per the dataset contract (see ContentBlockerRulesManager.Rules).
 public protocol TrackerProtectionDataSource {
     var trackerData: TrackerData? { get }
     var encodedTrackerData: String? { get }
@@ -52,18 +52,20 @@ public struct DefaultTrackerProtectionDataSource: TrackerProtectionDataSource {
         mergedTrackerData()
     }
 
-    /// Returns JSON-encoded full tracker data for the C-S-S trackerProtection feature.
+    /// Returns JSON-encoded surrogate-filtered tracker data for C-S-S surrogate injection.
     ///
-    /// Encodes the full merged `trackerData` (main + additional lists), not the
-    /// pre-filtered `encodedTrackerData` from `Rules`.  trackerProtection needs
-    /// all trackers including CTL rules.
+    /// Uses `extractSurrogates` to include only trackers with surrogate rules,
+    /// matching the dataset contract: full TDS for native classification,
+    /// surrogate-filtered TDS for JavaScript.
     public var encodedTrackerData: String? {
         guard let data = mergedTrackerData() else {
             Logger.contentBlocking.warning("TrackerProtectionDataSource: no tracker data available")
             return nil
         }
 
-        guard let encodedData = try? JSONEncoder().encode(data),
+        let surrogateTDS = ContentBlockerRulesManager.extractSurrogates(from: data)
+
+        guard let encodedData = try? JSONEncoder().encode(surrogateTDS),
               let encodedString = String(data: encodedData, encoding: .utf8) else {
             Logger.contentBlocking.warning("TrackerProtectionDataSource: Failed to encode trackerData")
             return nil
