@@ -410,7 +410,31 @@ jobs:
         run: python3 scripts/translation-pr-checks/check_new_string_translations.py --platform iOS
 
       - name: Check for orphaned translations
-        run: python3 scripts/translation-pr-checks/check_deleted_string_translations.py --platform iOS
+        id: orphaned-translations
+        run: |
+          output=$(python3 scripts/translation-pr-checks/check_deleted_string_translations.py --platform iOS 2>&1)
+          echo "$output"
+          if echo "$output" | grep -q "orphaned translations found"; then
+            echo "has_orphans=true" >> "$GITHUB_OUTPUT"
+            # Escape newlines for GitHub Actions output
+            EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+            echo "message<<$EOF" >> "$GITHUB_OUTPUT"
+            echo "$output" >> "$GITHUB_OUTPUT"
+            echo "$EOF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR with orphaned translations
+        if: steps.orphaned-translations.outputs.has_orphans == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body "## ⚠️ Orphaned Translations Detected
+
+          ${{ steps.orphaned-translations.outputs.message }}
+
+          > This is an automated warning. The PR will not be blocked."
 
   create-asana-task:
     name: Create Asana Task
