@@ -18,6 +18,7 @@
 //
 
 import Foundation
+import os.log
 import BrowserServicesKit
 import Bookmarks
 
@@ -73,18 +74,31 @@ struct BrowserKitBookmarkTreeBuilder {
         let isFolder: Bool
     }
 
+    private enum BuildStrategy: String {
+        case streamOrder = "stream-order"
+        case numericFallback = "numeric-fallback"
+    }
+
     private static let readingListFolderTitle = "Reading List"
     private static let rootFolderParentIdentifier = "0"
 
     func build(bookmarks: [BrowserKitBookmarkNode],
                readingListItems: [BrowserKitReadingListNode]) -> [BookmarkOrFolder] {
+        Logger.bookmarks.debug(
+            "BrowserKit tree build started: bookmarks=\(bookmarks.count, privacy: .public), reading-list=\(readingListItems.count, privacy: .public)"
+        )
+
         // First pass: build the tree using the original stream order from BrowserKit.
         // This works when items arrive in a parent-before-child sequence.
         let streamRecords = makeBookmarkRecords(from: bookmarks)
         let streamResult = buildTree(records: streamRecords,
-                                     readingListItems: readingListItems)
+                                     readingListItems: readingListItems,
+                                     strategy: .streamOrder)
 
         guard streamResult.signals.suggestsReordering else {
+            Logger.bookmarks.debug(
+                "BrowserKit tree build finished: strategy=stream-order, roots=\(streamResult.roots.count, privacy: .public), fallback-used=false"
+            )
             return streamResult.roots
         }
 
@@ -95,6 +109,15 @@ struct BrowserKitBookmarkTreeBuilder {
         }
 
         guard canUseNumericFallback else {
+            Logger.bookmarks.debug(
+                """
+                BrowserKit tree fallback skipped: \
+                root-children-without-root=\(streamResult.signals.rootFolderChildrenWithoutActiveRoot, privacy: .public), \
+                root-children-preceding-root=\(streamResult.signals.rootFolderChildrenPrecedingActiveRoot, privacy: .public), \
+                unresolved-parent-references=\(streamResult.signals.unresolvedParentReferences, privacy: .public), \
+                reason=non-numeric-identifiers
+                """
+            )
             return streamResult.roots
         }
 
@@ -102,7 +125,18 @@ struct BrowserKitBookmarkTreeBuilder {
         let fallbackRecords = makeBookmarkRecords(from: bookmarks)
         let numericOrderedRecords = makeNumericOrderedRecords(from: fallbackRecords)
         let fallbackResult = buildTree(records: numericOrderedRecords,
-                                       readingListItems: readingListItems)
+                                       readingListItems: readingListItems,
+                                       strategy: .numericFallback)
+
+        Logger.bookmarks.debug(
+            """
+            BrowserKit tree fallback applied: stream-signals \
+            root-children-without-root=\(streamResult.signals.rootFolderChildrenWithoutActiveRoot, privacy: .public), \
+            root-children-preceding-root=\(streamResult.signals.rootFolderChildrenPrecedingActiveRoot, privacy: .public), \
+            unresolved-parent-references=\(streamResult.signals.unresolvedParentReferences, privacy: .public), \
+            fallback-roots=\(fallbackResult.roots.count, privacy: .public)
+            """
+        )
 
         return fallbackResult.roots
     }
@@ -123,7 +157,8 @@ struct BrowserKitBookmarkTreeBuilder {
 
     // swiftlint:disable:next cyclomatic_complexity
     private func buildTree(records: [BookmarkRecord],
-                           readingListItems: [BrowserKitReadingListNode]) -> BuildResult {
+                           readingListItems: [BrowserKitReadingListNode],
+                           strategy: BuildStrategy) -> BuildResult {
         var topLevelNodes: [BookmarkOrFolder] = []
         var foldersByIdentifier: [String: BookmarkOrFolder] = [:]
         var currentRootFolder: RootFolder?
@@ -131,12 +166,39 @@ struct BrowserKitBookmarkTreeBuilder {
         var unplacedRecords: [UnplacedRecord] = []
         var signals = TreeBuildSignals()
 
+        Logger.bookmarks.debug("BrowserKit tree processing order: strategy=\(strategy.rawValue, privacy: .public)")
+
         for record in records {
+            Logger.bookmarks.debug(
+                """
+                BrowserKit tree item: strategy=\(strategy.rawValue, privacy: .public), \
+                idx=\(record.streamIndex, privacy: .public), \
+                id=\(record.identifier, privacy: .private), \
+                parent=\(record.parentIdentifier ?? "nil", privacy: .private), \
+                is-folder=\(record.isFolder, privacy: .public), \
+                current-root=\(currentRootFolder?.identifier ?? "nil", privacy: .private), \
+                has-active-nested=\(activeNestedFolder != nil, privacy: .public)
+                """
+            )
+
             guard let parentIdentifier = record.parentIdentifier else {
                 insert(record.treeNode, into: nil, topLevelNodes: &topLevelNodes)
                 if record.isFolder {
                     currentRootFolder = RootFolder(identifier: record.identifier, treeNode: record.treeNode)
                     foldersByIdentifier[record.identifier] = record.treeNode
+                    Logger.bookmarks.debug(
+                        "BrowserKit tree root attach: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), reason=no-parent-folder"
+                    )
+                } else {
+                    Logger.bookmarks.debug(
+                        "BrowserKit tree root attach: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), reason=no-parent-bookmark-preserves-root-context"
+                    )
+                }
+
+                if activeNestedFolder != nil {
+                    Logger.bookmarks.debug(
+                        "BrowserKit tree nested context cleared: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), reason=no-parent"
+                    )
                 }
                 activeNestedFolder = nil
                 continue
@@ -145,6 +207,9 @@ struct BrowserKitBookmarkTreeBuilder {
             if parentIdentifier == Self.rootFolderParentIdentifier {
                 if let currentRootFolder {
                     insert(record.treeNode, into: currentRootFolder.treeNode, topLevelNodes: &topLevelNodes)
+                    Logger.bookmarks.debug(
+                        "BrowserKit tree nested attach: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), parent=root-sentinel, target-root=\(currentRootFolder.identifier, privacy: .private)"
+                    )
 
                     if let rootIdentifier = numericIdentifierValue(for: currentRootFolder.identifier),
                        let currentIdentifier = numericIdentifierValue(for: record.identifier),
@@ -154,11 +219,17 @@ struct BrowserKitBookmarkTreeBuilder {
                 } else {
                     insert(record.treeNode, into: nil, topLevelNodes: &topLevelNodes)
                     signals.rootFolderChildrenWithoutActiveRoot += 1
+                    Logger.bookmarks.debug(
+                        "BrowserKit tree root attach: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), parent=root-sentinel, reason=no-active-root"
+                    )
                 }
 
                 if record.isFolder {
                     if currentRootFolder != nil {
                         activeNestedFolder = record.treeNode
+                        Logger.bookmarks.debug(
+                            "BrowserKit tree nested context set: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), folder-id=\(record.identifier, privacy: .private)"
+                        )
                     }
                     foldersByIdentifier[record.identifier] = record.treeNode
                 }
@@ -171,20 +242,34 @@ struct BrowserKitBookmarkTreeBuilder {
                parentIdentifier == currentRootFolder.identifier,
                let activeNestedFolder {
                 insert(record.treeNode, into: activeNestedFolder, topLevelNodes: &topLevelNodes)
+                Logger.bookmarks.debug(
+                    "BrowserKit tree nested attach: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), parent=\(parentIdentifier, privacy: .private), target=active-nested-folder"
+                )
                 if record.isFolder {
                     foldersByIdentifier[record.identifier] = record.treeNode
                 }
                 continue
             }
 
+            if activeNestedFolder != nil {
+                Logger.bookmarks.debug(
+                    "BrowserKit tree nested context cleared: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), reason=parent-not-current-root"
+                )
+            }
             activeNestedFolder = nil
 
             if let parentFolder = foldersByIdentifier[parentIdentifier] {
                 insert(record.treeNode, into: parentFolder, topLevelNodes: &topLevelNodes)
+                Logger.bookmarks.debug(
+                    "BrowserKit tree nested attach: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), parent=\(parentIdentifier, privacy: .private), target=parent-lookup"
+                )
                 if record.isFolder {
                     foldersByIdentifier[record.identifier] = record.treeNode
                 }
             } else {
+                Logger.bookmarks.debug(
+                    "BrowserKit tree unresolved parent queued: strategy=\(strategy.rawValue, privacy: .public), idx=\(record.streamIndex, privacy: .public), id=\(record.identifier, privacy: .private), parent=\(parentIdentifier, privacy: .private)"
+                )
                 unplacedRecords.append(
                     UnplacedRecord(identifier: record.identifier,
                                    parentIdentifier: parentIdentifier,
@@ -195,6 +280,9 @@ struct BrowserKitBookmarkTreeBuilder {
         }
 
         if !unplacedRecords.isEmpty {
+            Logger.bookmarks.debug(
+                "BrowserKit tree unresolved pass started: strategy=\(strategy.rawValue, privacy: .public), queued=\(unplacedRecords.count, privacy: .public)"
+            )
             var remaining = unplacedRecords
             var madeProgress = true
 
@@ -210,6 +298,9 @@ struct BrowserKitBookmarkTreeBuilder {
                         if unplacedRecord.isFolder {
                             foldersByIdentifier[unplacedRecord.identifier] = unplacedRecord.treeNode
                         }
+                        Logger.bookmarks.debug(
+                            "BrowserKit tree unresolved attach: strategy=\(strategy.rawValue, privacy: .public), id=\(unplacedRecord.identifier, privacy: .private), parent=\(parentIdentifier, privacy: .private), target=parent-lookup"
+                        )
                         madeProgress = true
                     } else {
                         nextRemaining.append(unplacedRecord)
@@ -222,6 +313,9 @@ struct BrowserKitBookmarkTreeBuilder {
             remaining.forEach { remainingRecord in
                 insert(remainingRecord.treeNode, into: nil, topLevelNodes: &topLevelNodes)
                 signals.unresolvedParentReferences += 1
+                Logger.bookmarks.debug(
+                    "BrowserKit tree unresolved parent dropped-to-root: strategy=\(strategy.rawValue, privacy: .public), id=\(remainingRecord.identifier, privacy: .private), parent=\(remainingRecord.parentIdentifier, privacy: .private)"
+                )
             }
         }
 
@@ -233,7 +327,19 @@ struct BrowserKitBookmarkTreeBuilder {
                                  urlString: nil,
                                  children: readingListBookmarks)
             )
+            Logger.bookmarks.debug(
+                "BrowserKit tree reading-list appended: strategy=\(strategy.rawValue, privacy: .public), count=\(readingListBookmarks.count, privacy: .public)"
+            )
         }
+
+        Logger.bookmarks.debug(
+            """
+            BrowserKit tree build finished: strategy=\(strategy.rawValue, privacy: .public), \
+            roots=\(topLevelNodes.count, privacy: .public), \
+            unresolved-parent-references=\(signals.unresolvedParentReferences, privacy: .public), \
+            suggests-reordering=\(signals.suggestsReordering, privacy: .public)
+            """
+        )
         return BuildResult(roots: topLevelNodes, signals: signals)
     }
 

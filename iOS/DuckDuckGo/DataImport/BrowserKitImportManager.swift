@@ -166,24 +166,53 @@ private extension BrowserKitImportManager {
 
     func importSupportedData(token: UUID) async throws -> ImportedData {
         var importedData = ImportedData()
+        var streamIndex = 0
+        var folderCount = 0
+        var bookmarkCount = 0
+        var bookmarkWithParentCount = 0
+        var readingListCount = 0
+        var unsupportedCount = 0
 
         for try await browserData in browserDataImportManager.importBrowserData(token: token) {
             switch browserData {
             case .bookmark(let bookmark):
                 importedData.bookmarks.append(bookmark)
+                if bookmark.isFolder {
+                    folderCount += 1
+                } else {
+                    bookmarkCount += 1
+                }
+                if bookmark.parentIdentifier != nil {
+                    bookmarkWithParentCount += 1
+                }
+                Logger.bookmarks.debug(
+                    "BrowserKit raw bookmark: idx=\(streamIndex, privacy: .public), id=\(bookmark.identifier, privacy: .private), parent=\(bookmark.parentIdentifier ?? "nil", privacy: .private), is-folder=\(bookmark.isFolder, privacy: .public), title=\(bookmark.title, privacy: .private), url=\(bookmark.url?.absoluteString ?? "nil", privacy: .private)"
+                )
             case .readingListItem(let readingListItem):
                 importedData.readingListItems.append(readingListItem)
+                readingListCount += 1
+                Logger.bookmarks.debug(
+                    "BrowserKit raw reading-list-item: idx=\(streamIndex, privacy: .public), title=\(readingListItem.title, privacy: .private), url=\(readingListItem.url.absoluteString, privacy: .private)"
+                )
             case .unsupported(let typeName):
+                unsupportedCount += 1
                 Logger.bookmarks.debug("Skipping unsupported BrowserKit data type: type=\(typeName, privacy: .public)")
             }
+            streamIndex += 1
         }
+
+        Logger.bookmarks.debug(
+            "BrowserKit import payload: folders=\(folderCount, privacy: .public), bookmarks=\(bookmarkCount, privacy: .public), with-parent=\(bookmarkWithParentCount, privacy: .public), reading-list=\(readingListCount, privacy: .public), unsupported=\(unsupportedCount, privacy: .public)"
+        )
 
         return importedData
     }
 
     func createBookmarksForImport(bookmarks: [BrowserKitBookmarkNode],
                                   readingListItems: [BrowserKitReadingListNode]) -> [BookmarkOrFolder] {
-        BrowserKitBookmarkTreeBuilder().build(bookmarks: bookmarks,
-                                              readingListItems: readingListItems)
+        let tree = BrowserKitBookmarkTreeBuilder().build(bookmarks: bookmarks,
+                                                         readingListItems: readingListItems)
+        Logger.bookmarks.debug("BrowserKit import tree output: roots=\(tree.count, privacy: .public)")
+        return tree
     }
 }
