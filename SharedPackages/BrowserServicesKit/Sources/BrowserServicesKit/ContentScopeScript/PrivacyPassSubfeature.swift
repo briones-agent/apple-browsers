@@ -1,5 +1,5 @@
 //
-//  PrivacyPassSubfeature.swift
+//  PrivacyPassChallengeHandler.swift
 //
 //  Copyright © 2025 DuckDuckGo. All rights reserved.
 //
@@ -18,29 +18,34 @@
 
 import Foundation
 import os.log
-import UserScript
 import WebKit
 
-/// Subfeature that handles Privacy Pass ACT messages from content-scope-scripts.
-///
-/// When the JavaScript `privacyPass` feature calls methods like `issue`, `spend`,
-/// `balance`, or `redeem`, this subfeature routes them to the `PrivacyPassTokenManaging`
-/// implementation.
-///
-/// ## Usage
-///
-/// ```swift
-/// let tokenManager = MockPrivacyPassTokenManager()
-/// let privacyPassSubfeature = PrivacyPassSubfeature(tokenManager: tokenManager)
-/// contentScopeUserScriptIsolated.registerSubfeature(delegate: privacyPassSubfeature)
-/// ```
-public final class PrivacyPassSubfeature: Subfeature {
+// MARK: - Challenge Model
 
-    public static let featureNameValue = "privacyPass"
+/// Parsed parameters from a `WWW-Authenticate: PrivateToken` header.
+public struct PrivacyPassChallenge {
+    public let issuerURL: String
+    public let tokenType: String?
+    public let challenge: String?
+}
 
-    public let messageOriginPolicy: MessageOriginPolicy = .all
-    public let featureName: String = PrivacyPassSubfeature.featureNameValue
-    public weak var broker: UserScriptMessageBroker?
+// MARK: - Challenge Handler
+
+/// HTTP-level Privacy Pass ACT handler.
+///
+/// Replaces the previous JS message–based `PrivacyPassSubfeature`.
+/// Instead of handling content-scope-scripts messages, this class operates
+/// at the HTTP layer:
+///
+/// 1. Detects `401` responses carrying `WWW-Authenticate: PrivateToken`
+/// 2. Parses the challenge to extract the issuer URL
+/// 3. Runs the ACT issuance protocol if no credential is stored for that issuer
+/// 4. Spends 1 credit to obtain a spend proof
+/// 5. Returns an `Authorization` header value so the caller can retry the request
+///
+/// Both iOS (`TabViewController`) and macOS (navigation responder chain) call
+/// into this handler when they observe an eligible 401 response.
+public final class PrivacyPassChallengeHandler {
 
     private let tokenManager: PrivacyPassTokenManaging
 
@@ -48,83 +53,109 @@ public final class PrivacyPassSubfeature: Subfeature {
         self.tokenManager = tokenManager
     }
 
-    public func with(broker: UserScriptMessageBroker) {
-        self.broker = broker
+    // MARK: - Detection
+
+    /// Returns `true` when the response is a Privacy Pass challenge (401 + PrivateToken).
+    public func isPrivacyPassChallenge(_ response: HTTPURLResponse) -> Bool {
+        guard response.statusCode == 401 else { return false }
+        let wwwAuth = response.value(forHTTPHeaderField: "WWW-Authenticate") ?? ""
+        return wwwAuth.contains("PrivateToken")
     }
 
-    enum MessageNames: String, CaseIterable {
-        case issue
-        case spend
-        case balance
-        case redeem
-    }
+    // MARK: - Parsing
 
-    public func handler(forMethodNamed methodName: String) -> Subfeature.Handler? {
-        switch MessageNames(rawValue: methodName) {
-        case .issue:
-            return { [weak self] params, original in
-                try await self?.handleIssue(params: params, original: original)
-            }
-        case .spend:
-            return { [weak self] params, original in
-                try await self?.handleSpend(params: params, original: original)
-            }
-        case .balance:
-            return { [weak self] params, original in
-                try await self?.handleBalance(params: params, original: original)
-            }
-        case .redeem:
-            return { [weak self] params, original in
-                try await self?.handleRedeem(params: params, original: original)
-            }
-        default:
-            return nil
+    /// Extracts issuer URL, token-type, and challenge value from the
+    /// `WWW-Authenticate` header.
+    ///
+    /// Expected format:
+    /// ```
+    /// PrivateToken challenge=<base64>, issuer="<url>", token-type=<int>
+    /// ```
+    public func parseChallenge(from response: HTTPURLResponse) throws -> PrivacyPassChallenge {
+        guard let wwwAuth = response.value(forHTTPHeaderField: "WWW-Authenticate") else {
+            throw PrivacyPassError.challengeParsingFailed("Missing WWW-Authenticate header")
         }
-    }
 
-    // MARK: - Handlers
+        var issuerURL: String?
+        var tokenType: String?
+        var challengeValue: String?
 
-    @MainActor
-    private func handleIssue(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        let dict = params as? [String: Any] ?? [:]
-        let issuer = dict["issuer"] as? String ?? "unknown"
-        let credits = dict["credits"] as? Int ?? 0
-        Logger.privacyPass.debug("Handling issue request: issuer=\(issuer, privacy: .public), credits=\(credits, privacy: .public)")
-        let credential = tokenManager.issueCredential(issuer: issuer, credits: credits)
-        return credential
-    }
+        let paramString = wwwAuth
+            .replacingOccurrences(of: "PrivateToken", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        let parts = paramString.components(separatedBy: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
 
-    @MainActor
-    private func handleSpend(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        let dict = params as? [String: Any] ?? [:]
-        guard let credentialId = dict["credentialId"] as? String else {
-            throw PrivacyPassError.credentialNotFound
+        for part in parts {
+            let keyValue = part.split(separator: "=", maxSplits: 1)
+                .map { String($0).trimmingCharacters(in: .whitespaces) }
+            guard keyValue.count == 2 else { continue }
+
+            let key = keyValue[0].lowercased()
+            let value = keyValue[1].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+
+            switch key {
+            case "issuer":
+                issuerURL = value
+            case "token-type":
+                tokenType = value
+            case "challenge":
+                challengeValue = value
+            default:
+                break
+            }
         }
-        let amount = dict["amount"] as? Int ?? 1
-        Logger.privacyPass.debug("Handling spend request: credentialId=\(credentialId, privacy: .public), amount=\(amount, privacy: .public)")
-        let result = try tokenManager.spendCredits(credentialId: credentialId, amount: amount)
-        return result
+
+        guard let issuer = issuerURL else {
+            throw PrivacyPassError.challengeParsingFailed("Missing issuer in WWW-Authenticate: \(wwwAuth)")
+        }
+
+        return PrivacyPassChallenge(issuerURL: issuer, tokenType: tokenType, challenge: challengeValue)
     }
 
-    @MainActor
-    private func handleBalance(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        let dict = params as? [String: Any] ?? [:]
-        guard let credentialId = dict["credentialId"] as? String else {
-            throw PrivacyPassError.credentialNotFound
+    // MARK: - Full Challenge Flow
+
+    /// Handles a Privacy Pass challenge end-to-end.
+    ///
+    /// - Issues a credential with the issuer if none is stored.
+    /// - Spends 1 credit.
+    /// - Returns the full `Authorization` header value (`PrivateToken token=<base64>`).
+    public func handleChallenge(from response: HTTPURLResponse) async throws -> String {
+        let challenge = try parseChallenge(from: response)
+        Logger.privacyPass.debug("Privacy Pass challenge from issuer: \(challenge.issuerURL, privacy: .public)")
+
+        if !tokenManager.hasCredential(for: challenge.issuerURL) {
+            Logger.privacyPass.debug("No credential — starting issuance with \(challenge.issuerURL, privacy: .public)")
+            try await tokenManager.issueCredential(for: challenge.issuerURL)
         }
-        Logger.privacyPass.debug("Handling balance request: credentialId=\(credentialId, privacy: .public)")
-        let credits = tokenManager.balance(credentialId: credentialId)
-        return ["credits": credits]
+
+        let spendProof = try await tokenManager.spend(for: challenge.issuerURL)
+        let authorization = "PrivateToken token=\(spendProof)"
+        Logger.privacyPass.debug("Generated authorization for \(challenge.issuerURL, privacy: .public)")
+        return authorization
     }
 
+    /// Builds a `URLRequest` that retries the original URL with the authorization token.
+    public func authorizedRequest(for originalURL: URL, authorization: String) -> URLRequest {
+        var request = URLRequest(url: originalURL)
+        request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    // MARK: - WKWebView Integration
+
+    /// Convenience for retrying a navigation in a `WKWebView` after obtaining authorization.
+    ///
+    /// Call this from `decidePolicy(for navigationResponse:)` when `isPrivacyPassChallenge` returns true.
+    /// The handler will cancel the current navigation, perform the issuance/spend flow,
+    /// and load a new request with the `Authorization` header.
     @MainActor
-    private func handleRedeem(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        let dict = params as? [String: Any] ?? [:]
-        guard let token = dict["token"] as? String else {
-            return ["success": false]
-        }
-        Logger.privacyPass.debug("Handling redeem request")
-        let success = tokenManager.redeemToken(token)
-        return ["success": success]
+    public func handleChallengeAndRetry(response: HTTPURLResponse,
+                                        originalURL: URL,
+                                        webView: WKWebView) async throws {
+        let authorization = try await handleChallenge(from: response)
+        let request = authorizedRequest(for: originalURL, authorization: authorization)
+        webView.load(request)
+        Logger.privacyPass.debug("Retrying navigation to \(originalURL.absoluteString, privacy: .public) with authorization")
     }
 }
