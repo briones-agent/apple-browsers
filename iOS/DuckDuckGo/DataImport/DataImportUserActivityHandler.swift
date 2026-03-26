@@ -24,7 +24,7 @@ import BrowserServicesKit
 import Persistence
 import Bookmarks
 
-typealias DataImportUserActivityResultHandler = (Result<DataImportSummary, Error>) -> Void
+typealias DataImportResultHandler = (Result<DataImportSummary, Error>) -> Void
 
 protocol DataImportUserActivityHandling {
     @discardableResult
@@ -39,11 +39,11 @@ final class DataImportUserActivityHandler: DataImportUserActivityHandling {
     }
 
     private let dependencies: Dependencies
-    private let onImportResult: DataImportUserActivityResultHandler
+    private let onImportResult: DataImportResultHandler
     private var browserKitUserActivityHandler: DataImportUserActivityHandling?
 
     init(dependencies: Dependencies,
-         onImportResult: @escaping DataImportUserActivityResultHandler,
+         onImportResult: @escaping DataImportResultHandler,
          browserKitUserActivityHandler: DataImportUserActivityHandling? = nil) {
         self.dependencies = dependencies
         self.onImportResult = onImportResult

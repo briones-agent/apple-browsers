@@ -28,8 +28,6 @@ protocol BrowserKitImportManaging {
     func handleImportRequest(with token: UUID)
 }
 
-typealias BrowserKitImportResultHandler = (Result<DataImportSummary, Error>) -> Void
-
 enum BrowserKitImportManagerError: Error {
     case unsupportedPlatform
 }
@@ -97,12 +95,12 @@ final class LiveBEBrowserDataImportManagerAdapter: BrowserKitBrowserDataImportMa
 final class BrowserKitImportManager: BrowserKitImportManaging {
     private let bookmarkImporter: BookmarkCoreDataImporter
     private let browserDataImportManager: BrowserKitBrowserDataImportManaging
-    private let onImportResult: BrowserKitImportResultHandler
+    private let onImportResult: DataImportResultHandler
 
     init(bookmarksDatabase: CoreDataDatabase,
          favoritesDisplayMode: FavoritesDisplayMode,
          browserDataImportManager: BrowserKitBrowserDataImportManaging = LiveBEBrowserDataImportManagerAdapter(),
-         onImportResult: @escaping BrowserKitImportResultHandler = { _ in }) {
+         onImportResult: @escaping DataImportResultHandler = { _ in }) {
         self.bookmarkImporter = BookmarkCoreDataImporter(database: bookmarksDatabase,
                                                          favoritesDisplayMode: favoritesDisplayMode)
         self.browserDataImportManager = browserDataImportManager
@@ -135,6 +133,9 @@ final class BrowserKitImportManager: BrowserKitImportManaging {
                 }
             } catch is CancellationError {
                 Logger.bookmarks.debug("BrowserKit import request cancelled")
+                await MainActor.run {
+                    self.onImportResult(.failure(CancellationError()))
+                }
             } catch {
                 Logger.bookmarks.error("BrowserKit import failed: \(error.localizedDescription, privacy: .public)")
                 await MainActor.run {
