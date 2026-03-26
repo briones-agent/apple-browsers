@@ -54,7 +54,7 @@ def get_deleted_keys_strings(en_file_path: str, base_content: str) -> Set[str]:
         with open(en_file_path, 'r', encoding='utf-8') as f:
             current_content = f.read()
     except FileNotFoundError:
-        return set()
+        return set(parse_strings_file(base_content).keys())
 
     base_keys = set(parse_strings_file(base_content).keys())
     current_keys = set(parse_strings_file(current_content).keys())
@@ -68,7 +68,7 @@ def get_deleted_keys_stringsdict(en_file_path: str, base_content: str) -> Set[st
         with open(en_file_path, 'r', encoding='utf-8') as f:
             current_content = f.read()
     except FileNotFoundError:
-        return set()
+        return parse_stringsdict_file(base_content)
 
     base_keys = parse_stringsdict_file(base_content)
     current_keys = parse_stringsdict_file(current_content)
