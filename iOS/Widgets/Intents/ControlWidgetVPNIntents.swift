@@ -36,7 +36,7 @@ struct ControlWidgetToggleVPNIntent: SetValueIntent {
         var errorDescription: String? {
             switch self {
             case .cancelled:
-                return "You need to enable the VPN from the DuckDuckGo App."
+                return UserText.vpnNeedsToBeEnabledFromApp
             }
         }
     }

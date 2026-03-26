@@ -20,4 +20,5 @@
 import Foundation
 
 extension UserText {
+    static let vpnNeedsToBeEnabledFromApp = NSLocalizedString("intent.vpn.needs.to.be.enabled.from.app", value: "You need to enable the VPN from the DuckDuckGo App.", comment: "Message that comes up when trying to enable the VPN from intents, asking the user to enable it from the app so it's configured")
 }
