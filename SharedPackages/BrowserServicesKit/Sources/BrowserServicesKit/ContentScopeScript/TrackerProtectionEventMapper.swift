@@ -19,100 +19,59 @@
 import Common
 import ContentBlocking
 import Foundation
+import TrackerRadarKit
 
-/// Shared converter for C-S-S tracker-protection events to native DetectedRequest.
-/// Eliminates duplicated mapping logic between iOS TabViewController and macOS ContentBlockingTabExtension.
+/// Classifies raw C-S-S resource observations into DetectedRequest using native TrackerResolver.
+///
+/// C-S-S is a raw resource observer — it sends `{url, resourceType, potentiallyBlocked, pageUrl}`.
+/// This mapper runs TrackerResolver with full in-memory TDS to produce authoritative classification.
 public struct TrackerProtectionEventMapper {
 
     private let tld: TLD
+    private let trackerResolver: TrackerResolver
 
-    public init(tld: TLD) {
+    public init(tld: TLD, trackerResolver: TrackerResolver) {
         self.tld = tld
+        self.trackerResolver = trackerResolver
     }
 
-    // MARK: - TrackerDetection mapping
+    // MARK: - ResourceObservation classification
 
-    public func detectedRequest(from tracker: TrackerProtectionSubfeature.TrackerDetection) -> DetectedRequest {
-        let reason = TrackerBlockingReason(rawValue: tracker.reason ?? "")
-        let state: BlockingState = tracker.blocked ? .blocked : .allowed(reason: reason?.allowReason ?? .otherThirdPartyRequest)
-        let eTLDplus1 = tld.eTLDplus1(forStringURL: tracker.url)
-
-        return DetectedRequest(
-            url: tracker.url,
-            eTLDplus1: eTLDplus1,
-            ownerName: tracker.ownerName,
-            entityName: tracker.entityName,
-            category: tracker.category,
-            prevalence: tracker.prevalence,
-            state: state,
-            pageUrl: tracker.pageUrl
-        )
-    }
-
-    public func applyAdAttributionOverrideIfNeeded(
-        _ request: DetectedRequest,
-        tracker: TrackerProtectionSubfeature.TrackerDetection,
-        vendor: String?,
-        allowlistHosts: [String]
-    ) -> DetectedRequest {
-        guard request.state == .blocked,
-              let vendor,
-              !allowlistHosts.isEmpty,
-              let pageHost = URL(string: tracker.pageUrl)?.host?.droppingWwwPrefix(),
-              tld.eTLDplus1(pageHost)?.lowercased() == vendor.lowercased(),
-              let trackerHost = URL(string: tracker.url)?.host,
-              allowlistHosts.contains(where: { trackerHost == $0 || trackerHost.hasSuffix("." + $0) })
-        else {
-            return request
-        }
-
-        return DetectedRequest(url: request.url,
-                               eTLDplus1: request.eTLDplus1,
-                               ownerName: request.ownerName,
-                               entityName: request.entityName,
-                               category: request.category,
-                               prevalence: request.prevalence,
-                               state: .allowed(reason: .adClickAttribution),
-                               pageUrl: request.pageUrl)
+    /// Classify a raw resource observation from C-S-S using native TrackerResolver.
+    /// Returns nil if the URL is not a known tracker.
+    public func classifyResource(_ observation: TrackerProtectionSubfeature.ResourceObservation) -> DetectedRequest? {
+        return trackerResolver.trackerFromUrl(
+            observation.url,
+            pageUrlString: observation.pageUrl,
+            resourceType: observation.resourceType,
+            potentiallyBlocked: observation.potentiallyBlocked)
     }
 
     // MARK: - SurrogateInjection mapping
 
-    public func detectedRequest(from surrogate: TrackerProtectionSubfeature.SurrogateInjection) -> DetectedRequest {
-        let eTLDplus1 = tld.eTLDplus1(forStringURL: surrogate.url)
-        let surrogateHost = URL(string: surrogate.url)?.host ?? ""
-        let entityName = surrogate.entityName ?? surrogateHost
+    /// Map a surrogate injection signal to a DetectedRequest.
+    /// Uses TrackerResolver to classify the blocked URL.
+    public func classifySurrogate(_ surrogate: TrackerProtectionSubfeature.SurrogateInjection) -> DetectedRequest? {
+        return trackerResolver.trackerFromUrl(
+            surrogate.url,
+            pageUrlString: surrogate.pageUrl,
+            resourceType: "script",
+            potentiallyBlocked: true)
+    }
 
-        return DetectedRequest(
-            url: surrogate.url,
-            eTLDplus1: eTLDplus1,
-            ownerName: surrogate.ownerName,
-            entityName: entityName,
-            category: nil,
-            prevalence: nil,
-            state: .blocked,
-            pageUrl: surrogate.pageUrl
-        )
+    /// Extract the surrogate host from the injection URL.
+    public func surrogateHost(from surrogate: TrackerProtectionSubfeature.SurrogateInjection) -> String? {
+        return URL(string: surrogate.url)?.host
     }
 
     // MARK: - Classification helpers
 
-    public static func isThirdPartyRequest(_ tracker: TrackerProtectionSubfeature.TrackerDetection) -> Bool {
-        return TrackerBlockingReason(rawValue: tracker.reason ?? "")?.isNonTrackerThirdPartyRequest ?? false
-    }
-
     /// Returns true when request and page share the same eTLD+1.
-    /// Same-site detections (both tracker and non-tracker) are suppressed
-    /// from the privacy dashboard, matching legacy WebKit first-party behavior.
-    public func isSameSiteDetection(_ tracker: TrackerProtectionSubfeature.TrackerDetection) -> Bool {
-        let requestETLDplus1 = tld.eTLDplus1(forStringURL: tracker.url)
-        let pageETLDplus1 = tld.eTLDplus1(forStringURL: tracker.pageUrl)
+    public func isSameSiteObservation(_ observation: TrackerProtectionSubfeature.ResourceObservation) -> Bool {
+        let requestETLDplus1 = tld.eTLDplus1(forStringURL: observation.url)
+        let pageETLDplus1 = tld.eTLDplus1(forStringURL: observation.pageUrl)
 
         guard let requestETLDplus1, let pageETLDplus1 else { return false }
         return requestETLDplus1 == pageETLDplus1
-    }
-
-    public func surrogateHost(from surrogate: TrackerProtectionSubfeature.SurrogateInjection) -> String? {
-        return URL(string: surrogate.url)?.host
     }
 }

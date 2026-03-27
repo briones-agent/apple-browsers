@@ -24,66 +24,75 @@ import WebKit
 
 /// Delegate protocol for tracker protection events from C-S-S.
 ///
-/// Replaces `ContentBlockerRulesUserScriptDelegate` and `SurrogatesUserScriptDelegate`
-/// for the C-S-S tracker protection integration.
+/// C-S-S is a raw resource observer — native is sole classifier.
+/// Raw observations are classified by `TrackerProtectionEventMapper` using `TrackerResolver`.
 @MainActor
 public protocol TrackerProtectionSubfeatureDelegate: AnyObject {
 
-    /// Called when a tracker is detected (blocked or allowed).
+    /// Called when a resource is observed by C-S-S.
+    /// Native classifies this via TrackerResolver to produce DetectedRequest.
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
-                           didDetectTracker tracker: TrackerProtectionSubfeature.TrackerDetection)
+                           didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation)
 
-    /// Called when a surrogate is injected for a blocked tracker.
+    /// Called when a surrogate is injected by C-S-S (only when surrogateInjectionEnabled).
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection)
 
-    /// Whether tracker processing should proceed (e.g., protection might be disabled for a site).
+    /// Whether resource observation processing should proceed.
     func trackerProtectionShouldProcessTrackers(_ subfeature: TrackerProtectionSubfeature) -> Bool
 }
 
-/// Subfeature that handles tracker detection and surrogate injection messages from C-S-S.
+/// Subfeature that handles resource observation and surrogate injection messages from C-S-S.
 ///
-/// The JavaScript `trackerProtection` feature in C-S-S detects trackers, injects surrogates,
-/// and reports results back to native via this subfeature. This replaces the legacy
-/// `SurrogatesUserScript` and `ContentBlockerRulesUserScript`.
+/// C-S-S emits raw `resourceObserved` signals with `{url, resourceType, potentiallyBlocked, pageUrl}`.
+/// Native `TrackerProtectionEventMapper` classifies these via `TrackerResolver` with full TDS.
 ///
-/// ## Usage
-///
-/// ```swift
-/// let trackerProtection = TrackerProtectionSubfeature()
-/// trackerProtection.delegate = self
-/// contentScopeUserScript.registerSubfeature(delegate: trackerProtection)
-/// ```
-///
-/// Add `TrackerProtectionSubfeature.featureNameValue` to `allowedNonisolatedFeatures`
-/// when creating the `ContentScopeUserScript`.
+/// Handles schema migration: accepts both new `resourceObserved` and legacy `trackerDetected`
+/// messages during transition. Legacy `trackerDetected` is mapped to `ResourceObservation`.
 public final class TrackerProtectionSubfeature: NSObject, Subfeature {
 
     // MARK: - Types
 
-    /// Data about a detected tracker from C-S-S.
-    public struct TrackerDetection: Decodable {
+    /// Raw resource observation from C-S-S. No classification — native decides.
+    public struct ResourceObservation: Decodable {
         public let url: String
-        public let blocked: Bool
-        public let reason: String?
-        public let isSurrogate: Bool
+        public let resourceType: String
+        public let potentiallyBlocked: Bool
         public let pageUrl: String
-        public let entityName: String?
-        public let ownerName: String?
-        public let category: String?
-        public let prevalence: Double?
-        public let isAllowlisted: Bool?
     }
 
-    /// Data about a surrogate injection from C-S-S.
+    /// Surrogate injection notification from C-S-S (new minimal schema).
     public struct SurrogateInjection: Decodable {
         public let url: String
-        public let blocked: Bool
-        public let reason: String?
-        public let isSurrogate: Bool
         public let pageUrl: String
-        public let entityName: String?
-        public let ownerName: String?
+        public let surrogateName: String?
+
+        // Migration: accept legacy fields if present
+        private enum CodingKeys: String, CodingKey {
+            case url, pageUrl, surrogateName
+            case blocked, reason, isSurrogate, entityName, ownerName
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            url = try container.decode(String.self, forKey: .url)
+            pageUrl = try container.decode(String.self, forKey: .pageUrl)
+            surrogateName = try container.decodeIfPresent(String.self, forKey: .surrogateName)
+        }
+    }
+
+    /// Legacy trackerDetected schema — decoded and mapped to ResourceObservation during migration.
+    private struct LegacyTrackerDetection: Decodable {
+        let url: String
+        let blocked: Bool
+        let reason: String?
+        let isSurrogate: Bool
+        let pageUrl: String
+        let entityName: String?
+        let ownerName: String?
+        let category: String?
+        let prevalence: Double?
+        let isAllowlisted: Bool?
     }
 
     // MARK: - Properties
@@ -108,16 +117,19 @@ public final class TrackerProtectionSubfeature: NSObject, Subfeature {
     }
 
     enum MessageNames: String, CaseIterable {
-        case trackerDetected
+        case resourceObserved
         case surrogateInjected
+        case trackerDetected
     }
 
     public func handler(forMethodNamed methodName: String) -> Subfeature.Handler? {
         switch MessageNames(rawValue: methodName) {
-        case .trackerDetected:
-            return { [weak self] in try await self?.handleTrackerDetected(params: $0, original: $1) }
+        case .resourceObserved:
+            return { [weak self] in try await self?.handleResourceObserved(params: $0, original: $1) }
         case .surrogateInjected:
             return { [weak self] in try await self?.handleSurrogateInjected(params: $0, original: $1) }
+        case .trackerDetected:
+            return { [weak self] in try await self?.handleLegacyTrackerDetected(params: $0, original: $1) }
         default:
             return nil
         }
@@ -126,17 +138,17 @@ public final class TrackerProtectionSubfeature: NSObject, Subfeature {
     // MARK: - Handlers
 
     @MainActor
-    private func handleTrackerDetected(params: Any, original: WKScriptMessage) async throws -> Encodable? {
+    private func handleResourceObserved(params: Any, original: WKScriptMessage) async throws -> Encodable? {
         guard delegate?.trackerProtectionShouldProcessTrackers(self) == true else {
             return nil
         }
 
-        guard let detection = Self.decode(TrackerDetection.self, from: params) else {
-            Logger.general.warning("TrackerProtection: Failed to decode trackerDetected params")
+        guard let observation = Self.decode(ResourceObservation.self, from: params) else {
+            Logger.general.warning("TrackerProtection: Failed to decode resourceObserved params")
             return nil
         }
 
-        delegate?.trackerProtection(self, didDetectTracker: detection)
+        delegate?.trackerProtection(self, didObserveResource: observation)
         return nil
     }
 
@@ -152,6 +164,30 @@ public final class TrackerProtectionSubfeature: NSObject, Subfeature {
         }
 
         delegate?.trackerProtection(self, didInjectSurrogate: injection)
+        return nil
+    }
+
+    /// Migration handler: maps legacy trackerDetected to ResourceObservation.
+    @MainActor
+    private func handleLegacyTrackerDetected(params: Any, original: WKScriptMessage) async throws -> Encodable? {
+        guard delegate?.trackerProtectionShouldProcessTrackers(self) == true else {
+            return nil
+        }
+
+        guard let legacy = Self.decode(LegacyTrackerDetection.self, from: params) else {
+            Logger.general.warning("TrackerProtection: Failed to decode legacy trackerDetected params")
+            return nil
+        }
+
+        Logger.general.debug("TrackerProtection: Received legacy trackerDetected, mapping to ResourceObservation")
+
+        let observation = ResourceObservation(
+            url: legacy.url,
+            resourceType: legacy.isSurrogate ? "script" : "unknown",
+            potentiallyBlocked: legacy.blocked,
+            pageUrl: legacy.pageUrl)
+
+        delegate?.trackerProtection(self, didObserveResource: observation)
         return nil
     }
 
