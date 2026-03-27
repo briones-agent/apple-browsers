@@ -136,7 +136,7 @@ public extension Watchdog {
 
             logger.info("Watchdog paused")
             paused = true
-            stopMonitoring()
+            stopMonitoring(resetPauseState: false)
         }
     }
 
@@ -184,14 +184,19 @@ private extension Watchdog {
         logger.info("Watchdog started monitoring main thread with timeout: \(self.settings.maximumHangDuration)s")
     }
 
-    func stopMonitoring() {
+    func stopMonitoring(resetPauseState: Bool = true) {
         guard running else {
+            if resetPauseState {
+                paused = false
+            }
             return
         }
 
         cancelTimer()
         running = false
-        paused = false
+        if resetPauseState {
+            paused = false
+        }
 
         logger.info("Watchdog stopped monitoring")
     }
@@ -302,7 +307,9 @@ private extension Watchdog {
         switch heartbeatState {
         case .hanging:
             logger.info("Main thread hang detected! Last heartbeat [\(secondsSinceLastHeartbeat)s] ago")
-            timestamps.signalHangDetected(secondsSinceLastHeartbeat: secondsSinceLastHeartbeat, checkInterval: settings.checkInterval)
+            if timestamps.lastHangStartTimestamp == nil {
+                timestamps.signalHangDetected(secondsSinceLastHeartbeat: secondsSinceLastHeartbeat, checkInterval: settings.checkInterval)
+            }
 
         case .timeout:
             logger.info("Main thread Timeout Reached. Last heartbeat [\(secondsSinceLastHeartbeat)s] ago")
