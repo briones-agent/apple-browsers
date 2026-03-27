@@ -3259,6 +3259,17 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
         return privacyInfo?.isFor(self.url) ?? false
     }
 
+    private func makeMapper() -> TrackerProtectionEventMapper? {
+        guard let trackerData = ContentBlocking.shared.contentBlockingManager.currentMainRules?.trackerData else { return nil }
+        let tld = AppDependencyProvider.shared.storageCache.tld
+        let privacyConfig = ContentBlocking.shared.privacyConfigurationManager.privacyConfig
+        let resolver = TrackerResolver(tds: trackerData,
+                                       unprotectedSites: privacyConfig.userUnprotectedDomains,
+                                       tempList: privacyConfig.tempUnprotectedDomains,
+                                       tld: tld)
+        return TrackerProtectionEventMapper(tld: tld, trackerResolver: resolver)
+    }
+
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation) {
     }

@@ -53,6 +53,7 @@ final class ContentBlockingTabExtension: NSObject {
     private let cbaTimeReporter: ContentBlockingAssetsCompilationTimeReporter?
     private let privacyConfigurationManager: PrivacyConfigurationManaging
     private let fbBlockingEnabledProvider: FbBlockingEnabledProvider
+    private let trackerProtectionMapper: TrackerProtectionEventMapper?
     private var trackersSubject = PassthroughSubject<DetectedTracker, Never>()
 
     private var cancellables = Set<AnyCancellable>()
@@ -74,11 +75,24 @@ final class ContentBlockingTabExtension: NSObject {
          privacyConfigurationManager: PrivacyConfigurationManaging,
          contentBlockerRulesUserScriptPublisher: some Publisher<ContentBlockerRulesUserScript?, Never>,
          surrogatesUserScriptPublisher: some Publisher<SurrogatesUserScript?, Never>,
-         trackerProtectionSubfeaturePublisher: some Publisher<TrackerProtectionSubfeature?, Never>) {
+         trackerProtectionSubfeaturePublisher: some Publisher<TrackerProtectionSubfeature?, Never>,
+         tld: TLD,
+         contentBlockingManager: ContentBlockerRulesManagerProtocol) {
 
         self.cbaTimeReporter = cbaTimeReporter
         self.fbBlockingEnabledProvider = fbBlockingEnabledProvider
         self.privacyConfigurationManager = privacyConfigurationManager
+
+        if let trackerData = contentBlockingManager.currentMainRules?.trackerData {
+            let privacyConfig = privacyConfigurationManager.privacyConfig
+            let resolver = TrackerResolver(tds: trackerData,
+                                           unprotectedSites: privacyConfig.userUnprotectedDomains,
+                                           tempList: privacyConfig.tempUnprotectedDomains,
+                                           tld: tld)
+            self.trackerProtectionMapper = TrackerProtectionEventMapper(tld: tld, trackerResolver: resolver)
+        } else {
+            self.trackerProtectionMapper = nil
+        }
         super.init()
 
         userContentControllerFuture.sink { [weak self] userContentController in
@@ -188,12 +202,18 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation) {
-        Logger.contentBlocking.debug("Shadow: C-S-S observed \(observation.url) potentiallyBlocked=\(observation.potentiallyBlocked)")
+        guard let mapper = trackerProtectionMapper else { return }
+        if let detected = mapper.classifyResource(observation) {
+            Logger.contentBlocking.debug("Shadow classify: \(observation.url) -> \(detected.state == .blocked ? "blocked" : "allowed") entity=\(detected.entityName ?? "?")")
+        }
     }
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
-        Logger.contentBlocking.debug("Shadow: C-S-S surrogate injected for \(surrogate.url)")
+        guard let mapper = trackerProtectionMapper else { return }
+        if let detected = mapper.classifySurrogate(surrogate), let host = mapper.surrogateHost(from: surrogate) {
+            Logger.contentBlocking.debug("Shadow surrogate: \(surrogate.url) -> host=\(host) entity=\(detected.entityName ?? "?")")
+        }
     }
 }
 
