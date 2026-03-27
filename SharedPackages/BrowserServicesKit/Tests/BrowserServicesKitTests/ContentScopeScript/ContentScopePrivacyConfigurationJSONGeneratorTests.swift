@@ -391,6 +391,7 @@ final class ContentScopePrivacyConfigurationJSONGeneratorTests: XCTestCase {
 
 private struct MockTrackerProtectionDataSource: TrackerProtectionDataSource {
     var trackerData: TrackerRadarKit.TrackerData? { nil }
+    var surrogateFilteredTrackerData: TrackerRadarKit.TrackerData? { nil }
     let encodedTrackerData: String?
 
     init(encodedTrackerData: String? = "{}") {
