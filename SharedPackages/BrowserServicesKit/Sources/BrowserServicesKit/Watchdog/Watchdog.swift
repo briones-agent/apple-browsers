@@ -394,7 +394,5 @@ private extension DispatchTime {
 
 private extension Double {
 
-    static var nanosecondsPerSecond: Double {
-        Double(NSEC_PER_SEC)
-    }
+    static let nanosecondsPerSecond = Double(NSEC_PER_SEC)
 }
