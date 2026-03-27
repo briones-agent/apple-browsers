@@ -21,7 +21,6 @@ import AppUpdaterShared
 import BrowserServicesKit
 import Foundation
 import HistoryView
-import NewTabPage
 import Persistence
 import PixelKit
 import SERPSettings
@@ -55,7 +54,6 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
     let pageContextUserScript: PageContextUserScript?
     let subscriptionUserScript: SubscriptionUserScript?
     let historyViewUserScript: HistoryViewUserScript
-    let newTabPageUserScript: NewTabPageUserScript?
     let serpSettingsUserScript: SERPSettingsUserScript?
     let trackerProtectionSubfeature = TrackerProtectionSubfeature()
     let faviconScript = FaviconUserScript()
@@ -139,18 +137,6 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
         sourceProvider.historyViewActionsManager?.registerUserScript(historyViewUserScript)
         self.historyViewUserScript = historyViewUserScript
 
-        if sourceProvider.featureFlagger.isFeatureOn(.newTabPagePerTab) {
-            assert(
-                sourceProvider.newTabPageActionsManager != nil,
-                "NewTabPageActionsManager must be available when newTabPagePerTab feature is enabled. Ensure it is properly initialized in UserScriptDependenciesProviding."
-            )
-            let newTabPageUserScript = NewTabPageUserScript()
-            sourceProvider.newTabPageActionsManager?.registerUserScript(newTabPageUserScript)
-            self.newTabPageUserScript = newTabPageUserScript
-        } else {
-            newTabPageUserScript = nil
-        }
-
         if sourceProvider.featureFlagger.isFeatureOn(.aiChatPageContext) {
             pageContextUserScript = PageContextUserScript()
         } else {
@@ -226,9 +212,6 @@ final class UserScripts: UserScriptsProvider, ReleaseNotesUserScriptProvider {
 
             specialPages.registerSubfeature(delegate: historyViewUserScript)
 
-            if let newTabPageUserScript {
-                specialPages.registerSubfeature(delegate: newTabPageUserScript)
-            }
             userScripts.append(specialPages)
         }
 

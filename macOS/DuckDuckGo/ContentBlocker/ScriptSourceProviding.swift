@@ -40,7 +40,6 @@ protocol ScriptSourceProviding {
     var sessionKey: String? { get }
     var messageSecret: String? { get }
     var onboardingActionsManager: OnboardingActionsManaging? { get }
-    var newTabPageActionsManager: NewTabPageActionsManager? { get }
     var historyViewActionsManager: HistoryViewActionsManager? { get }
     var windowControllersManager: WindowControllersManagerProtocol { get }
     var currentCohorts: [ContentScopeExperimentData]? { get }
@@ -80,18 +79,17 @@ protocol ScriptSourceProviding {
         fireproofDomains: Application.appDelegate.fireproofDomains,
         fireCoordinator: Application.appDelegate.fireCoordinator,
         autoconsentManagement: Application.appDelegate.autoconsentManagement,
-        newTabPageActionsManager: nil,
         syncServiceProvider: { [weak appDelegate = Application.appDelegate] in
             return appDelegate?.syncService
         },
         syncErrorHandler: Application.appDelegate.syncErrorHandler,
-        webExtensionAvailability: Application.appDelegate.webExtensionAvailability
+        webExtensionAvailability: Application.appDelegate.webExtensionAvailability,
+        dockCustomization: Application.appDelegate.dockCustomization
     )
 }
 
 struct ScriptSourceProvider: ScriptSourceProviding {
     private(set) var onboardingActionsManager: OnboardingActionsManaging?
-    private(set) var newTabPageActionsManager: NewTabPageActionsManager?
     private(set) var historyViewActionsManager: HistoryViewActionsManager?
     private(set) var autofillSourceProvider: AutofillUserScriptSourceProvider?
     private(set) var sessionKey: String?
@@ -117,8 +115,9 @@ struct ScriptSourceProvider: ScriptSourceProviding {
     let syncErrorHandler: SyncErrorHandling
     let webExtensionAvailability: WebExtensionAvailabilityProviding?
     let trackerProtectionDataSource: TrackerProtectionDataSource?
+    let appearancePreferences: AppearancePreferences
+    let dockCustomization: DockCustomization
 
-    @MainActor
     init(configStorage: ConfigurationStoring,
          privacyConfigurationManager: PrivacyConfigurationManaging,
          webTrackingProtectionPreferences: WebTrackingProtectionPreferences,
@@ -140,10 +139,10 @@ struct ScriptSourceProvider: ScriptSourceProviding {
          fireproofDomains: DomainFireproofStatusProviding,
          fireCoordinator: FireCoordinator,
          autoconsentManagement: AutoconsentManagement,
-         newTabPageActionsManager: NewTabPageActionsManager?,
          syncServiceProvider: @escaping () -> DDGSyncing?,
          syncErrorHandler: SyncErrorHandling,
-         webExtensionAvailability: WebExtensionAvailabilityProviding?
+         webExtensionAvailability: WebExtensionAvailabilityProviding?,
+         dockCustomization: DockCustomization
     ) {
 
         self.configStorage = configStorage
@@ -175,6 +174,11 @@ struct ScriptSourceProvider: ScriptSourceProviding {
         )
 
         self.newTabPageActionsManager = newTabPageActionsManager
+        self.appearancePreferences = appearancePreferences
+        self.dockCustomization = dockCustomization
+
+        self.contentBlockerRulesConfig = buildContentBlockerRulesConfig()
+        self.surrogatesConfig = buildSurrogatesConfig()
         self.sessionKey = generateSessionKey()
         self.messageSecret = generateSessionKey()
         self.autofillSourceProvider = buildAutofillSource()
@@ -196,8 +200,8 @@ struct ScriptSourceProvider: ScriptSourceProviding {
     }
 
     public func buildAutofillSource() -> AutofillUserScriptSourceProvider {
-        let privacyConfig = self.privacyConfigurationManager.privacyConfig
-        let themeVariant = Application.appDelegate.appearancePreferences.themeName.rawValue
+        let privacyConfig = privacyConfigurationManager.privacyConfig
+        let themeVariant = appearancePreferences.themeName.rawValue
         do {
             return try DefaultAutofillSourceProvider.Builder(privacyConfigurationManager: privacyConfigurationManager,
                                                              properties: ContentScopeProperties(gpcEnabled: webTrackingProtectionPreferences.isGPCEnabled,
@@ -217,10 +221,60 @@ struct ScriptSourceProvider: ScriptSourceProviding {
     }
 
     @MainActor
+    private func buildContentBlockerRulesConfig() -> ContentBlockerUserScriptConfig {
+
+        let tdsName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
+        let trackerData = contentBlockingManager.currentRules.first(where: { $0.name == tdsName })?.trackerData
+
+        let ctlTrackerData = (contentBlockingManager.currentRules.first(where: {
+            $0.name == DefaultContentBlockerRulesListsSource.Constants.clickToLoadRulesListName
+        })?.trackerData)
+
+        do {
+            return try DefaultContentBlockerUserScriptConfig(privacyConfiguration: privacyConfigurationManager.privacyConfig,
+                                                             trackerData: trackerData,
+                                                             ctlTrackerData: ctlTrackerData,
+                                                             tld: tld,
+                                                             trackerDataManager: trackerDataManager)
+        } catch {
+            if let error = error as? UserScriptError {
+                error.fireLoadJSFailedPixelIfNeeded()
+            }
+            fatalError("Failed to initialize DefaultContentBlockerUserScriptConfig: \(error.localizedDescription)")
+        }
+    }
+
+    private func buildSurrogatesConfig() -> SurrogatesUserScriptConfig {
+
+        let isDebugBuild: Bool
+#if DEBUG
+        isDebugBuild = true
+#else
+        isDebugBuild = false
+#endif
+
+        let surrogates = configStorage.loadData(for: .surrogates)?.utf8String() ?? ""
+        let allTrackers = mergeTrackerDataSets(rules: contentBlockingManager.currentRules)
+        do {
+            return try DefaultSurrogatesUserScriptConfig(privacyConfig: privacyConfigurationManager.privacyConfig,
+                                                         surrogates: surrogates,
+                                                         trackerData: allTrackers.trackerData,
+                                                         encodedSurrogateTrackerData: allTrackers.encodedTrackerData,
+                                                         trackerDataManager: trackerDataManager,
+                                                         tld: tld,
+                                                         isDebugBuild: isDebugBuild)
+        } catch {
+            if let error = error as? UserScriptError {
+                error.fireLoadJSFailedPixelIfNeeded()
+            }
+            fatalError("Failed to initialize DefaultSurrogatesUserScriptConfig: \(error.localizedDescription)")
+        }
+    }
+
     private func buildOnboardingActionsManager(_ navigationDelegate: OnboardingNavigating, _ appearancePreferences: AppearancePreferences, _ startupPreferences: StartupPreferences) -> OnboardingActionsManaging {
         return OnboardingActionsManager(
             navigationDelegate: navigationDelegate,
-            dockCustomization: DockCustomizer(),
+            dockCustomization: dockCustomization,
             defaultBrowserProvider: SystemDefaultBrowserProvider(),
             appearancePreferences: appearancePreferences,
             startupPreferences: startupPreferences,

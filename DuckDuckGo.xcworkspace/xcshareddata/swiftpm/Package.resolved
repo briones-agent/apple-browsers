@@ -1,4 +1,5 @@
 {
+  "originHash" : "85dca4514213cd8e0c7190fb7761524a23ca803b981ce2244f0d819d6acf7c14",
   "pins" : [
     {
       "identity" : "apple-toolbox",
@@ -32,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/duckduckgo/content-scope-scripts.git",
       "state" : {
-        "revision" : "965b6a29db693c707cbc46e819afec68ef37b5e0",
-        "version" : "13.32.0"
+        "revision" : "01571a934044bfa5345d77241ea60b00334e9d30",
+        "version" : "13.34.0"
       }
     },
     {
@@ -91,15 +92,6 @@
       }
     },
     {
-      "identity" : "lrucache",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/nicklockwood/LRUCache.git",
-      "state" : {
-        "revision" : "cb5b2bd0da83ad29c0bec762d39f41c8ad0eaf3e",
-        "version" : "1.2.1"
-      }
-    },
-    {
       "identity" : "native-apps-ducksans",
       "kind" : "remoteSourceControl",
       "location" : "git@github.com:duckduckgo/native-apps-ducksans.git",
@@ -118,15 +110,6 @@
       }
     },
     {
-      "identity" : "openssl-xcframework",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/duckduckgo/OpenSSL-XCFramework",
-      "state" : {
-        "revision" : "263f0422b0b516838bc4f8cf5f4b5aac4df144c1",
-        "version" : "3.3.2000"
-      }
-    },
-    {
       "identity" : "privacy-dashboard",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/duckduckgo/privacy-dashboard",
@@ -142,15 +125,6 @@
       "state" : {
         "revision" : "30a462bdb4398ea835a3585472229e0d74b36ba5",
         "version" : "3.0.0"
-      }
-    },
-    {
-      "identity" : "sparkle",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/sparkle-project/Sparkle.git",
-      "state" : {
-        "revision" : "5581748cef2bae787496fe6d61139aebe0a451f6",
-        "version" : "2.8.1"
       }
     },
     {
@@ -178,15 +152,6 @@
       "state" : {
         "revision" : "810496cf121e525d660cd0ea89a758740476b85f",
         "version" : "1.5.1"
-      }
-    },
-    {
-      "identity" : "swift-atomics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-atomics.git",
-      "state" : {
-        "revision" : "b601256eab081c0f92f059e12818ac1d4f178ff7",
-        "version" : "1.3.0"
       }
     },
     {
@@ -239,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-snapshot-testing",
       "state" : {
-        "revision" : "a8b7c5e0ed33d8ab8887d1654d9b59f2cbad529b",
-        "version" : "1.18.7"
+        "revision" : "bf8d8c27f0f0c6d5e77bff0db76ab68f2050d15d",
+        "version" : "1.18.9"
       }
     },
     {
@@ -266,8 +231,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/scinfu/SwiftSoup",
       "state" : {
-        "revision" : "c1f3348d1845302b8e99b1c0787d9417ffa11053",
-        "version" : "2.11.2"
+        "revision" : "dba183c96b2da4e4b80bb31b1e2e59cb9542b8fc",
+        "version" : "2.13.0"
       }
     },
     {
@@ -316,5 +281,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }
