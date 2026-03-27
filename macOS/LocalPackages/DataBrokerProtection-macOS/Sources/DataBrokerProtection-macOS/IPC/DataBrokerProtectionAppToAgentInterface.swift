@@ -59,6 +59,13 @@ public protocol DataBrokerProtectionAgentDebugCommands {
     func forceBrokerUpdate() async -> Data?
     /// Sets the API environment and optional service root path.
     func setAPIEndpoint(environment: String, serviceRoot: String) async -> Data?
+
+    /// Runs a custom scan with broker JSON and profile info. Returns extracted profiles as JSON.
+    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data?
+    /// Runs opt-out for an extracted profile from a previous scan. Takes broker JSON + extracted profile JSON.
+    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data?
+    /// Returns the current debug WebView state (action progress, errors, etc.)
+    func getWebViewState() async -> Data?
 }
 
 public protocol DataBrokerProtectionAppToAgentInterface: AnyObject, DataBrokerProtectionAgentAppEvents, DataBrokerProtectionAgentDebugCommands {

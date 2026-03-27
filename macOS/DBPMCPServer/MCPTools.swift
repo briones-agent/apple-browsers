@@ -164,6 +164,29 @@ final class MCPTools {
                     required: ["environment"]
                 )
             ),
+            toolDef(
+                name: "run_optout",
+                description: "Run an opt-out for a specific extracted profile from a previous run_scan. Provide the same broker and profile info used for the scan, plus the extracted_profile JSON object from the scan results.",
+                inputSchema: schemaWith(
+                    properties: [
+                        "broker_name": ["type": "string", "description": "The broker name or URL. The broker JSON is loaded from the DB."],
+                        "broker_json": ["type": "string", "description": "Optional: custom broker JSON to use instead of the DB version."],
+                        "extracted_profile": ["type": "object", "description": "The extracted profile object from run_scan results (must include at minimum identifier or name+addresses)."],
+                        "first_name": ["type": "string", "description": "First name"],
+                        "last_name": ["type": "string", "description": "Last name"],
+                        "city": ["type": "string", "description": "City"],
+                        "state": ["type": "string", "description": "State (2-letter abbreviation)"],
+                        "birth_year": ["type": "integer", "description": "Birth year (e.g., 1980)"],
+                        "show_web_view": ["type": "boolean", "description": "Show the web view during opt-out (default: true)"]
+                    ],
+                    required: ["extracted_profile", "first_name", "last_name", "city", "state", "birth_year"]
+                )
+            ),
+            toolDef(
+                name: "get_webview_state",
+                description: "Get the current state of the debug WebView during an active scan or opt-out. Shows whether a scan/optout is running, the current action being executed, recent debug events, and any errors.",
+                inputSchema: emptySchema()
+            ),
         ]
     }
 
@@ -218,6 +241,10 @@ final class MCPTools {
             forceBrokerUpdate(completion: completion)
         case "set_api_endpoint":
             setAPIEndpoint(arguments: arguments, completion: completion)
+        case "run_optout":
+            runOptOut(arguments: arguments, completion: completion)
+        case "get_webview_state":
+            getWebViewState(completion: completion)
         default:
             completion(.failure(ToolError.unknownTool(name)))
         }
@@ -413,28 +440,15 @@ final class MCPTools {
 
         let showWebView = arguments["show_web_view"] as? Bool ?? true
 
-        // If custom JSON provided, use it directly
-        if let customJSON = arguments["broker_json"] as? String,
-           let jsonData = customJSON.data(using: .utf8) {
-            agent.runCustomScan(brokerJSON: jsonData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
-                self.handleScanResult(data: data, completion: completion)
-            }
-            return
-        }
-
-        // Otherwise look up broker JSON from DB
-        guard let brokerName = arguments["broker_name"] as? String else {
-            completion(.failure(ToolError.missingArgument("Either broker_name or broker_json is required")))
-            return
-        }
-
-        agent.getBrokerJSON(brokerURL: brokerName) { [weak self] brokerData in
-            guard let self, let brokerData else {
-                completion(.failure(ToolError.xpcError("Broker '\(brokerName)' not found. Use list_brokers to see available brokers.")))
-                return
-            }
-            self.agent.runCustomScan(brokerJSON: brokerData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
-                self.handleScanResult(data: data, completion: completion)
+        resolveBrokerJSON(arguments: arguments) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let brokerData):
+                self.agent.runCustomScan(brokerJSON: brokerData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
+                    self.handleScanResult(data: data, completion: completion)
+                }
+            case .failure(let error):
+                completion(.failure(error))
             }
         }
     }
@@ -486,6 +500,71 @@ final class MCPTools {
                 return
             }
             self.prettyPrintJSON(data, completion: completion)
+        }
+    }
+
+    private func runOptOut(arguments: [String: Any], completion: @escaping (Result<String, Error>) -> Void) {
+        guard let extractedProfileObj = arguments["extracted_profile"],
+              let extractedProfileData = try? JSONSerialization.data(withJSONObject: extractedProfileObj) else {
+            completion(.failure(ToolError.missingArgument("extracted_profile")))
+            return
+        }
+        guard let firstName = arguments["first_name"] as? String,
+              let lastName = arguments["last_name"] as? String,
+              let city = arguments["city"] as? String,
+              let state = arguments["state"] as? String,
+              let birthYear = arguments["birth_year"] as? Int else {
+            completion(.failure(ToolError.missingArgument("first_name, last_name, city, state, and birth_year are required")))
+            return
+        }
+
+        let showWebView = arguments["show_web_view"] as? Bool ?? true
+
+        // Resolve broker JSON
+        resolveBrokerJSON(arguments: arguments) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let brokerData):
+                self.agent.runCustomOptOut(brokerJSON: brokerData, extractedProfileJSON: extractedProfileData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
+                    guard let data else {
+                        completion(.failure(ToolError.xpcError("Opt-out failed — no response from agent.")))
+                        return
+                    }
+                    self.prettyPrintJSON(data, completion: completion)
+                }
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func getWebViewState(completion: @escaping (Result<String, Error>) -> Void) {
+        agent.getWebViewState { data in
+            guard let data else {
+                completion(.failure(ToolError.xpcError("Failed to get WebView state. Is the agent running?")))
+                return
+            }
+            self.prettyPrintJSON(data, completion: completion)
+        }
+    }
+
+    /// Resolves broker JSON from either `broker_json` (custom) or `broker_name` (DB lookup).
+    private func resolveBrokerJSON(arguments: [String: Any], completion: @escaping (Result<Data, Error>) -> Void) {
+        if let customJSON = arguments["broker_json"] as? String,
+           let jsonData = customJSON.data(using: .utf8) {
+            completion(.success(jsonData))
+            return
+        }
+        guard let brokerName = arguments["broker_name"] as? String else {
+            completion(.failure(ToolError.missingArgument("Either broker_name or broker_json is required")))
+            return
+        }
+        agent.getBrokerJSON(brokerURL: brokerName) { brokerData in
+            guard let brokerData else {
+                completion(.failure(ToolError.xpcError("Broker '\(brokerName)' not found. Use list_brokers to see available brokers.")))
+                return
+            }
+            completion(.success(brokerData))
         }
     }
 

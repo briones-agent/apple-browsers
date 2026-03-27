@@ -132,6 +132,9 @@ protocol XPCServerInterface {
 
     func forceBrokerUpdate(completion: @escaping (Data?) -> Void)
     func setAPIEndpoint(environment: String, serviceRoot: String, completion: @escaping (Data?) -> Void)
+    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void)
+    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void)
+    func getWebViewState(completion: @escaping (Data?) -> Void)
 }
 
 protocol DataBrokerProtectionIPCServer: IPCClientInterface, XPCServerInterface {
@@ -288,6 +291,27 @@ extension DefaultDataBrokerProtectionIPCServer: XPCServerInterface {
     func setAPIEndpoint(environment: String, serviceRoot: String, completion: @escaping (Data?) -> Void) {
         Task {
             let data = await serverDelegate?.setAPIEndpoint(environment: environment, serviceRoot: serviceRoot)
+            completion(data)
+        }
+    }
+
+    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.runCustomScan(brokerJSON: brokerJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView)
+            completion(data)
+        }
+    }
+
+    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.runCustomOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView)
+            completion(data)
+        }
+    }
+
+    func getWebViewState(completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.getWebViewState()
             completion(data)
         }
     }

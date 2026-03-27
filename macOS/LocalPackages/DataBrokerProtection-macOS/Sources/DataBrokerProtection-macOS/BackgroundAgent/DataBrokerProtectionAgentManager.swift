@@ -219,6 +219,38 @@ public final class DataBrokerProtectionAgentManager {
 
     // Used for debug functions only, so not injected
     private lazy var browserWindowManager = BrowserWindowManager()
+    private let debugScanSession = DebugScanSession()
+
+    /// Lazily-constructed debug email confirmation service (mirrors DataBrokerRunCustomJSONViewModel).
+    private lazy var debugEmailConfirmationService: EmailConfirmationDataServiceProvider = {
+        let dbpSettings = DataBrokerProtectionSettings(defaults: .dbp)
+        let fakePixelHandler: EventMapping<DataBrokerProtectionSharedPixels> = EventMapping { event, _, _, _ in
+            Logger.dataBrokerProtection.debug("Debug event: \(String(describing: event), privacy: .public)")
+        }
+        let backendServicePixels = DefaultDataBrokerProtectionBackendServicePixels(pixelHandler: fakePixelHandler, settings: dbpSettings)
+        let emailService = EmailService(authenticationManager: authenticationManager, settings: dbpSettings, servicePixel: backendServicePixels)
+        let emailServiceV1 = EmailServiceV1(authenticationManager: authenticationManager, settings: dbpSettings, servicePixel: backendServicePixels)
+        return EmailConfirmationDataService(
+            emailConfirmationStore: debugScanSession.debugEmailConfirmationStore,
+            database: nil,
+            emailServiceV0: emailService,
+            emailServiceV1: emailServiceV1,
+            featureFlagger: jobDependencies.featureFlagger,
+            pixelHandler: fakePixelHandler
+        )
+    }()
+
+    /// No-op pixel handler for debug scan/optout runners.
+    private lazy var debugPixelHandler: EventMapping<DataBrokerProtectionSharedPixels> = EventMapping { event, _, _, _ in
+        Logger.dataBrokerProtection.debug("Debug event: \(String(describing: event), privacy: .public)")
+    }
+
+    /// Lazily-constructed debug captcha service.
+    private lazy var debugCaptchaService: CaptchaService = {
+        let dbpSettings = DataBrokerProtectionSettings(defaults: .dbp)
+        let backendServicePixels = DefaultDataBrokerProtectionBackendServicePixels(pixelHandler: debugPixelHandler, settings: dbpSettings)
+        return CaptchaService(authenticationManager: authenticationManager, settings: dbpSettings, servicePixel: backendServicePixels)
+    }()
 
     private var didStartActivityScheduler = false
     private var currentRunIsFreeScan: Bool?
@@ -908,6 +940,197 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
             "endpointURL": settings.endpointURL.absoluteString,
         ]
         return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+    }
+
+    // MARK: - Debug Scan/OptOut/WebView State
+
+    public func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data? {
+        debugScanSession.updateState { s in
+            s.isRunning = true
+            s.currentStep = "scan"
+            s.currentAction = nil
+            s.lastError = nil
+            s.debugEvents.removeAll()
+            s.lastExtractedProfiles.removeAll()
+        }
+        debugScanSession.debugEmailConfirmationStore.reset()
+
+        do {
+            let broker = try JSONDecoder().decode(DataBroker.self, from: brokerJSON)
+            let resolvedBroker = broker.with(id: DebugHelper.stableId(for: broker))
+
+            let profile = DataBrokerProtectionProfile(
+                names: [.init(firstName: firstName, lastName: lastName, middleName: nil)],
+                addresses: [.init(city: city, state: state)],
+                phones: [],
+                birthYear: birthYear
+            )
+
+            var allExtracted = [ExtractedProfile]()
+
+            for profileQuery in profile.profileQueries {
+                let queryWithId = profileQuery.with(id: DebugHelper.stableId(for: profileQuery))
+                let brokerId = DebugHelper.stableId(for: resolvedBroker)
+                let profileQueryId = DebugHelper.stableId(for: queryWithId)
+                let fakeScanJob = ScanJobData(
+                    brokerId: brokerId,
+                    profileQueryId: profileQueryId,
+                    historyEvents: []
+                )
+                let queryData = BrokerProfileQueryData(
+                    dataBroker: resolvedBroker,
+                    profileQuery: queryWithId,
+                    scanJobData: fakeScanJob
+                )
+
+                let stageCalculator = debugScanSession.makeStageCalculator()
+                let runner = BrokerProfileScanSubJobWebRunner(
+                    privacyConfig: jobDependencies.privacyConfig,
+                    prefs: jobDependencies.contentScopeProperties,
+                    context: queryData,
+                    emailConfirmationDataService: debugEmailConfirmationService,
+                    captchaService: debugCaptchaService,
+                    featureFlagger: jobDependencies.featureFlagger,
+                    applicationNameForUserAgent: jobDependencies.applicationNameForUserAgent,
+                    stageDurationCalculator: stageCalculator,
+                    pixelHandler: debugPixelHandler,
+                    executionConfig: .init(),
+                    shouldRunNextStep: { true }
+                )
+
+                let profiles = try await runner.scan(queryData, showWebView: showWebView) { true }
+
+                // Store in debug email confirmation store (mirrors debug VM flow)
+                let assignedProfiles: [ExtractedProfile] = profiles.map { profile in
+                    debugScanSession.debugEmailConfirmationStore.storeExtractedProfile(
+                        profile,
+                        brokerId: brokerId,
+                        profileQueryId: profileQueryId,
+                        stableId: DebugHelper.stableId(for: profile)
+                    )
+                }
+                allExtracted.append(contentsOf: assignedProfiles)
+            }
+
+            debugScanSession.updateState { s in
+                s.isRunning = false
+                s.currentStep = "idle"
+                s.lastBroker = resolvedBroker
+                s.lastProfileQuery = profile.profileQueries.first
+                s.lastExtractedProfiles = allExtracted
+            }
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let result: [String: Any] = [
+                "success": true,
+                "matchCount": allExtracted.count,
+                "extractedProfiles": (try? JSONSerialization.jsonObject(with: encoder.encode(allExtracted))) ?? [],
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+
+        } catch {
+            Logger.dataBrokerProtection.error("Debug scan failed: \(error.localizedDescription, privacy: .public)")
+            debugScanSession.updateState { s in
+                s.isRunning = false
+                s.currentStep = "idle"
+                s.lastError = error.localizedDescription
+            }
+            let result: [String: Any] = [
+                "success": false,
+                "error": error.localizedDescription,
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+    }
+
+    public func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data? {
+        debugScanSession.updateState { s in
+            s.isRunning = true
+            s.currentStep = "optOut"
+            s.currentAction = nil
+            s.lastError = nil
+            s.debugEvents.removeAll()
+        }
+
+        do {
+            let broker = try JSONDecoder().decode(DataBroker.self, from: brokerJSON)
+            let resolvedBroker = broker.with(id: DebugHelper.stableId(for: broker))
+            let extractedProfile = try JSONDecoder().decode(ExtractedProfile.self, from: extractedProfileJSON)
+
+            let profile = DataBrokerProtectionProfile(
+                names: [.init(firstName: firstName, lastName: lastName, middleName: nil)],
+                addresses: [.init(city: city, state: state)],
+                phones: [],
+                birthYear: birthYear
+            )
+
+            guard let profileQuery = profile.profileQueries.first else {
+                throw NSError(domain: "DebugScan", code: -1, userInfo: [NSLocalizedDescriptionKey: "No profile queries generated"])
+            }
+
+            let queryWithId = profileQuery.with(id: DebugHelper.stableId(for: profileQuery))
+            let fakeScanJob = ScanJobData(
+                brokerId: DebugHelper.stableId(for: resolvedBroker),
+                profileQueryId: DebugHelper.stableId(for: queryWithId),
+                historyEvents: []
+            )
+            let queryData = BrokerProfileQueryData(
+                dataBroker: resolvedBroker,
+                profileQuery: queryWithId,
+                scanJobData: fakeScanJob
+            )
+
+            let stageCalculator = debugScanSession.makeStageCalculator()
+            let runner = BrokerProfileOptOutSubJobWebRunner(
+                privacyConfig: jobDependencies.privacyConfig,
+                prefs: jobDependencies.contentScopeProperties,
+                context: queryData,
+                emailConfirmationDataService: debugEmailConfirmationService,
+                captchaService: debugCaptchaService,
+                featureFlagger: jobDependencies.featureFlagger,
+                applicationNameForUserAgent: jobDependencies.applicationNameForUserAgent,
+                stageCalculator: stageCalculator,
+                pixelHandler: debugPixelHandler,
+                executionConfig: .init(),
+                actionsHandlerMode: .optOut,
+                shouldRunNextStep: { true }
+            )
+
+            try await runner.optOut(
+                profileQuery: queryData,
+                extractedProfile: extractedProfile,
+                showWebView: showWebView
+            ) { true }
+
+            debugScanSession.updateState { s in
+                s.isRunning = false
+                s.currentStep = "idle"
+            }
+
+            let result: [String: Any] = [
+                "success": true,
+                "message": "Opt-out completed successfully.",
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+
+        } catch {
+            Logger.dataBrokerProtection.error("Debug opt-out failed: \(error.localizedDescription, privacy: .public)")
+            debugScanSession.updateState { s in
+                s.isRunning = false
+                s.currentStep = "idle"
+                s.lastError = error.localizedDescription
+            }
+            let result: [String: Any] = [
+                "success": false,
+                "error": error.localizedDescription,
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+    }
+
+    public func getWebViewState() async -> Data? {
+        return debugScanSession.serializeState()
     }
 }
 
