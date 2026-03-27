@@ -118,6 +118,12 @@ protocol XPCServerInterface {
     func checkForEmailConfirmationData()
     func runEmailConfirmationOperations(showWebView: Bool)
     func getDebugMetadata(completion: @escaping (DBPBackgroundAgentMetadata?) -> Void)
+
+    // MARK: - MCP Debug Server Support (Read-Only)
+
+    func getBrokerProfileData(completion: @escaping (Data?) -> Void)
+    func getBrokerJSON(brokerURL: String, completion: @escaping (Data?) -> Void)
+    func getBrokerDetails(brokerName: String, completion: @escaping (Data?) -> Void)
 }
 
 protocol DataBrokerProtectionIPCServer: IPCClientInterface, XPCServerInterface {
@@ -215,6 +221,29 @@ extension DefaultDataBrokerProtectionIPCServer: XPCServerInterface {
         Task {
             let metaData = await serverDelegate?.getDebugMetadata()
             completion(metaData)
+        }
+    }
+
+    // MARK: - MCP Debug Server Support (Read-Only)
+
+    func getBrokerProfileData(completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.getBrokerProfileData()
+            completion(data)
+        }
+    }
+
+    func getBrokerJSON(brokerURL: String, completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.getBrokerJSON(brokerURL: brokerURL)
+            completion(data)
+        }
+    }
+
+    func getBrokerDetails(brokerName: String, completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.getBrokerDetails(brokerName: brokerName)
+            completion(data)
         }
     }
 }

@@ -37,6 +37,15 @@ public protocol DataBrokerProtectionAgentDebugCommands {
     func checkForEmailConfirmationData() async
     func runEmailConfirmationOperations(showWebView: Bool) async
     func getDebugMetadata() async -> DBPBackgroundAgentMetadata?
+
+    // MARK: - MCP Debug Server Support (Read-Only)
+
+    /// Returns JSON-encoded broker profile query data for all brokers.
+    func getBrokerProfileData() async -> Data?
+    /// Returns JSON-encoded broker definition for a specific broker by URL.
+    func getBrokerJSON(brokerURL: String) async -> Data?
+    /// Returns detailed per-profile-query data for a specific broker.
+    func getBrokerDetails(brokerName: String) async -> Data?
 }
 
 public protocol DataBrokerProtectionAppToAgentInterface: AnyObject, DataBrokerProtectionAgentAppEvents, DataBrokerProtectionAgentDebugCommands {

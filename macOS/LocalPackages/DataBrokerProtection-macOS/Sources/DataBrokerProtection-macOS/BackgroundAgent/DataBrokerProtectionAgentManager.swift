@@ -559,6 +559,216 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
                                               lastSchedulerSessionStartTimestamp: activityScheduler.lastTriggerTimestamp?.timeIntervalSince1970)
         }
     }
+
+    // MARK: - MCP Debug Server Support (Read-Only)
+
+    public func getBrokerProfileData() async -> Data? {
+        do {
+            let allData = try dataManager.fetchBrokerProfileQueryData(ignoresCache: true)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            var brokerMap = [String: [BrokerProfileQueryData]]()
+            for item in allData {
+                brokerMap[item.dataBroker.name, default: []].append(item)
+            }
+
+            var brokerSummaries = [[String: Any]]()
+            for (brokerName, items) in brokerMap.sorted(by: { $0.key < $1.key }) {
+                guard let first = items.first else { continue }
+                let broker = first.dataBroker
+
+                let allEvents = items.flatMap { $0.events }
+                let errorEvents = allEvents.filter { $0.isError }
+                let totalMatches = items.reduce(0) { $0 + $1.extractedProfiles.count }
+                let lastScanDate = items.compactMap { $0.scanJobData.lastRunDate }.max()
+                let recentErrors = errorEvents.sorted { $0.date > $1.date }.prefix(5)
+
+                var summary: [String: Any] = [
+                    "name": brokerName,
+                    "url": broker.url,
+                    "version": broker.version,
+                    "profileQueryCount": items.count,
+                    "totalMatches": totalMatches,
+                    "errorCount": errorEvents.count,
+                ]
+
+                if let parent = broker.parent {
+                    summary["parent"] = parent
+                }
+                if let lastScan = lastScanDate {
+                    summary["lastScanDate"] = formatter.string(from: lastScan)
+                }
+                if !recentErrors.isEmpty {
+                    summary["recentErrors"] = recentErrors.map { event -> [String: Any] in
+                        var dict: [String: Any] = ["date": formatter.string(from: event.date)]
+                        if let error = event.error {
+                            dict["error"] = error
+                        }
+                        return dict
+                    }
+                }
+
+                // Include profile query info for get_profile_queries extraction
+                let uniqueQueries = Set(items.map { "\($0.profileQuery.firstName) \($0.profileQuery.lastName)" })
+                if let firstQuery = items.first?.profileQuery {
+                    summary["profileQuery"] = [
+                        "firstName": firstQuery.firstName,
+                        "lastName": firstQuery.lastName,
+                        "city": firstQuery.city,
+                        "state": firstQuery.state,
+                        "birthYear": firstQuery.birthYear,
+                        "fullName": firstQuery.fullName,
+                    ] as [String: Any]
+                }
+
+                brokerSummaries.append(summary)
+            }
+
+            return try JSONSerialization.data(withJSONObject: brokerSummaries, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            Logger.dataBrokerProtection.error("Failed to fetch broker profile data: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    public func getBrokerJSON(brokerURL: String) async -> Data? {
+        do {
+            let allData = try dataManager.fetchBrokerProfileQueryData(ignoresCache: true)
+            let normalizedURL = brokerURL.replacingOccurrences(of: ".json", with: "")
+
+            let broker = allData.first(where: {
+                $0.dataBroker.url == normalizedURL ||
+                $0.dataBroker.name.lowercased() == normalizedURL.lowercased()
+            })?.dataBroker
+
+            guard let broker else { return nil }
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            return try encoder.encode(broker)
+        } catch {
+            Logger.dataBrokerProtection.error("Failed to fetch broker JSON: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    public func getBrokerDetails(brokerName: String) async -> Data? {
+        do {
+            let allData = try dataManager.fetchBrokerProfileQueryData(ignoresCache: true)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            let brokerItems = allData.filter {
+                $0.dataBroker.name.lowercased() == brokerName.lowercased() ||
+                $0.dataBroker.url.lowercased() == brokerName.lowercased()
+            }
+
+            guard !brokerItems.isEmpty, let broker = brokerItems.first?.dataBroker else { return nil }
+
+            var profileQueries = [[String: Any]]()
+            for item in brokerItems {
+                let query = item.profileQuery
+                let scan = item.scanJobData
+
+                var scanInfo: [String: Any] = [:]
+                if let lastRun = scan.lastRunDate {
+                    scanInfo["lastRunDate"] = formatter.string(from: lastRun)
+                }
+                if let preferredRun = scan.preferredRunDate {
+                    scanInfo["nextScheduledDate"] = formatter.string(from: preferredRun)
+                }
+
+                let scanEvents = scan.historyEvents.sorted { $0.date > $1.date }
+                if let latest = scanEvents.first {
+                    switch latest.type {
+                    case .noMatchFound:
+                        scanInfo["lastResult"] = "noMatchFound"
+                    case .matchesFound(let count):
+                        scanInfo["lastResult"] = "matchesFound"
+                        scanInfo["matchCount"] = count
+                    case .error:
+                        scanInfo["lastResult"] = "error"
+                        if let error = latest.error {
+                            scanInfo["lastError"] = error
+                        }
+                    case .scanStarted:
+                        scanInfo["lastResult"] = "scanStarted"
+                    default:
+                        scanInfo["lastResult"] = String(describing: latest.type)
+                    }
+                    scanInfo["lastEventDate"] = formatter.string(from: latest.date)
+                }
+                scanInfo["totalErrors"] = scan.historyEvents.filter { $0.isError }.count
+
+                var optOuts = [[String: Any]]()
+                for optOut in item.optOutJobData {
+                    var optOutInfo: [String: Any] = [
+                        "extractedProfileName": optOut.extractedProfile.fullName ?? optOut.extractedProfile.name ?? "unknown",
+                        "attemptCount": optOut.attemptCount,
+                    ]
+
+                    if let addr = optOut.extractedProfile.addresses?.first {
+                        optOutInfo["extractedProfileAddress"] = "\(addr.city), \(addr.state)"
+                    }
+                    if let lastRun = optOut.lastRunDate {
+                        optOutInfo["lastRunDate"] = formatter.string(from: lastRun)
+                    }
+                    if let submitted = optOut.submittedSuccessfullyDate {
+                        optOutInfo["submittedDate"] = formatter.string(from: submitted)
+                    }
+                    if let removed = optOut.extractedProfile.removedDate {
+                        optOutInfo["removedDate"] = formatter.string(from: removed)
+                    }
+
+                    let optOutEvents = optOut.historyEvents.sorted { $0.date > $1.date }
+                    if let latest = optOutEvents.first {
+                        switch latest.type {
+                        case .optOutStarted: optOutInfo["status"] = "started"
+                        case .optOutRequested: optOutInfo["status"] = "requested"
+                        case .optOutConfirmed: optOutInfo["status"] = "confirmed"
+                        case .optOutSubmittedAndAwaitingEmailConfirmation: optOutInfo["status"] = "awaitingEmailConfirmation"
+                        case .error:
+                            optOutInfo["status"] = "error"
+                            if let error = latest.error { optOutInfo["lastError"] = error }
+                        case .reAppearence: optOutInfo["status"] = "reAppeared"
+                        case .matchRemovedByUser: optOutInfo["status"] = "removedByUser"
+                        default: optOutInfo["status"] = String(describing: latest.type)
+                        }
+                    }
+                    optOutInfo["totalErrors"] = optOut.historyEvents.filter { $0.isError }.count
+                    optOuts.append(optOutInfo)
+                }
+
+                var queryDict: [String: Any] = [
+                    "profileQueryId": query.id ?? -1,
+                    "firstName": query.firstName,
+                    "lastName": query.lastName,
+                    "city": query.city,
+                    "state": query.state,
+                    "scan": scanInfo,
+                ]
+                if !optOuts.isEmpty {
+                    queryDict["optOuts"] = optOuts
+                }
+                profileQueries.append(queryDict)
+            }
+
+            let result: [String: Any] = [
+                "brokerName": broker.name,
+                "brokerURL": broker.url,
+                "version": broker.version,
+                "parent": broker.parent ?? NSNull(),
+                "profileQueryCount": brokerItems.count,
+                "profileQueries": profileQueries,
+            ]
+
+            return try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            Logger.dataBrokerProtection.error("Failed to fetch broker details: \(error.localizedDescription)")
+            return nil
+        }
+    }
 }
 
 extension DataBrokerProtectionAgentManager: DataBrokerProtectionAppToAgentInterface {

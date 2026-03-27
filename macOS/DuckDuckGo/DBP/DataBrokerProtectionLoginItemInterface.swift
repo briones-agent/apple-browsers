@@ -127,4 +127,18 @@ extension DefaultDataBrokerProtectionLoginItemInterface: DataBrokerProtectionLog
     func getDebugMetadata() async -> DBPBackgroundAgentMetadata? {
         return await ipcClient.getDebugMetadata()
     }
+
+    // MARK: - MCP Debug Server Support (Read-Only)
+
+    func getBrokerProfileData() async -> Data? {
+        return await ipcClient.getBrokerProfileData()
+    }
+
+    func getBrokerJSON(brokerURL: String) async -> Data? {
+        return await ipcClient.getBrokerJSON(brokerURL: brokerURL)
+    }
+
+    func getBrokerDetails(brokerName: String) async -> Data? {
+        return await ipcClient.getBrokerDetails(brokerName: brokerName)
+    }
 }

@@ -178,6 +178,47 @@ extension DataBrokerProtectionIPCClient: IPCServerInterface {
             })
         }
     }
+
+    // MARK: - MCP Debug Server Support (Read-Only)
+
+    public func getBrokerProfileData() async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.getBrokerProfileData { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error fetching broker profile data: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
+
+    public func getBrokerJSON(brokerURL: String) async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.getBrokerJSON(brokerURL: brokerURL) { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error fetching broker JSON: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
+
+    public func getBrokerDetails(brokerName: String) async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.getBrokerDetails(brokerName: brokerName) { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error fetching broker details: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
 }
 
 // MARK: - Incoming communication from the server
