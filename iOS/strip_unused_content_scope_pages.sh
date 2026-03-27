@@ -25,12 +25,16 @@ UNUSED_PAGES=("onboarding" "new-tab" "history" "release-notes" "errorpage")
 # Resolve the .app path
 if [[ -n "${1:-}" ]]; then
     APP_PATH="$1"
+elif [[ -n "${TARGET_BUILD_DIR:-}" && -n "${WRAPPER_NAME:-}" ]]; then
+    APP_PATH="${TARGET_BUILD_DIR}/${WRAPPER_NAME}"
 elif [[ -n "${BUILT_PRODUCTS_DIR:-}" && -n "${PRODUCT_NAME:-}" ]]; then
     APP_PATH="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app"
 else
     echo "error: No .app path provided and Xcode build variables not set." >&2
     exit 1
 fi
+
+echo "Stripping unused ContentScopeScripts pages from: ${APP_PATH}"
 
 if [[ ! -d "$APP_PATH" ]]; then
     echo "error: App bundle not found at $APP_PATH" >&2
