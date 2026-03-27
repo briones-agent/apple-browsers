@@ -83,6 +83,7 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
 
     public init(session: URLSession = .shared) {
         self.session = session
+        loadPersistedCredentials()
     }
 
     public func hasCredential(for issuerOrigin: String) -> Bool {
@@ -105,8 +106,8 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
             throw PrivacyPassError.issuerURLInvalid(issuerOrigin)
         }
 
-        guard let pkData = base64urlDecode(tokenKeyBase64url) else {
-            throw PrivacyPassError.publicKeyFetchFailed("Invalid base64url token-key")
+        guard let pkData = Data(base64Encoded: tokenKeyBase64url) ?? base64urlDecode(tokenKeyBase64url) else {
+            throw PrivacyPassError.publicKeyFetchFailed("Invalid base64/base64url token-key")
         }
 
         try await performIssuance(for: issuerOrigin, issuerBaseURL: issuerBaseURL, pkData: pkData)
@@ -193,6 +194,7 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
         publicKeyCBOR[issuerOrigin] = pkData
         lock.unlock()
 
+        persistCredential(tokenData, publicKey: pkData, for: issuerOrigin)
         Logger.privacyPass.debug("Stored credential for \(issuerOrigin, privacy: .public)")
     }
 
@@ -297,8 +299,10 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
 
         lock.lock()
         credentialCBOR[issuerOrigin] = newTokenData
+        let pkData = publicKeyCBOR[issuerOrigin]
         lock.unlock()
 
+        persistCredential(newTokenData, publicKey: pkData, for: issuerOrigin)
         Logger.privacyPass.debug("Updated credential after refund for \(issuerOrigin, privacy: .public)")
 
         return spendProofData.base64EncodedString()
@@ -346,6 +350,71 @@ public final class PrivacyPassTokenManager: PrivacyPassTokenManaging {
             base64.append(contentsOf: String(repeating: "=", count: 4 - remainder))
         }
         return Data(base64Encoded: base64)
+    }
+
+    // MARK: - Persistence (file-based, caches directory)
+
+    private static let credentialDirectoryName = "PrivacyPassCredentials"
+
+    private static var credentialDirectory: URL? {
+        guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return cacheDir.appendingPathComponent(credentialDirectoryName)
+    }
+
+    private func sanitizedIssuer(_ issuer: String) -> String {
+        issuer.replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: ":", with: "_")
+    }
+
+    private func persistCredential(_ tokenCBOR: Data, publicKey: Data?, for issuer: String) {
+        guard let dir = Self.credentialDirectory else { return }
+
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let sanitized = sanitizedIssuer(issuer)
+            try tokenCBOR.write(to: dir.appendingPathComponent("\(sanitized).token.cbor"))
+            if let pk = publicKey {
+                try pk.write(to: dir.appendingPathComponent("\(sanitized).pubkey.cbor"))
+            }
+        } catch {
+            Logger.privacyPass.error("Failed to persist credential for \(issuer, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func loadPersistedCredentials() {
+        guard let dir = Self.credentialDirectory,
+              FileManager.default.fileExists(atPath: dir.path) else {
+            return
+        }
+
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
+            let tokenFiles = files.filter { $0.lastPathComponent.hasSuffix(".token.cbor") }
+
+            lock.lock()
+            defer { lock.unlock() }
+
+            for tokenFile in tokenFiles {
+                let baseName = tokenFile.lastPathComponent.replacingOccurrences(of: ".token.cbor", with: "")
+                let pubkeyFile = dir.appendingPathComponent("\(baseName).pubkey.cbor")
+
+                guard let tokenData = try? Data(contentsOf: tokenFile),
+                      let pkData = try? Data(contentsOf: pubkeyFile) else {
+                    continue
+                }
+
+                let issuer = baseName.replacingOccurrences(of: "_", with: "/")
+                    .replacingOccurrences(of: "/_", with: ":")
+                credentialCBOR[issuer] = tokenData
+                publicKeyCBOR[issuer] = pkData
+            }
+
+            Logger.privacyPass.debug("Loaded \(self.credentialCBOR.count) persisted credential(s)")
+        } catch {
+            Logger.privacyPass.error("Failed to load persisted credentials: \(error.localizedDescription, privacy: .public)")
+        }
     }
 }
 

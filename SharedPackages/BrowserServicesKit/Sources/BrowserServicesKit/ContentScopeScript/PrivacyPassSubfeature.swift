@@ -97,7 +97,8 @@ public final class PrivacyPassChallengeHandler {
             guard keyValue.count == 2 else { continue }
 
             let key = keyValue[0].lowercased()
-            let value = keyValue[1].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+            let value = Self.stripStructuredFieldDelimiters(
+                keyValue[1].trimmingCharacters(in: CharacterSet(charactersIn: "\"")))
 
             switch key {
             case "challenge":
@@ -109,8 +110,9 @@ public final class PrivacyPassChallengeHandler {
             }
         }
 
+        // Try standard base64 first (RFC 8941 Structured Fields), then base64url
         guard let challengeB64 = challengeB64URL,
-              let challengeData = Self.base64urlDecode(challengeB64) else {
+              let challengeData = Data(base64Encoded: challengeB64) ?? Self.base64urlDecode(challengeB64) else {
             throw PrivacyPassError.challengeParsingFailed("Missing or invalid challenge in WWW-Authenticate: \(wwwAuth)")
         }
 
@@ -141,6 +143,16 @@ public final class PrivacyPassChallengeHandler {
             tokenKey: tokenKeyB64,
             redemptionContext: Data(redemptionContext),
             rawTokenChallenge: challengeData)
+    }
+
+    // MARK: - RFC 8941 Structured Fields
+
+    /// Strips `:` delimiters from RFC 8941 Byte Sequence values (e.g. `:abc123:` → `abc123`).
+    private static func stripStructuredFieldDelimiters(_ value: String) -> String {
+        if value.hasPrefix(":") && value.hasSuffix(":") && value.count > 2 {
+            return String(value.dropFirst().dropLast())
+        }
+        return value
     }
 
     // MARK: - Base64url
@@ -200,8 +212,8 @@ public final class PrivacyPassChallengeHandler {
         // token_key_id is empty for ACT (Nid=0)
         tokenStruct.append(spendProofData)
 
-        let tokenB64URL = Self.base64urlEncode(tokenStruct)
-        let authorization = "PrivateToken token=\(tokenB64URL)"
+        let tokenB64 = tokenStruct.base64EncodedString()
+        let authorization = "PrivateToken token=:\(tokenB64):"
         Logger.privacyPass.debug("Generated authorization for \(challenge.issuerURL, privacy: .public)")
         return authorization
     }
@@ -215,9 +227,12 @@ public final class PrivacyPassChallengeHandler {
     }
 
     /// Builds a `URLRequest` that retries the original URL with the authorization token.
-    public func authorizedRequest(for originalURL: URL, authorization: String) -> URLRequest {
+    public func authorizedRequest(for originalURL: URL, authorization: String, referrer: String? = nil) -> URLRequest {
         var request = URLRequest(url: originalURL)
         request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        if let referrer {
+            request.setValue(referrer, forHTTPHeaderField: "Referer")
+        }
         return request
     }
 
@@ -233,7 +248,8 @@ public final class PrivacyPassChallengeHandler {
                                         originalURL: URL,
                                         webView: WKWebView) async throws {
         let authorization = try await handleChallenge(from: response)
-        let request = authorizedRequest(for: originalURL, authorization: authorization)
+        let referrer = webView.url?.absoluteString
+        let request = authorizedRequest(for: originalURL, authorization: authorization, referrer: referrer)
         webView.load(request)
         Logger.privacyPass.debug("Retrying navigation to \(originalURL.absoluteString, privacy: .public) with authorization")
     }

@@ -90,6 +90,7 @@ public enum PrivacyFeature: String {
     case webExtensions
     case forceDarkModeOnWebsites
     case promoQueue
+    case privacyPass
 }
 
 /// An abstraction to be implemented by any "subfeature" of a given `PrivacyConfiguration` feature.
