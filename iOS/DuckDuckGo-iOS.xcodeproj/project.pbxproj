@@ -11808,15 +11808,17 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)",
 			);
 			name = "Strip Unused ContentScopeScripts Pages";
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/strip_unused_pages.stamp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/strip_unused_content_scope_pages.sh\"\n";
+			shellPath = /bin/bash;
+			shellScript = "# Strips macOS-only pages from ContentScopeScripts bundles in the iOS app.\n# iOS only uses duckplayer and special-error.\n\nset -euo pipefail\n\nAPP_PATH=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nBUNDLE_NAME=\"ContentScopeScripts_ContentScopeScripts.bundle\"\nUNUSED_PAGES=(onboarding new-tab history release-notes errorpage)\nTOTAL_SAVED=0\n\necho \"Stripping unused ContentScopeScripts pages from: ${APP_PATH}\"\n\nwhile IFS= read -r -d '' bundle_path; do\n    pages_dir=\"${bundle_path}/pages\"\n    [ -d \"$pages_dir\" ] || continue\n    rel_path=\"${bundle_path#\"$APP_PATH\"/}\"\n    for page in \"${UNUSED_PAGES[@]}\"; do\n        page_dir=\"${pages_dir}/${page}\"\n        if [ -d \"$page_dir\" ]; then\n            page_size=$(du -sk \"$page_dir\" | cut -f1)\n            TOTAL_SAVED=$((TOTAL_SAVED + page_size))\n            rm -rf \"$page_dir\"\n            echo \"  Stripped ${page}/ (${page_size} KB) from ${rel_path}\"\n        fi\n    done\ndone < <(find \"$APP_PATH\" -name \"$BUNDLE_NAME\" -type d -print0)\n\nif [ $TOTAL_SAVED -gt 0 ]; then\n    echo \"Total saved: $((TOTAL_SAVED / 1024)) MB\"\n    touch \"${APP_PATH}/strip_unused_pages.stamp\"\nelse\n    echo \"Nothing to strip (already clean or bundle not found).\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
