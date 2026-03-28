@@ -1109,7 +1109,12 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
                 actionsHandlerMode: .optOut,
                 shouldRunNextStep: { true }
             )
-            runner.keepWebViewAlive = true
+            runner.keepWebViewAlive = pauseOnError
+
+            // Store optout context for email confirmation flow
+            debugScanSession.updateState { s in
+                s.lastOptOutExtractedProfile = extractedProfile
+            }
 
             do {
                 try await runner.optOut(
@@ -1121,8 +1126,10 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
                 // Success — clean up WebView
                 await runner.webViewHandler?.finish()
             } catch {
-                // Error — keep WebView alive for inspection
-                debugScanSession.activeWebViewHandler = runner.webViewHandler
+                // Error — keep WebView alive for inspection if pauseOnError
+                if pauseOnError {
+                    debugScanSession.activeWebViewHandler = runner.webViewHandler
+                }
                 throw error
             }
 
@@ -1186,6 +1193,135 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
             let result: [String: Any] = [
                 "success": false,
                 "error": error.localizedDescription,
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+    }
+
+    public func checkEmailConfirmation() async -> Data? {
+        do {
+            try await debugEmailConfirmationService.checkForEmailConfirmationData()
+
+            // Check if confirmation link is now available
+            let store = debugScanSession.debugEmailConfirmationStore
+            let withLinks = try store.fetchOptOutEmailConfirmationsWithLink()
+            let awaiting = try store.fetchOptOutEmailConfirmationsAwaitingLink()
+
+            let result: [String: Any] = [
+                "success": true,
+                "confirmationsWithLink": withLinks.count,
+                "confirmationsAwaiting": awaiting.count,
+                "message": withLinks.isEmpty
+                    ? "No confirmation links found yet. Try again later."
+                    : "Found \(withLinks.count) confirmation link(s). Use continue_optout to complete the opt-out.",
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            let result: [String: Any] = [
+                "success": false,
+                "error": error.localizedDescription,
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+    }
+
+    public func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
+        // Find the confirmation URL from the debug email store
+        let s = debugScanSession.state
+        guard let broker = try? JSONDecoder().decode(DataBroker.self, from: brokerJSON) else {
+            let result: [String: Any] = ["success": false, "error": "Invalid broker JSON"]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+
+        guard let extractedProfile = try? JSONDecoder().decode(ExtractedProfile.self, from: extractedProfileJSON),
+              let extractedProfileId = extractedProfile.id else {
+            let result: [String: Any] = ["success": false, "error": "Invalid extracted profile or missing ID"]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+
+        let resolvedBroker = broker.with(id: DebugHelper.stableId(for: broker))
+        let profile = DataBrokerProtectionProfile(
+            names: [.init(firstName: firstName, lastName: lastName, middleName: nil)],
+            addresses: [.init(city: city, state: state)],
+            phones: [],
+            birthYear: birthYear
+        )
+        guard let profileQuery = profile.profileQueries.first else {
+            let result: [String: Any] = ["success": false, "error": "No profile queries generated"]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+
+        let brokerId = DebugHelper.stableId(for: resolvedBroker)
+        let profileQueryId = DebugHelper.stableId(for: profileQuery)
+
+        // Look up confirmation URL from email store
+        guard let confirmations = try? debugScanSession.debugEmailConfirmationStore.fetchOptOutEmailConfirmationsWithLink(),
+              let match = confirmations.first(where: { $0.brokerId == brokerId && $0.profileQueryId == profileQueryId && $0.extractedProfileId == extractedProfileId }),
+              let link = match.emailConfirmationLink,
+              let confirmationURL = URL(string: link) else {
+            let result: [String: Any] = ["success": false, "error": "No confirmation link found. Run check_email_confirmation first."]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+
+        await debugScanSession.cleanUpPreviousWebView()
+        debugScanSession.updateState { s in
+            s.isRunning = true
+            s.currentStep = "emailConfirmation"
+            s.currentAction = nil
+            s.lastError = nil
+            s.debugEvents.removeAll()
+        }
+
+        do {
+            let queryWithId = profileQuery.with(id: profileQueryId)
+            let fakeScanJob = ScanJobData(brokerId: brokerId, profileQueryId: profileQueryId, historyEvents: [])
+            let queryData = BrokerProfileQueryData(dataBroker: resolvedBroker, profileQuery: queryWithId, scanJobData: fakeScanJob)
+
+            let stageCalculator = debugScanSession.makeStageCalculator()
+            let runner = BrokerProfileOptOutSubJobWebRunner(
+                privacyConfig: jobDependencies.privacyConfig,
+                prefs: jobDependencies.contentScopeProperties,
+                context: queryData,
+                emailConfirmationDataService: debugEmailConfirmationService,
+                captchaService: debugCaptchaService,
+                featureFlagger: jobDependencies.featureFlagger,
+                applicationNameForUserAgent: jobDependencies.applicationNameForUserAgent,
+                stageCalculator: stageCalculator,
+                pixelHandler: debugPixelHandler,
+                executionConfig: .init(),
+                actionsHandlerMode: .emailConfirmation(confirmationURL),
+                shouldRunNextStep: { true }
+            )
+            runner.keepWebViewAlive = pauseOnError
+
+            do {
+                try await runner.optOut(profileQuery: queryData, extractedProfile: extractedProfile, showWebView: showWebView) { true }
+                await runner.webViewHandler?.finish()
+            } catch {
+                if pauseOnError {
+                    debugScanSession.activeWebViewHandler = runner.webViewHandler
+                }
+                throw error
+            }
+
+            debugScanSession.updateState { s in
+                s.isRunning = false
+                s.currentStep = "idle"
+            }
+
+            let result: [String: Any] = ["success": true, "message": "Opt-out email confirmation completed successfully."]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            Logger.dataBrokerProtection.error("Debug email confirmation opt-out failed: \(error.localizedDescription, privacy: .public)")
+            debugScanSession.updateState { s in
+                s.isRunning = false
+                s.currentStep = pauseOnError ? "paused" : "idle"
+                s.lastError = error.localizedDescription
+            }
+            let result: [String: Any] = [
+                "success": false,
+                "error": error.localizedDescription,
+                "webViewAlive": debugScanSession.activeWebViewHandler != nil,
             ]
             return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
         }

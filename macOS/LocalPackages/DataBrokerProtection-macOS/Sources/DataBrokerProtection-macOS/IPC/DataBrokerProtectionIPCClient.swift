@@ -351,6 +351,32 @@ extension DataBrokerProtectionIPCClient: IPCServerInterface {
             })
         }
     }
+
+    public func checkEmailConfirmation() async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.checkEmailConfirmation { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error checking email confirmation: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
+
+    public func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.continueOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError) { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error continuing opt-out: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
 }
 
 // MARK: - Incoming communication from the server

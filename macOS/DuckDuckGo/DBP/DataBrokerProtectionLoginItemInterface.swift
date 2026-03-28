@@ -183,4 +183,12 @@ extension DefaultDataBrokerProtectionLoginItemInterface: DataBrokerProtectionLog
     func executeJavaScript(code: String) async -> Data? {
         return await ipcClient.executeJavaScript(code: code)
     }
+
+    func checkEmailConfirmation() async -> Data? {
+        return await ipcClient.checkEmailConfirmation()
+    }
+
+    func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
+        return await ipcClient.continueOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError)
+    }
 }

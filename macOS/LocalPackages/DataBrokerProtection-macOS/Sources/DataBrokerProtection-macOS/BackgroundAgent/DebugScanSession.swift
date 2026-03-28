@@ -45,6 +45,9 @@ public final class DebugScanSession {
         var lastBroker: DataBroker?
         var lastProfileQuery: ProfileQuery?
         var lastExtractedProfiles: [ExtractedProfile] = []
+
+        // Last optout context for email confirmation flow
+        var lastOptOutExtractedProfile: ExtractedProfile?
     }
 
     private let lock = NSLock()

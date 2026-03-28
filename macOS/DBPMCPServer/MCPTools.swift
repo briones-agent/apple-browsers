@@ -195,6 +195,30 @@ final class MCPTools {
                 inputSchema: emptySchema()
             ),
             toolDef(
+                name: "check_email_confirmation",
+                description: "Check for email confirmation links from the backend after an opt-out that requires email confirmation (e.g. spokeo). Call this after run_optout returns 'awaiting email confirmation'. May need to be called multiple times until a link is found.",
+                inputSchema: emptySchema()
+            ),
+            toolDef(
+                name: "continue_optout",
+                description: "Continue an opt-out after email confirmation link is found. Call check_email_confirmation first to verify a link exists. This runs the email confirmation step of the opt-out flow using the confirmation URL.",
+                inputSchema: schemaWith(
+                    properties: [
+                        "broker_name": ["type": "string", "description": "The broker name or URL."],
+                        "broker_json": ["type": "string", "description": "Optional: custom broker JSON."],
+                        "extracted_profile": ["type": "object", "description": "The extracted profile from run_scan (must include id)."],
+                        "first_name": ["type": "string", "description": "First name"],
+                        "last_name": ["type": "string", "description": "Last name"],
+                        "city": ["type": "string", "description": "City"],
+                        "state": ["type": "string", "description": "State"],
+                        "birth_year": ["type": "integer", "description": "Birth year"],
+                        "show_web_view": ["type": "boolean", "description": "Show web view (default: true)"],
+                        "pause_on_error": ["type": "boolean", "description": "Keep WebView alive on failure (default: false)."]
+                    ],
+                    required: ["extracted_profile", "first_name", "last_name", "city", "state", "birth_year"]
+                )
+            ),
+            toolDef(
                 name: "execute_js",
                 description: "Execute JavaScript on the live debug WebView. Only works when a WebView is alive (paused on error after run_scan/run_optout). Use to inspect the page DOM, test CSS/XPath selectors, check element text, or verify fixes before updating broker JSON. The WebView stays alive until the next run_scan/run_optout call.",
                 inputSchema: schemaWith(
@@ -266,6 +290,10 @@ final class MCPTools {
             reauthenticate(completion: completion)
         case "execute_js":
             executeJS(arguments: arguments, completion: completion)
+        case "check_email_confirmation":
+            checkEmailConfirmation(completion: completion)
+        case "continue_optout":
+            continueOptOut(arguments: arguments, completion: completion)
         default:
             completion(.failure(ToolError.unknownTool(name)))
         }
@@ -628,6 +656,51 @@ final class MCPTools {
         }
 
         completion(.success("Activation flow opened in browser. Please sign in, then use get_auth_status to verify."))
+    }
+
+    private func checkEmailConfirmation(completion: @escaping (Result<String, Error>) -> Void) {
+        agent.checkEmailConfirmation { data in
+            guard let data else {
+                completion(.failure(ToolError.xpcError("Failed to check email confirmation. Is the agent running?")))
+                return
+            }
+            self.prettyPrintJSON(data, completion: completion)
+        }
+    }
+
+    private func continueOptOut(arguments: [String: Any], completion: @escaping (Result<String, Error>) -> Void) {
+        guard let extractedProfileObj = arguments["extracted_profile"],
+              let extractedProfileData = try? JSONSerialization.data(withJSONObject: extractedProfileObj) else {
+            completion(.failure(ToolError.missingArgument("extracted_profile")))
+            return
+        }
+        guard let firstName = arguments["first_name"] as? String,
+              let lastName = arguments["last_name"] as? String,
+              let city = arguments["city"] as? String,
+              let state = arguments["state"] as? String,
+              let birthYear = arguments["birth_year"] as? Int else {
+            completion(.failure(ToolError.missingArgument("first_name, last_name, city, state, and birth_year are required")))
+            return
+        }
+
+        let showWebView = arguments["show_web_view"] as? Bool ?? true
+        let pauseOnError = arguments["pause_on_error"] as? Bool ?? false
+
+        resolveBrokerJSON(arguments: arguments) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let brokerData):
+                self.agent.continueOptOut(brokerJSON: brokerData, extractedProfileJSON: extractedProfileData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError) { data in
+                    guard let data else {
+                        completion(.failure(ToolError.xpcError("Continue opt-out failed — no response from agent.")))
+                        return
+                    }
+                    self.prettyPrintJSON(data, completion: completion)
+                }
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
     }
 
     private func executeJS(arguments: [String: Any], completion: @escaping (Result<String, Error>) -> Void) {

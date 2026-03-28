@@ -39,6 +39,8 @@ import Foundation
     func getWebViewState(completion: @escaping (Data?) -> Void)
     func reauthenticate(completion: @escaping (Data?) -> Void)
     func executeJavaScript(code: String, completion: @escaping (Data?) -> Void)
+    func checkEmailConfirmation(completion: @escaping (Data?) -> Void)
+    func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void)
 }
 
 /// Mirror of the agent's XPC client interface (currently unused by MCP server).
@@ -306,5 +308,27 @@ final class AgentConnection: NSObject, DBPXPCClientInterface {
             return
         }
         proxy.executeJavaScript(code: code, completion: completion)
+    }
+
+    func checkEmailConfirmation(completion: @escaping (Data?) -> Void) {
+        guard let proxy = serverProxy(errorHandler: { error in
+            log("XPC error (checkEmailConfirmation): \(error)")
+            completion(nil)
+        }) else {
+            completion(nil)
+            return
+        }
+        proxy.checkEmailConfirmation(completion: completion)
+    }
+
+    func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void) {
+        guard let proxy = serverProxy(errorHandler: { error in
+            log("XPC error (continueOptOut): \(error)")
+            completion(nil)
+        }) else {
+            completion(nil)
+            return
+        }
+        proxy.continueOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError, completion: completion)
     }
 }

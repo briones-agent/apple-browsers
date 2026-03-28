@@ -70,6 +70,10 @@ public protocol DataBrokerProtectionAgentDebugCommands {
     func reauthenticate() async -> Data?
     /// Evaluates JavaScript on the paused debug WebView.
     func executeJavaScript(code: String) async -> Data?
+    /// Checks for email confirmation links from the backend.
+    func checkEmailConfirmation() async -> Data?
+    /// Continues opt-out after email confirmation link is found.
+    func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data?
 }
 
 public protocol DataBrokerProtectionAppToAgentInterface: AnyObject, DataBrokerProtectionAgentAppEvents, DataBrokerProtectionAgentDebugCommands {

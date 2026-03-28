@@ -137,6 +137,8 @@ protocol XPCServerInterface {
     func getWebViewState(completion: @escaping (Data?) -> Void)
     func reauthenticate(completion: @escaping (Data?) -> Void)
     func executeJavaScript(code: String, completion: @escaping (Data?) -> Void)
+    func checkEmailConfirmation(completion: @escaping (Data?) -> Void)
+    func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void)
 }
 
 protocol DataBrokerProtectionIPCServer: IPCClientInterface, XPCServerInterface {
@@ -328,6 +330,20 @@ extension DefaultDataBrokerProtectionIPCServer: XPCServerInterface {
     func executeJavaScript(code: String, completion: @escaping (Data?) -> Void) {
         Task {
             let data = await serverDelegate?.executeJavaScript(code: code)
+            completion(data)
+        }
+    }
+
+    func checkEmailConfirmation(completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.checkEmailConfirmation()
+            completion(data)
+        }
+    }
+
+    func continueOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.continueOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError)
             completion(data)
         }
     }
