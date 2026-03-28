@@ -52,6 +52,11 @@ final class MCPTools {
     func listTools() -> [[String: Any]] {
         return [
             toolDef(
+                name: "help",
+                description: "Get a comprehensive guide to the PIR/DBP MCP debug server: available tools, workflows, and examples. Call this first to understand how to use the debug tools.",
+                inputSchema: emptySchema()
+            ),
+            toolDef(
                 name: "get_agent_status",
                 description: "Get PIR background agent status: version, running state, scheduler state, last trigger time.",
                 inputSchema: emptySchema()
@@ -156,13 +161,12 @@ final class MCPTools {
             ),
             toolDef(
                 name: "set_api_endpoint",
-                description: "Switch the DBP API environment between production and staging, with an optional service root path for staging branch deploys.",
+                description: "Set the staging API service root path for branch deploys. The DBP API always uses staging (https://dbp-staging.duckduckgo.com). The service_root is appended to the staging URL. Pass empty string to use the default staging endpoint.",
                 inputSchema: schemaWith(
                     properties: [
-                        "environment": ["type": "string", "description": "API environment: 'production' or 'staging'"],
-                        "service_root": ["type": "string", "description": "Optional path appended to staging URL for branch deploys (e.g., '/branch-name'). Ignored for production. Pass empty string to reset."]
+                        "service_root": ["type": "string", "description": "Path appended to staging URL (e.g., '/branch-name'). Pass empty string to reset to default staging."]
                     ],
-                    required: ["environment"]
+                    required: ["service_root"]
                 )
             ),
             toolDef(
@@ -235,6 +239,8 @@ final class MCPTools {
 
     func callTool(name: String, arguments: [String: Any], completion: @escaping (Result<String, Error>) -> Void) {
         switch name {
+        case "help":
+            completion(.success(helpText()))
         case "get_agent_status":
             getAgentStatus(completion: completion)
         case "query_logs":
@@ -620,13 +626,12 @@ final class MCPTools {
     }
 
     private func setAPIEndpoint(arguments: [String: Any], completion: @escaping (Result<String, Error>) -> Void) {
-        guard let environment = arguments["environment"] as? String else {
-            completion(.failure(ToolError.missingArgument("environment")))
+        guard let serviceRoot = arguments["service_root"] as? String else {
+            completion(.failure(ToolError.missingArgument("service_root")))
             return
         }
-        let serviceRoot = arguments["service_root"] as? String ?? ""
 
-        agent.setAPIEndpoint(environment: environment, serviceRoot: serviceRoot) { data in
+        agent.setAPIEndpoint(environment: "staging", serviceRoot: serviceRoot) { data in
             guard let data else {
                 completion(.failure(ToolError.xpcError("Failed to set API endpoint. Is the agent running?")))
                 return
@@ -715,6 +720,127 @@ final class MCPTools {
             }
             self.prettyPrintJSON(data, completion: completion)
         }
+    }
+
+    // MARK: - Help
+
+    private func helpText() -> String {
+        """
+        # PIR/DBP MCP Debug Server
+
+        Debug server for DuckDuckGo's Personal Information Removal (PIR) feature.
+        Lets you inspect agent state, query broker data, run scans/optouts, and debug broker JSON.
+
+        ## Quick Start
+
+        1. get_agent_status — verify the PIR agent is running
+        2. get_auth_status — verify auth token is valid
+        3. list_brokers — see all brokers with scan status
+
+        ## Tools by Category
+
+        ### Production DB Inspection (read-only, queries the encrypted prod database)
+        These tools inspect the real scan/optout state from the production scheduler.
+        Use them to investigate user-reported issues, audit broker health, and check scan results.
+        - get_agent_status: Agent version, running state, scheduler state
+        - get_auth_status: Auth token validity, entitlement, environment, endpoint URL
+        - list_brokers: All brokers with versions, match counts, error counts, last scan dates
+        - get_broker_json: Full JSON step definitions for a broker (scan/optout actions)
+        - get_broker_details: Per-profile-query scan and optout state for a broker
+        - get_scan_history: Timeline of scan events for a broker + profile query
+        - get_optout_history: Timeline of optout events for a broker + profile query + extracted profile
+        - get_profile_queries: Configured name/address/birthYear combinations being scanned
+        - query_logs: PIR system logs filtered by subsystem, level, and text
+
+        ### Environment & Auth Management
+        - start_immediate_scan: Trigger full production scan cycle (async, all brokers)
+        - force_broker_update: Force broker JSON fetch, bypass hourly rate limiter
+        - set_api_endpoint: Set staging API service root path for branch deploys
+        - reauthenticate: Sign out + open activation flow for fresh auth token
+
+        ### Broker JSON Development (isolated debug WebView, does NOT affect prod data)
+        These tools run scans/optouts in a debug WebView with test profiles.
+        Use them to develop, test, and fix broker JSON definitions.
+        Results are NOT written to the production database.
+        - run_scan: Run a scan for one broker with a test profile. Returns extracted profiles.
+          - Accepts broker_name (DB lookup) or broker_json (custom JSON for testing fixes)
+          - Set pause_on_error=true to keep WebView alive on failure for inspection
+        - run_optout: Run optout for an extracted profile from run_scan results.
+          - Pass the extracted_profile object from run_scan output
+          - Set pause_on_error=true to keep WebView alive on failure
+        - check_email_confirmation: Poll backend for email confirmation links (for brokers like spokeo)
+        - continue_optout: Complete optout after email confirmation link is found
+
+        ### Live WebView Inspection (only available during/after broker JSON development tools)
+        - get_webview_state: Current URL, page HTML, action progress, errors.
+          - Works during active scan/optout OR when paused on error (pause_on_error=true)
+        - execute_js: Run JavaScript on the live/paused WebView.
+          - Test CSS selectors, inspect DOM, verify text, debug broker JSON actions
+
+        ## Workflows
+
+        ### Audit a broker (pause_on_error=false)
+        Quick check whether a broker's scan/optout works. No WebView inspection needed.
+        1. run_scan(broker_name: "example.com", ..., pause_on_error: false)
+        2. Success → broker works. Failure → note the error for investigation.
+
+        ### Fix a broken broker (pause_on_error=true)
+        When a broker is broken, use this workflow to diagnose and fix the JSON.
+        IMPORTANT: Do NOT modify bundled broker JSON in the codebase. Instead, pass
+        the fixed JSON via broker_json parameter to validate it.
+        1. run_scan(broker_name: "example.com", ..., pause_on_error: true)
+        2. Scan fails → WebView stays alive with page state
+        3. get_webview_state → see currentURL, pageHTML, failed action details
+        4. execute_js("document.querySelector('.some-selector')?.outerHTML") → test selectors
+        5. execute_js("document.body.innerText.substring(0, 500)") → check page text
+        6. Identify what changed (new selector, different text, restructured DOM)
+        7. Construct fixed broker JSON based on findings
+        8. run_scan(broker_json: "<fixed JSON>", ...) → validate the fix
+        9. Repeat steps 3-8 until it works
+
+        ### Explore a page for new broker JSON
+        When building a new broker JSON from scratch, you need to see the live page.
+        Use a minimal broker JSON with just a navigate action and a dummy extract that
+        will fail — with pause_on_error=true, the WebView stays alive for exploration.
+        1. run_scan(broker_json: '{"name":"new-broker","url":"newbroker.com","version":"1.0.0","steps":[{"stepType":"scan","actions":[{"actionType":"navigate","url":"https://newbroker.com/search/${firstName}-${lastName}/${state}/${city}"},{"actionType":"extract","selector":".dummy","profile":{}}]}]}', ..., pause_on_error: true)
+        2. Navigate succeeds, extract fails → WebView stays alive on the search results page
+        3. execute_js("document.querySelectorAll('.result-card').length") → explore the DOM
+        4. execute_js("document.querySelector('.result-card')?.innerHTML") → inspect structure
+        5. Build the real extract action based on findings
+
+        ### Full optout flow (with email confirmation)
+        1. run_scan(broker_name: "spokeo.com", ...) → get extracted profiles
+        2. run_optout(broker_name: "spokeo.com", extracted_profile: <from step 1>, ...)
+        3. Optout halts at "awaiting email confirmation"
+        4. check_email_confirmation → poll for confirmation link (may need multiple calls)
+        5. continue_optout(broker_name: "spokeo.com", extracted_profile: <same>, ...)
+
+        ### Switch to a staging branch deploy
+        1. set_api_endpoint(service_root: "/branch-name")
+        2. reauthenticate → sign in on staging if needed
+        3. get_auth_status → verify token is valid
+        4. force_broker_update → get latest broker JSONs from staging
+        5. Run scans/optouts against the staging branch
+
+        ### Investigate production issues (read-only)
+        Use production DB tools to investigate user-reported issues or broker health.
+        These query the real encrypted database — no side effects.
+        1. list_brokers → find brokers with high error counts
+        2. get_broker_details(broker_name: "...") → see per-query scan/optout state
+        3. get_scan_history / get_optout_history → drill into event timelines
+        4. query_logs(filter: "broker_name") → check system logs for errors
+        5. get_broker_json → read current step definitions to compare with site
+
+        ## Broker JSON Format
+        Broker definitions have steps (scan/optOut) containing actions:
+        - navigate: Load a URL (supports ${firstName}, ${lastName}, ${city}, ${state} templates)
+        - expectation: Wait for element/text/URL condition
+        - click: Click elements by selector
+        - fillForm: Fill form fields (email, profileUrl, etc.)
+        - extract: Extract profile data from page
+        - getCaptchaInfo / solveCaptcha: Handle captcha challenges
+        - emailConfirmation: Wait for email confirmation
+        """
     }
 
     // MARK: - Helpers
