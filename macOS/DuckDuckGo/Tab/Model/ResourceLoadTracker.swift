@@ -36,50 +36,92 @@ final class ResourceLoadTracker {
         case responseReceived
     }
 
-    private var resources = [URL: ResourceState]()
+    private var resources = [URL: [ResourceState]]()
     private var stalledCheckTimer: Timer?
     private let allResourcesStalledSubject = PassthroughSubject<Void, Never>()
+    private let stalledStateSubject = CurrentValueSubject<Bool, Never>(false)
 
     var allResourcesStalledPublisher: AnyPublisher<Void, Never> {
         allResourcesStalledSubject.eraseToAnyPublisher()
     }
 
+    var stalledStatePublisher: AnyPublisher<Bool, Never> {
+        stalledStateSubject.removeDuplicates().eraseToAnyPublisher()
+    }
+
     /// True when there are pending resources and all of them are stalled (no response received).
     var hasOnlyStalledResources: Bool {
-        let pendingResources = resources.filter { _, state in
-            if case .requestSent = state { return true }
-            return false
-        }
+        let pendingResources = resources.values
+            .flatMap { $0 }
+            .compactMap { state -> Date? in
+                if case .requestSent(let sentDate) = state { return sentDate }
+                return nil
+            }
         guard !pendingResources.isEmpty else { return false }
 
         let now = Date()
-        return pendingResources.allSatisfy { _, state in
-            if case .requestSent(let sentDate) = state {
-                return now.timeIntervalSince(sentDate) >= Self.stalledTimeout
-            }
-            return false
+        return pendingResources.allSatisfy { sentDate in
+            now.timeIntervalSince(sentDate) >= Self.stalledTimeout
         }
     }
 
     // MARK: - Tracking
 
     func didSendRequest(for url: URL) {
-        resources[url] = .requestSent(Date())
+        resources[url, default: []].append(.requestSent(Date()))
+        updateStalledState()
         scheduleStalledCheckIfNeeded()
     }
 
     func didReceiveResponse(for url: URL) {
-        resources[url] = .responseReceived
+        guard var resourceStates = resources[url],
+              let pendingIndex = resourceStates.firstIndex(where: { state in
+                  if case .requestSent = state { return true }
+                  return false
+              }) else {
+            return
+        }
+
+        resourceStates[pendingIndex] = .responseReceived
+        resources[url] = resourceStates
+        updateStalledState()
     }
 
-    func didComplete(for url: URL) {
-        resources.removeValue(forKey: url)
+    func didComplete(for url: URL, hadResponse: Bool) {
+        guard var resourceStates = resources[url], !resourceStates.isEmpty else {
+            resources.removeValue(forKey: url)
+            updateStalledState()
+            return
+        }
+
+        if hadResponse,
+           let responseIndex = resourceStates.firstIndex(where: { state in
+               if case .responseReceived = state { return true }
+               return false
+           }) {
+            resourceStates.remove(at: responseIndex)
+        } else if let pendingIndex = resourceStates.firstIndex(where: { state in
+            if case .requestSent = state { return true }
+            return false
+        }) {
+            resourceStates.remove(at: pendingIndex)
+        } else {
+            resourceStates.removeFirst()
+        }
+
+        if resourceStates.isEmpty {
+            resources.removeValue(forKey: url)
+        } else {
+            resources[url] = resourceStates
+        }
+        updateStalledState()
     }
 
     func reset() {
         resources.removeAll()
         stalledCheckTimer?.invalidate()
         stalledCheckTimer = nil
+        stalledStateSubject.send(false)
     }
 
     // MARK: - Stalled Detection
@@ -99,10 +141,14 @@ final class ResourceLoadTracker {
         stalledCheckTimer = nil
 
         if hasOnlyStalledResources {
+            stalledStateSubject.send(true)
             allResourcesStalledSubject.send()
         } else {
+            stalledStateSubject.send(false)
             // Some resources are still progressing or new ones arrived — check again later
-            let hasPendingRequests = resources.contains { _, state in
+            let hasPendingRequests = resources.values
+                .flatMap { $0 }
+                .contains { state in
                 if case .requestSent = state { return true }
                 return false
             }
@@ -110,5 +156,9 @@ final class ResourceLoadTracker {
                 scheduleStalledCheckIfNeeded()
             }
         }
+    }
+
+    private func updateStalledState() {
+        stalledStateSubject.send(hasOnlyStalledResources)
     }
 }

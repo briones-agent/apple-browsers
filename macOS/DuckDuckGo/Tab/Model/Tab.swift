@@ -563,6 +563,10 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         resourceLoadTracker.allResourcesStalledPublisher
     }
 
+    var stalledStatePublisher: AnyPublisher<Bool, Never> {
+        resourceLoadTracker.stalledStatePublisher
+    }
+
     /// True when all pending resources have been waiting for a response longer than the stalled timeout.
     var hasOnlyStalledResources: Bool {
         resourceLoadTracker.hasOnlyStalledResources
@@ -1584,7 +1588,7 @@ extension Tab/*: NavigationResponder*/ { // to be moved to Tab+Navigation.swift
     @objc(webView:resourceLoad:didCompleteWithError:response:)
     func webView(_ webView: WKWebView, resourceLoad resourceLoadInfo: Any, didCompleteWithError error: Error?, response: URLResponse?) {
         guard let url = resourceURL(resourceLoadInfo) else { return }
-        resourceLoadTracker.didComplete(for: url)
+        resourceLoadTracker.didComplete(for: url, hadResponse: response != nil)
     }
 
     /// Factory method to create a child Tab

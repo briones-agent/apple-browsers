@@ -83,7 +83,7 @@ extension TabCollectionViewModel: TabLazyLoaderDataSource {
             .compactMap { $0 }
             .flatMap { tabViewModel -> AnyPublisher<Bool, Never> in
                 tabViewModel.$isLoading
-                    .combineLatest(tabViewModel.tab.stalledResourcePublisher.map { true }.prepend(false))
+                    .combineLatest(tabViewModel.tab.stalledStatePublisher)
                     .map { isLoading, isStalled in
                         isLoading && !isStalled
                     }
