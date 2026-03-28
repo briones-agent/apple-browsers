@@ -287,10 +287,10 @@ extension DataBrokerProtectionIPCClient: IPCServerInterface {
         }
     }
 
-    public func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data? {
+    public func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
         await withCheckedContinuation { continuation in
             xpc.execute(call: { server in
-                server.runCustomScan(brokerJSON: brokerJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
+                server.runCustomScan(brokerJSON: brokerJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError) { data in
                     continuation.resume(returning: data)
                 }
             }, xpcReplyErrorHandler: { error in
@@ -300,10 +300,10 @@ extension DataBrokerProtectionIPCClient: IPCServerInterface {
         }
     }
 
-    public func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data? {
+    public func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
         await withCheckedContinuation { continuation in
             xpc.execute(call: { server in
-                server.runCustomOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
+                server.runCustomOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError) { data in
                     continuation.resume(returning: data)
                 }
             }, xpcReplyErrorHandler: { error in

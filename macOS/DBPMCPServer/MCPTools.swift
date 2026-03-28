@@ -143,7 +143,8 @@ final class MCPTools {
                         "city": ["type": "string", "description": "City"],
                         "state": ["type": "string", "description": "State (2-letter abbreviation)"],
                         "birth_year": ["type": "integer", "description": "Birth year (e.g., 1980)"],
-                        "show_web_view": ["type": "boolean", "description": "Show the web view during scan (default: true)"]
+                        "show_web_view": ["type": "boolean", "description": "Show the web view during scan (default: true)"],
+                        "pause_on_error": ["type": "boolean", "description": "Keep WebView alive on failure for inspection with get_webview_state and execute_js (default: false). Set true for debugging."]
                     ],
                     required: ["first_name", "last_name", "city", "state", "birth_year"]
                 )
@@ -177,7 +178,8 @@ final class MCPTools {
                         "city": ["type": "string", "description": "City"],
                         "state": ["type": "string", "description": "State (2-letter abbreviation)"],
                         "birth_year": ["type": "integer", "description": "Birth year (e.g., 1980)"],
-                        "show_web_view": ["type": "boolean", "description": "Show the web view during opt-out (default: true)"]
+                        "show_web_view": ["type": "boolean", "description": "Show the web view during opt-out (default: true)"],
+                        "pause_on_error": ["type": "boolean", "description": "Keep WebView alive on failure for inspection (default: true). Set false for simple audit runs."]
                     ],
                     required: ["extracted_profile", "first_name", "last_name", "city", "state", "birth_year"]
                 )
@@ -458,12 +460,13 @@ final class MCPTools {
         }
 
         let showWebView = arguments["show_web_view"] as? Bool ?? true
+        let pauseOnError = arguments["pause_on_error"] as? Bool ?? false
 
         resolveBrokerJSON(arguments: arguments) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success(let brokerData):
-                self.agent.runCustomScan(brokerJSON: brokerData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
+                self.agent.runCustomScan(brokerJSON: brokerData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError) { data in
                     self.handleScanResult(data: data, completion: completion)
                 }
             case .failure(let error):
@@ -538,13 +541,14 @@ final class MCPTools {
         }
 
         let showWebView = arguments["show_web_view"] as? Bool ?? true
+        let pauseOnError = arguments["pause_on_error"] as? Bool ?? false
 
         // Resolve broker JSON
         resolveBrokerJSON(arguments: arguments) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success(let brokerData):
-                self.agent.runCustomOptOut(brokerJSON: brokerData, extractedProfileJSON: extractedProfileData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView) { data in
+                self.agent.runCustomOptOut(brokerJSON: brokerData, extractedProfileJSON: extractedProfileData, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError) { data in
                     guard let data else {
                         completion(.failure(ToolError.xpcError("Opt-out failed — no response from agent.")))
                         return

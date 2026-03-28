@@ -32,10 +32,10 @@ import Foundation
     func getScanHistory(brokerId: Int64, profileQueryId: Int64, completion: @escaping (Data?) -> Void)
     func getOptOutHistory(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64, completion: @escaping (Data?) -> Void)
     func getAuthStatus(completion: @escaping (Data?) -> Void)
-    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void)
+    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void)
     func forceBrokerUpdate(completion: @escaping (Data?) -> Void)
     func setAPIEndpoint(environment: String, serviceRoot: String, completion: @escaping (Data?) -> Void)
-    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void)
+    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void)
     func getWebViewState(completion: @escaping (Data?) -> Void)
     func reauthenticate(completion: @escaping (Data?) -> Void)
     func executeJavaScript(code: String, completion: @escaping (Data?) -> Void)
@@ -231,7 +231,7 @@ final class AgentConnection: NSObject, DBPXPCClientInterface {
         proxy.getAuthStatus(completion: completion)
     }
 
-    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void) {
+    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void) {
         guard let proxy = serverProxy(errorHandler: { error in
             log("XPC error (runCustomScan): \(error)")
             completion(nil)
@@ -239,7 +239,7 @@ final class AgentConnection: NSObject, DBPXPCClientInterface {
             completion(nil)
             return
         }
-        proxy.runCustomScan(brokerJSON: brokerJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, completion: completion)
+        proxy.runCustomScan(brokerJSON: brokerJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError, completion: completion)
     }
 
     func forceBrokerUpdate(completion: @escaping (Data?) -> Void) {
@@ -264,7 +264,7 @@ final class AgentConnection: NSObject, DBPXPCClientInterface {
         proxy.setAPIEndpoint(environment: environment, serviceRoot: serviceRoot, completion: completion)
     }
 
-    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, completion: @escaping (Data?) -> Void) {
+    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void) {
         guard let proxy = serverProxy(errorHandler: { error in
             log("XPC error (runCustomOptOut): \(error)")
             completion(nil)
@@ -272,7 +272,7 @@ final class AgentConnection: NSObject, DBPXPCClientInterface {
             completion(nil)
             return
         }
-        proxy.runCustomOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, completion: completion)
+        proxy.runCustomOptOut(brokerJSON: brokerJSON, extractedProfileJSON: extractedProfileJSON, firstName: firstName, lastName: lastName, city: city, state: state, birthYear: birthYear, showWebView: showWebView, pauseOnError: pauseOnError, completion: completion)
     }
 
     func getWebViewState(completion: @escaping (Data?) -> Void) {

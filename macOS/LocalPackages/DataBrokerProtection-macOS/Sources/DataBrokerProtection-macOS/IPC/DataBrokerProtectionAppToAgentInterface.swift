@@ -61,9 +61,9 @@ public protocol DataBrokerProtectionAgentDebugCommands {
     func setAPIEndpoint(environment: String, serviceRoot: String) async -> Data?
 
     /// Runs a custom scan with broker JSON and profile info. Returns extracted profiles as JSON.
-    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data?
+    func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data?
     /// Runs opt-out for an extracted profile from a previous scan. Takes broker JSON + extracted profile JSON.
-    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data?
+    func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data?
     /// Returns the current debug WebView state (action progress, errors, etc.)
     func getWebViewState() async -> Data?
     /// Signs out of subscription and opens the activation flow for the user to re-auth.

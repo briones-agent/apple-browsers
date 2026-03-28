@@ -944,7 +944,7 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
 
     // MARK: - Debug Scan/OptOut/WebView State
 
-    public func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data? {
+    public func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
         await debugScanSession.cleanUpPreviousWebView()
         debugScanSession.updateState { s in
             s.isRunning = true
@@ -998,7 +998,7 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
                     executionConfig: .init(),
                     shouldRunNextStep: { true }
                 )
-                runner.keepWebViewAlive = true
+                runner.keepWebViewAlive = pauseOnError
 
                 do {
                     let profiles = try await runner.scan(queryData, showWebView: showWebView) { true }
@@ -1056,7 +1056,7 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
         }
     }
 
-    public func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool) async -> Data? {
+    public func runCustomOptOut(brokerJSON: Data, extractedProfileJSON: Data, firstName: String, lastName: String, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool) async -> Data? {
         await debugScanSession.cleanUpPreviousWebView()
         debugScanSession.updateState { s in
             s.isRunning = true
