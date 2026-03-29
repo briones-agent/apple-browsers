@@ -158,7 +158,8 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation) {
         guard let mapper = trackerProtectionMapper,
-              let detected = mapper.classifyResource(observation) else { return }
+              let detected = mapper.classifyResource(observation,
+                                                     adClickAttributionVendor: subfeature.currentAdClickAttributionVendor) else { return }
 
         if detected.state == .blocked {
             trackersSubject.send(DetectedTracker(request: detected, type: .tracker))
@@ -173,7 +174,8 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
         guard let mapper = trackerProtectionMapper,
-              let detected = mapper.classifySurrogate(surrogate),
+              let detected = mapper.classifySurrogate(surrogate,
+                                                      adClickAttributionVendor: subfeature.currentAdClickAttributionVendor),
               let host = mapper.surrogateHost(from: surrogate) else { return }
         trackersSubject.send(DetectedTracker(request: detected, type: .trackerWithSurrogate(host: host)))
     }

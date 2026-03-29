@@ -3201,7 +3201,8 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation) {
         guard let mapper = makeMapper(),
-              let detected = mapper.classifyResource(observation) else { return }
+              let detected = mapper.classifyResource(observation,
+                                                     adClickAttributionVendor: subfeature.currentAdClickAttributionVendor) else { return }
 
         if detected.state == .blocked {
             userScriptDetectedTracker(detected)
@@ -3214,7 +3215,8 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
                            didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
         guard let url = url,
               let mapper = makeMapper(),
-              let detected = mapper.classifySurrogate(surrogate),
+              let detected = mapper.classifySurrogate(surrogate,
+                                                      adClickAttributionVendor: subfeature.currentAdClickAttributionVendor),
               let host = mapper.surrogateHost(from: surrogate) else { return }
 
         privacyInfo?.trackerInfo.addInstalledSurrogateHost(host, for: detected, onPageWithURL: url)
