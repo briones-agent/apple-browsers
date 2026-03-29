@@ -65,6 +65,7 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-clocks.git", exact: "1.0.6"),
         .package(url: "https://github.com/duckduckgo/content-scope-scripts.git", exact: "13.34.0"),
         .package(path: "../URLPredictor"),
+        .package(path: "../ActCore"),
     ],
     targets: [
         .binaryTarget(
@@ -77,18 +78,7 @@ let package = Package(
             url: "https://github.com/duckduckgo/GRDB.swift/releases/download/2.4.2/GRDB.xcframework.zip",
             checksum: "5380265b0e70f0ed28eb1e12640eb6cde5e4bfd39893c86b31f8d17126887174"
         ),
-        .binaryTarget(
-            name: "ActCoreBinary",
-            path: "Sources/ActCoreBinary/ActCore.xcframework"
-        ),
-        .target(
-            name: "ActCore",
-            dependencies: ["ActCoreBinary"],
-            publicHeadersPath: "include",
-            linkerSettings: [
-                .unsafeFlags(["-Xlinker", "-no_compact_unwind"])
-            ]
-        ),
+        // ActCore is now a separate package at SharedPackages/ActCore
         .target(
             name: "BrowserServicesKit",
             dependencies: [
@@ -105,7 +95,7 @@ let package = Package(
                 "Subscription",
                 "PixelKit",
                 "Navigation",
-                "ActCore"
+                .product(name: "ActCore", package: "ActCore")
             ],
             resources: [
                 .process("ContentBlocking/UserScripts/contentblockerrules.js"),

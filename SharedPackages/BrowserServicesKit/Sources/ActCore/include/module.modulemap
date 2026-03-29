@@ -1,4 +1,0 @@
-module ActCore {
-    header "act_core.h"
-    export *
-}
