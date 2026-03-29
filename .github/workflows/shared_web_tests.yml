@@ -1,5 +1,8 @@
 name: Apple - Shared Web Tests
 
+env:
+  SHARED_WEB_TESTS_REF: f1cd9f45f074ba8446996aaf7530810e72d4d00e
+
 on:
   workflow_dispatch:
     inputs:
@@ -63,8 +66,12 @@ jobs:
       with:
         submodules: recursive
         repository: duckduckgo/shared-web-tests
+        ref: ${{ env.SHARED_WEB_TESTS_REF }}
         path: tmp/shared-web-tests
         token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Patch shared web tests driver for CI
+      run: python3 .github/scripts/patch_shared_web_tests_webdriver.py
 
     - name: Build and run tests
       run: |
@@ -139,8 +146,12 @@ jobs:
       with:
         submodules: recursive
         repository: duckduckgo/shared-web-tests
+        ref: ${{ env.SHARED_WEB_TESTS_REF }}
         path: tmp/shared-web-tests
         token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Patch shared web tests driver for CI
+      run: python3 .github/scripts/patch_shared_web_tests_webdriver.py
 
     - name: Install prerequisites
       run: |
@@ -166,6 +177,7 @@ jobs:
 
     - name: Build and run tests
       run: |
+        set -o pipefail
         cd tmp/shared-web-tests
         log_path="../../tmp/test_out_macos_$(date +"%Y%m%d_%H%M%S").log"
         mkdir -p "$(dirname "$log_path")"
@@ -179,9 +191,10 @@ jobs:
           sudo -- sh -c 'npm run install-hosts'
         fi
 
-        pushd webdriver
-        cargo build
-        popd
+        (
+          cd webdriver
+          cargo build
+        )
 
         MACOS_APP_PATH="$(pwd)/../../DerivedData/Build/Products/CI/DuckDuckGo.app"
         export MACOS_APP_PATH
