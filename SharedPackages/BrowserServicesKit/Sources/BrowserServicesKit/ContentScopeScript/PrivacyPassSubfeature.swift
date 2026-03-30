@@ -54,7 +54,7 @@ public final class PrivacyPassChallengeHandler {
 
     private let tokenManager: PrivacyPassTokenManaging
 
-    public init(tokenManager: PrivacyPassTokenManaging) {
+    nonisolated public init(tokenManager: PrivacyPassTokenManaging) {
         self.tokenManager = tokenManager
     }
 
