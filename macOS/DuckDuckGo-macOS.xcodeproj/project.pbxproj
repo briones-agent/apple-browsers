@@ -3063,6 +3063,8 @@
 		B61E2CD5294346C000773D8A /* Tab+Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61E2CD4294346C000773D8A /* Tab+Navigation.swift */; };
 		B61EF3EC266F91E700B4D78F /* WKWebView+Download.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61EF3EB266F91E700B4D78F /* WKWebView+Download.swift */; };
 		B626A7552991413000053070 /* SerpHeadersNavigationResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF5D922947199A006742B1 /* SerpHeadersNavigationResponder.swift */; };
+		D7DDFC48735A407B8505F638 /* PrivacyPassNavigationResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56D8554BCC6480996226DA1 /* PrivacyPassNavigationResponder.swift */; };
+		F56D8554BCC6480996226DA1 /* PrivacyPassNavigationResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPassNavigationResponder.swift; sourceTree = "<group>"; };
 		B626A7602992407D00053070 /* CancellableExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B626A75F2992407C00053070 /* CancellableExtension.swift */; };
 		B626A7612992407D00053070 /* CancellableExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B626A75F2992407C00053070 /* CancellableExtension.swift */; };
 		B626A7642992506A00053070 /* SerpHeadersNavigationResponderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B626A7632992506A00053070 /* SerpHeadersNavigationResponderTests.swift */; };
@@ -3295,6 +3297,7 @@
 		B6BF5D852946FFDA006742B1 /* PrivacyDashboardTabExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF5D842946FFDA006742B1 /* PrivacyDashboardTabExtension.swift */; };
 		B6BF5D8929470BC4006742B1 /* HTTPSUpgradeTabExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF5D8829470BC4006742B1 /* HTTPSUpgradeTabExtension.swift */; };
 		B6BF5D932947199A006742B1 /* SerpHeadersNavigationResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF5D922947199A006742B1 /* SerpHeadersNavigationResponder.swift */; };
+		C124F3549EDD4E88938DA6EA /* PrivacyPassNavigationResponder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56D8554BCC6480996226DA1 /* PrivacyPassNavigationResponder.swift */; };
 		B6C00ECB292F839D009C73A6 /* AutofillTabExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C00ECA292F839D009C73A6 /* AutofillTabExtension.swift */; };
 		B6C00ECD292F89D9009C73A6 /* FindInPageTabExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C00ECC292F89D9009C73A6 /* FindInPageTabExtension.swift */; };
 		B6C00ED5292FB21E009C73A6 /* HoveredLinkTabExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C00ED4292FB21E009C73A6 /* HoveredLinkTabExtension.swift */; };
@@ -11817,6 +11820,7 @@
 				1E559BB02BBCA9F1002B4AF6 /* RedirectNavigationResponder.swift */,
 				B60C6F7629B0E286007BFAA8 /* SearchNonexistentDomainNavigationResponder.swift */,
 				B6BF5D922947199A006742B1 /* SerpHeadersNavigationResponder.swift */,
+				F56D8554BCC6480996226DA1 /* PrivacyPassNavigationResponder.swift */,
 			);
 			path = Navigation;
 			sourceTree = "<group>";
@@ -15032,6 +15036,7 @@
 				4BF97AD92B43C5C000EB4240 /* Bundle+VPN.swift in Sources */,
 				3706FBAF293F65D500E42796 /* FireproofDomains.xcdatamodeld in Sources */,
 				B626A7552991413000053070 /* SerpHeadersNavigationResponder.swift in Sources */,
+				D7DDFC48735A407B8505F638 /* PrivacyPassNavigationResponder.swift in Sources */,
 				BB7696C62D6E333B00AD8DAB /* DefaultBrowserAndDockPromptPresenting.swift in Sources */,
 				B68D21C42ACBC917002DA3C2 /* ContentBlockingMock.swift in Sources */,
 				1DD6A7B82D804B60006AE043 /* PinnedTabsDiscoveryPopover.swift in Sources */,
@@ -17202,6 +17207,7 @@
 				B6085D092743AAB600A9C456 /* FireproofDomains.xcdatamodeld in Sources */,
 				56BA1E752BAAF70F001CF69F /* SpecialErrorPageTabExtension.swift in Sources */,
 				B6BF5D932947199A006742B1 /* SerpHeadersNavigationResponder.swift in Sources */,
+				C124F3549EDD4E88938DA6EA /* PrivacyPassNavigationResponder.swift in Sources */,
 				569277C129DDCBB500B633EF /* HomePageContinueSetUpModel.swift in Sources */,
 				B68D21CF2ACBC9FC002DA3C2 /* ContentBlockerRulesManagerMock.swift in Sources */,
 				B6A924D92664C72E001A28CA /* WebKitDownloadTask.swift in Sources */,
