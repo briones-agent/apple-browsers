@@ -144,11 +144,11 @@ final class MainMenu: NSMenu {
     let toggleDownloadsShortcutMenuItem = NSMenuItem(title: UserText.mainMenuViewShowDownloadsShortcut, action: #selector(MainViewController.toggleDownloadsShortcut), keyEquivalent: "J")
     let toggleAutofillShortcutMenuItem = NSMenuItem(title: UserText.mainMenuViewShowAutofillShortcut, action: #selector(MainViewController.toggleAutofillShortcut), keyEquivalent: "A")
     let toggleBookmarksShortcutMenuItem = NSMenuItem(title: UserText.mainMenuViewShowBookmarksShortcut, action: #selector(MainViewController.toggleBookmarksShortcut), keyEquivalent: "K")
-    private(set) lazy var aiChatMenu: NSMenuItem = {
+    private(set) lazy var aiChatMenu: NSMenuItem = MainActor.assumeIsolated {
         let container = NSMenuItem(title: "Duck.ai")
         container.submenu = makeAIChatMenu()
         return container
-    }()
+    }
     let toggleNetworkProtectionShortcutMenuItem = NSMenuItem(title: UserText.showNetworkProtectionShortcut, action: #selector(MainViewController.toggleNetworkProtectionShortcut), keyEquivalent: "")
 
     // MARK: Window
@@ -249,6 +249,7 @@ final class MainMenu: NSMenu {
             buildEditMenu()
             buildViewMenu()
             buildHistoryMenu()
+            aiChatMenu
             buildBookmarksMenu()
             buildWindowMenu()
             buildDebugMenu(featureFlagger: featureFlagger, historyCoordinator: historyCoordinator)
@@ -309,8 +310,6 @@ final class MainMenu: NSMenu {
                 newWindowMenuItem
                 newBurnerWindowMenuItem
             }
-
-            aiChatMenu
 
             openFileMenuItem
             openLocationMenuItem
@@ -1200,7 +1199,7 @@ final class MainMenu: NSMenu {
         return menu
     }
 
-    private func makeAIChatMenu() -> AIChatMenu {
+    @MainActor private func makeAIChatMenu() -> AIChatMenu {
         let actions = AIChatMenu.Actions(
             openNewChat: {
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))

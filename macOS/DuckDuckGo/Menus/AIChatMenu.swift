@@ -26,11 +26,11 @@ final class AIChatMenu: NSMenu {
     // MARK: - Actions
 
     struct Actions {
-        var openNewChat: () -> Void
-        var openNewVoiceChat: () -> Void
-        var openNewImageChat: () -> Void
-        var openChat: (AIChatSuggestion) -> Void
-        var viewAllChats: () -> Void
+        var openNewChat: @MainActor () -> Void
+        var openNewVoiceChat: @MainActor () -> Void
+        var openNewImageChat: @MainActor () -> Void
+        var openChat: @MainActor (AIChatSuggestion) -> Void
+        var viewAllChats: @MainActor () -> Void
         var deleteAllChats: () async -> Void
     }
 
