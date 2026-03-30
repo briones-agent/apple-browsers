@@ -55,13 +55,24 @@ final class ContentBlockingTabExtension: NSObject {
     private let fbBlockingEnabledProvider: FbBlockingEnabledProvider
     private let tld: TLD
     private let contentBlockingManager: ContentBlockerRulesManagerProtocol
-    private lazy var trackerProtectionMapper: TrackerProtectionEventMapper? = {
+    private func makeMapper(attributionTrackerData: TrackerData?) -> TrackerProtectionEventMapper? {
         let tdsName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
+        let attrListName = AdClickAttributionRulesSplitter.blockingAttributionRuleListName(forListNamed: tdsName)
         guard let mainTrackerData = contentBlockingManager.currentRules
             .first(where: { $0.name == tdsName })?.trackerData else { return nil }
-        let supplementary = contentBlockingManager.currentRules
-            .filter { $0.name != tdsName }
-            .map(\.trackerData)
+
+        var supplementary: [TrackerData]
+        if let attributionTrackerData {
+            supplementary = contentBlockingManager.currentRules
+                .filter { $0.name != tdsName && $0.name != attrListName }
+                .map(\.trackerData)
+            supplementary.append(attributionTrackerData)
+        } else {
+            supplementary = contentBlockingManager.currentRules
+                .filter { $0.name != tdsName }
+                .map(\.trackerData)
+        }
+
         let privacyConfig = privacyConfigurationManager.privacyConfig
         return TrackerProtectionEventMapper(tld: tld,
                                             mainTrackerData: mainTrackerData,
@@ -69,7 +80,7 @@ final class ContentBlockingTabExtension: NSObject {
                                             unprotectedSites: privacyConfig.userUnprotectedDomains,
                                             tempList: privacyConfig.tempUnprotectedDomains,
                                             contentBlockingEnabled: privacyConfig.isEnabled(featureKey: .contentBlocking))
-    }()
+    }
     private var trackersSubject = PassthroughSubject<DetectedTracker, Never>()
 
     private var cancellables = Set<AnyCancellable>()
@@ -163,7 +174,7 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation) {
-        guard let mapper = trackerProtectionMapper else { return }
+        guard let mapper = makeMapper(attributionTrackerData: subfeature.currentAttributionTrackerData) else { return }
 
         if let detected = mapper.classifyResource(observation,
                                                    adClickAttributionVendor: subfeature.currentAdClickAttributionVendor) {
@@ -182,7 +193,7 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
-        guard let mapper = trackerProtectionMapper,
+        guard let mapper = makeMapper(attributionTrackerData: subfeature.currentAttributionTrackerData),
               let detected = mapper.classifySurrogate(surrogate,
                                                       adClickAttributionVendor: subfeature.currentAdClickAttributionVendor),
               let host = mapper.surrogateHost(from: surrogate) else { return }

@@ -129,14 +129,18 @@ public struct TrackerProtectionEventMapper {
 
     /// Multi-TDS classification mirroring the legacy ContentBlockerRulesUserScript loop.
     ///
-    /// Supplementary TDS (CTL, ad-attribution) are authoritative when they match:
-    /// blocked results return immediately, allowed results (e.g. vendor exceptions)
-    /// are preserved without falling through to the main TDS. Main TDS is only
-    /// consulted when no supplementary TDS matched.
+    /// 1. Try each supplementary TDS (CTL, ad-attribution) with ad-click vendor.
+    ///    If any returns blocked, use it immediately.
+    /// 2. Fall back to the main TDS without vendor.
+    /// 3. Main result overwrites non-blocked supplementary candidates (matching legacy behavior).
+    ///    This is correct because the splitter removes attribution trackers from main TDS,
+    ///    so main returns nil for those URLs and the supplementary candidate survives.
     private func classifyUrl(_ urlString: String,
                              pageUrlString: String,
                              resourceType: String,
                              adClickAttributionVendor: String?) -> DetectedRequest? {
+        var candidate: DetectedRequest?
+
         for trackerData in supplementaryTrackerData {
             let resolver = TrackerResolver(tds: trackerData,
                                            unprotectedSites: unprotectedSites,
@@ -147,7 +151,10 @@ public struct TrackerProtectionEventMapper {
                                                      pageUrlString: pageUrlString,
                                                      resourceType: resourceType,
                                                      potentiallyBlocked: contentBlockingEnabled) {
-                return tracker
+                if tracker.isBlocked {
+                    return tracker
+                }
+                candidate = tracker
             }
         }
 
@@ -155,9 +162,13 @@ public struct TrackerProtectionEventMapper {
                                            unprotectedSites: unprotectedSites,
                                            tempList: tempList,
                                            tld: tld)
-        return mainResolver.trackerFromUrl(urlString,
-                                           pageUrlString: pageUrlString,
-                                           resourceType: resourceType,
-                                           potentiallyBlocked: contentBlockingEnabled)
+        if let tracker = mainResolver.trackerFromUrl(urlString,
+                                                     pageUrlString: pageUrlString,
+                                                     resourceType: resourceType,
+                                                     potentiallyBlocked: contentBlockingEnabled) {
+            candidate = tracker
+        }
+
+        return candidate
     }
 }

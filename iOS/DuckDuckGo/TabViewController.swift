@@ -3187,11 +3187,24 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
         return privacyInfo?.isFor(self.url) ?? false
     }
 
-    private func makeMapper() -> TrackerProtectionEventMapper? {
+    private func makeMapper(attributionTrackerData: TrackerData?) -> TrackerProtectionEventMapper? {
         let rules = ContentBlocking.shared.contentBlockingManager.currentRules
         let tdsName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
+        let attrListName = AdClickAttributionRulesSplitter.blockingAttributionRuleListName(forListNamed: tdsName)
         guard let mainTrackerData = rules.first(where: { $0.name == tdsName })?.trackerData else { return nil }
-        let supplementary = rules.filter { $0.name != tdsName }.map(\.trackerData)
+
+        var supplementary: [TrackerData]
+        if let attributionTrackerData {
+            supplementary = rules
+                .filter { $0.name != tdsName && $0.name != attrListName }
+                .map(\.trackerData)
+            supplementary.append(attributionTrackerData)
+        } else {
+            supplementary = rules
+                .filter { $0.name != tdsName }
+                .map(\.trackerData)
+        }
+
         let tld = AppDependencyProvider.shared.storageCache.tld
         let privacyConfig = ContentBlocking.shared.privacyConfigurationManager.privacyConfig
         return TrackerProtectionEventMapper(tld: tld,
@@ -3204,7 +3217,7 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didObserveResource observation: TrackerProtectionSubfeature.ResourceObservation) {
-        guard let mapper = makeMapper() else { return }
+        guard let mapper = makeMapper(attributionTrackerData: subfeature.currentAttributionTrackerData) else { return }
 
         if let detected = mapper.classifyResource(observation,
                                                    adClickAttributionVendor: subfeature.currentAdClickAttributionVendor) {
@@ -3221,7 +3234,7 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
                            didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
         guard let url = url,
-              let mapper = makeMapper(),
+              let mapper = makeMapper(attributionTrackerData: subfeature.currentAttributionTrackerData),
               let detected = mapper.classifySurrogate(surrogate,
                                                       adClickAttributionVendor: subfeature.currentAdClickAttributionVendor),
               let host = mapper.surrogateHost(from: surrogate) else { return }
@@ -3306,6 +3319,7 @@ extension TabViewController: AdClickAttributionLogicDelegate {
 
         userScripts?.trackerProtectionSubfeature.currentAdClickAttributionVendor = vendor
         userScripts?.trackerProtectionSubfeature.currentAdClickAttributionAllowlistHosts = vendor != nil ? ContentBlocking.shared.adClickAttribution.allowlist.map(\.host) : []
+        userScripts?.trackerProtectionSubfeature.currentAttributionTrackerData = rules?.trackerData
 
         if let rules = rules {
 
