@@ -17,6 +17,7 @@
 //  limitations under the License.
 //
 
+import AVFoundation
 import WebKit
 import Core
 import Combine
@@ -129,7 +130,7 @@ class TabViewController: UIViewController {
     var daxEasterEggHandler: DaxEasterEggHandling?
     var logoCache: DaxEasterEggLogoCaching = DaxEasterEggLogoCache()
 
-    let favicons = Favicons.shared
+    let favicons: FaviconManaging
     let progressWorker = WebProgressWorker()
 
     private(set) var webView: WKWebView!
@@ -248,7 +249,7 @@ class TabViewController: UIViewController {
     let bookmarksDatabase: CoreDataDatabase
     lazy var faviconUpdater = FireproofFaviconUpdater(bookmarksDatabase: bookmarksDatabase,
                                                       tab: tabModel,
-                                                      favicons: Favicons.shared,
+                                                      favicons: favicons,
                                                       sharedSecureVault: sharedSecureVault)
 
     private let refreshControl = UIRefreshControl()
@@ -414,6 +415,7 @@ class TabViewController: UIViewController {
                                    autoconsentManagement: AutoconsentManaging,
                                    websiteDataManager: WebsiteDataManaging,
                                    fireproofing: Fireproofing,
+                                   favicons: FaviconManaging,
                                    tabInteractionStateSource: TabInteractionStateSource?,
                                    specialErrorPageNavigationHandler: SpecialErrorPageManaging,
                                    featureDiscovery: FeatureDiscovery,
@@ -446,6 +448,7 @@ class TabViewController: UIViewController {
                               textZoomCoordinator: textZoomCoordinator,
                               autoconsentManagement: autoconsentManagement,
                               fireproofing: fireproofing,
+                              favicons: favicons,
                               websiteDataManager: websiteDataManager,
                               tabInteractionStateSource: tabInteractionStateSource,
                               specialErrorPageNavigationHandler: specialErrorPageNavigationHandler,
@@ -525,7 +528,8 @@ class TabViewController: UIViewController {
             contentBlockingAssetsPublisher: contentBlockingAssetsPublisher,
             featureDiscovery: featureDiscovery,
             featureFlagger: featureFlagger,
-            pageContextHandler: pageContextHandler
+            pageContextHandler: pageContextHandler,
+            isFireTab: tabModel.fireTab
         )
         coordinator.delegate = self
         return coordinator
@@ -552,6 +556,7 @@ class TabViewController: UIViewController {
                    textZoomCoordinator: TextZoomCoordinating,
                    autoconsentManagement: AutoconsentManaging,
                    fireproofing: Fireproofing,
+                   favicons: FaviconManaging,
                    websiteDataManager: WebsiteDataManaging,
                    tabInteractionStateSource: TabInteractionStateSource?,
                    specialErrorPageNavigationHandler: SpecialErrorPageManaging,
@@ -586,6 +591,7 @@ class TabViewController: UIViewController {
         self.textZoomCoordinator = textZoomCoordinator
         self.autoconsentManagement = autoconsentManagement
         self.fireproofing = fireproofing
+        self.favicons = favicons
         self.websiteDataManager = websiteDataManager
         self.tabInteractionStateSource = tabInteractionStateSource
         self.specialErrorPageNavigationHandler = specialErrorPageNavigationHandler
@@ -641,7 +647,7 @@ class TabViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        fireproofingWorker = FireproofingWorking(controller: self, fireproofing: fireproofing)
+        fireproofingWorker = FireproofingWorking(controller: self, fireproofing: fireproofing, favicons: favicons)
         initAttributionLogic()
         decorate()
         addTextZoomObserver()
@@ -730,7 +736,8 @@ class TabViewController: UIViewController {
         } else {
             webViewBottomAnchorConstraint?.constant = 0
         }
-        borderView.bottomAlpha = isLargeWidth ? 0 : barsVisibilityPercent
+        let hideBottomBorder = isLargeWidth || (chromeDelegate?.isToolbarHidden == true)
+        borderView.bottomAlpha = hideBottomBorder ? 0 : barsVisibilityPercent
         updateContentInsetAdjustment()
     }
 
@@ -863,6 +870,11 @@ class TabViewController: UIViewController {
                                                             onRefresh: { [weak self] in
             self?.handlePullToRefresh()
         })
+
+        if isAITab {
+            pullToRefreshViewAdapter?.setRefreshControlEnabled(false)
+            webView.scrollView.alwaysBounceVertical = false
+        }
 
         updateContentMode()
 
@@ -1061,6 +1073,8 @@ class TabViewController: UIViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 guard let self else { return }
                 self.webViewUrlHasChanged(previousURL: previousURL, newURL: self.webView.url)
+                self.pullToRefreshViewAdapter?.setRefreshControlEnabled(!self.isAITab)
+                self.webView.scrollView.alwaysBounceVertical = !self.isAITab
                 if #available(iOS 18.4, *) {
                     self.notifyWebExtensionOfPropertyChange([.URL])
                 }
@@ -1101,7 +1115,8 @@ class TabViewController: UIViewController {
     }
 
     func enableFireproofingForDomain(_ domain: String) {
-        FireproofingAlert.showConfirmFireproofWebsite(usingController: self, forDomain: domain) { [weak self] in
+        let displayDomain = fireproofing.displayDomain(for: domain)
+        FireproofingAlert.showConfirmFireproofWebsite(usingController: self, forDomain: displayDomain) { [weak self] in
             Pixel.fire(pixel: .browsingMenuFireproof)
             self?.fireproofingWorker?.handleUserEnablingFireproofing(forDomain: domain)
         }
@@ -2918,6 +2933,21 @@ extension TabViewController: WKUIDelegate {
                              inheritingAttribution: adClickAttributionLogic.state)
     }
 
+    func webView(_ webView: WKWebView,
+                 requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                 initiatedByFrame frame: WKFrameInfo,
+                 type: WKMediaCaptureType,
+                 decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        guard origin.host.isDuckAIHost,
+              type == .microphone || type == .cameraAndMicrophone else {
+            decisionHandler(.prompt)
+            return
+        }
+
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        decisionHandler(status == .authorized ? .grant : .deny)
+    }
+
     func webViewDidClose(_ webView: WKWebView) {
         if openedByPage {
             delegate?.tabDidRequestClose(self)
@@ -3113,6 +3143,7 @@ extension TabViewController: UserContentControllerDelegate {
         userScripts.serpSettingsUserScript.setStore(keyValueStore)
         userScripts.serpSettingsUserScript.webView = webView
         
+        userScripts.aiChatUserScript.setFireModeProvider { [weak self] in self?.tabModel.fireTab ?? false }
         aiChatContentHandler.setup(with: userScripts.aiChatUserScript, webView: webView, displayMode: .fullTab)
         aiChatContextualSheetCoordinator.pageContextHandler.resubscribe()
 
@@ -3895,7 +3926,7 @@ extension TabViewController: SaveLoginViewControllerDelegate {
 
                         self.showLoginDetails(with: newCredential.account, source: .viewSavedLoginPrompt)
                     })
-                    Favicons.shared.loadFavicon(forDomain: newCredential.account.domain, intoCache: .fireproof, fromCache: .tabs)
+                    self.favicons.loadFavicon(forDomain: newCredential.account.domain, intoCache: .fireproof, fromCache: .tabs)
                 }
 
                 guard let domain = newCredential.account.domain else { return }

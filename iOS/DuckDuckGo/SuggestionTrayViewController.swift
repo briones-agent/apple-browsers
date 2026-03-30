@@ -28,6 +28,7 @@ import PrivacyConfig
 import UIComponents
 import RemoteMessaging
 import AIChat
+import Subscription
 
 class SuggestionTrayViewController: UIViewController {
     
@@ -39,7 +40,8 @@ class SuggestionTrayViewController: UIViewController {
     @IBOutlet var variableHeightConstraint: NSLayoutConstraint!
     @IBOutlet var fullHeightSafeAreaConstraint: NSLayoutConstraint!
     @IBOutlet var fullHeightConstraint: NSLayoutConstraint!
-
+    @IBOutlet var fullHeightSafeAreaInequalityConstraint: NSLayoutConstraint!
+    
     weak var autocompleteDelegate: AutocompleteViewControllerDelegate?
     weak var newTabPageControllerDelegate: NewTabPageControllerDelegate?
 
@@ -110,10 +112,12 @@ class SuggestionTrayViewController: UIViewController {
         let newTabDialogFactory: NewTabDaxDialogsProvider
         let newTabDaxDialogManager: NewTabDialogSpecProvider & SubscriptionPromotionCoordinating
         let faviconLoader: FavoritesFaviconLoading
+        let faviconsCache: FavoritesFaviconCaching
         let remoteMessagingActionHandler: RemoteMessagingActionHandling
         let remoteMessagingImageLoader: RemoteMessagingImageLoading
         let remoteMessagingPixelReporter: RemoteMessagingPixelReporting?
         let appSettings: AppSettings
+        let subscriptionManager: any SubscriptionManager
         let internalUserCommands: URLBasedDebugCommands
     }
 
@@ -229,6 +233,7 @@ class SuggestionTrayViewController: UIViewController {
         fullWidthConstraint.isActive = false
         fullHeightConstraint.isActive = false
         fullHeightSafeAreaConstraint.isActive = false
+        fullHeightSafeAreaInequalityConstraint.isActive = true
     }
     
     func fill(bottomOffset: CGFloat = 0.0) {
@@ -247,6 +252,7 @@ class SuggestionTrayViewController: UIViewController {
         fullWidthConstraint.isActive = true
         fullHeightConstraint.isActive = coversFullScreen
         fullHeightSafeAreaConstraint.isActive = !coversFullScreen
+        fullHeightSafeAreaInequalityConstraint.isActive = !coversFullScreen
     }
     
     private func installDismissHandler() {
@@ -303,6 +309,8 @@ class SuggestionTrayViewController: UIViewController {
             remoteMessagingImageLoader: dependencies.remoteMessagingImageLoader,
             remoteMessagingPixelReporter: dependencies.remoteMessagingPixelReporter,
             appSettings: dependencies.appSettings,
+            faviconsCache: dependencies.faviconsCache,
+            subscriptionManager: dependencies.subscriptionManager,
             internalUserCommands: dependencies.internalUserCommands
         )
 

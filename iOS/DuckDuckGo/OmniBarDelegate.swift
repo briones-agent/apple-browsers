@@ -43,7 +43,9 @@ protocol OmniBarDelegate: AnyObject {
     func onMenuPressed()
 
     func onBookmarksPressed()
-    
+
+    func onPasswordsPressed()
+
     func onSettingsPressed()
 
     func onMenuLongPressed()
@@ -127,6 +129,9 @@ protocol OmniBarDelegate: AnyObject {
     /// When true, the omnibar editing-state transition uses the new behaviour (opaque from frame 0, single logo). Gated by showNTPAfterIdleReturn.
     func useNewOmnibarTransitionBehaviour() -> Bool
     
+    // MARK: - Voice Mode
+    func onDuckAIVoiceModeRequested()
+
     // MARK: - Fire Mode
     func isCurrentTabFireTab() -> Bool
 }
@@ -150,9 +155,13 @@ extension OmniBarDelegate {
     }
 
     func onBookmarksPressed() {
-        
+
     }
-    
+
+    func onPasswordsPressed() {
+
+    }
+
     func onSettingsPressed() {
         
     }
@@ -220,4 +229,6 @@ extension OmniBarDelegate {
     func useNewOmnibarTransitionBehaviour() -> Bool {
         false
     }
+
+    func onDuckAIVoiceModeRequested() {}
 }
