@@ -152,7 +152,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let tld = TLD()
     let privacyFeatures: AnyPrivacyFeatures
     // Shared across all tabs so Privacy Pass credentials persist across navigations
-    lazy var privacyPassChallengeHandler = PrivacyPassChallengeHandler(tokenManager: PrivacyPassTokenManager())
+    // nonisolated(unsafe) because AppDelegate properties are initialized on main thread
+    // but the compiler can't prove it for a lazy var on a non-@MainActor class
+    nonisolated(unsafe) lazy var privacyPassChallengeHandler = PrivacyPassChallengeHandler(tokenManager: PrivacyPassTokenManager())
     let brokenSitePromptLimiter: BrokenSitePromptLimiter
     let fireCoordinator: FireCoordinator
     let permissionManager: PermissionManager

@@ -108,7 +108,7 @@ final class AppDependencyProvider: DependencyProvider {
     lazy var syncAutoRestoreDecisionManager: SyncAutoRestoreDecisionManaging = SyncAutoRestoreDecisionManager(featureFlagger: featureFlagger)
 
     // Shared across all tabs so Privacy Pass credentials persist across navigations
-    lazy var privacyPassChallengeHandler = PrivacyPassChallengeHandler(tokenManager: PrivacyPassTokenManager())
+    nonisolated(unsafe) lazy var privacyPassChallengeHandler = PrivacyPassChallengeHandler(tokenManager: PrivacyPassTokenManager())
 
     private init() {
 
