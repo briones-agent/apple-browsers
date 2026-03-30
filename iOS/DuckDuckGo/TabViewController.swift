@@ -3187,7 +3187,15 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
         return privacyInfo?.isFor(self.url) ?? false
     }
 
+    private var cachedMapper: TrackerProtectionEventMapper?
+    private var cachedMapperHasAttribution = false
+
     private func makeMapper(attributionTrackerData: TrackerData?) -> TrackerProtectionEventMapper? {
+        let hasAttribution = attributionTrackerData != nil
+        if let cachedMapper, cachedMapperHasAttribution == hasAttribution {
+            return cachedMapper
+        }
+
         let rules = ContentBlocking.shared.contentBlockingManager.currentRules
         let tdsName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
         let attrListName = AdClickAttributionRulesSplitter.blockingAttributionRuleListName(forListNamed: tdsName)
@@ -3207,12 +3215,15 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
 
         let tld = AppDependencyProvider.shared.storageCache.tld
         let privacyConfig = ContentBlocking.shared.privacyConfigurationManager.privacyConfig
-        return TrackerProtectionEventMapper(tld: tld,
-                                            mainTrackerData: mainTrackerData,
-                                            supplementaryTrackerData: supplementary,
-                                            unprotectedSites: privacyConfig.userUnprotectedDomains,
-                                            tempList: privacyConfig.tempUnprotectedDomains,
-                                            contentBlockingEnabled: privacyConfig.isEnabled(featureKey: .contentBlocking))
+        let mapper = TrackerProtectionEventMapper(tld: tld,
+                                                  mainTrackerData: mainTrackerData,
+                                                  supplementaryTrackerData: supplementary,
+                                                  unprotectedSites: privacyConfig.userUnprotectedDomains,
+                                                  tempList: privacyConfig.tempUnprotectedDomains,
+                                                  contentBlockingEnabled: privacyConfig.isEnabled(featureKey: .contentBlocking))
+        cachedMapper = mapper
+        cachedMapperHasAttribution = hasAttribution
+        return mapper
     }
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
