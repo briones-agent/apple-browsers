@@ -89,6 +89,8 @@ class TabViewController: UIViewController {
         }
     }
     private var savedViewSettings: ViewSettings?
+    private var cachedMapper: TrackerProtectionEventMapper?
+    private var cachedMapperHasAttribution = false
 
     @IBOutlet var showBarsTapGestureRecogniser: UITapGestureRecognizer!
 
@@ -3186,9 +3188,6 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
     func trackerProtectionShouldProcessTrackers(_ subfeature: TrackerProtectionSubfeature) -> Bool {
         return privacyInfo?.isFor(self.url) ?? false
     }
-
-    private var cachedMapper: TrackerProtectionEventMapper?
-    private var cachedMapperHasAttribution = false
 
     private func makeMapper(attributionTrackerData: TrackerData?) -> TrackerProtectionEventMapper? {
         let hasAttribution = attributionTrackerData != nil
