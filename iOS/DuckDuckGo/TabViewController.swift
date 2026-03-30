@@ -89,8 +89,6 @@ class TabViewController: UIViewController {
         }
     }
     private var savedViewSettings: ViewSettings?
-    private var cachedMapper: TrackerProtectionEventMapper?
-    private var cachedMapperHasAttribution = false
 
     @IBOutlet var showBarsTapGestureRecogniser: UITapGestureRecognizer!
 
@@ -3190,11 +3188,6 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
     }
 
     private func makeMapper(attributionTrackerData: TrackerData?) -> TrackerProtectionEventMapper? {
-        let hasAttribution = attributionTrackerData != nil
-        if let cachedMapper, cachedMapperHasAttribution == hasAttribution {
-            return cachedMapper
-        }
-
         let rules = ContentBlocking.shared.contentBlockingManager.currentRules
         let tdsName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
         let attrListName = AdClickAttributionRulesSplitter.blockingAttributionRuleListName(forListNamed: tdsName)
@@ -3214,15 +3207,12 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
 
         let tld = AppDependencyProvider.shared.storageCache.tld
         let privacyConfig = ContentBlocking.shared.privacyConfigurationManager.privacyConfig
-        let mapper = TrackerProtectionEventMapper(tld: tld,
-                                                  mainTrackerData: mainTrackerData,
-                                                  supplementaryTrackerData: supplementary,
-                                                  unprotectedSites: privacyConfig.userUnprotectedDomains,
-                                                  tempList: privacyConfig.tempUnprotectedDomains,
-                                                  contentBlockingEnabled: privacyConfig.isEnabled(featureKey: .contentBlocking))
-        cachedMapper = mapper
-        cachedMapperHasAttribution = hasAttribution
-        return mapper
+        return TrackerProtectionEventMapper(tld: tld,
+                                            mainTrackerData: mainTrackerData,
+                                            supplementaryTrackerData: supplementary,
+                                            unprotectedSites: privacyConfig.userUnprotectedDomains,
+                                            tempList: privacyConfig.tempUnprotectedDomains,
+                                            contentBlockingEnabled: privacyConfig.isEnabled(featureKey: .contentBlocking))
     }
 
     func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
