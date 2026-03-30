@@ -775,7 +775,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
 
     private let instrumentation = TabInstrumentation()
     // Shared across all tabs - sourced from AppDelegate for credential persistence
-    private let privacyPassChallengeHandler: PrivacyPassChallengeHandler
+    let privacyPassChallengeHandler: PrivacyPassChallengeHandler
 
     private let _id: String?
     var id: String {

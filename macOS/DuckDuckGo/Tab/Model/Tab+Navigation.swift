@@ -69,8 +69,8 @@ extension Tab: NavigationResponder {
 
             // Privacy Pass 401 challenge handling
             .strong(PrivacyPassNavigationResponder(
-                challengeHandler: privacyPassChallengeHandler,
-                privacyConfigurationManager: privacyFeatures.contentBlocking.privacyConfigurationManager,
+                challengeHandler: NSApp.delegateTyped.privacyPassChallengeHandler,
+                privacyConfigurationManager: NSApp.delegateTyped.privacyFeatures.contentBlocking.privacyConfigurationManager,
                 webViewFuture: args.webViewFuture)),
 
             .struct(redirectNavigationResponder),
