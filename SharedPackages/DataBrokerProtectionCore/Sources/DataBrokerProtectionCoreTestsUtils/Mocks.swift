@@ -327,6 +327,16 @@ public extension ContentScopeFeatureToggles {
 }
 
 public final class WebViewHandlerMock: NSObject, WebViewHandler {
+    public let currentURL: URL? = nil
+    
+    public func getPageHTML() async -> String? {
+        nil
+    }
+
+    public func evaluateJavaScriptReturningResult(_ javaScript: String) async throws -> Any? {
+        nil
+    }
+
     public var wasInitializeWebViewCalled = false
     public var wasLoadCalledWithURL: URL?
     public var wasWaitForWebViewLoadCalled = false
