@@ -3325,6 +3325,7 @@ extension TabViewController: AdClickAttributionLogicDelegate {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
             userScripts?.trackerProtectionSubfeature.currentAdClickAttributionVendor = nil
             userScripts?.trackerProtectionSubfeature.currentAdClickAttributionAllowlistHosts = []
+            userScripts?.trackerProtectionSubfeature.currentAttributionTrackerData = nil
             return
         }
 
