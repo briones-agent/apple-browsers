@@ -728,9 +728,8 @@ struct AutoplayPermissionRowView: View {
             button.setContentHuggingPriority(.defaultHigh, for: .horizontal)
 
             let decisions: [(AutoplayDecision, String)] = [
-                (.useDefault, UserText.permissionAutoplayUseDefault),
-                (.allowAll, UserText.autoplayModeAllowAll),
                 (.audioMuted, UserText.autoplayModeBlockAudio),
+                (.allowAll, UserText.autoplayModeAllowAll),
                 (.blockAll, UserText.autoplayModeBlockAll),
             ]
 

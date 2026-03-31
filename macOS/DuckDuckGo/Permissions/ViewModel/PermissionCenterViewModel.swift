@@ -141,7 +141,6 @@ enum PopupDecision: Hashable {
 
 /// Autoplay decision options for the Permission Center dropdown
 enum AutoplayDecision: Hashable {
-    case useDefault
     case allowAll
     case audioMuted
     case blockAll
@@ -361,8 +360,6 @@ final class PermissionCenterViewModel: ObservableObject {
     /// Updates the autoplay decision for the current domain
     func setAutoplayDecision(_ decision: AutoplayDecision) {
         switch decision {
-        case .useDefault:
-            permissionManager.removePermission(forDomain: domain, permissionType: .autoplayPolicy)
         case .allowAll:
             permissionManager.setPermission(.allow, forDomain: domain, permissionType: .autoplayPolicy)
         case .audioMuted:
@@ -374,7 +371,6 @@ final class PermissionCenterViewModel: ObservableObject {
         // Update the item's decision in the list
         if let index = permissionItems.firstIndex(where: { $0.permissionType == .autoplayPolicy }) {
             switch decision {
-            case .useDefault: permissionItems[index].decision = .ask
             case .allowAll: permissionItems[index].decision = .allow
             case .audioMuted: permissionItems[index].decision = .ask
             case .blockAll: permissionItems[index].decision = .deny
@@ -387,7 +383,7 @@ final class PermissionCenterViewModel: ObservableObject {
     /// Returns the current autoplay decision based on whether a per-site override is persisted
     func currentAutoplayDecision() -> AutoplayDecision {
         guard permissionManager.hasPermissionPersisted(forDomain: domain, permissionType: .autoplayPolicy) else {
-            return .useDefault
+            return .audioMuted
         }
         let decision = permissionManager.permission(forDomain: domain, permissionType: .autoplayPolicy)
         switch decision {
