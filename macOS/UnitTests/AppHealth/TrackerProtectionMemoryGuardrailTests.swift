@@ -149,10 +149,8 @@ final class TrackerProtectionMemoryGuardrailTests: XCTestCase {
         let start = CFAbsoluteTimeGetCurrent()
 
         var classifiedCount = 0
-        for observation in observations {
-            if mapper.classifyResource(observation) != nil {
-                classifiedCount += 1
-            }
+        for observation in observations where mapper.classifyResource(observation) != nil {
+            classifiedCount += 1
         }
 
         let elapsed = CFAbsoluteTimeGetCurrent() - start
