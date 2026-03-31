@@ -89,12 +89,17 @@ extension Preferences {
                 // YouTube Ad Blocking Section
                 PreferencePaneSection {
                     TextMenuItemCaption(UserText.youTubeAdBlockingExplanation)
+
+                    Spacer().frame(height: 4)
+
                     ToggleMenuItem(UserText.youTubeAdBlockingToggle, isOn: $model.youTubeAdBlockingEnabled)
                 }
 
                 // Duck Player Section
                 PreferencePaneSection(UserText.duckPlayer) {
                     TextMenuItemCaption(UserText.duckPlayerYouTubeAdBlockingExplanation)
+
+                    Spacer().frame(height: 4)
 
                     if model.shouldDisplayContingencyMessage {
                         ContingencyMessageView {

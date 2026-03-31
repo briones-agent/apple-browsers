@@ -111,7 +111,7 @@ struct SettingsYouTubeAdBlockingView: View {
                 }
 
                 if viewModel.state.duckPlayerNativeYoutubeMode != .never {
-                    Section {
+                    Section(footer: Text(UserText.duckPlayerSearchResultsFooter)) {
                         SettingsCellView(
                             label: UserText.duckPlayerAlwaysOpenToggle,
                             accessory: .toggle(isOn: viewModel.isOpenAutomaticallyBinding)
@@ -121,16 +121,13 @@ struct SettingsYouTubeAdBlockingView: View {
                         SettingsCellView(label: UserText.duckPlayerAutoplayLabel,
                                         accessory: .toggle(isOn: viewModel.duckPlayerAutoplay))
                         .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
-                    }
 
-                    Section(footer: Text(UserText.duckPlayerSearchResultsFooter)) {
                         SettingsCellView(label: UserText.duckPlayerSearchResultsLabel,
                                          accessory: .toggle(isOn: viewModel.duckPlayerNativeUISERPEnabled))
                         .disabled(viewModel.shouldDisplayDuckPlayerContingencyMessage)
                     }
                 }
             }
-
         }
         .applySettingsListModifiers(title: UserText.youTubeAdBlockingTitle,
                                     displayMode: .inline,

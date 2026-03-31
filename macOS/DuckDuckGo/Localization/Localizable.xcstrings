@@ -25526,7 +25526,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Duck Player provides a cleaner viewing experience and prevents viewing activity from influencing your YouTube recommendations."
+            "value" : "Opens videos in a private theatre mode that prevents what you watch from influencing your YouTube feed."
           }
         }
       }
