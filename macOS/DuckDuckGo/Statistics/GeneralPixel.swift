@@ -1323,8 +1323,8 @@ enum GeneralPixel: PixelKitEvent {
         case .userScriptLoadJSFailed: return "m_mac_debug_user_script_load_js_failed"
 
         case .attributionXattrCanary: return "m_mac_attribution-xattr-canary_u"
-            // Website Autoplay
 
+            // Website Autoplay
         case .autoplaySettingAllowAll:
             return "m_mac_autoplay_setting_allow-all"
         case .autoplaySettingBlockAudio:
