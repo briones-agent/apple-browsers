@@ -29,8 +29,7 @@ import XCTest
 /// These are coarse wall-clock guardrails, NOT microbenchmarks. Thresholds are set at
 /// 5-10x expected values to avoid CI flakiness. No strict resident-memory-delta assertions.
 ///
-/// New coverage — no equivalent existed in deleted tests. Guards against perf regressions
-/// from sending TDS data through the C-S-S pipeline.
+/// Guards against perf regressions from TDS data processing in the C-S-S pipeline.
 final class TrackerProtectionMemoryGuardrailTests: XCTestCase {
 
     // MARK: - Synthetic TDS Helpers

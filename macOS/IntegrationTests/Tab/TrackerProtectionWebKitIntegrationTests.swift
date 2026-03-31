@@ -47,8 +47,7 @@ private final class MockMaliciousSiteDetectingTP: MaliciousSiteDetecting {
 /// for seam confidence. Tests use `WindowsManager.openNewWindow` to trigger full content
 /// blocking asset installation and C-S-S injection.
 ///
-/// Restores equivalent risk coverage for deleted tests: `ContentBlockerReferenceTests`,
-/// `ContentBlockerRulesUserScriptsTests`, `TrackerResolverTests`.
+/// Provides end-to-end integration coverage for the C-S-S tracker-protection pipeline.
 @available(macOS 12.0, *)
 final class TrackerProtectionWebKitIntegrationTests: XCTestCase {
 
