@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import Persistence
 import PixelKit
 import WebKit
 
@@ -39,8 +40,21 @@ protocol AutoplayPreferencesPersistor {
 }
 
 struct AutoplayPreferencesUserDefaultsPersistor: AutoplayPreferencesPersistor {
-    @UserDefaultsWrapper(key: .autoplayBlockingMode, defaultValue: AutoplayBlockingMode.blockAudio.rawValue)
-    var autoplayBlockingModeRawValue: String
+
+    enum Key: String {
+        case autoplayBlockingMode = "preferences.autoplay.blocking-mode"
+    }
+
+    private let keyValueStore: KeyValueStoring
+
+    init(keyValueStore: KeyValueStoring = UserDefaults.standard) {
+        self.keyValueStore = keyValueStore
+    }
+
+    var autoplayBlockingModeRawValue: String {
+        get { keyValueStore.object(forKey: Key.autoplayBlockingMode.rawValue) as? String ?? AutoplayBlockingMode.blockAudio.rawValue }
+        set { keyValueStore.set(newValue, forKey: Key.autoplayBlockingMode.rawValue) }
+    }
 }
 
 final class AutoplayPreferences: ObservableObject {
