@@ -348,6 +348,15 @@ extension TabExtensionsBuilder {
                 internalUserDecider: dependencies.featureFlagger.internalUserDecider
             )
         }
+
+        add {
+            TabSuspensionExtension(
+                webViewPublisher: args.webViewFuture,
+                contentPublisher: args.contentPublisher,
+                featureFlagger: dependencies.featureFlagger,
+                isTabPinned: args.isTabPinned
+            )
+        }
     }
 
 }

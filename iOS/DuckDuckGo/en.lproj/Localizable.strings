@@ -64,6 +64,9 @@
 /* Open AI Chat action in the menu list */
 "action.title.duckai" = "Duck.ai";
 
+/* Open Duck.ai Voice mode action */
+"action.title.duckai.voice" = "Duck.ai Voice";
+
 /* Edit Bookmark action */
 "action.title.edit.bookmark" = "Edit Bookmark";
 
@@ -171,6 +174,12 @@
 
 /* Settings screen title for AI features */
 "ai-features.settings.title" = "AI Features";
+
+/* Action sheet option to choose a photo from the photo library for attaching to an AI chat message */
+"aichat.attachment.option.choose.photo" = "Choose Photo";
+
+/* Action sheet option to take a photo using the device camera for attaching to an AI chat message */
+"aichat.attachment.option.take.photo" = "Take a Photo";
 
 /* No comment provided by engineer. */
 "alert.message.bookmarkAll" = "Existing bookmarks will not be duplicated.";
@@ -1014,6 +1023,12 @@
 
 /* Close All Tabs */
 "close.all.tabs" = "Close All Tabs";
+
+/* Button to confirm deleting a contextual AI chat */
+"contextual.chat.delete.confirmation.button" = "Delete Chat";
+
+/* Title for the confirmation dialog when deleting a contextual AI chat */
+"contextual.chat.delete.confirmation.title" = "Delete this chat?";
 
 /* Button to continue the onboarding process */
 "contextual.onboarding.addToDock.buttons.skip" = "Skip";
@@ -2004,6 +2019,9 @@
 
 /* Placeholder text for the duck.ai input field */
 "input.field.placeholder.duckai" = "Ask privately";
+
+/* Placeholder text for the duck.ai input field when a chat is already active */
+"input.field.placeholder.duckai.followup" = "Ask a follow-up question...";
 
 /* OK title for invite screen alert dismissal button */
 "invite.alert.ok.button" = "OK";
@@ -3132,6 +3150,18 @@ Take back control of your personal information with the browser designed for dat
 
 /* The name of Settings category in Privacy Features related to configuration of the default browser */
 "settings.default.browser" = "Default Browser";
+
+/* Option to always default the omnibar toggle to Duck.ai */
+"settings.default.omnibar.mode.duckai" = "Duck.ai";
+
+/* Label for the default omnibar toggle position picker in AI Features settings */
+"settings.default.omnibar.mode.header" = "New Tab Toggle Position";
+
+/* Option to remember the last used omnibar toggle position */
+"settings.default.omnibar.mode.last.used" = "Last Used";
+
+/* Option to always default the omnibar toggle to Search */
+"settings.default.omnibar.mode.search" = "Search";
 
 /* Settings screen cell text for option to delete Duck.ai chats when using scoped fire */
 "settings.delete.duckai.chats" = "Delete Duck.ai Chats";

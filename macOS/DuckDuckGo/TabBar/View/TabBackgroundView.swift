@@ -36,10 +36,10 @@ final class TabBackgroundView: NSView {
     }
 
     private enum Metrics {
-        static let overlayCornerRadius: CGFloat = 6
+        static let overlayCornerRadius: CGFloat = 8
         static let overlayInsets: NSEdgeInsets = NSEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
-        static let shapeCornerRadius: CGFloat = 8
-        static let shapeRampSize = NSSize(width: 10, height: 10)
+        static let tabCornerRadius: CGFloat = 12
+        static let tabRampSize = NSSize(width: 12, height: 12)
     }
 
     // MARK: - Subviews
@@ -103,8 +103,8 @@ private extension TabBackgroundView {
 
         backgroundShapeView.wantsLayer = true
         backgroundShapeView.clipsToBounds = false
-        backgroundShapeView.rampSize = Metrics.shapeRampSize
-        backgroundShapeView.tabCornerRadius = Metrics.shapeCornerRadius
+        backgroundShapeView.tabRampSize = Metrics.tabRampSize
+        backgroundShapeView.tabCornerRadius = Metrics.tabCornerRadius
 
         overlayView.cornerRadius = Metrics.overlayCornerRadius
 
@@ -123,12 +123,12 @@ private extension TabBackgroundView {
             return
         }
 
-        let anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        let anchorPoint = CGPoint(x: 0.5, y: 0)
         if layer.anchorPoint != anchorPoint {
             layer.anchorPoint = anchorPoint
         }
 
-        let position = CGPoint(x: bounds.midX, y: bounds.midY)
+        let position = CGPoint(x: bounds.midX, y: 0)
         if layer.position != position {
             layer.position = position
         }
@@ -220,12 +220,12 @@ private extension TabBackgroundView {
         let fadeAnimation: CABasicAnimation = .buildFadeAnimation(duration: duration, fromAlpha: fromAlpha, toAlpha: toAlpha)
 
         let translationAnimation: CABasicAnimation = visible
-            ? .buildTranslationYAnimation(duration: duration, fromValue: Animations.slideOffsetY, toValue: .zero)
-            : .buildTranslationYAnimation(duration: duration, toValue: Animations.slideOffsetY)
+            ? .buildTranslationYAnimation(duration: duration, timingFunction: .bezierCubic, fromValue: Animations.slideOffsetY, toValue: .zero)
+            : .buildTranslationYAnimation(duration: duration, timingFunction: .bezierCubic, toValue: Animations.slideOffsetY)
 
         let scaleAnimation: CABasicAnimation = visible
-            ? .buildScaleAnimation(duration: duration, fromValue: Animations.slideScaleDown, toValue: Animations.slideScaleFull)
-            : .buildScaleAnimation(duration: duration, fromValue: Animations.slideScaleFull, toValue: Animations.slideScaleDown)
+            ? .buildScaleAnimation(duration: duration, timingFunction: .bezierCubic, fromValue: Animations.slideScaleDown, toValue: Animations.slideScaleFull)
+            : .buildScaleAnimation(duration: duration, timingFunction: .bezierCubic, fromValue: Animations.slideScaleFull, toValue: Animations.slideScaleDown)
 
         let group = CAAnimationGroup()
         group.animations = [translationAnimation, fadeAnimation, scaleAnimation]
