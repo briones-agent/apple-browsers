@@ -38,10 +38,10 @@ extension AutoplayPolicyTabExtension: NavigationResponder {
     @MainActor
     func decidePolicy(for navigationAction: NavigationAction, preferences: inout NavigationPreferences) async -> NavigationActionPolicy? {
         let isAutoplayPolicyEnabled = featureFlagger.isFeatureOn(.autoplayPolicy)
-        preferences.mustApplyAutoplayPolicy = isAutoplayPolicyEnabled
+        preferences.mustApplyAutoplayPolicy = isAutoplayPolicyEnabled && navigationAction.isForMainFrame
 
-        if isAutoplayPolicyEnabled {
-            let domain = navigationAction.url.host ?? ""
+        if preferences.mustApplyAutoplayPolicy {
+            let domain = autoplayDomain(for: navigationAction.url)
             preferences.autoplayPolicy = loadAutoplayPolicy(forDomain: domain)
         }
 
@@ -50,6 +50,10 @@ extension AutoplayPolicyTabExtension: NavigationResponder {
 }
 
 private extension AutoplayPolicyTabExtension {
+
+    func autoplayDomain(for url: URL) -> String {
+        (url.isFileURL ? .localhost : (url.host ?? "")).droppingWwwPrefix()
+    }
 
     func loadAutoplayPolicy(forDomain domain: String) -> _WKWebsiteAutoplayPolicy {
         guard permissionManager.hasPermissionPersisted(forDomain: domain, permissionType: .autoplayPolicy) else {

@@ -359,25 +359,17 @@ final class PermissionCenterViewModel: ObservableObject {
 
     /// Updates the autoplay decision for the current domain
     func setAutoplayDecision(_ decision: AutoplayDecision) {
+        let persistedDecision: PersistedPermissionDecision
         switch decision {
         case .allowAll:
-            permissionManager.setPermission(.allow, forDomain: domain, permissionType: .autoplayPolicy)
+            persistedDecision = .allow
         case .audioMuted:
-            permissionManager.setPermission(.ask, forDomain: domain, permissionType: .autoplayPolicy)
+            persistedDecision = .ask
         case .blockAll:
-            permissionManager.setPermission(.deny, forDomain: domain, permissionType: .autoplayPolicy)
+            persistedDecision = .deny
         }
 
-        // Update the item's decision in the list
-        if let index = permissionItems.firstIndex(where: { $0.permissionType == .autoplayPolicy }) {
-            switch decision {
-            case .allowAll: permissionItems[index].decision = .allow
-            case .audioMuted: permissionItems[index].decision = .ask
-            case .blockAll: permissionItems[index].decision = .deny
-            }
-        }
-
-        markReloadNeeded()
+        setDecision(persistedDecision, for: .autoplayPolicy)
     }
 
     /// Returns the current autoplay decision based on whether a per-site override is persisted

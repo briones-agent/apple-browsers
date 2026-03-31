@@ -61,11 +61,11 @@ final class AutoplayPolicyTabExtensionTests: XCTestCase {
         )
     }
 
-    private func makeNavigationAction(url: URL) -> NavigationAction {
+    private func makeNavigationAction(url: URL, isMainFrame: Bool = true) -> NavigationAction {
         let frame = FrameInfo(
             webView: webView,
             handle: FrameHandle(rawValue: 1),
-            isMainFrame: true,
+            isMainFrame: isMainFrame,
             url: url,
             securityOrigin: url.securityOrigin
         )
@@ -160,6 +160,30 @@ final class AutoplayPolicyTabExtensionTests: XCTestCase {
         _ = await ext.decidePolicy(for: makeNavigationAction(url: URL(string: "https://example.com")!), preferences: &prefs)
 
         XCTAssertEqual(prefs.autoplayPolicy, .deny)
+    }
+
+    func testWhenSubframeNavigationThenAutoplayPolicyIsNotApplied() async {
+        mockFeatureFlagger.featuresStub[FeatureFlag.autoplayPolicy.rawValue] = true
+        mockPermissionManager.setPermission(.deny, forDomain: "embedded.com", permissionType: .autoplayPolicy)
+        let ext = makeExtension()
+        var prefs = NavigationPreferences.default
+
+        _ = await ext.decidePolicy(for: makeNavigationAction(url: URL(string: "https://embedded.com")!, isMainFrame: false), preferences: &prefs)
+
+        XCTAssertFalse(prefs.mustApplyAutoplayPolicy, "Autoplay policy should only be applied for main-frame navigations")
+        XCTAssertEqual(prefs.autoplayPolicy, .default, "Subframe host should not affect page-level autoplay policy")
+    }
+
+    func testWhenMainFrameFileURLAndLocalhostOverrideStoredThenPolicyUsesLocalhostDecision() async {
+        mockFeatureFlagger.featuresStub[FeatureFlag.autoplayPolicy.rawValue] = true
+        mockPermissionManager.setPermission(.deny, forDomain: .localhost, permissionType: .autoplayPolicy)
+        let ext = makeExtension()
+        var prefs = NavigationPreferences.default
+
+        _ = await ext.decidePolicy(for: makeNavigationAction(url: URL(fileURLWithPath: "/tmp/test.html")), preferences: &prefs)
+
+        XCTAssertTrue(prefs.mustApplyAutoplayPolicy, "Autoplay policy should be applied for main-frame file URLs")
+        XCTAssertEqual(prefs.autoplayPolicy, .deny, "File URLs should resolve to localhost for per-site autoplay overrides")
     }
 
     // MARK: - Return value
