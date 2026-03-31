@@ -430,6 +430,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
 
     /// Enables the fire button in the contextual AI chat sheet
     case contextualFireButton
+
+    /// Enables the Duck.ai top-level main menu shortcut (macOS only)
+    case mainMenuShortcut
 }
 
 public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {

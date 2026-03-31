@@ -125,7 +125,7 @@ final class AIChatMenuConfiguration: AIChatMenuVisibilityConfigurable {
     }
 
     var shouldDisplayApplicationMenuShortcut: Bool {
-        return shouldDisplayAnyAIChatFeature
+        return shouldDisplayAnyAIChatFeature && featureFlagger.isFeatureOn(.aiChatMainMenuShortcut)
     }
 
     var shouldDisplayAddressBarShortcut: Bool {
@@ -160,18 +160,28 @@ final class AIChatMenuConfiguration: AIChatMenuVisibilityConfigurable {
     }
 
     private func subscribeToValuesChanged() {
-        Publishers.Merge8(
-            storage.isAIFeaturesEnabledPublisher.removeDuplicates(),
-            storage.showShortcutOnNewTabPagePublisher.removeDuplicates(),
-            storage.showShortcutInApplicationMenuPublisher.removeDuplicates(),
-            storage.showShortcutInAddressBarPublisher.removeDuplicates(),
-            storage.showShortcutInAddressBarWhenTypingPublisher.removeDuplicates(),
-            storage.openAIChatInSidebarPublisher.removeDuplicates(),
-            storage.shouldAutomaticallySendPageContextPublisher.removeDuplicates(),
-            storage.showSearchAndDuckAITogglePublisher.removeDuplicates()
-        )
-        .sink { [weak self] _ in
-            self?.valuesChangedPublisher.send()
-        }.store(in: &cancellables)
+        let storagePublishers: [AnyPublisher<Bool, Never>] = [
+            storage.isAIFeaturesEnabledPublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.showShortcutOnNewTabPagePublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.showShortcutInApplicationMenuPublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.showShortcutInAddressBarPublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.showShortcutInAddressBarWhenTypingPublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.openAIChatInSidebarPublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.shouldAutomaticallySendPageContextPublisher.removeDuplicates().eraseToAnyPublisher(),
+            storage.showSearchAndDuckAITogglePublisher.removeDuplicates().eraseToAnyPublisher(),
+        ]
+
+        let mainMenuShortcutFlagPublisher = featureFlagger.updatesPublisher
+            .map { [weak self] in self?.featureFlagger.isFeatureOn(.aiChatMainMenuShortcut) ?? false }
+            .removeDuplicates()
+            .map { _ in () }
+            .eraseToAnyPublisher()
+
+        Publishers.MergeMany(storagePublishers)
+            .map { _ in () }
+            .merge(with: mainMenuShortcutFlagPublisher)
+            .sink { [weak self] in
+                self?.valuesChangedPublisher.send()
+            }.store(in: &cancellables)
     }
 }

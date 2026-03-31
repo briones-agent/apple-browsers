@@ -365,27 +365,7 @@ class MainMenuTests: XCTestCase {
     func testDuckAIMenuIsHidden_whenShouldDisplayApplicationMenuShortcutIsFalse() throws {
         // GIVEN
         let aiChatConfig = DummyAIChatConfig()
-        let sut = MainMenu(
-            featureFlagger: MockFeatureFlagger(),
-            bookmarkManager: MockBookmarkManager(),
-            historyCoordinator: HistoryCoordinatingMock(),
-            recentlyClosedCoordinator: RecentlyClosedCoordinatorMock(),
-            faviconManager: FaviconManagerMock(),
-            dockCustomizer: DockCustomizerMock(),
-            defaultBrowserPreferences: DefaultBrowserPreferences(defaultBrowserProvider: MockDefaultBrowserProvider()),
-            aiChatMenuConfig: aiChatConfig,
-            aiChatSuggestionsReader: DummyAIChatSuggestionsReader(),
-            aiChatHistoryCleaner: DummyAIChatHistoryCleaner(),
-            internalUserDecider: MockInternalUserDecider(),
-            appearancePreferences: appearancePreferences,
-            privacyConfigurationManager: MockPrivacyConfigurationManager(),
-            isFireWindowDefault: false,
-            configurationURLProvider: MockCustomURLProvider(),
-            contentScopePreferences: ContentScopePreferences(windowControllersManager: WindowControllersManagerMock()),
-            quitSurveyPersistor: MockQuitSurveyPersistor(),
-            pinningManager: MockPinningManager(),
-            subscriptionManager: SubscriptionManagerMock()
-        )
+        let sut = makeMainMenu(aiChatConfig: aiChatConfig)
 
         // WHEN
         let aiChatMenu = sut.item(withTitle: "Duck.ai")
@@ -395,14 +375,8 @@ class MainMenuTests: XCTestCase {
         XCTAssertTrue(aiChatMenu?.isHidden == true, "Duck.ai menu item should be hidden when the AI chat flag is false.")
     }
 
-    @MainActor
-    func testDuckAIMenuIsVisible_whenShouldDisplayApplicationMenuShortcutIsTrue() throws {
-        // GIVEN
-        let aiChatConfig = DummyAIChatConfig()
-        aiChatConfig.shouldDisplayApplicationMenuShortcut = true
-        aiChatConfig.shouldDisplayAddressBarShortcut = true
-
-        let sut = MainMenu(
+    @MainActor private func makeMainMenu(aiChatConfig: AIChatMenuVisibilityConfigurable) -> MainMenu {
+        MainMenu(
             featureFlagger: MockFeatureFlagger(),
             bookmarkManager: MockBookmarkManager(),
             historyCoordinator: HistoryCoordinatingMock(),
@@ -423,6 +397,14 @@ class MainMenuTests: XCTestCase {
             pinningManager: MockPinningManager(),
             subscriptionManager: SubscriptionManagerMock()
         )
+    }
+
+    @MainActor
+    func testDuckAIMenuIsVisible_whenShouldDisplayApplicationMenuShortcutIsTrue() throws {
+        // GIVEN
+        let aiChatConfig = DummyAIChatConfig()
+        aiChatConfig.shouldDisplayApplicationMenuShortcut = true
+        let sut = makeMainMenu(aiChatConfig: aiChatConfig)
 
         // WHEN
         let aiChatMenu = sut.item(withTitle: "Duck.ai")
@@ -430,6 +412,56 @@ class MainMenuTests: XCTestCase {
         // THEN
         XCTAssertNotNil(aiChatMenu, "Duck.ai menu item should exist in the menu bar.")
         XCTAssertFalse(aiChatMenu?.isHidden ?? true, "Duck.ai menu item should be visible when the AI chat flag is true.")
+    }
+
+    @MainActor
+    func testDuckAIMenuBecomesHidden_whenValuesChangedAndShouldDisplayApplicationMenuShortcutIsFalse() throws {
+        // GIVEN
+        let aiChatConfig = DummyAIChatConfig()
+        aiChatConfig.shouldDisplayApplicationMenuShortcut = true
+        let sut = makeMainMenu(aiChatConfig: aiChatConfig)
+        let aiChatMenu = try XCTUnwrap(sut.item(withTitle: "Duck.ai"))
+        XCTAssertFalse(aiChatMenu.isHidden)
+
+        // Subscribe on main queue so our assertion runs after MainMenu's setupAIChatMenu()
+        let expectation = expectation(description: "Duck.ai menu updated after config change")
+        let cancellable = aiChatConfig.valuesChangedPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { expectation.fulfill() }
+
+        // WHEN
+        aiChatConfig.shouldDisplayApplicationMenuShortcut = false
+        aiChatConfig.valuesChangedPublisher.send()
+        waitForExpectations(timeout: 1)
+        cancellable.cancel()
+
+        // THEN
+        XCTAssertTrue(aiChatMenu.isHidden)
+    }
+
+    @MainActor
+    func testDuckAIMenuBecomesVisible_whenValuesChangedAndShouldDisplayApplicationMenuShortcutIsTrue() throws {
+        // GIVEN
+        let aiChatConfig = DummyAIChatConfig()
+        aiChatConfig.shouldDisplayApplicationMenuShortcut = false
+        let sut = makeMainMenu(aiChatConfig: aiChatConfig)
+        let aiChatMenu = try XCTUnwrap(sut.item(withTitle: "Duck.ai"))
+        XCTAssertTrue(aiChatMenu.isHidden)
+
+        // Subscribe on main queue so our assertion runs after MainMenu's setupAIChatMenu()
+        let expectation = expectation(description: "Duck.ai menu updated after config change")
+        let cancellable = aiChatConfig.valuesChangedPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { expectation.fulfill() }
+
+        // WHEN
+        aiChatConfig.shouldDisplayApplicationMenuShortcut = true
+        aiChatConfig.valuesChangedPublisher.send()
+        waitForExpectations(timeout: 1)
+        cancellable.cancel()
+
+        // THEN
+        XCTAssertFalse(aiChatMenu.isHidden)
     }
 
     @MainActor
@@ -682,9 +714,7 @@ class DummyAIChatConfig: AIChatMenuVisibilityConfigurable {
     var shouldAutomaticallySendPageContext = false
     var shouldAutomaticallySendPageContextTelemetryValue: Bool?
 
-    var valuesChangedPublisher: PassthroughSubject<Void, Never> {
-        return PassthroughSubject<Void, Never>()
-    }
+    var valuesChangedPublisher = PassthroughSubject<Void, Never>()
 
     func markToolbarOnboardingPopoverAsShown() { }
 }

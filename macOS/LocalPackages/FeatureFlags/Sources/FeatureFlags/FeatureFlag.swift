@@ -316,6 +316,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// Gates the Suspend Tab / Resume Tab context menu actions for debugging purposes
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213883766662888?focus=true
     case tabSuspensionDebugging
+
+    /// Enables the Duck.ai top-level main menu shortcut (macOS only, disabled by default)
+    /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1213833143996470
+    case aiChatMainMenuShortcut
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -355,7 +359,8 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .autofillPasswordsStatusBar,
              .aiChatSidebarFloating,
              .semaphoreAlwaysVisible,
-             .aiChatRemoveSuggestion:
+             .aiChatRemoveSuggestion,
+             .aiChatMainMenuShortcut:
             .internalOnly
         default:
             .disabled
@@ -455,6 +460,7 @@ extension FeatureFlag: FeatureFlagDescribing {
                 .semaphoreAlwaysVisible,
                 .tabAnimations,
                 .aiChatRemoveSuggestion,
+                .aiChatMainMenuShortcut,
                 .lazyMenuRebuild,
                 .websitesHistoryFirstTimeQuitSurvey,
                 .addToDockAppStore,
@@ -648,6 +654,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.addToDockAppStore))
         case .aiChatRemoveSuggestion:
             return .remoteReleasable(.subfeature(AIChatSubfeature.removeSuggestion))
+        case .aiChatMainMenuShortcut:
+            return .remoteReleasable(.subfeature(AIChatSubfeature.mainMenuShortcut))
         case .screenTimeCleaning:
             return .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.screenTimeCleaning))
         case .onboardingRebranding:
