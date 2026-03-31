@@ -92,4 +92,9 @@ final class WKWebViewPrivateMethodsAvailabilityTests: XCTestCase {
         configuration.applyStandardConfiguration(contentBlocking: MockContentBlocking(), burnerMode: .regular, privateProcessName: false)
         XCTAssertEqual(configuration.systemProcessName, "")
     }
+
+    func testWKWebpagePreferencesRespondsTo_autoplayPolicy() {
+        XCTAssertTrue(WKWebpagePreferences.instancesRespond(to: WKWebpagePreferences.AutoplayPolicySelector.autoplayPolicy))
+        XCTAssertTrue(WKWebpagePreferences.instancesRespond(to: WKWebpagePreferences.AutoplayPolicySelector.setAutoplayPolicy))
+    }
 }
