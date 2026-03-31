@@ -63,7 +63,7 @@ final class AutoconsentUserScript: NSObject, WKScriptMessageHandlerWithReply, Us
     var management: AutoconsentManaging?
 
     public var messageNames: [String] { MessageName.allCases.map(\.rawValue) }
-    let source: String
+    nonisolated let source: String
     private let config: PrivacyConfiguration
     private let ignoreNonHTTPURLs: Bool
     private let webExtensionAvailability: WebExtensionAvailabilityProviding?
