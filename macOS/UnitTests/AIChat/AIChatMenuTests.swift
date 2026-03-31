@@ -113,8 +113,8 @@ final class AIChatMenuTests: XCTestCase {
         XCTAssertEqual(chatTitles, ["New"])
     }
 
-    func testUpdateLimitsChatItemsToTen() async {
-        suggestionsReader.recentChats = (1...15).map { makeChat(chatId: "\($0)", title: "Chat \($0)") }
+    func testUpdateShowsAllChats() async {
+        suggestionsReader.recentChats = (1...20).map { makeChat(chatId: "\($0)", title: "Chat \($0)") }
         let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
         menu.update()
 
@@ -122,7 +122,7 @@ final class AIChatMenuTests: XCTestCase {
 
         let labelIndex = menu.items.firstIndex { $0.title == UserText.aiChatMenuRecentChats }!
         let nextSeparatorIndex = menu.items[(labelIndex + 1)...].firstIndex { $0.isSeparatorItem }!
-        XCTAssertEqual(nextSeparatorIndex - labelIndex - 1, 10)
+        XCTAssertEqual(nextSeparatorIndex - labelIndex - 1, 20)
     }
 
     func testUpdateSortsChatsByTimestampDescending() async {
@@ -140,13 +140,13 @@ final class AIChatMenuTests: XCTestCase {
         XCTAssertEqual(menu.items[labelIndex + 2].title, "Older")
     }
 
-    func testUpdatePassesMaxChatsOfTen() async {
+    func testUpdatePassesIntMaxToFetchSuggestions() async {
         let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
         menu.update()
 
         await fulfillment(of: [suggestionsReader.fetchExpectation], timeout: 1)
 
-        XCTAssertEqual(suggestionsReader.receivedMaxChats, 10)
+        XCTAssertEqual(suggestionsReader.receivedMaxChats, .max)
     }
 
     // MARK: - Private helpers

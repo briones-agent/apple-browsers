@@ -18,6 +18,7 @@
 
 import AIChat
 import AppKit
+import DesignResourcesKitIcons
 import PixelKit
 
 @MainActor
@@ -119,11 +120,11 @@ final class AIChatMenu: NSMenu {
         fetchTask?.cancel()
         fetchTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: nil, maxChats: 10)
+            let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: nil, maxChats: .max)
             guard !Task.isCancelled else { return }
             let sorted = (pinned + recent)
                 .sorted { ($0.timestamp ?? .distantPast) > ($1.timestamp ?? .distantPast) }
-            insertChatItems(Array(sorted.prefix(10)))
+            insertChatItems(sorted)
         }
     }
 
@@ -141,6 +142,7 @@ final class AIChatMenu: NSMenu {
             let item = NSMenuItem(title: chat.title, action: #selector(chatItemTapped(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = chat
+            item.image = chat.isPinned ? DesignSystemImages.Glyphs.Size16.pin : DesignSystemImages.Glyphs.Size16.chat
             insertItem(item, at: labelIndex + 1 + offset)
             chatItems.append(item)
         }
