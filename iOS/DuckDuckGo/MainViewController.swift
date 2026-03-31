@@ -1277,6 +1277,7 @@ class MainViewController: UIViewController {
             }
 
         syncUpdatesCancellable = syncDataProviders.bookmarksAdapter.syncDidCompletePublisher
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.favoritesViewModel.reloadData()
             }
