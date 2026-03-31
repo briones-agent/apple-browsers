@@ -28,8 +28,6 @@ struct SettingsYouTubeAdBlockingView: View {
     /// This property ensures that the associated action is only triggered once per viewing session, preventing redundant executions.
     @State private var hasFiredSettingsDisplayedPixel = false
 
-    @State private var showNewTabAlert = false
-
     @EnvironmentObject var viewModel: SettingsViewModel
     var body: some View {
         List {
@@ -140,11 +138,6 @@ struct SettingsYouTubeAdBlockingView: View {
         .onAppear {
             DailyPixel.fireDailyAndCount(pixel: .duckPlayerSettingsOpen,
                                          withAdditionalParameters: viewModel.featureDiscovery.addToParams([:], forFeature: .duckPlayer))
-        }
-        .alert(UserText.duckPlayerTabAlertTitle, isPresented: $showNewTabAlert) {
-            Button(UserText.duckPlayerTabAlertOK, role: .cancel) { }
-        } message: {
-            Text(UserText.duckPlayerTabAlertMessage)
         }
     }
 }
