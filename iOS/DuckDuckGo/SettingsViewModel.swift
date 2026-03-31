@@ -135,8 +135,8 @@ final class SettingsViewModel: ObservableObject {
 
     // View State
     @Published private(set) var state: SettingsState
-    @Published private var lastEnabledDuckPlayerMode: DuckPlayerMode = .alwaysAsk
-    @Published private var lastEnabledNativeYoutubeMode: NativeDuckPlayerYoutubeMode = .ask
+    private var lastEnabledDuckPlayerMode: DuckPlayerMode?
+    private var lastEnabledNativeYoutubeMode: NativeDuckPlayerYoutubeMode?
 
     // MARK: Cell Visibility
     enum Features {
@@ -502,6 +502,24 @@ final class SettingsViewModel: ObservableObject {
         )
     }
 
+    private var resolvedDuckPlayerMode: DuckPlayerMode {
+        if let lastEnabledDuckPlayerMode {
+            return lastEnabledDuckPlayerMode
+        }
+        if let current = state.duckPlayerMode, current != .disabled {
+            return current
+        }
+        return .alwaysAsk
+    }
+
+    private var resolvedNativeYoutubeMode: NativeDuckPlayerYoutubeMode {
+        if let lastEnabledNativeYoutubeMode {
+            return lastEnabledNativeYoutubeMode
+        }
+        let current = state.duckPlayerNativeYoutubeMode
+        return current != .never ? current : .ask
+    }
+
     var isDuckPlayerEnabledBinding: Binding<Bool> {
         Binding<Bool>(
             get: {
@@ -517,7 +535,7 @@ final class SettingsViewModel: ObservableObject {
                     self.appSettings.duckPlayerMode = .disabled
                     self.state.duckPlayerMode = .disabled
                 } else {
-                    let restoredMode = self.lastEnabledDuckPlayerMode
+                    let restoredMode = self.resolvedDuckPlayerMode
                     self.appSettings.duckPlayerMode = restoredMode
                     self.state.duckPlayerMode = restoredMode
                 }
@@ -656,7 +674,7 @@ final class SettingsViewModel: ObservableObject {
                     self.appSettings.duckPlayerNativeYoutubeMode = .never
                     self.state.duckPlayerNativeYoutubeMode = .never
                 } else {
-                    let restoredMode = self.lastEnabledNativeYoutubeMode
+                    let restoredMode = self.resolvedNativeYoutubeMode
                     self.appSettings.duckPlayerNativeYoutubeMode = restoredMode
                     self.state.duckPlayerNativeYoutubeMode = restoredMode
                 }
