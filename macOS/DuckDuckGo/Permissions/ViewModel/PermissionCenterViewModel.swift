@@ -370,6 +370,8 @@ final class PermissionCenterViewModel: ObservableObject {
 
     /// Updates the autoplay decision for the current domain
     func setAutoplayDecision(_ decision: AutoplayDecision) {
+        guard !domain.isEmpty else { return }
+
         switch decision {
         case .allowAll:
             permissionManager.setPermission(.allow, forDomain: domain, permissionType: .autoplayPolicy)
@@ -393,6 +395,9 @@ final class PermissionCenterViewModel: ObservableObject {
 
     /// Returns the current autoplay decision based on whether a per-site override is persisted
     func currentAutoplayDecision() -> AutoplayDecision {
+        guard !domain.isEmpty else {
+            return AutoplayDecision(autoplayPreferences.autoplayBlockingMode)
+        }
         guard permissionManager.hasPermissionPersisted(forDomain: domain, permissionType: .autoplayPolicy) else {
             return AutoplayDecision(autoplayPreferences.autoplayBlockingMode)
         }
