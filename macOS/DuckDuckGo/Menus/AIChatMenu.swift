@@ -84,14 +84,21 @@ final class AIChatMenu: NSMenu {
 
     private let suggestionsReader: AIChatSuggestionsReading
     private let actions: Actions
+    /// When set, "View All Chats" is shown only when the fetched chat count reaches this threshold.
+    /// When `nil`, all chats are fetched and "View All Chats" is always shown.
+    private let viewAllChatsThreshold: Int?
 
     // MARK: - Init
 
-    init(suggestionsReader: AIChatSuggestionsReading, actions: Actions) {
+    init(suggestionsReader: AIChatSuggestionsReading, actions: Actions, viewAllChatsThreshold: Int? = nil) {
         self.suggestionsReader = suggestionsReader
         self.actions = actions
+        self.viewAllChatsThreshold = viewAllChatsThreshold
         super.init(title: "Duck.ai")
         buildMenu()
+        if viewAllChatsThreshold != nil {
+            viewAllChatsItem.isHidden = true
+        }
     }
 
     required init(coder: NSCoder) {
@@ -121,7 +128,8 @@ final class AIChatMenu: NSMenu {
         fetchTask?.cancel()
         fetchTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: nil, maxChats: .max)
+            let maxChats = viewAllChatsThreshold ?? .max
+            let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: nil, maxChats: maxChats)
             guard !Task.isCancelled else { return }
             let sorted = (pinned + recent)
                 .sorted { ($0.timestamp ?? .distantPast) > ($1.timestamp ?? .distantPast) }
@@ -146,6 +154,9 @@ final class AIChatMenu: NSMenu {
             item.image = chat.isPinned ? DesignSystemImages.Glyphs.Size16.pin : DesignSystemImages.Glyphs.Size16.chat
             insertItem(item, at: labelIndex + 1 + offset)
             chatItems.append(item)
+        }
+        if let threshold = viewAllChatsThreshold {
+            viewAllChatsItem.isHidden = chats.count < threshold
         }
     }
 

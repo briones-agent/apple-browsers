@@ -55,6 +55,12 @@ protocol AIChatMenuVisibilityConfigurable {
     /// - Returns: `true` if the application menu shortcut should be displayed; otherwise, `false`.
     var shouldDisplayApplicationMenuShortcut: Bool { get }
 
+    /// This property validates user settings to determine if the Duck.ai submenu
+    /// should be presented in the more options (hamburger) menu.
+    ///
+    /// - Returns: `true` if the more options menu shortcut should be displayed; otherwise, `false`.
+    var shouldDisplayMoreOptionsMenuShortcut: Bool { get }
+
     /// This property determines whether AI Chat should open in the sidebar.
     ///
     /// - Returns: `true` if AI Chat should open in the sidebar; otherwise, `false`.
@@ -128,6 +134,10 @@ final class AIChatMenuConfiguration: AIChatMenuVisibilityConfigurable {
         return shouldDisplayAnyAIChatFeature && featureFlagger.isFeatureOn(.aiChatMainMenuShortcut)
     }
 
+    var shouldDisplayMoreOptionsMenuShortcut: Bool {
+        return shouldDisplayAnyAIChatFeature && featureFlagger.isFeatureOn(.aiChatMoreOptionsMenuShortcut)
+    }
+
     var shouldDisplayAddressBarShortcut: Bool {
         shouldDisplayAnyAIChatFeature && storage.showShortcutInAddressBar
     }
@@ -177,9 +187,16 @@ final class AIChatMenuConfiguration: AIChatMenuVisibilityConfigurable {
             .map { _ in () }
             .eraseToAnyPublisher()
 
+        let moreOptionsMenuShortcutFlagPublisher = featureFlagger.updatesPublisher
+            .map { [weak self] in self?.featureFlagger.isFeatureOn(.aiChatMoreOptionsMenuShortcut) ?? false }
+            .removeDuplicates()
+            .map { _ in () }
+            .eraseToAnyPublisher()
+
         Publishers.MergeMany(storagePublishers)
             .map { _ in () }
             .merge(with: mainMenuShortcutFlagPublisher)
+            .merge(with: moreOptionsMenuShortcutFlagPublisher)
             .sink { [weak self] in
                 self?.valuesChangedPublisher.send()
             }.store(in: &cancellables)

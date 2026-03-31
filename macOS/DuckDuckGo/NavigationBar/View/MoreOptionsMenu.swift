@@ -16,6 +16,7 @@
 //  limitations under the License.
 //
 
+import AIChat
 import AppUpdaterShared
 import BrowserServicesKit
 import Cocoa
@@ -95,6 +96,7 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
     private let vpnFeatureGatekeeper: VPNFeatureGatekeeper
     private let subscriptionFeatureAvailability: SubscriptionFeatureAvailability
     private let aiChatMenuConfiguration: AIChatMenuVisibilityConfigurable
+    private let aiChatSuggestionsReader: AIChatSuggestionsReading
     private let moreOptionsMenuIconsProvider: MoreOptionsMenuIconsProviding
     private let isFireWindowDefault: Bool
 
@@ -132,6 +134,7 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
          featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger,
          dataBrokerProtectionFreemiumPixelHandler: EventMapping<DataBrokerProtectionFreemiumPixels> = DataBrokerProtectionFreemiumPixelHandler(),
          aiChatMenuConfiguration: AIChatMenuVisibilityConfigurable = NSApp.delegateTyped.aiChatMenuConfiguration,
+         aiChatSuggestionsReader: AIChatSuggestionsReading = NSApp.delegateTyped.aiChatSuggestionsReader,
          themeManager: ThemeManager = NSApp.delegateTyped.themeManager,
          isFireWindowDefault: Bool = NSApp.delegateTyped.visualizeFireSettingsDecider.isOpenFireWindowByDefaultEnabled,
          syncDeviceButtonModel: SyncDeviceButtonModel = SyncDeviceButtonModel(),
@@ -158,6 +161,7 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
         self.notificationCenter = notificationCenter
         self.dataBrokerProtectionFreemiumPixelHandler = dataBrokerProtectionFreemiumPixelHandler
         self.aiChatMenuConfiguration = aiChatMenuConfiguration
+        self.aiChatSuggestionsReader = aiChatSuggestionsReader
         self.featureFlagger = featureFlagger
         self.freeTrialBadgePersistor = freeTrialBadgePersistor
         self.moreOptionsMenuIconsProvider = themeManager.theme.iconsProvider.moreOptionsMenuIconsProvider
@@ -539,8 +543,9 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
             addItem(burnerWindowItem)
         }
 
-        // New Duck.ai Chat
-        if aiChatMenuConfiguration.shouldDisplayApplicationMenuShortcut {
+        // New Duck.ai Chat — shown only when the full Duck.ai submenu (more options FF) is off
+        if aiChatMenuConfiguration.shouldDisplayAnyAIChatFeature &&
+            !aiChatMenuConfiguration.shouldDisplayMoreOptionsMenuShortcut {
             let aiChatItem = NSMenuItem(title: UserText.newAIChatMenuItem,
                                         action: #selector(newAiChat(_:)),
                                         target: self)
@@ -554,7 +559,47 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
     }
 
     @MainActor
+    private func makeAIChatMenu() -> AIChatMenu {
+        let actions = AIChatMenu.Actions(
+            openNewChat: {
+                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
+            },
+            openNewVoiceChat: {
+                let url = AIChatURLParameters.voiceModeURL(from: AIChatRemoteSettings().aiChatURL)
+                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
+            },
+            openNewImageChat: {
+                let url = AIChatURLParameters.imageModeURL(from: AIChatRemoteSettings().aiChatURL)
+                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
+            },
+            openChat: { suggestion in
+                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(
+                    with: .existingChat(chatId: suggestion.chatId),
+                    behavior: .currentTab
+                )
+            },
+            viewAllChats: {
+                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
+            },
+            deleteAllChats: {
+                if case .failure(let error) = await NSApp.delegateTyped.aiChatHistoryCleaner.cleanAIChatHistory() {
+                    Logger.aiChat.error("Failed to delete all Duck.ai chats: \(error.localizedDescription)")
+                }
+            }
+        )
+        return AIChatMenu(suggestionsReader: aiChatSuggestionsReader, actions: actions, viewAllChatsThreshold: 25)
+    }
+
+    @MainActor
     private func addUtilityItems() {
+        if aiChatMenuConfiguration.shouldDisplayMoreOptionsMenuShortcut {
+            let aiChatItem = NSMenuItem(title: "Duck.ai", action: nil, keyEquivalent: "n")
+            aiChatItem.keyEquivalentModifierMask = [.command, .option]
+            aiChatItem.image = moreOptionsMenuIconsProvider.newAIChatIcon
+            aiChatItem.submenu = makeAIChatMenu()
+            addItem(aiChatItem)
+        }
+
         let bookmarksSubMenu = BookmarksSubMenu(targetting: self,
                                                 tabCollectionViewModel: tabCollectionViewModel,
                                                 bookmarkManager: bookmarkManager,
