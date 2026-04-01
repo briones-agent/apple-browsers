@@ -38,8 +38,8 @@ import UIComponents
 protocol TabSwitcherPageDelegate: AnyObject {
     func page(_ page: TabSwitcherPageViewController, didSelectTabAt index: Int)
     func page(_ page: TabSwitcherPageViewController, didDeselectTab: Void)
-    func page(_ page: TabSwitcherPageViewController, willDeleteTabs tabs: [Tab])
-    func page(_ page: TabSwitcherPageViewController, didDeleteAllTabs: Bool)
+    func page(_ page: TabSwitcherPageViewController, willDeleteTabs tabs: [Tab], allDeleted: Bool)
+    func pageDidDeleteTabs(_ page: TabSwitcherPageViewController, allDeleted: Bool)
     func page(_ page: TabSwitcherPageViewController, didReorderTabs: Void)
     func page(_ page: TabSwitcherPageViewController, contextMenuForTabsAt indexPaths: [IndexPath]) -> UIMenu?
     func pageDidRequestDismiss(_ page: TabSwitcherPageViewController)
@@ -284,19 +284,15 @@ class TabSwitcherPageViewController: UIViewController {
         guard let pageDelegate else { return }
         let allTabsDeleted = tabsModel.count == indexPaths.count
         let tabsToClose = indexPaths.compactMap { tabsModel.get(tabAt: $0.row) }
-        pageDelegate.page(self, willDeleteTabs: tabsToClose)
 
         collectionView.performBatchUpdates {
             pageDelegate.isProcessingUpdates = true
-            tabsToClose.forEach { tabsModel.remove(tab: $0) }
+            pageDelegate.page(self, willDeleteTabs: tabsToClose, allDeleted: allTabsDeleted)
             collectionView.deleteItems(at: indexPaths)
-            if allTabsDeleted && !pageDelegate.canDismissOnEmpty && pageDelegate.isEditing {
-                exitEditingMode(reloadData: false)
-            }
         } completion: { _ in
             self.currentSelection = self.tabsModel.currentIndex
             pageDelegate.isProcessingUpdates = false
-            pageDelegate.page(self, didDeleteAllTabs: allTabsDeleted)
+            pageDelegate.pageDidDeleteTabs(self, allDeleted: allTabsDeleted)
         }
     }
 

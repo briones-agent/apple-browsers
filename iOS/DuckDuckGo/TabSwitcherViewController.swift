@@ -112,6 +112,11 @@ class TabSwitcherViewController: UIViewController {
         activePageController.collectionView
     }
 
+    var currentSelection: Int? {
+        get { activePageController.currentSelection }
+        set { activePageController.currentSelection = newValue }
+    }
+
     weak var delegate: TabSwitcherDelegate!
     weak var previewsSource: TabPreviewsSource!
 
@@ -747,16 +752,23 @@ extension TabSwitcherViewController: TabSwitcherPageDelegate {
         refreshTitleViews()
     }
 
-    func page(_ page: TabSwitcherPageViewController, willDeleteTabs tabs: [Tab]) {
+    func page(_ page: TabSwitcherPageViewController, willDeleteTabs tabs: [Tab], allDeleted: Bool) {
         delegate?.tabSwitcher(self, willCloseTabs: tabs)
         tabManager.bulkRemoveTabs(tabs, in: page.tabsModel)
+        if allDeleted && !canDismissOnEmpty && isEditing {
+            transitionFromMultiSelect(reloadCollectionView: false)
+        }
     }
 
-    func page(_ page: TabSwitcherPageViewController, didDeleteAllTabs allDeleted: Bool) {
+    func pageDidDeleteTabs(_ page: TabSwitcherPageViewController, allDeleted: Bool) {
         if tabsModel.tabs.isEmpty && !tabsModel.allowsEmpty {
             let newTab = Tab(fireTab: tabsModel.shouldCreateFireTabs)
             tabsModel.insert(tab: newTab, placement: .atEnd, selectNewTab: true)
         }
+        if allDeleted && !canDismissOnEmpty && isEditing {
+            transitionFromMultiSelect(reloadCollectionView: false)
+        }
+        currentSelection = tabsModel.currentIndex
         delegate?.tabSwitcherDidBulkCloseTabs(tabSwitcher: self)
         refreshTitleViews()
         updateUIForSelectionMode()
