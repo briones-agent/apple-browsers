@@ -91,7 +91,9 @@ extension TabSwitcherViewController {
                               duration: 0.3,
                               options: .transitionCrossDissolve, animations: {
                 self.refreshTitleViews()
-                self.activePageController.reloadData()
+                // Reload both pages so the inactive one also picks up the new cell type.
+                self.normalPageController.reloadData()
+                self.firePageController?.reloadData()
             }, completion: { _ in
                 self.isProcessingUpdates = false
             })

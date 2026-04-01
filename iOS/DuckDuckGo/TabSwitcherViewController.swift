@@ -218,7 +218,7 @@ class TabSwitcherViewController: UIViewController {
                 selectedItem: pickerItems[tabManager.currentBrowsingMode.rawValue],
                 configuration: ImageSegmentedPickerConfiguration(),
                 scrollProgress: nil,
-                isScrollProgressDriven: false)
+                isScrollProgressDriven: true)
         super.init(coder: coder)
     }
 
@@ -727,7 +727,6 @@ extension TabSwitcherViewController: UIScrollViewDelegate {
         guard pageWidth > 0 else { return }
 
         let progress = max(0, min(1, scrollView.contentOffset.x / pageWidth))
-        pickerViewModel.isScrollProgressDriven = true
         pickerViewModel.updateScrollProgress(progress)
     }
 
@@ -739,7 +738,6 @@ extension TabSwitcherViewController: UIScrollViewDelegate {
         let newMode: BrowsingMode = currentPage == 0 ? .fire : .normal
 
         if newMode != selectedBrowsingMode {
-            pickerViewModel.isScrollProgressDriven = false
             pickerViewModel.selectItem(pickerItems[newMode.rawValue])
         }
     }
