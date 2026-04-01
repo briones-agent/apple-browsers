@@ -262,6 +262,7 @@ class TabSwitcherViewController: UIViewController {
         }
         selectedBrowsingMode = newMode
         syncPagingScrollViewToCurrentMode(animated: true)
+        scrollToInitialTab()
         updateUIForSelectionMode()
     }
 
@@ -555,8 +556,8 @@ class TabSwitcherViewController: UIViewController {
     }
 
     private func scrollToInitialTab() {
-        guard let index = tabsModel.currentIndex else { return }
-        activePageController.scrollToTab(at: index)
+        normalPageController.scrollToInitialTab()
+        firePageController?.scrollToInitialTab()
     }
 
     func refreshTitleViews() {

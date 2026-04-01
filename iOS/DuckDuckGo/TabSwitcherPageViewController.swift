@@ -252,9 +252,10 @@ class TabSwitcherPageViewController: UIViewController {
         collectionView.reloadData()
         updateEmptyStateVisibility()
     }
-
-    func scrollToTab(at index: Int) {
-        guard index < collectionView.numberOfItems(inSection: 0) else { return }
+    
+    func scrollToInitialTab() {
+        guard let index = tabsModel.currentIndex,
+              index < collectionView.numberOfItems(inSection: 0) else { return }
         collectionView.scrollToItem(at: IndexPath(row: index, section: 0), at: .bottom, animated: false)
     }
 
