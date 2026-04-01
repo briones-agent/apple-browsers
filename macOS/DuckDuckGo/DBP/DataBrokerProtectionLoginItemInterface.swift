@@ -160,6 +160,14 @@ extension DefaultDataBrokerProtectionLoginItemInterface: DataBrokerProtectionLog
 
     // MARK: - MCP Debug Server Support (Actions)
 
+    func removeAllData() async -> Data? {
+        return await ipcClient.removeAllData()
+    }
+
+    func saveProfile(profileJSON: Data) async -> Data? {
+        return await ipcClient.saveProfile(profileJSON: profileJSON)
+    }
+
     func forceBrokerUpdate() async -> Data? {
         return await ipcClient.forceBrokerUpdate()
     }

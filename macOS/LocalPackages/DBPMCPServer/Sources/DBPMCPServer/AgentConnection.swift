@@ -33,6 +33,8 @@ import Foundation
     func getOptOutHistory(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64, completion: @escaping (Data?) -> Void)
     func getSchedulerState(brokerName: String, profileQueryId: Int64, extractedProfileId: Int64, includeHistory: Bool, completion: @escaping (Data?) -> Void)
     func getAuthStatus(completion: @escaping (Data?) -> Void)
+    func removeAllData(completion: @escaping (Data?) -> Void)
+    func saveProfile(profileJSON: Data, completion: @escaping (Data?) -> Void)
     func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, middleName: String?, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void)
     func forceBrokerUpdate(completion: @escaping (Data?) -> Void)
     func setAPIEndpoint(environment: String, serviceRoot: String, completion: @escaping (Data?) -> Void)
@@ -93,7 +95,7 @@ final class DBPAgentMetadata: NSObject, NSSecureCoding {
 
 /// XPC client that connects to the PIR background agent.
 final class AgentConnection: NSObject, DBPXPCClientInterface {
-    private let machServiceName: String
+    let machServiceName: String
     private var connection: NSXPCConnection?
 
     init(machServiceName: String) {
@@ -243,6 +245,28 @@ final class AgentConnection: NSObject, DBPXPCClientInterface {
             return
         }
         proxy.getAuthStatus(completion: completion)
+    }
+
+    func removeAllData(completion: @escaping (Data?) -> Void) {
+        guard let proxy = serverProxy(errorHandler: { error in
+            log("XPC error (removeAllData): \(error)")
+            completion(nil)
+        }) else {
+            completion(nil)
+            return
+        }
+        proxy.removeAllData(completion: completion)
+    }
+
+    func saveProfile(profileJSON: Data, completion: @escaping (Data?) -> Void) {
+        guard let proxy = serverProxy(errorHandler: { error in
+            log("XPC error (saveProfile): \(error)")
+            completion(nil)
+        }) else {
+            completion(nil)
+            return
+        }
+        proxy.saveProfile(profileJSON: profileJSON, completion: completion)
     }
 
     func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, middleName: String?, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void) {

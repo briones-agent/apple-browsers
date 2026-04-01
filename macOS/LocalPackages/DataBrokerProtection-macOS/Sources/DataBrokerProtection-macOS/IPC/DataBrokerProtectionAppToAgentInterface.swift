@@ -57,6 +57,10 @@ public protocol DataBrokerProtectionAgentDebugCommands {
 
     // MARK: - MCP Debug Server Support (Actions)
 
+    /// Removes all PIR data from the encrypted database.
+    func removeAllData() async -> Data?
+    /// Saves (upserts) a profile from JSON.
+    func saveProfile(profileJSON: Data) async -> Data?
     /// Forces broker JSON update, bypassing the hourly rate limiter.
     func forceBrokerUpdate() async -> Data?
     /// Sets the API environment and optional service root path.

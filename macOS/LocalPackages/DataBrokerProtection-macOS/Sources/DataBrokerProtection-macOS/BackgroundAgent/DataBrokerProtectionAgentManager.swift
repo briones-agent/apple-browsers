@@ -592,6 +592,37 @@ extension DataBrokerProtectionAgentManager: DataBrokerProtectionAgentDebugComman
         }
     }
 
+    // MARK: - MCP Debug Server Support (Profile Management)
+
+    public func removeAllData() async -> Data? {
+        do {
+            try dataManager.communicator.deleteProfileData()
+            let result: [String: Any] = ["success": true, "message": "All PIR data removed"]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            let result: [String: Any] = ["success": false, "error": error.localizedDescription]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+    }
+
+    public func saveProfile(profileJSON: Data) async -> Data? {
+        do {
+            let profile = try JSONDecoder().decode(DataBrokerProtectionProfile.self, from: profileJSON)
+            try await dataManager.saveProfile(profile)
+            let queries = profile.profileQueries
+            // Trigger the same flow as the UI: pixel events, auth refresh, immediate scan
+            await profileSaved()
+            let result: [String: Any] = [
+                "success": true,
+                "message": "Profile saved with \(profile.names.count) name(s), \(profile.addresses.count) address(es), \(queries.count) profile query/queries. Immediate scan triggered."
+            ]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        } catch {
+            let result: [String: Any] = ["success": false, "error": error.localizedDescription]
+            return try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+        }
+    }
+
     // MARK: - MCP Debug Server Support (Read-Only)
 
     public func getBrokerProfileData() async -> Data? {

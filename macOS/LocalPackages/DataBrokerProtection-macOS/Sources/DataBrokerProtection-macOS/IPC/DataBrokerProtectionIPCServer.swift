@@ -131,6 +131,8 @@ protocol XPCServerInterface {
 
     // MARK: - MCP Debug Server Support (Actions)
 
+    func removeAllData(completion: @escaping (Data?) -> Void)
+    func saveProfile(profileJSON: Data, completion: @escaping (Data?) -> Void)
     func forceBrokerUpdate(completion: @escaping (Data?) -> Void)
     func setAPIEndpoint(environment: String, serviceRoot: String, completion: @escaping (Data?) -> Void)
     func runCustomScan(brokerJSON: Data, firstName: String, lastName: String, middleName: String?, city: String, state: String, birthYear: Int, showWebView: Bool, pauseOnError: Bool, completion: @escaping (Data?) -> Void)
@@ -292,6 +294,20 @@ extension DefaultDataBrokerProtectionIPCServer: XPCServerInterface {
     }
 
     // MARK: - MCP Debug Server Support (Actions)
+
+    func removeAllData(completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.removeAllData()
+            completion(data)
+        }
+    }
+
+    func saveProfile(profileJSON: Data, completion: @escaping (Data?) -> Void) {
+        Task {
+            let data = await serverDelegate?.saveProfile(profileJSON: profileJSON)
+            completion(data)
+        }
+    }
 
     func forceBrokerUpdate(completion: @escaping (Data?) -> Void) {
         Task {

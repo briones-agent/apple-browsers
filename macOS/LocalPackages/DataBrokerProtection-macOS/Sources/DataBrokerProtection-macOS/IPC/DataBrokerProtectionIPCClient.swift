@@ -274,6 +274,32 @@ extension DataBrokerProtectionIPCClient: IPCServerInterface {
 
     // MARK: - MCP Debug Server Support (Actions)
 
+    public func removeAllData() async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.removeAllData { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error removing all data: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
+
+    public func saveProfile(profileJSON: Data) async -> Data? {
+        await withCheckedContinuation { continuation in
+            xpc.execute(call: { server in
+                server.saveProfile(profileJSON: profileJSON) { data in
+                    continuation.resume(returning: data)
+                }
+            }, xpcReplyErrorHandler: { error in
+                Logger.dataBrokerProtection.error("Error saving profile: \(error.localizedDescription)")
+                continuation.resume(returning: nil)
+            })
+        }
+    }
+
     public func forceBrokerUpdate() async -> Data? {
         await withCheckedContinuation { continuation in
             xpc.execute(call: { server in

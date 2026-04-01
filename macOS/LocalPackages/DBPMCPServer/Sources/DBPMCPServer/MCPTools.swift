@@ -51,7 +51,7 @@ final class MCPTools: @unchecked Sendable {
             tool("help",
                  "Get a comprehensive guide to the PIR/DBP MCP debug server: available tools, workflows, and examples."),
             tool("get_agent_status",
-                 "Get PIR background agent status: version, running state, scheduler state, last trigger time."),
+                 "Get PIR background agent status: version, running state, scheduler state, last background scheduler trigger time. Note: Last Trigger tracks only the periodic NSBackgroundActivityScheduler, not immediate scans from save_profile or start_immediate_scan."),
             tool("query_logs",
                  "Query PIR/DataBrokerProtection logs from the system log. Returns recent log entries filtered by subsystem.",
                  properties: [
@@ -166,6 +166,18 @@ final class MCPTools: @unchecked Sendable {
                  "Execute JavaScript on the live debug WebView. Only works when a WebView is alive (paused on error).",
                  properties: ["javascript": prop(.string, "JavaScript expression to evaluate in the WebView.")],
                  required: ["javascript"]),
+            tool("restart_agent",
+                 "Restart the PIR background agent via launchctl. Use after rebuilding the app or to recover from a stuck agent."),
+            tool("remove_all_data",
+                 "Remove all PIR data from the encrypted database: profile, scan history, opt-out history, extracted profiles. Use before save_profile for a clean slate."),
+            tool("save_profile",
+                 "Save (upsert) a profile to the encrypted database and automatically trigger an immediate scan. Supports multiple names and addresses. Profile queries are the cartesian product of names × addresses.",
+                 properties: [
+                    "names": .object(["type": .string("array"), "description": .string("Array of name objects, each with first_name (string), last_name (string), and optional middle_name (string).")]),
+                    "addresses": .object(["type": .string("array"), "description": .string("Array of address objects, each with city (string) and state (string, 2-letter abbreviation).")]),
+                    "birth_year": prop(.integer, "Birth year (e.g., 1980)"),
+                 ],
+                 required: ["names", "addresses", "birth_year"]),
         ]
     }
 
@@ -247,6 +259,12 @@ final class MCPTools: @unchecked Sendable {
                 text = try await xpcDataCall("Failed to execute JavaScript. Is a WebView alive?") {
                     self.agent.executeJavaScript(code: javascript, completion: $0)
                 }.prettyJSON()
+            case "restart_agent":
+                text = try restartAgent()
+            case "remove_all_data":
+                text = try await xpcDataCall("Failed to remove all data") { self.agent.removeAllData(completion: $0) }.prettyJSON()
+            case "save_profile":
+                text = try await saveProfile(args: args)
             default:
                 return .init(content: [.text(text: "Unknown tool: \(params.name)", annotations: nil, _meta: nil)], isError: true)
             }
@@ -419,6 +437,72 @@ final class MCPTools: @unchecked Sendable {
         return "Activation flow opened in browser. Use get_auth_status to verify."
     }
 
+    // MARK: - Agent Lifecycle
+
+    private func restartAgent() throws -> String {
+        let uid = getuid()
+        let label = agent.machServiceName
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = ["kickstart", "-k", "gui/\(uid)/\(label)"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        process.waitUntilExit()
+        if process.terminationStatus != 0 {
+            throw ToolError.commandFailed("launchctl kickstart exited with status \(process.terminationStatus)")
+        }
+        return "Agent restarted (\(label)). XPC connection will reconnect on next tool call."
+    }
+
+    // MARK: - Profile Management
+
+    private func saveProfile(args: DecodedArguments) async throws -> String {
+        let birthYear = try args.requireInt("birth_year")
+
+        guard let namesRaw = args.array("names"), !namesRaw.isEmpty else {
+            throw ToolError.missingArgument("names (array of {first_name, last_name, middle_name?})")
+        }
+        guard let addressesRaw = args.array("addresses"), !addressesRaw.isEmpty else {
+            throw ToolError.missingArgument("addresses (array of {city, state})")
+        }
+
+        var names: [[String: Any]] = []
+        for nameObj in namesRaw {
+            guard let dict = nameObj as? [String: Any],
+                  let firstName = dict["first_name"] as? String,
+                  let lastName = dict["last_name"] as? String else {
+                throw ToolError.missingArgument("Each name must have first_name and last_name")
+            }
+            var name: [String: Any] = ["firstName": firstName, "lastName": lastName]
+            if let middleName = dict["middle_name"] as? String {
+                name["middleName"] = middleName
+            }
+            names.append(name)
+        }
+
+        var addresses: [[String: Any]] = []
+        for addrObj in addressesRaw {
+            guard let dict = addrObj as? [String: Any],
+                  let city = dict["city"] as? String,
+                  let state = dict["state"] as? String else {
+                throw ToolError.missingArgument("Each address must have city and state")
+            }
+            addresses.append(["city": city, "state": state])
+        }
+
+        let profileDict: [String: Any] = [
+            "names": names,
+            "addresses": addresses,
+            "phones": [String](),
+            "birthYear": birthYear
+        ]
+        let profileJSON = try JSONSerialization.data(withJSONObject: profileDict, options: [])
+        return try await xpcDataCall("Failed to save profile") {
+            self.agent.saveProfile(profileJSON: profileJSON, completion: $0)
+        }.prettyJSON()
+    }
+
     // MARK: - XPC Helpers
 
     private func xpcDataCall(_ errorMessage: String, call: @escaping (@escaping (Data?) -> Void) -> Void) async throws -> Data {
@@ -463,14 +547,14 @@ final class MCPTools: @unchecked Sendable {
         Communicates with the PIR background agent via XPC to query state, run operations, and read logs.
 
         ## Quick Start
-        1. get_agent_status — verify the PIR agent is running and see install path
+        1. get_agent_status — verify the PIR agent is running
         2. get_auth_status — verify auth token is valid and check which environment is active
         3. list_brokers — see all brokers with scan status, error counts, and versions
 
         ## Tools by Category
 
         ### Production DB Inspection (read-only)
-        - get_agent_status — agent version, running state, scheduler state, install path
+        - get_agent_status — agent version, running state, scheduler state, last background scheduler trigger
         - get_auth_status — token validity, environment, API endpoint URL
         - list_brokers — all brokers with version, match/error counts, last scan date
         - get_broker_json — full scan/opt-out step definitions for a broker
@@ -479,10 +563,15 @@ final class MCPTools: @unchecked Sendable {
         - get_optout_history — opt-out events (needs IDs from get_broker_details)
         - get_broker_scheduler_state — raw scheduler state: run dates, attempt counts, history
         - get_profile_queries — configured profile queries being scanned
-        - query_logs — system logs filtered by PIR subsystems and build variant
+        - query_logs — system logs filtered by PIR subsystems and debug build variant
+
+        ### Profile & Data Management
+        - save_profile — create or update profile (multiple names × addresses). Auto-triggers immediate scan.
+        - remove_all_data — wipe all PIR data (profile, scan history, opt-out history, extracted profiles)
+        - restart_agent — restart the PIR background agent via launchctl
 
         ### Environment & Auth
-        - start_immediate_scan — trigger async scan of all brokers
+        - start_immediate_scan — trigger async scan of all brokers (use after force_broker_update or to re-scan same profile)
         - force_broker_update — force broker JSON update, bypass hourly rate limit
         - set_api_endpoint — switch staging API service root for branch deploys
         - reauthenticate — sign out and open activation flow for re-auth
@@ -499,6 +588,19 @@ final class MCPTools: @unchecked Sendable {
 
         ## Key Workflows
 
+        ### Full reset and scan with new profile
+        1. remove_all_data → wipe everything
+        2. restart_agent → clean slate
+        3. save_profile(names: [...], addresses: [...], birth_year: 1990) → saves profile AND auto-triggers immediate scan
+        4. get_agent_status / list_brokers → monitor progress
+
+        ### Update profile and re-scan
+        1. save_profile(names: [...], addresses: [...], birth_year: 1990) → upserts profile, auto-triggers immediate scan
+
+        ### Re-scan same profile (e.g. after broker JSON update)
+        1. force_broker_update → pull latest JSONs
+        2. start_immediate_scan → re-scan with current profile and updated JSONs
+
         ### Fix a broken broker
         1. run_scan(broker_name: "spokeo.com", first_name: ...) → fails, WebView stays alive (pause_on_error defaults to true)
         2. get_webview_state → see current URL, page content, and error
@@ -514,7 +616,7 @@ final class MCPTools: @unchecked Sendable {
         4. Once scan works, test opt-out with run_optout(broker_json: ...)
 
         ### Diagnose stuck or failing scans
-        1. get_agent_status → is the agent running?
+        1. get_agent_status → is the agent running? (Last Trigger = last background scheduler fire, not last immediate scan)
         2. get_auth_status → is the token valid? correct environment?
         3. get_broker_scheduler_state(broker_name: "...", include_history: true) → check preferredRunDate, attemptCount
         4. query_logs(minutes: 60, filter: "spokeo") → look for errors in logs
@@ -532,12 +634,15 @@ final class MCPTools: @unchecked Sendable {
         4. continue_optout(...) → resume opt-out after confirmation
 
         ## Important Tips
+        - save_profile auto-triggers an immediate scan (same as the real app UI flow)
+        - start_immediate_scan is for re-scanning without changing the profile (e.g. after force_broker_update)
+        - Last Trigger in get_agent_status = last NSBackgroundActivityScheduler fire, NOT last immediate scan
         - Tool IDs chain: list_brokers → get_broker_details (returns broker_id, profile_query_id) → get_scan_history / get_optout_history
         - pause_on_error (default: true) keeps the WebView alive after failures — use get_webview_state and execute_js to inspect
         - Set pause_on_error: false for batch audits where you don't need to inspect failures
-        - query_logs automatically filters to this build variant (no prod/review log noise)
+        - query_logs automatically filters to debug build variant (no prod/review log noise)
         - run_scan/run_optout/continue_optout accept optional broker_json to test custom JSON without modifying the DB
-        - middle_name is optional on run_scan, run_optout, and continue_optout
+        - middle_name is optional on run_scan, run_optout, continue_optout, and save_profile
         """
     }
 }
@@ -562,6 +667,7 @@ struct DecodedArguments {
     func int(_ key: String) -> Int? { dict[key] as? Int }
     func int64(_ key: String) -> Int64? { (dict[key] as? Int64) ?? (dict[key] as? Int).map(Int64.init) }
     func bool(_ key: String) -> Bool? { dict[key] as? Bool }
+    func array(_ key: String) -> [Any]? { dict[key] as? [Any] }
 
     func requireString(_ key: String) throws -> String {
         guard let v = string(key) else { throw ToolError.missingArgument(key) }
