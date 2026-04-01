@@ -39,6 +39,7 @@ final class TabViewModel: NSObject {
     @Published private(set) var canGoBack: Bool = false
 
     @Published private(set) var canReload: Bool = false
+    @Published private(set) var isSuspended: Bool = false
     @Published private(set) var canBeBookmarked: Bool = false
     @Published private(set) var canShare: Bool = false
     @Published var isLoading: Bool = false {
@@ -156,6 +157,9 @@ final class TabViewModel: NSObject {
             .store(in: &cancellables)
         tab.$loadingProgress
             .assign(to: \.progress, onWeaklyHeld: self)
+            .store(in: &cancellables)
+        tab.$isSuspended
+            .assign(to: \.isSuspended, onWeaklyHeld: self)
             .store(in: &cancellables)
         if case .url(_, credential: _, source: .pendingStateRestoration) = tab.content {
             updateAddressBarStrings()
@@ -335,8 +339,8 @@ final class TabViewModel: NSObject {
     }
 
     private func subscribeToWebViewDidFinishNavigation() {
-        // When a web page finishes loading, wait for tracker detection
-        // and additions to `PrivacyDashboardTabExtension.$privacyInfo.$trackerInfo`.
+        // When a web page finishes loading, wait when the `ContentBlockerRulesUserScript` detects trackers
+        // and adds them to `PrivacyDashboardTabExtension.$privacyInfo.$trackerInfo`.
         // Map the `$trackerInfo` into a debounced Publisher and play trackers animations
         // if there were any trackers detected.
         tab.webViewDidFinishNavigationPublisher.map { [weak tab] in

@@ -81,7 +81,7 @@ public extension OnboardingTheme {
             borderWidth: 1,
             borderInset: 0.5,
             iconSize: CGSize(width: 16, height: 16),
-            itemMaxHeight: 40
+            itemMinHeight: 44
         )
 
         let linearOnboardingMetrics = LinearOnboardingMetrics(
@@ -110,7 +110,7 @@ public extension OnboardingTheme {
             contextualOnboardingMetrics: ContextualOnboardingMetrics(
                 containerPadding: containerPadding,
                 contentSpacing: 20,
-                titleBodyVerticalSpacingVerticalLayout: 28,
+                titleBodyVerticalSpacingVerticalLayout: 14,
                 titleBodyVerticalSpacingHorizontalLayout: 10,
                 titleBodyInset: contextualTitleBodyContentInsets,
                 contextualTitleTextAlignment: .leading,
@@ -151,7 +151,7 @@ public extension OnboardingTheme {
                     OnboardingRebranding.OnboardingStyles.BubbleDismissButtonStyle(
                         contentPadding: dismissButtonMetrics.contentPadding,
                         backgroundColor: colorPalette.bubbleBackground,
-                        borderColor: colorPalette.bubbleBorder,
+                        borderColor: Color(singleUseColor: .rebranding(.accentAltPrimary)), // Dark mode bubble does not have a border color, hence reference the color directly.
                         borderWidth: borderWidth,
                         buttonSize: dismissButtonMetrics.buttonSize
                     )

@@ -21,8 +21,7 @@ import DesignResourcesKit
 import DesignResourcesKitIcons
 import UIKit
 
-/// Horizontal toolbar with AI tool buttons: globe, image, [spacer], model picker chip, submit.
-/// All buttons except submit are non-functional stubs for Part 1.
+/// Horizontal toolbar with AI tool buttons: image, [spacer], model picker chip, submit.
 final class UnifiedToggleInputToolbarView: UIView {
 
     // MARK: - Constants
@@ -31,7 +30,6 @@ final class UnifiedToggleInputToolbarView: UIView {
         static let verticalPadding: CGFloat = 8
         static let horizontalPadding: CGFloat = 8
         static let toolButtonSize: CGFloat = 40
-        static let leftGroupSpacing: CGFloat = 4
         static let rightGroupSpacing: CGFloat = 8
         static let chipHeight: CGFloat = 32
         static let chipCornerRadius: CGFloat = 16
@@ -42,13 +40,18 @@ final class UnifiedToggleInputToolbarView: UIView {
 
     // MARK: - Callbacks
 
-    var onSearchTapped: (() -> Void)?
+    var onCustomizeResponsesTapped: (() -> Void)?
     var onAttachTapped: (() -> Void)?
     var onModelPickerTapped: (() -> Void)?
     var onSubmitTapped: (() -> Void)?
+    var onVoiceTapped: (() -> Void)?
     var onStopGeneratingTapped: (() -> Void)?
 
     // MARK: - State
+
+    var isAIVoiceChatActive: Bool = false {
+        didSet { updateSubmitButtonAppearance() }
+    }
 
     var isSubmitEnabled: Bool = false {
         didSet { updateSubmitButtonState() }
@@ -79,16 +82,26 @@ final class UnifiedToggleInputToolbarView: UIView {
         set { modelChipButton.isHidden = newValue }
     }
 
+    var isImageButtonHidden: Bool {
+        get { imageButton.isHidden }
+        set { imageButton.isHidden = newValue }
+    }
+
+    var isCustomizeResponsesButtonHidden: Bool {
+        get { customizeResponsesButton.isHidden }
+        set { customizeResponsesButton.isHidden = newValue }
+    }
+
     // MARK: - UI Components
 
-    private lazy var globeButton: UIButton = makeToolButton(
-        image: DesignSystemImages.Glyphs.Size16.globe,
-        accessibilityLabel: UserText.aiChatToolbarSearchButtonAccessibilityLabel,
-        action: #selector(searchTapped)
+    private lazy var customizeResponsesButton: UIButton = makeToolButton(
+        image: DesignSystemImages.Glyphs.Size24.options,
+        accessibilityLabel: UserText.aiChatToolbarCustomizeResponsesButtonAccessibilityLabel,
+        action: #selector(customizeResponsesTapped)
     )
 
-    private lazy var imageButton: UIButton = makeToolButton(
-        image: DesignSystemImages.Glyphs.Size16.image,
+    private(set) lazy var imageButton: UIButton = makeToolButton(
+        image: DesignSystemImages.Glyphs.Size24.attach,
         accessibilityLabel: UserText.aiChatToolbarAttachButtonAccessibilityLabel,
         action: #selector(attachTapped)
     )
@@ -174,14 +187,11 @@ final class UnifiedToggleInputToolbarView: UIView {
     // MARK: - Setup
 
     private func setupUI() {
-        let leftGroup = UIStackView(arrangedSubviews: [globeButton, imageButton])
+        let leftGroup = UIStackView(arrangedSubviews: [customizeResponsesButton, imageButton])
         leftGroup.axis = .horizontal
-        leftGroup.spacing = Constants.leftGroupSpacing
+        leftGroup.spacing = 0
         leftGroup.alignment = .center
         leftGroup.translatesAutoresizingMaskIntoConstraints = false
-        leftGroup.backgroundColor = UIColor(singleUseColor: .unifiedToggleInputCardBackground)
-        leftGroup.layer.cornerRadius = 20
-        leftGroup.clipsToBounds = true
 
         let spacer = UIView()
         spacer.translatesAutoresizingMaskIntoConstraints = false
@@ -227,11 +237,18 @@ final class UnifiedToggleInputToolbarView: UIView {
     }
 
     private func updateSubmitButtonState() {
-        submitButton.isEnabled = isSubmitEnabled
-        submitButton.backgroundColor = isSubmitEnabled
+        updateSubmitButtonAppearance()
+    }
+
+    private func updateSubmitButtonAppearance() {
+        let showVoice = isAIVoiceChatActive && !isSubmitEnabled
+        let icon = showVoice ? DesignSystemImages.Glyphs.Size24.voice : DesignSystemImages.Glyphs.Size24.arrowUp
+        submitButton.setImage(icon, for: .normal)
+        submitButton.isEnabled = isSubmitEnabled || showVoice
+        submitButton.backgroundColor = (isSubmitEnabled || showVoice)
             ? UIColor(designSystemColor: .accent)
             : UIColor(designSystemColor: .controlsFillPrimary)
-        submitButton.tintColor = isSubmitEnabled
+        submitButton.tintColor = (isSubmitEnabled || showVoice)
             ? .white
             : UIColor(designSystemColor: .iconsSecondary)
     }
@@ -248,9 +265,15 @@ final class UnifiedToggleInputToolbarView: UIView {
         }
     }
 
-    @objc private func searchTapped() { onSearchTapped?() }
+    @objc private func customizeResponsesTapped() { onCustomizeResponsesTapped?() }
     @objc private func attachTapped() { onAttachTapped?() }
     @objc private func modelPickerTapped() { onModelPickerTapped?() }
-    @objc private func submitTapped() { onSubmitTapped?() }
+    @objc private func submitTapped() {
+        if isAIVoiceChatActive && !isSubmitEnabled {
+            onVoiceTapped?()
+        } else {
+            onSubmitTapped?()
+        }
+    }
     @objc private func stopGeneratingTapped() { onStopGeneratingTapped?() }
 }

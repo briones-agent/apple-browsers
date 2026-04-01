@@ -270,6 +270,7 @@ public extension DesignSystemImages {
             public static var viewGridSolid: DesignSystemImage { .init(resource: .viewGridSolid16) }
             public static var viewList: DesignSystemImage { .init(resource: .viewList16) }
             public static var viewListSolid: DesignSystemImage { .init(resource: .viewListSolid16) }
+            public static var voice: DesignSystemImage { .init(resource: .voice16) }
             public static var vpnOn: DesignSystemImage { .init(resource: .vpnOn16) }
             public static var vpnOff: DesignSystemImage { .init(resource: .vpnOff16) }
             public static var wand: DesignSystemImage { .init(resource: .wand16) }
@@ -360,6 +361,7 @@ public extension DesignSystemImages {
             public static var arrowUpRight: DesignSystemImage { .init(resource: .arrowUpRight24) }
             public static var assist: DesignSystemImage { .init(resource: .assist24) }
             public static var assistAlt: DesignSystemImage { .init(resource: .assistAlt24) }
+            public static var attach: DesignSystemImage { .init(resource: .attach24) }
             public static var bell: DesignSystemImage { .init(resource: .bell24) }
             public static var bookmark: DesignSystemImage { .init(resource: .bookmark24) }
             public static var bookmarkSolid: DesignSystemImage { .init(resource: .bookmarkSolid24) }
@@ -425,6 +427,8 @@ public extension DesignSystemImages {
             public static var findSearchSmall: DesignSystemImage { .init(resource: .findSearchSmall24) }
             public static var fire: DesignSystemImage { .init(resource: .fire24) }
             public static var fireSolid: DesignSystemImage { .init(resource: .fireSolid24) }
+            public static var fireTabMobile: DesignSystemImage { .init(resource: .fireTabMobile24) }
+            public static var fireTabMobileFrame: DesignSystemImage { .init(resource: .fireTabMobileFrame24) }
             public static var fireTabs: DesignSystemImage { .init(resource: .fireTabs24) }
             public static var fireproof: DesignSystemImage { .init(resource: .fireproof24) }
             public static var fireproofSolid: DesignSystemImage { .init(resource: .fireproofSolid24) }
@@ -462,6 +466,7 @@ public extension DesignSystemImages {
             public static var news: DesignSystemImage { .init(resource: .news24) }
             public static var note: DesignSystemImage { .init(resource: .note24) }
             public static var openIn: DesignSystemImage { .init(resource: .openIn24) }
+            public static var options: DesignSystemImage { .init(resource: .options24) }
             public static var pageContentAttach: DesignSystemImage { .init(resource: .pageContentAttach24) }
             public static var paste: DesignSystemImage { .init(resource: .paste24) }
             public static var pin: DesignSystemImage { .init(resource: .pin24) }

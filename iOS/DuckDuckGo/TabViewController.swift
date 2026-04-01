@@ -17,6 +17,7 @@
 //  limitations under the License.
 //
 
+import AVFoundation
 import WebKit
 import Core
 import Combine
@@ -129,7 +130,7 @@ class TabViewController: UIViewController {
     var daxEasterEggHandler: DaxEasterEggHandling?
     var logoCache: DaxEasterEggLogoCaching = DaxEasterEggLogoCache()
 
-    let favicons = Favicons.shared
+    let favicons: FaviconManaging
     let progressWorker = WebProgressWorker()
 
     private(set) var webView: WKWebView!
@@ -248,7 +249,7 @@ class TabViewController: UIViewController {
     let bookmarksDatabase: CoreDataDatabase
     lazy var faviconUpdater = FireproofFaviconUpdater(bookmarksDatabase: bookmarksDatabase,
                                                       tab: tabModel,
-                                                      favicons: Favicons.shared,
+                                                      favicons: favicons,
                                                       sharedSecureVault: sharedSecureVault)
 
     private let refreshControl = UIRefreshControl()
@@ -414,6 +415,7 @@ class TabViewController: UIViewController {
                                    autoconsentManagement: AutoconsentManaging,
                                    websiteDataManager: WebsiteDataManaging,
                                    fireproofing: Fireproofing,
+                                   favicons: FaviconManaging,
                                    tabInteractionStateSource: TabInteractionStateSource?,
                                    specialErrorPageNavigationHandler: SpecialErrorPageManaging,
                                    featureDiscovery: FeatureDiscovery,
@@ -424,7 +426,8 @@ class TabViewController: UIViewController {
                                    sharedSecureVault: (any AutofillSecureVault)? = nil,
                                    privacyStats: PrivacyStatsProviding,
                                    voiceSearchHelper: VoiceSearchHelperProtocol,
-                                   darkReaderFeatureSettings: DarkReaderFeatureSettings) -> TabViewController {
+                                   darkReaderFeatureSettings: DarkReaderFeatureSettings,
+                                   autoplaySettings: AutoplaySettings) -> TabViewController {
 
         let storyboard = UIStoryboard(name: "Tab", bundle: nil)
         let controller = storyboard.instantiateViewController(identifier: "TabViewController", creator: { coder in
@@ -446,6 +449,7 @@ class TabViewController: UIViewController {
                               textZoomCoordinator: textZoomCoordinator,
                               autoconsentManagement: autoconsentManagement,
                               fireproofing: fireproofing,
+                              favicons: favicons,
                               websiteDataManager: websiteDataManager,
                               tabInteractionStateSource: tabInteractionStateSource,
                               specialErrorPageNavigationHandler: specialErrorPageNavigationHandler,
@@ -457,7 +461,8 @@ class TabViewController: UIViewController {
                               sharedSecureVault: sharedSecureVault,
                               privacyStats: privacyStats,
                               voiceSearchHelper: voiceSearchHelper,
-                              darkReaderFeatureSettings: darkReaderFeatureSettings
+                              darkReaderFeatureSettings: darkReaderFeatureSettings,
+                              autoplaySettings: autoplaySettings
             )
         })
         return controller
@@ -512,6 +517,7 @@ class TabViewController: UIViewController {
     private(set) var aiChatContentHandler: AIChatContentHandling
     private(set) var voiceSearchHelper: VoiceSearchHelperProtocol
     let darkReaderFeatureSettings: DarkReaderFeatureSettings
+    let autoplaySettings: AutoplaySettings
     lazy var aiChatContextualSheetCoordinator: AIChatContextualSheetCoordinator = {
         let pageContextHandler = AIChatPageContextHandler(
             webViewProvider: { [weak self] in self?.webView },
@@ -525,7 +531,8 @@ class TabViewController: UIViewController {
             contentBlockingAssetsPublisher: contentBlockingAssetsPublisher,
             featureDiscovery: featureDiscovery,
             featureFlagger: featureFlagger,
-            pageContextHandler: pageContextHandler
+            pageContextHandler: pageContextHandler,
+            isFireTab: tabModel.fireTab
         )
         coordinator.delegate = self
         return coordinator
@@ -552,6 +559,7 @@ class TabViewController: UIViewController {
                    textZoomCoordinator: TextZoomCoordinating,
                    autoconsentManagement: AutoconsentManaging,
                    fireproofing: Fireproofing,
+                   favicons: FaviconManaging,
                    websiteDataManager: WebsiteDataManaging,
                    tabInteractionStateSource: TabInteractionStateSource?,
                    specialErrorPageNavigationHandler: SpecialErrorPageManaging,
@@ -565,7 +573,8 @@ class TabViewController: UIViewController {
                    sharedSecureVault: (any AutofillSecureVault)? = nil,
                    privacyStats: PrivacyStatsProviding,
                    voiceSearchHelper: VoiceSearchHelperProtocol,
-                   darkReaderFeatureSettings: DarkReaderFeatureSettings) {
+                   darkReaderFeatureSettings: DarkReaderFeatureSettings,
+                   autoplaySettings: AutoplaySettings) {
 
         self.tabModel = tabModel
         self.viewModel = TabViewModel(tab: tabModel, historyManager: historyManager)
@@ -586,6 +595,7 @@ class TabViewController: UIViewController {
         self.textZoomCoordinator = textZoomCoordinator
         self.autoconsentManagement = autoconsentManagement
         self.fireproofing = fireproofing
+        self.favicons = favicons
         self.websiteDataManager = websiteDataManager
         self.tabInteractionStateSource = tabInteractionStateSource
         self.specialErrorPageNavigationHandler = specialErrorPageNavigationHandler
@@ -607,6 +617,7 @@ class TabViewController: UIViewController {
         self.subscriptionAIChatStateHandler = SubscriptionAIChatStateHandler()
         self.voiceSearchHelper = voiceSearchHelper
         self.darkReaderFeatureSettings = darkReaderFeatureSettings
+        self.autoplaySettings = autoplaySettings
 
         self.productSurfaceTelemetry = productSurfaceTelemetry
 
@@ -641,7 +652,7 @@ class TabViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        fireproofingWorker = FireproofingWorking(controller: self, fireproofing: fireproofing)
+        fireproofingWorker = FireproofingWorking(controller: self, fireproofing: fireproofing, favicons: favicons)
         initAttributionLogic()
         decorate()
         addTextZoomObserver()
@@ -730,7 +741,8 @@ class TabViewController: UIViewController {
         } else {
             webViewBottomAnchorConstraint?.constant = 0
         }
-        borderView.bottomAlpha = isLargeWidth ? 0 : barsVisibilityPercent
+        let hideBottomBorder = isLargeWidth || (chromeDelegate?.isToolbarHidden == true)
+        borderView.bottomAlpha = hideBottomBorder ? 0 : barsVisibilityPercent
         updateContentInsetAdjustment()
     }
 
@@ -863,6 +875,11 @@ class TabViewController: UIViewController {
                                                             onRefresh: { [weak self] in
             self?.handlePullToRefresh()
         })
+
+        if isAITab {
+            pullToRefreshViewAdapter?.setRefreshControlEnabled(false)
+            webView.scrollView.alwaysBounceVertical = false
+        }
 
         updateContentMode()
 
@@ -1061,6 +1078,8 @@ class TabViewController: UIViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 guard let self else { return }
                 self.webViewUrlHasChanged(previousURL: previousURL, newURL: self.webView.url)
+                self.pullToRefreshViewAdapter?.setRefreshControlEnabled(!self.isAITab)
+                self.webView.scrollView.alwaysBounceVertical = !self.isAITab
                 if #available(iOS 18.4, *) {
                     self.notifyWebExtensionOfPropertyChange([.URL])
                 }
@@ -1101,7 +1120,8 @@ class TabViewController: UIViewController {
     }
 
     func enableFireproofingForDomain(_ domain: String) {
-        FireproofingAlert.showConfirmFireproofWebsite(usingController: self, forDomain: domain) { [weak self] in
+        let displayDomain = fireproofing.displayDomain(for: domain)
+        FireproofingAlert.showConfirmFireproofWebsite(usingController: self, forDomain: displayDomain) { [weak self] in
             Pixel.fire(pixel: .browsingMenuFireproof)
             self?.fireproofingWorker?.handleUserEnablingFireproofing(forDomain: domain)
         }
@@ -1484,6 +1504,7 @@ class TabViewController: UIViewController {
                                                                      userRefreshCount: refreshCountSinceLoad,
                                                                      breakageReportingSubfeature: breakageReportingSubfeature,
                                                                      isForceDarkModeEnabled: darkReaderFeatureSettings.isForceDarkModeEnabled,
+                                                                     autoplayBlockingMode: featureFlagger.isFeatureOn(.autoplayBlocking) ? autoplaySettings.currentAutoplayBlockingMode.rawValue : nil,
                                                                      isAfterSuppressedXSafariRedirect: safariRedirectHandler.isAfterSuppressedXSafariRedirect(for: currentURL))
     }
 
@@ -2918,6 +2939,21 @@ extension TabViewController: WKUIDelegate {
                              inheritingAttribution: adClickAttributionLogic.state)
     }
 
+    func webView(_ webView: WKWebView,
+                 requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                 initiatedByFrame frame: WKFrameInfo,
+                 type: WKMediaCaptureType,
+                 decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        guard origin.host.isDuckAIHost,
+              type == .microphone || type == .cameraAndMicrophone else {
+            decisionHandler(.prompt)
+            return
+        }
+
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        decisionHandler(status == .authorized ? .grant : .deny)
+    }
+
     func webViewDidClose(_ webView: WKWebView) {
         if openedByPage {
             delegate?.tabDidRequestClose(self)
@@ -3084,6 +3120,9 @@ extension TabViewController: UserContentControllerDelegate {
     private var findInPageScript: FindInPageUserScript? {
         userScripts?.findInPageScript
     }
+    private var contentBlockerUserScript: ContentBlockerRulesUserScript? {
+        userScripts?.contentBlockerUserScript
+    }
     private var autofillUserScript: AutofillUserScript? {
         userScripts?.autofillUserScript
     }
@@ -3095,7 +3134,8 @@ extension TabViewController: UserContentControllerDelegate {
         guard let userScripts = userScripts as? UserScripts else { fatalError("Unexpected UserScripts") }
 
         userScripts.debugScript.instrumentation = instrumentation
-        userScripts.trackerProtectionSubfeature.delegate = self
+        userScripts.surrogatesScript.delegate = self
+        userScripts.contentBlockerUserScript.delegate = self
         userScripts.autofillUserScript.emailDelegate = emailManager
         userScripts.autofillUserScript.vaultDelegate = vaultManager
         userScripts.autofillUserScript.passwordImportDelegate = credentialsImportManager
@@ -3109,6 +3149,7 @@ extension TabViewController: UserContentControllerDelegate {
         userScripts.serpSettingsUserScript.setStore(keyValueStore)
         userScripts.serpSettingsUserScript.webView = webView
         
+        userScripts.aiChatUserScript.setFireModeProvider { [weak self] in self?.tabModel.fireTab ?? false }
         aiChatContentHandler.setup(with: userScripts.aiChatUserScript, webView: webView, displayMode: .fullTab)
         aiChatContextualSheetCoordinator.pageContextHandler.resubscribe()
 
@@ -3151,41 +3192,41 @@ extension TabViewController: UserContentControllerDelegate {
 
 }
 
-// MARK: - TrackerProtectionSubfeatureDelegate
-extension TabViewController: TrackerProtectionSubfeatureDelegate {
-
-    private static let trackerProtectionMapper = TrackerProtectionEventMapper(tld: tld)
-
-    func trackerProtectionShouldProcessTrackers(_ subfeature: TrackerProtectionSubfeature) -> Bool {
+// MARK: - ContentBlockerRulesUserScriptDelegate
+extension TabViewController: ContentBlockerRulesUserScriptDelegate {
+    
+    func contentBlockerRulesUserScriptShouldProcessTrackers(_ script: ContentBlockerRulesUserScript) -> Bool {
         return privacyInfo?.isFor(self.url) ?? false
     }
+    
+    func contentBlockerRulesUserScriptShouldProcessCTLTrackers(_ script: ContentBlockerRulesUserScript) -> Bool {
+        return false
+    }
 
-    func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
-                           didDetectTracker tracker: TrackerProtectionSubfeature.TrackerDetection) {
+    func contentBlockerRulesUserScript(_ script: ContentBlockerRulesUserScript,
+                                       detectedTracker tracker: DetectedRequest) {
+        userScriptDetectedTracker(tracker)
+    }
+    
+    func contentBlockerRulesUserScript(_ script: ContentBlockerRulesUserScript,
+                                       detectedThirdPartyRequest request: DetectedRequest) {
+        privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: request)
+    }
+
+    fileprivate func userScriptDetectedTracker(_ tracker: DetectedRequest) {
         guard let url = url else { return }
+        
+        adClickAttributionLogic.onRequestDetected(request: tracker)
 
-        if Self.trackerProtectionMapper.isSameSiteDetection(tracker) {
-            return
-        }
-
-        let detectedRequest = Self.trackerProtectionMapper.detectedRequest(from: tracker)
-
-        if TrackerProtectionEventMapper.isThirdPartyRequest(tracker) {
-            privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: detectedRequest)
-            return
-        }
-
-        adClickAttributionLogic.onRequestDetected(request: detectedRequest)
-
-        if detectedRequest.isBlocked && fireWoFollowUp {
+        if tracker.isBlocked && fireWoFollowUp {
             fireWoFollowUp = false
             Pixel.fire(pixel: .daxDialogsWithoutTrackersFollowUp)
         }
 
-        privacyInfo?.trackerInfo.addDetectedTracker(detectedRequest, onPageWithURL: url)
+        privacyInfo?.trackerInfo.addDetectedTracker(tracker, onPageWithURL: url)
 
-        guard detectedRequest.isBlocked,
-              let host = detectedRequest.url.url?.host,
+        guard tracker.isBlocked,
+              let host = tracker.url.url?.host,
               let entityName = ContentBlocking.shared.trackerDataManager.trackerData.findParentEntityOrFallback(forHost: host)?.displayName else {
             return
         }
@@ -3194,16 +3235,28 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
             await privacyStats.recordBlockedTracker(entityName)
         }
     }
+}
 
-    func trackerProtection(_ subfeature: TrackerProtectionSubfeature,
-                           didInjectSurrogate surrogate: TrackerProtectionSubfeature.SurrogateInjection) {
-        guard let url = url,
-              let surrogateHost = Self.trackerProtectionMapper.surrogateHost(from: surrogate),
-              !surrogateHost.isEmpty else { return }
+// MARK: - SurrogatesUserScriptDelegate
+extension TabViewController: SurrogatesUserScriptDelegate {
 
-        let detectedRequest = Self.trackerProtectionMapper.detectedRequest(from: surrogate)
-        privacyInfo?.trackerInfo.addInstalledSurrogateHost(surrogateHost, for: detectedRequest, onPageWithURL: url)
+    func surrogatesUserScriptShouldProcessTrackers(_ script: SurrogatesUserScript) -> Bool {
+        return privacyInfo?.isFor(self.url) ?? false
     }
+
+    func surrogatesUserScriptShouldProcessCTLTrackers(_ script: SurrogatesUserScript) -> Bool {
+        false
+    }
+
+    func surrogatesUserScript(_ script: SurrogatesUserScript,
+                              detectedTracker tracker: DetectedRequest,
+                              withSurrogate host: String) {
+        guard let url = url else { return }
+        
+        privacyInfo?.trackerInfo.addInstalledSurrogateHost(host, for: tracker, onPageWithURL: url)
+        userScriptDetectedTracker(tracker)
+    }
+
 }
 
 // MARK: - PrintingSubfeatureDelegate
@@ -3253,9 +3306,12 @@ extension TabViewController: AdClickAttributionLogicDelegate {
         guard privacyConfigurationManager.privacyConfig.isEnabled(featureKey: .contentBlocking)
         else {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
+            contentBlockerUserScript?.currentAdClickAttributionVendor = nil
+            contentBlockerUserScript?.supplementaryTrackerData = []
             return
         }
 
+        contentBlockerUserScript?.currentAdClickAttributionVendor = vendor
         if let rules = rules {
 
             let globalListName = DefaultContentBlockerRulesListsSource.Constants.trackerDataSetRulesListName
@@ -3268,6 +3324,10 @@ extension TabViewController: AdClickAttributionLogicDelegate {
                 userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
                 try? userContentController.enableGlobalContentRuleList(withIdentifier: globalAttributionListName)
             }
+
+            contentBlockerUserScript?.supplementaryTrackerData = [rules.trackerData]
+        } else {
+            contentBlockerUserScript?.supplementaryTrackerData = []
         }
     }
 
@@ -3872,7 +3932,7 @@ extension TabViewController: SaveLoginViewControllerDelegate {
 
                         self.showLoginDetails(with: newCredential.account, source: .viewSavedLoginPrompt)
                     })
-                    Favicons.shared.loadFavicon(forDomain: newCredential.account.domain, intoCache: .fireproof, fromCache: .tabs)
+                    self.favicons.loadFavicon(forDomain: newCredential.account.domain, intoCache: .fireproof, fromCache: .tabs)
                 }
 
                 guard let domain = newCredential.account.domain else { return }
