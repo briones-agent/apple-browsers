@@ -530,11 +530,16 @@ class TabSwitcherViewController: UIViewController {
         _ = AppWidthObserver.shared.willResize(toWidth: size.width)
         updateUIForSelectionMode()
         setupBarsLayout()
-        activePageController.collectionView.collectionViewLayout.invalidateLayout()
-
-        coordinator.animate(alongsideTransition: nil) { [weak self] _ in
-            self?.syncPagingScrollViewToCurrentMode(animated: false)
+        for pageController in [self.firePageController, self.normalPageController].compactMap({ $0 }) {
+            pageController.view.setNeedsLayout()
+            pageController.collectionView.setNeedsLayout()
+            pageController.collectionView.collectionViewLayout.invalidateLayout()
         }
+        
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            self?.syncPagingScrollViewToCurrentMode(animated: false)
+        }, completion: nil)
+        
     }
 
     func prepareForPresentation() {
