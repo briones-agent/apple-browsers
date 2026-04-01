@@ -518,6 +518,7 @@ class TabSwitcherViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         refreshTitleViews()
+        currentSelection = tabsModel.currentIndex
         updateUIForSelectionMode()
         setupBarsLayout()
         firePageController?.updateEmptyStateVisibility()
@@ -529,6 +530,7 @@ class TabSwitcherViewController: UIViewController {
         _ = AppWidthObserver.shared.willResize(toWidth: size.width)
         updateUIForSelectionMode()
         setupBarsLayout()
+        activePageController.collectionView.collectionViewLayout.invalidateLayout()
 
         coordinator.animate(alongsideTransition: nil) { [weak self] _ in
             self?.syncPagingScrollViewToCurrentMode(animated: false)
@@ -765,9 +767,6 @@ extension TabSwitcherViewController: TabSwitcherPageDelegate {
             let newTab = Tab(fireTab: tabsModel.shouldCreateFireTabs)
             tabsModel.insert(tab: newTab, placement: .atEnd, selectNewTab: true)
         }
-        if allDeleted && !canDismissOnEmpty && isEditing {
-            transitionFromMultiSelect(reloadCollectionView: false)
-        }
         currentSelection = tabsModel.currentIndex
         delegate?.tabSwitcherDidBulkCloseTabs(tabSwitcher: self)
         refreshTitleViews()
@@ -779,7 +778,9 @@ extension TabSwitcherViewController: TabSwitcherPageDelegate {
     }
 
     func page(_ page: TabSwitcherPageViewController, didReorderTabs: Void) {
-        barsHandler.configureButtonActions(tabsStyle: tabsStyle, canShowSelectionMenu: canShowSelectionMenu)
+        if isEditing {
+            barsHandler.configureButtonActions(tabsStyle: tabsStyle, canShowSelectionMenu: canShowSelectionMenu)
+        }
         delegate.tabSwitcherDidReorderTabs(tabSwitcher: self)
     }
 

@@ -290,7 +290,6 @@ class TabSwitcherPageViewController: UIViewController {
             pageDelegate.page(self, willDeleteTabs: tabsToClose, allDeleted: allTabsDeleted)
             collectionView.deleteItems(at: indexPaths)
         } completion: { _ in
-            self.currentSelection = self.tabsModel.currentIndex
             pageDelegate.isProcessingUpdates = false
             pageDelegate.pageDidDeleteTabs(self, allDeleted: allTabsDeleted)
         }
@@ -300,12 +299,7 @@ class TabSwitcherPageViewController: UIViewController {
 
     @objc private func handleBackgroundTap(gesture: UITapGestureRecognizer) {
         guard gesture.tappedInWhitespaceAtEndOfCollectionView(collectionView) else { return }
-        if pageDelegate?.isEditing == true {
-            exitEditingMode(reloadData: true)
-            pageDelegate?.page(self, didDeselectTab: ())
-        } else {
-            pageDelegate?.pageDidRequestDismiss(self)
-        }
+        pageDelegate?.pageDidRequestDismiss(self)
     }
 }
 
