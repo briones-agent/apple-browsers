@@ -85,7 +85,7 @@ public class DataBrokerProtectionFeature: Subfeature {
     func onActionCompleted(params: Any, original: WKScriptMessage) async throws -> Encodable? {
         removeTimers()
 
-        Logger.action.log("Action completed")
+        Logger.action.log("Action completed: \(DebugHelper.prettyPrintedJSON(from: params), privacy: .public)")
 
         await parseActionCompleted(params: params)
         return nil
@@ -138,7 +138,7 @@ public class DataBrokerProtectionFeature: Subfeature {
         removeTimers()
 
         let error = DataBrokerProtectionError.parse(params: params)
-        Logger.action.log("Action Error: \(String(describing: error.localizedDescription), privacy: .public)")
+        Logger.action.log("Action Error: \(String(describing: error.localizedDescription), privacy: .public) params: \(DebugHelper.prettyPrintedJSON(from: params), privacy: .public)")
 
         await delegate?.onError(error: error)
         return nil
