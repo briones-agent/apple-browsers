@@ -20,6 +20,7 @@ import Foundation
 import PrivacyConfig
 
 public enum FeatureFlagCategory: String, CaseIterable, Comparable {
+    case adBlocking = "Ad Blocking"
     case duckAI = "Duck.ai"
     case dbp = "Personal Information Removal"
     case osSupportWarnings = "OS Support Warnings"
@@ -97,7 +98,10 @@ extension FeatureFlag: FeatureFlagCategorization {
             return .popupBlocking
         case .webNotifications:
             return .webNotifications
+        case .showYouTubeAdBlockOnBadge:
+            return .adBlocking
         case .webExtensions,
+                .adBlockingExtension,
                 .forceDarkModeOnWebsites,
                 .embeddedExtension:
             return .webExtensions

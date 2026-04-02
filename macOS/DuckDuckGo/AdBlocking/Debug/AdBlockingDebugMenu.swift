@@ -17,8 +17,12 @@
 //
 
 import AppKit
+import WebExtensions
 
-final class AdBlockingDebugMenu: NSMenuItem {
+@MainActor
+final class AdBlockingDebugMenu: NSMenuItem, NSMenuDelegate {
+
+    private static let scriptletDebugInfoTag = 1000
 
     required init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -31,18 +35,72 @@ final class AdBlockingDebugMenu: NSMenuItem {
 
     private func makeSubmenu() -> NSMenu {
         let menu = NSMenu(title: "")
-        menu.addItem(NSMenuItem(title: "Show Youtube Ad Block On Animation",
+        menu.delegate = self
+        menu.addItem(NSMenuItem(title: "Trigger `Youtube Ad Block On` address bar animation",
                                 action: #selector(showYouTubeAdBlockOnAnimation),
                                 target: self))
+        menu.addItem(.separator())
         return menu
     }
 
-    @MainActor @objc func showYouTubeAdBlockOnAnimation() {
+    // MARK: - NSMenuDelegate
+
+    nonisolated func menuNeedsUpdate(_ menu: NSMenu) {
+        MainActor.assumeIsolated {
+            rebuildScriptletDebugInfoItems(in: menu)
+        }
+    }
+
+    // MARK: - Actions
+
+    @objc func showYouTubeAdBlockOnAnimation() {
         guard let mainVC = Application.appDelegate.windowControllersManager
             .lastKeyMainWindowController?.mainViewController else { return }
         mainVC.navigationBarViewController
             .addressBarViewController?
             .addressBarButtonsViewController?
             .showBadgeNotification(.youTubeAdBlockOn)
+    }
+
+    // MARK: - Scriptlet Debug Info
+
+    private func rebuildScriptletDebugInfoItems(in menu: NSMenu) {
+        menu.items
+            .filter { $0.tag == Self.scriptletDebugInfoTag }
+            .forEach { menu.removeItem($0) }
+
+        guard #available(macOS 15.4, *) else { return }
+
+        for item in scriptletDebugInfoItems() {
+            item.tag = Self.scriptletDebugInfoTag
+            menu.addItem(item)
+        }
+    }
+
+    @available(macOS 15.4, *)
+    private func scriptletDebugInfoItems() -> [NSMenuItem] {
+        guard let manager = Application.appDelegate.webExtensionManager else {
+            return [disabledItem("Scriptlets: Web Extensions not initialized")]
+        }
+
+        let debugInfos = manager.scriptletDebugInfo()
+
+        guard !debugInfos.isEmpty else {
+            return [disabledItem("Scriptlets: No data available")]
+        }
+
+        return debugInfos.flatMap { info -> [NSMenuItem] in
+            let header = disabledItem("[\(info.extensionType.rawValue)] Scriptlets")
+            let cached = disabledItem("  Cached version: \(info.cachedVersion ?? "none")")
+            let installed = disabledItem("  Installed version: \(info.installedVersion ?? "none")")
+            let paths = info.scriptletPaths.sorted().map { disabledItem("    • \($0)") }
+            return [header, cached, installed] + paths
+        }
+    }
+
+    private func disabledItem(_ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        return item
     }
 }
