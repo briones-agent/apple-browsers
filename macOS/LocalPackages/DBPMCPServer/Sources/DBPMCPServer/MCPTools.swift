@@ -75,28 +75,13 @@ final class MCPTools: @unchecked Sendable {
                  "Get detailed per-profile-query scan and opt-out results for a specific broker.",
                  properties: ["broker_name": prop(.string, "The broker name or URL (e.g., 'PeopleLooker' or 'peoplelooker.com')")],
                  required: ["broker_name"]),
-            tool("get_scan_history",
-                 "Get scan history events for a specific broker and profile query.",
-                 properties: [
-                    "broker_id": prop(.integer, "The broker ID (from get_broker_details)"),
-                    "profile_query_id": prop(.integer, "The profile query ID (from get_broker_details)"),
-                 ],
-                 required: ["broker_id", "profile_query_id"]),
-            tool("get_optout_history",
-                 "Get opt-out history events for a specific broker, profile query, and extracted profile.",
-                 properties: [
-                    "broker_id": prop(.integer, "The broker ID"),
-                    "profile_query_id": prop(.integer, "The profile query ID"),
-                    "extracted_profile_id": prop(.integer, "The extracted profile ID (from get_broker_details optOuts)"),
-                 ],
-                 required: ["broker_id", "profile_query_id", "extracted_profile_id"]),
             tool("get_broker_scheduler_state",
-                 "Get raw scheduler state for a broker: preferredRunDate, lastRunDate, attemptCount for scan and each opt-out job, plus full history events. Use this to debug why jobs run too often or not at all.",
+                 "Get scheduler state for a broker: preferredRunDate, lastRunDate, attemptCount for scan and each opt-out job. Optionally include history events filtered by type.",
                  properties: [
                     "broker_name": prop(.string, "The broker name or URL"),
                     "profile_query_id": prop(.integer, "Optional: filter to a specific profile query ID. Pass 0 or omit for all."),
                     "extracted_profile_id": prop(.integer, "Optional: filter opt-outs to a specific extracted profile ID. Pass 0 or omit for all."),
-                    "include_history": prop(.boolean, "Include full history events (default: true). Set false for compact output."),
+                    "history_type": prop(.string, "Include history events: 'scan', 'optout', 'all', or omit for no history."),
                  ],
                  required: ["broker_name"]),
             tool("get_auth_status",
@@ -224,26 +209,13 @@ final class MCPTools: @unchecked Sendable {
                 text = try await xpcDataCall("Broker '\(brokerName)' not found") {
                     self.agent.getBrokerDetails(brokerName: brokerName, completion: $0)
                 }.prettyJSON()
-            case "get_scan_history":
-                let brokerId = try args.requireInt64("broker_id")
-                let profileQueryId = try args.requireInt64("profile_query_id")
-                text = try await xpcDataCall("Failed to fetch scan history") {
-                    self.agent.getScanHistory(brokerId: brokerId, profileQueryId: profileQueryId, completion: $0)
-                }.prettyJSON()
-            case "get_optout_history":
-                let brokerId = try args.requireInt64("broker_id")
-                let profileQueryId = try args.requireInt64("profile_query_id")
-                let extractedProfileId = try args.requireInt64("extracted_profile_id")
-                text = try await xpcDataCall("Failed to fetch opt-out history") {
-                    self.agent.getOptOutHistory(brokerId: brokerId, profileQueryId: profileQueryId, extractedProfileId: extractedProfileId, completion: $0)
-                }.prettyJSON()
             case "get_broker_scheduler_state":
                 let brokerName = try args.requireString("broker_name")
                 let profileQueryId = args.int64("profile_query_id") ?? 0
                 let extractedProfileId = args.int64("extracted_profile_id") ?? 0
-                let includeHistory = args.bool("include_history") ?? true
+                let historyType = args.string("history_type")
                 text = try await xpcDataCall("Failed to fetch scheduler state") {
-                    self.agent.getSchedulerState(brokerName: brokerName, profileQueryId: profileQueryId, extractedProfileId: extractedProfileId, includeHistory: includeHistory, completion: $0)
+                    self.agent.getSchedulerState(brokerName: brokerName, profileQueryId: profileQueryId, extractedProfileId: extractedProfileId, historyType: historyType, completion: $0)
                 }.prettyJSON()
             case "get_auth_status":
                 text = try await xpcDataCall("Failed to fetch auth status") { self.agent.getAuthStatus(completion: $0) }.prettyJSON()

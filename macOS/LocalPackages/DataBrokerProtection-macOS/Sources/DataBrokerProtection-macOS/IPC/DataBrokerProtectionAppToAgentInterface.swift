@@ -46,12 +46,8 @@ public protocol DataBrokerProtectionAgentDebugCommands {
     func getBrokerJSON(brokerURL: String) async -> Data?
     /// Returns detailed per-profile-query data for a specific broker.
     func getBrokerDetails(brokerName: String) async -> Data?
-    /// Returns scan history events for a broker + profile query.
-    func getScanHistory(brokerId: Int64, profileQueryId: Int64) async -> Data?
-    /// Returns opt-out history events for a broker + profile query + extracted profile.
-    func getOptOutHistory(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64) async -> Data?
-    /// Returns raw scheduler state: preferredRunDate, lastRunDate, history events for scan and opt-out jobs.
-    func getSchedulerState(brokerName: String, profileQueryId: Int64, extractedProfileId: Int64, includeHistory: Bool) async -> Data?
+    /// Returns scheduler state with optional history events filtered by type (scan/optout/all).
+    func getSchedulerState(brokerName: String, profileQueryId: Int64, extractedProfileId: Int64, historyType: String?) async -> Data?
     /// Returns auth/subscription status info.
     func getAuthStatus() async -> Data?
 

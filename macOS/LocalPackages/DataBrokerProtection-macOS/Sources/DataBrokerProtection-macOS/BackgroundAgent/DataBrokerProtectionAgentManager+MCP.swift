@@ -274,47 +274,9 @@ extension DataBrokerProtectionAgentManager {
         }
     }
 
-    public func getScanHistory(brokerId: Int64, profileQueryId: Int64) async -> Data? {
-        do {
-            let allData = try mcpDataManager.fetchBrokerProfileQueryData(ignoresCache: true)
-            let item = allData.first(where: {
-                $0.dataBroker.id == brokerId && $0.profileQuery.id == profileQueryId
-            })
-
-            guard let item else { return nil }
-
-            let events = item.scanJobData.historyEvents.sorted { $0.date < $1.date }
-            return try serializeHistoryEvents(events)
-        } catch {
-            Logger.dataBrokerProtection.error("Failed to fetch scan history: \(error.localizedDescription)")
-            return nil
-        }
-    }
-
-    public func getOptOutHistory(brokerId: Int64, profileQueryId: Int64, extractedProfileId: Int64) async -> Data? {
-        do {
-            let allData = try mcpDataManager.fetchBrokerProfileQueryData(ignoresCache: true)
-            let item = allData.first(where: {
-                $0.dataBroker.id == brokerId && $0.profileQuery.id == profileQueryId
-            })
-
-            guard let item else { return nil }
-
-            let optOut = item.optOutJobData.first(where: {
-                $0.extractedProfile.id == extractedProfileId
-            })
-
-            guard let optOut else { return nil }
-
-            let events = optOut.historyEvents.sorted { $0.date < $1.date }
-            return try serializeHistoryEvents(events)
-        } catch {
-            Logger.dataBrokerProtection.error("Failed to fetch opt-out history: \(error.localizedDescription)")
-            return nil
-        }
-    }
-
-    public func getSchedulerState(brokerName: String, profileQueryId: Int64, extractedProfileId: Int64, includeHistory: Bool) async -> Data? {
+    public func getSchedulerState(brokerName: String, profileQueryId: Int64, extractedProfileId: Int64, historyType: String?) async -> Data? {
+        let includeScanHistory = historyType == "scan" || historyType == "all"
+        let includeOptOutHistory = historyType == "optout" || historyType == "all"
         do {
             let allData = try mcpDataManager.fetchBrokerProfileQueryData(ignoresCache: true)
             let formatter = ISO8601DateFormatter()
@@ -345,7 +307,7 @@ extension DataBrokerProtectionAgentManager {
                 if let date = scan.lastRunDate { scanRow["lastRunDate"] = formatter.string(from: date) }
 
                 var scanHistory: [[String: Any]]?
-                if includeHistory {
+                if includeScanHistory {
                     scanHistory = scan.historyEvents.sorted { $0.date < $1.date }.map { serializeHistoryEvent($0, formatter: formatter) }
                 }
 
@@ -368,7 +330,7 @@ extension DataBrokerProtectionAgentManager {
                     if let date = optOut.submittedSuccessfullyDate { row["submittedSuccessfullyDate"] = formatter.string(from: date) }
                     optOutRows.append(row)
 
-                    if includeHistory {
+                    if includeOptOutHistory {
                         let events = optOut.historyEvents.sorted { $0.date < $1.date }.map { serializeHistoryEvent($0, formatter: formatter) }
                         optOutHistories["\(epId)"] = events
                     }
@@ -379,7 +341,7 @@ extension DataBrokerProtectionAgentManager {
                     "optOutRows": optOutRows,
                 ]
                 if let scanHistory { queryResult["scanHistory"] = scanHistory }
-                if includeHistory { queryResult["optOutHistory"] = optOutHistories }
+                if includeOptOutHistory { queryResult["optOutHistory"] = optOutHistories }
 
                 if let configData = try? JSONEncoder().encode(broker.schedulingConfig),
                    let configDict = try? JSONSerialization.jsonObject(with: configData) as? [String: Any] {
