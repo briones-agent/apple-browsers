@@ -20,6 +20,7 @@ import Carbon.HIToolbox
 import Cocoa
 import Combine
 import CommonObjCExtensions
+import os.log
 import WebKit
 
 @MainActor
@@ -57,6 +58,9 @@ final class WebView: WKWebView {
         isLoadingObserver = nil
     }
 
+    @UserDefaultsWrapper(key: .webViewTrackingAreaLoadingSuppressionDisabled, defaultValue: false)
+    static private var isTrackingAreaLoadingSuppressionDisabled: Bool
+
     private var shouldShowWebInspector: Bool {
         // When a new tab is open, we don't want the web inspector to be active on screen and gain focus.
         // When a new tab is open the other tab views are removed from the window, hence, we should not show the web inspector.
@@ -64,16 +68,23 @@ final class WebView: WKWebView {
     }
 
     override func addTrackingArea(_ trackingArea: NSTrackingArea) {
-        /// disable mouseEntered/mouseMoved/mouseExited events passing to Web View while it‘s loading
+        /// disable mouseEntered/mouseMoved/mouseExited events passing to Web View while it's loading
         /// see https://app.asana.com/0/1177771139624306/1206990108527681/f
         if trackingArea.owner?.className == "WKMouseTrackingObserver" {
-            // suppress Tracking Area events while loading
+            Logger.general.debug("WebView: WKMouseTrackingObserver tracking area added (\(trackingArea.debugDescription))")
+
+            guard !Self.isTrackingAreaLoadingSuppressionDisabled else {
+                super.addTrackingArea(trackingArea)
+                return
+            }
             isLoadingObserver = self.observe(\.isLoading, options: [.new]) { [weak self, trackingArea] _, c in
                 if c.newValue /* isLoading */ ?? false {
                     guard let self, self.trackingAreas.contains(trackingArea) else { return }
+                    Logger.general.debug("WebView: removing WKMouseTrackingObserver tracking area (loading started)")
                     removeTrackingArea(trackingArea)
                 } else {
                     guard let self, !self.trackingAreas.contains(trackingArea) else { return }
+                    Logger.general.debug("WebView: re-adding WKMouseTrackingObserver tracking area (loading finished)")
                     superAddTrackingArea(trackingArea)
                 }
             }

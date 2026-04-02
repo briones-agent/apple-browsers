@@ -104,6 +104,8 @@ final class MainMenu: NSMenu {
     let configurationDateAndTimeMenuItem = NSMenuItem(title: "Configuration URL", action: nil)
     let autofillDebugScriptMenuItem = NSMenuItem(title: "Autofill Debug Script", action: #selector(MainMenu.toggleAutofillScriptDebugSettingsAction))
     let contentScopeDebugStateMenuItem = NSMenuItem(title: "Content Scope Scripts Debug State", action: #selector(MainMenu.toggleContentScopeStateDebugSettingsAction))
+    let disableTrackingAreaSuppressionMenuItem = NSMenuItem(title: "Disable WebView Tracking Area Loading Suppression",
+                                                            action: #selector(MainMenu.toggleTrackingAreaSuppressionAction))
     let toggleWatchdogMenuItem = NSMenuItem(title: "Toggle Hang Watchdog", action: #selector(MainViewController.toggleWatchdog))
     let toggleWatchdogCrashMenuItem = NSMenuItem(title: "Crash on timeout", action: #selector(MainViewController.toggleWatchdogCrash))
     let alwaysShowFirstTimeQuitSurvey = NSMenuItem(title: "Always Show First-Time Quit Survey", action: #selector(MainViewController.alwaysShowFirstTimeQuitSurvey))
@@ -522,6 +524,7 @@ final class MainMenu: NSMenu {
         updateRemoteConfigurationInfo()
         updateAutofillDebugScriptMenuItem()
         updateContentScopeDebugStateMenuItem()
+        updateDisableTrackingAreaSuppressionMenuItem()
         updateShiftNextStepsDaysMenuItem()
         updateShowToolbarsOnFullScreenMenuItem()
         updateWatchdogMenuItems()
@@ -1052,6 +1055,8 @@ final class MainMenu: NSMenu {
             .targetting(self))
         menu.addItem(contentScopeDebugStateMenuItem
             .targetting(self))
+        menu.addItem(disableTrackingAreaSuppressionMenuItem
+            .targetting(self))
         menu.addItem(.separator())
         let exportLogsMenuItem = NSMenuItem(title: "Export Logs…", action: #selector(MainViewController.exportLogs))
         menu.addItem(exportLogsMenuItem)
@@ -1113,6 +1118,18 @@ final class MainMenu: NSMenu {
     @objc private func toggleContentScopeStateDebugSettingsAction(_ sender: NSMenuItem) {
         contentScopePreferences.isDebugStateEnabled = !contentScopePreferences.isDebugStateEnabled
         updateContentScopeDebugStateMenuItem()
+    }
+
+    @UserDefaultsWrapper(key: .webViewTrackingAreaLoadingSuppressionDisabled, defaultValue: false)
+    static private var isTrackingAreaLoadingSuppressionDisabled: Bool
+
+    private func updateDisableTrackingAreaSuppressionMenuItem() {
+        disableTrackingAreaSuppressionMenuItem.state = Self.isTrackingAreaLoadingSuppressionDisabled ? .on : .off
+    }
+
+    @objc private func toggleTrackingAreaSuppressionAction(_ sender: NSMenuItem) {
+        Self.isTrackingAreaLoadingSuppressionDisabled = !Self.isTrackingAreaLoadingSuppressionDisabled
+        updateDisableTrackingAreaSuppressionMenuItem()
     }
 
     @MainActor

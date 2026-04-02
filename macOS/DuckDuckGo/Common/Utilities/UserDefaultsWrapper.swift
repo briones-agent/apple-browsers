@@ -67,6 +67,7 @@ extension UserDefaults {
         case autolockLocksFormFilling = "preferences.lock-autofill-form-fill"
         case autofillDebugScriptEnabled = "preferences.enable-autofill-debug-script"
         case contentScopeDebugStateEnabled = "preferences.enable-content-scope-debug-state"
+        case webViewTrackingAreaLoadingSuppressionDisabled = "debug.webview-tracking-area-loading-suppression-disabled"
 
         case saveAsPreferredFileType = "saveAs.selected.filetype"
 
