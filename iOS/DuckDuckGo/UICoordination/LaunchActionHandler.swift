@@ -20,7 +20,16 @@
 import UIKit
 import Core
 
-enum LaunchAction {
+enum LaunchAction: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .openURL(let url): "openURL \(url.absoluteString)"
+        default: "N/A"
+        }
+    }
+
+
+
 
     case openURL(URL)
     case handleShortcutItem(UIApplicationShortcutItem)
@@ -85,6 +94,7 @@ final class LaunchActionHandler: LaunchActionHandling {
     }
 
     func handleLaunchAction(_ action: LaunchAction) {
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public), action: \(action)")
         switch action {
         case .openURL(let url):
             launchSourceManager.setSource(.URL)

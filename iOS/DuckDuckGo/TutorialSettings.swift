@@ -19,12 +19,15 @@
 
 import Foundation
 import Core
+import Onboarding
 
 protocol TutorialSettings: AnyObject {
 
     var lastVersionSeen: Int { get }
     var hasSeenOnboarding: Bool { get set }
     var hasSkippedOnboarding: Bool { get set }
+
+    var onboardingFlowType: OnboardingFlowType? { get set }
 
 }
 
@@ -39,6 +42,7 @@ final class DefaultTutorialSettings: TutorialSettings {
         static let lastVersionSeen = "com.duckduckgo.tutorials.lastVersionSeen"
         static let hasSeenOnboarding = "com.duckduckgo.tutorials.hasSeenOnboarding"
         static let hasSkippedOnboarding = "com.duckduckgo.tutorials.hasSkippedOnboarding"
+        static let onboardingFlowType = "com.duckduckgo.tutorials.onboardingFlowType"
     }
 
     private func userDefaults() -> UserDefaults {
@@ -68,6 +72,23 @@ final class DefaultTutorialSettings: TutorialSettings {
         }
         set {
             userDefaults().set(newValue, forKey: Keys.hasSkippedOnboarding)
+        }
+    }
+
+    public var onboardingFlowType: OnboardingFlowType? {
+        get {
+            guard
+                let rawValue = userDefaults().data(forKey: Keys.onboardingFlowType),
+                let decodedValue = try? JSONDecoder().decode(OnboardingFlowType.self, from: rawValue)
+            else {
+                return nil
+            }
+
+            return decodedValue
+        }
+        set {
+            let rawValue = try? JSONEncoder().encode(newValue)
+            userDefaults().set(rawValue, forKey: Keys.onboardingFlowType)
         }
     }
 

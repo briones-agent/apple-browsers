@@ -402,34 +402,35 @@ private extension View {
 
 // MARK: - Preview
 
-struct OnboardingView_Previews: PreviewProvider {
-    class MockDaxDialogDisabling: ContextualDaxDialogDisabling {
-        func disableContextualDaxDialogs() {}
-    }
-
-    final class MockRestorePromptHandler: OnboardingRestorePromptHandling {
-        func isEligibleForRestorePrompt() -> Bool {
-            false
-        }
-
-        func restoreSyncAccount() {}
-    }
-
-    static var previews: some View {
-        ForEach(ColorScheme.allCases, id: \.self) {
-            OnboardingView(
-                model: .init(
-                    pixelReporter: OnboardingPixelReporter(),
-                    systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManager(
-                        playerView: UIView(),
-                        videoPlayer: VideoPlayerCoordinator(configuration: VideoPlayerConfiguration()),
-                        eventMapper: SystemSettingsPiPTutorialPixelHandler(),
-                    ),
-                    daxDialogsManager: MockDaxDialogDisabling(),
-                    restorePromptHandler: MockRestorePromptHandler()
-                )
-            )
-            .preferredColorScheme($0)
-        }
-    }
-}
+//struct OnboardingView_Previews: PreviewProvider {
+//    class MockDaxDialogDisabling: ContextualDaxDialogDisabling {
+//        func disableContextualDaxDialogs() {}
+//    }
+//
+//    final class MockRestorePromptHandler: OnboardingRestorePromptHandling {
+//        func isEligibleForRestorePrompt() -> Bool {
+//            false
+//        }
+//
+//        func restoreSyncAccount() {}
+//    }
+//
+//    static var previews: some View {
+//        ForEach(ColorScheme.allCases, id: \.self) {
+//            OnboardingView(
+//                model: .init(
+//                    pixelReporter: OnboardingPixelReporter(),
+//                    systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManager(
+//                        playerView: UIView(),
+//                        videoPlayer: VideoPlayerCoordinator(configuration: VideoPlayerConfiguration()),
+//                        eventMapper: SystemSettingsPiPTutorialPixelHandler(),
+//                    ),
+//                    daxDialogsManager: MockDaxDialogDisabling(),
+//                    restorePromptHandler: MockRestorePromptHandler(),
+//                    onboardingManager: MockOnboardingManager
+//                )
+//            )
+//            .preferredColorScheme($0)
+//        }
+//    }
+//}

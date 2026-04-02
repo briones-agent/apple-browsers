@@ -106,6 +106,9 @@ struct Foreground: ForegroundHandling {
             autoClearService: sceneDependencies.autoClearService,
             launchActionHandler: launchActionHandler
         )
+
+        let onboardingManager = appDependencies.onboardingManager
+        onboardingManager.configureOnboardingFlow(from: actionToHandle)
     }
 
     // MARK: - Handle applicationDidBecomeActive(_:) logic here
@@ -145,7 +148,7 @@ struct Foreground: ForegroundHandling {
                 appDependencies.mainCoordinator.presentModalPromptIfNeeded()
             }
         )
-
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public)")
         services.vpnService.resume()
         services.aiChatService.resume()
         services.configurationService.resume()

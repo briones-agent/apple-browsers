@@ -72,6 +72,8 @@ struct Connected: ConnectedHandling {
         launchTaskManager.register(task: ClearInteractionStateTask(autoClearService: autoClearService,
                                                                    interactionStateSource: mainCoordinator.interactionStateSource,
                                                                    tabManager: mainCoordinator.tabManager))
+//        let onboardingManager = appDependencies.onboardingManager
+//        onboardingManager.configureOnboardingFlow(from: actionToHandle)
         sceneDependencies = SceneDependencies(screenshotService: screenshotService,
                                               authenticationService: authenticationService,
                                               autoClearService: autoClearService)
@@ -103,6 +105,8 @@ struct Connected: ConnectedHandling {
                                                 aiChatSyncCleaner: appDependencies.services.syncService.aiChatSyncCleaner)
         let authenticationService = AuthenticationService(overlayWindowManager: overlayWindowManager)
         let screenshotService = ScreenshotService(window: window, mainViewController: mainCoordinator.controller)
+//        let onboardingManager = appDependencies.onboardingManager
+//        onboardingManager.configureOnboardingFlow(from: actionToHandle)
         sceneDependencies = SceneDependencies(screenshotService: screenshotService,
                                               authenticationService: authenticationService,
                                               autoClearService: autoClearService)
@@ -133,6 +137,8 @@ struct Connected: ConnectedHandling {
                                                 aiChatSyncCleaner: appDependencies.services.syncService.aiChatSyncCleaner)
         let authenticationService = AuthenticationService(overlayWindowManager: overlayWindowManager)
         let screenshotService = ScreenshotService(window: window, mainViewController: mainCoordinator.controller)
+//        let onboardingManager = appDependencies.onboardingManager
+//        onboardingManager.configureOnboardingFlow(from: actionToHandle)
         sceneDependencies = SceneDependencies(screenshotService: screenshotService,
                                               authenticationService: authenticationService,
                                               autoClearService: autoClearService)

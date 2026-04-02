@@ -20,7 +20,24 @@
 import UIKit
 import Core
 
-enum AppEvent {
+enum AppEvent: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .didFinishLaunching:
+            return "didFinishLaunching"
+        case .didBecomeActive:
+            return "didBecomeActive"
+        case .willResignActive:
+            return "willResignActive"
+        case .willEnterForeground:
+            return "willEnterForeground"
+        case .didEnterBackground:
+            return "didEnterBackground"
+        case .willConnectToWindow:
+            return "willConnectToWindow"
+        }
+    }
+
 
     case didFinishLaunching(isTesting: Bool)
     case didBecomeActive
@@ -31,7 +48,18 @@ enum AppEvent {
 
 }
 
-enum AppAction {
+enum AppAction: CustomStringConvertible {
+
+    var description: String {
+        switch self {
+        case .openURL(let url):
+            return "openURL \(url.absoluteString)"
+        case .handleShortcutItem:
+            return "didBecomeActive"
+        case .handleUserActivity:
+            return "willResignActive"
+        }
+    }
 
     case openURL(URL)
     case handleShortcutItem(UIApplicationShortcutItem)
@@ -172,6 +200,7 @@ final class AppStateMachine {
     }
 
     func handle(_ event: AppEvent) {
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public), event: \(event, privacy: .public)")
         switch currentState {
         case .initializing(let initializing):
             respond(to: event, in: initializing)
@@ -191,6 +220,7 @@ final class AppStateMachine {
     }
 
     func handle(_ action: AppAction) {
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public), action: \(action, privacy: .public)")
         if case .foreground(let foregroundHandling) = currentState {
             foregroundHandling.handle(action)
         } else {
@@ -223,6 +253,7 @@ final class AppStateMachine {
     }
 
     private func respond(to event: AppEvent, in connected: any ConnectedHandling) {
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public) event: \(event, privacy: .public)")
         switch event {
         case .didBecomeActive:
             let foreground = connected.makeForegroundState(actionToHandle: actionToHandle)

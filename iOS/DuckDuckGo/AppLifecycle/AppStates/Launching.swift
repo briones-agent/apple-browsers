@@ -60,6 +60,7 @@ struct Launching: LaunchingHandling {
     private let launchTaskManager = LaunchTaskManager()
     private let launchSourceManager = LaunchSourceManager()
     private let lastBackgroundDateStorage: any ThrowingKeyedStoring<IdleReturnLastBackgroundDateKeys>
+    private let onboardingManager: OnboardingManager = OnboardingManager()
 
     // MARK: - Handle application(_:didFinishLaunchingWithOptions:) logic here
 
@@ -260,7 +261,9 @@ struct Launching: LaunchingHandling {
                                               productSurfaceTelemetry: productSurfaceTelemetry,
                                               whatsNewRepository: whatsNewRepository,
                                               sharedSecureVault: configuration.persistentStoresConfiguration.sharedSecureVault,
-                                              wideEvent: AppDependencyProvider.shared.wideEvent)
+                                              wideEvent: AppDependencyProvider.shared.wideEvent,
+                                              onboardingManager: onboardingManager
+        )
 
         // MARK: - UI-Dependent Services Setup
         // Initialize and configure services that depend on UI components
@@ -369,7 +372,8 @@ struct Launching: LaunchingHandling {
             featureFlagger: featureFlagger,
             voiceSearchHelper: voiceSearchHelper,
             appSettings: appSettings,
-            backgroundTaskManager: BackgroundTaskManager(featureFlagger: featureFlagger)
+            backgroundTaskManager: BackgroundTaskManager(featureFlagger: featureFlagger),
+            onboardingManager: onboardingManager
         )
     }
 

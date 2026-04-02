@@ -360,6 +360,8 @@ class MainViewController: UIViewController {
     private(set) var darkReaderFeatureSettings: DarkReaderFeatureSettings
     private let fireModePromotionEligibility: FireModePromotionCoordinating?
 
+    private(set) var onboardingManager: OnboardingManaging
+
     init(
         privacyConfigurationManager: PrivacyConfigurationManaging,
         bookmarksDatabase: CoreDataDatabase,
@@ -422,7 +424,8 @@ class MainViewController: UIViewController {
         voiceShortcutFeature: DuckAIVoiceShortcutFeatureProviding = DuckAIVoiceShortcutFeature(),
         toggleModeStorage: ToggleModeStoring = ToggleModeStorage(),
         fireModePromotionEligibility: FireModePromotionCoordinating? = nil,
-        duckAIOnboardingResumeStepStore: (any KeyedStoring<DuckAIOnboardingStoringKeys>)? = nil
+        duckAIOnboardingResumeStepStore: (any KeyedStoring<DuckAIOnboardingStoringKeys>)? = nil,
+        onboardingManager: OnboardingManaging
     ) {
         self.remoteMessagingActionHandler = remoteMessagingActionHandler
         self.remoteMessagingImageLoader = remoteMessagingImageLoader
@@ -490,6 +493,7 @@ class MainViewController: UIViewController {
         self.toggleModeStorage = toggleModeStorage
         self.fireModeCapability = FireModeCapability.create()
         self.fireModePromotionEligibility = fireModePromotionEligibility
+        self.onboardingManager = onboardingManager
 
         super.init(nibName: nil, bundle: nil)
         
@@ -666,7 +670,7 @@ class MainViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public)")
         loadFindInPage()
 
         productSurfaceTelemetry.dailyActiveUser()
@@ -2469,7 +2473,7 @@ class MainViewController: UIViewController {
         // Show the reminder only if users have not seen the Add to Dock promo.
         // iPhone users would have seen Add to Dock promo during the onboarding.
         // iPad users don't see the Add to Dock promo during the onboarding.
-        guard !OnboardingManager().userHasSeenAddToDockPromoDuringOnboarding else { return }
+        guard !onboardingManager.userHasSeenAddToDockPromoDuringOnboarding else { return }
         let feature = HomeRowReminder()
         if feature.showNow() {
             showNotification(title: UserText.homeRowReminderTitle, message: UserText.homeRowReminderMessage) { tapped in

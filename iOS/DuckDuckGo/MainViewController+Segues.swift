@@ -50,7 +50,7 @@ extension MainViewController {
     }
 
     func segueToDaxOnboarding(completion: (() -> Void)? = nil) {
-        Logger.lifecycle.debug(#function)
+        Logger.lifecycle.debug("~~~ \(#function, privacy: .public)")
         hideAllHighlightsIfNeeded()
 
         let controller: Onboarding = if featureFlagger.isFeatureOn(.onboardingRebranding) {
@@ -58,14 +58,16 @@ extension MainViewController {
                 onboardingPixelReporter: contextualOnboardingPixelReporter,
                 systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
                 daxDialogsManager: daxDialogsManager,
-                syncAutoRestoreHandler: syncAutoRestoreHandler
+                syncAutoRestoreHandler: syncAutoRestoreHandler,
+                onboardingManager: onboardingManager
             )
         } else {
             OnboardingIntroViewController.legacy(
                 onboardingPixelReporter: contextualOnboardingPixelReporter,
                 systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
                 daxDialogsManager: daxDialogsManager,
-                syncAutoRestoreHandler: syncAutoRestoreHandler
+                syncAutoRestoreHandler: syncAutoRestoreHandler,
+                onboardingManager: onboardingManager
             )
         }
         controller.delegate = self
