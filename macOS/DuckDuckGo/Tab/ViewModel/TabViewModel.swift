@@ -152,6 +152,7 @@ final class TabViewModel: NSObject {
         subscribeToPermissions()
         subscribeToPreferences()
         subscribeToWebViewDidFinishNavigation()
+        subscribeToYouTubeAdBlockAnimationTrigger()
         tab.$isLoading
             .assign(to: \.isLoading, onWeaklyHeld: self)
             .store(in: &cancellables)
@@ -514,6 +515,7 @@ final class TabViewModel: NSObject {
 
     let trackersAnimationTriggerPublisher = PassthroughSubject<Void, Never>()
     let privacyEntryPointIconUpdateTrigger = PassthroughSubject<Void, Never>()
+    let youtubeAdBlockAnimationTriggerPublisher = PassthroughSubject<Void, Never>()
 
     private var trackerAnimationTimer: Timer?
 
@@ -522,6 +524,18 @@ final class TabViewModel: NSObject {
         if let trackerInfo, !trackerInfo.trackersBlocked.isEmpty {
             self.trackersAnimationTriggerPublisher.send()
         }
+    }
+
+    private func subscribeToYouTubeAdBlockAnimationTrigger() {
+        tab.navigationDidEndPublisher
+            .sink { [weak self] tab in
+                guard let self,
+                      featureFlagger.isFeatureOn(.adBlockingExtension),
+                      case .url(let url, _, _) = tab.content,
+                      url.isPlayableYoutubeVideoContent else { return }
+                youtubeAdBlockAnimationTriggerPublisher.send()
+            }
+            .store(in: &cancellables)
     }
 
 }
