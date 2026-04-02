@@ -1862,12 +1862,17 @@ extension TabViewController: WKNavigationDelegate {
         tabModel.link = link
         delegate?.tabLoadingStateDidChange(tab: self)
 
+        if featureFlagger.isFeatureOn(.adBlockingExtension),
+           let url = url, url.isPlayableYoutubeVideoContent {
+            delegate?.tabDidRequestPresentingYouTubeAdBlockAnimation(tab: self)
+        }
+
         // Present the Dax dialog with a delay to mitigate issue where user script detec trackers after the dialog is show to the user
         // Debounce to avoid showing multiple animations on redirects. e.g. !image baby ducklings
         daxDialogsDebouncer.debounce(for: 0.8) { [weak self] in
             self?.showDaxDialogOrStartTrackerNetworksAnimationIfNeeded()
         }
-        
+
         // DuckPlayer finish loading actions
         duckPlayerNavigationHandler.handleDidFinishLoading(webView: webView)
 

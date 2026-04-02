@@ -4334,7 +4334,12 @@ extension MainViewController: TabDelegate {
         guard currentTab === tab else { return }
         viewCoordinator.omniBar?.startTrackersAnimation(privacyInfo, forDaxDialog: !isCollapsing)
     }
-    
+
+    func tabDidRequestPresentingYouTubeAdBlockAnimation(tab: TabViewController) {
+        guard currentTab === tab else { return }
+        viewCoordinator.omniBar?.showYouTubeAdBlockNotification()
+    }
+
     func tabDidRequestShowingMenuHighlighter(tab: TabViewController) {
         showMenuHighlighterIfNeeded()
     }
