@@ -282,7 +282,7 @@ final class AddressBarButtonsViewController: NSViewController {
 
     private var lastNotificationType: NavigationBarBadgeAnimationView.AnimationType?
     private var trackerAnimationDomainStateByTabID: [String: TrackerAnimationDomainState] = [:]
-    private var shouldSuppressTrackerAnimation = false
+    private var shouldSuppressNonAdBlockBadgeAnimations = false
     private let tld: TLD = NSApp.delegateTyped.tld
 
     private lazy var buttonsBadgeAnimator = {
@@ -533,6 +533,8 @@ final class AddressBarButtonsViewController: NSViewController {
         if case .youTubeAdBlockOn = type {
             guard featureFlagger.isFeatureOn(.adBlockingExtension) else { return }
             buttonsBadgeAnimator.cancelPendingAnimations()
+        } else if shouldSuppressNonAdBlockBadgeAnimations {
+            return
         }
 
         let priority: NavigationBarBadgeAnimator.AnimationPriority
@@ -651,7 +653,7 @@ final class AddressBarButtonsViewController: NSViewController {
                 stopAnimations()
                 lastNotificationType = nil
                 hasShieldAnimationCompleted = false
-                shouldSuppressTrackerAnimation = false
+                shouldSuppressNonAdBlockBadgeAnimations = false
                 updateTrackerAnimationDomainState(for: self.urlForTrackerAnimation(), tabID: self.tabViewModel?.tab.uuid)
                 updateBookmarkButtonImage()
                 updateButtons()
@@ -673,7 +675,7 @@ final class AddressBarButtonsViewController: NSViewController {
         youtubeAdBlockAnimationTriggerCancellable = tabViewModel?.youtubeAdBlockAnimationTriggerPublisher
             .sink { [weak self] _ in
                 guard let self else { return }
-                shouldSuppressTrackerAnimation = true
+                shouldSuppressNonAdBlockBadgeAnimations = true
                 showBadgeNotification(.youTubeAdBlockOn)
             }
     }
@@ -2387,7 +2389,6 @@ final class AddressBarButtonsViewController: NSViewController {
     }
 
     private func animateTrackers() {
-        guard !shouldSuppressTrackerAnimation else { return }
         guard privacyDashboardButton.isShown, let tabViewModel else { return }
 
         // Show tracker notification only once per eTLD+1 per domain visit
