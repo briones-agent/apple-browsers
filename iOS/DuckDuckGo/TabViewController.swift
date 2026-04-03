@@ -3236,11 +3236,7 @@ extension TabViewController: TrackerProtectionSubfeatureDelegate {
 
         if let detected = mapper.classifyResource(observation,
                                                    adClickAttributionVendor: subfeature.currentAdClickAttributionVendor) {
-            if detected.state == .blocked {
-                userScriptDetectedTracker(detected)
-            } else if !mapper.isSameSiteObservation(observation) {
-                privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: detected)
-            }
+            userScriptDetectedTracker(detected)
         } else if let thirdParty = mapper.makeThirdPartyRequest(from: observation) {
             privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: thirdParty)
         }

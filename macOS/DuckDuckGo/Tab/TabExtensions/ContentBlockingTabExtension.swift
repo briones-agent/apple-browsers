@@ -179,13 +179,9 @@ extension ContentBlockingTabExtension: TrackerProtectionSubfeatureDelegate {
 
         if let detected = mapper.classifyResource(observation,
                                                    adClickAttributionVendor: subfeature.currentAdClickAttributionVendor) {
-            if detected.state == .blocked {
-                trackersSubject.send(DetectedTracker(request: detected, type: .tracker))
-                if detected.ownerName == fbBlockingEnabledProvider.fbEntity {
-                    fbBlockingEnabledProvider.trackerDetected()
-                }
-            } else if !mapper.isSameSiteObservation(observation) {
-                trackersSubject.send(DetectedTracker(request: detected, type: .thirdPartyRequest))
+            trackersSubject.send(DetectedTracker(request: detected, type: .tracker))
+            if detected.state == .blocked && detected.ownerName == fbBlockingEnabledProvider.fbEntity {
+                fbBlockingEnabledProvider.trackerDetected()
             }
         } else if let thirdParty = mapper.makeThirdPartyRequest(from: observation) {
             trackersSubject.send(DetectedTracker(request: thirdParty, type: .thirdPartyRequest))
