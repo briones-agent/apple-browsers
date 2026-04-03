@@ -38,6 +38,8 @@ import Networking
 
 enum YouTubeAdBlockingStorageKeys: String, StorageKeyDescribing {
     case youTubeAdBlockingEnabled = "com_duckduckgo_ios_youTubeAdBlockingEnabled"
+
+    static let youTubeAdBlockingEnabledDidChangeNotification = Notification.Name("youTubeAdBlockingEnabledDidChange")
 }
 
 struct YouTubeAdBlockingKeys: StoringKeys {
@@ -659,8 +661,10 @@ final class SettingsViewModel: ObservableObject {
         Binding<Bool>(
             get: { self.state.youTubeAdBlockingEnabled },
             set: {
+                guard $0 != self.state.youTubeAdBlockingEnabled else { return }
                 try? self.youTubeAdBlockingStorage.set($0, for: \YouTubeAdBlockingKeys.youTubeAdBlockingEnabled)
                 self.state.youTubeAdBlockingEnabled = $0
+                NotificationCenter.default.post(name: YouTubeAdBlockingStorageKeys.youTubeAdBlockingEnabledDidChangeNotification, object: nil)
             }
         )
     }
