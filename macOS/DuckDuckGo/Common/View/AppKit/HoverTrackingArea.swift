@@ -75,7 +75,8 @@ final class HoverTrackingArea: NSTrackingArea {
     }()
 
     init(owner: some Hoverable) {
-        super.init(rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeInKeyWindow, .inVisibleRect], owner: owner, userInfo: nil)
+        let activation: NSTrackingArea.Options = WebView.isNSTrackingAlwaysActiveOnWebContent ? .activeAlways : .activeInKeyWindow
+        super.init(rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, activation, .inVisibleRect], owner: owner, userInfo: nil)
        _=Self.swizzleMouseExitedOnce
 
         observers = [
@@ -185,7 +186,7 @@ final class HoverTrackingArea: NSTrackingArea {
         guard let view else { return }
 
         if view.isMouseOver,
-           view.window?.isKeyWindow != true || view.isMouseLocationInsideBounds() != true,
+           (!WebView.isNSTrackingAlwaysActiveOnWebContent && view.window?.isKeyWindow != true) || view.isMouseLocationInsideBounds() != true,
            let event = NSApp.currentEvent {
 
             mouseExited(event)
