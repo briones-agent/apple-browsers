@@ -83,12 +83,16 @@ final class UserScripts: UserScriptsProvider {
                                                           currentCohorts: baseProps.currentCohorts,
                                                           trackerData: sourceProvider.trackerProtectionDataSource?.surrogateFilteredTrackerData)
         do {
+            let configGenerator = ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: AppDependencyProvider.shared.featureFlagger,
+                                                                               privacyConfigurationManager: sourceProvider.privacyConfigurationManager,
+                                                                               excludedFeatures: [PrivacyFeature.autoconsent.rawValue])
             let isolatedConfigGenerator = ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: AppDependencyProvider.shared.featureFlagger,
-                                                                                     privacyConfigurationManager: sourceProvider.privacyConfigurationManager)
+                                                                                       privacyConfigurationManager: sourceProvider.privacyConfigurationManager)
             contentScopeUserScript = try ContentScopeUserScript(sourceProvider.privacyConfigurationManager,
                                                                 properties: propsWithTrackerData,
                                                                 scriptContext: .contentScope,
-                                                                allowedNonisolatedFeatures: [PageContextUserScript.featureName, PrintingSubfeature.featureNameValue, TrackerProtectionSubfeature.featureNameValue])
+                                                                allowedNonisolatedFeatures: [PageContextUserScript.featureName, PrintingSubfeature.featureNameValue, TrackerProtectionSubfeature.featureNameValue],
+                                                                privacyConfigurationJSONGenerator: configGenerator)
             contentScopeUserScriptIsolated = try ContentScopeUserScript(sourceProvider.privacyConfigurationManager,
                                                                         properties: propsWithTrackerData,
                                                                         scriptContext: .contentScopeIsolated,
