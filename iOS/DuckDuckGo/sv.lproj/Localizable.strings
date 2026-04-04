@@ -1225,8 +1225,6 @@
 /* No comment provided by engineer. */
 "Custom URL: %@" = "Anpassad URL: %@";
 
-/* No comment provided by engineer. */
-
 /* Button label to select zip or html file for importing */
 "data.import.bookmarks.file-button" = "Importera bokmärkesfil ...";
 
@@ -2605,8 +2603,6 @@
 "No active subscriptions" = "Inga aktiva abonnemang";
 
 /* No comment provided by engineer. */
-
-/* No comment provided by engineer. */
 "No existing subscription found" = "Inget befintligt abonnemang hittades";
 
 /* No comment provided by engineer. */
@@ -2647,9 +2643,6 @@
 
 /* Text displayed on notification appearing in the address bar when the browser blocks trackers. The %d placeholder represents the number of trackers blocked. For languages which translation is longer than 30 characters, we should only translate 'Trackers', instead of 'Trackers Blocked'. Pluralization is handled by Localizable.stringsdict. */
 "omnibar.notification.trackers-blocked" = "%d Trackers";
-
-/* No comment provided by engineer. */
-"On App Store builds, this screen will only show if you're signed in as an internal user via **use-login.duckduckgo.com**." = "I App Store-versioner visas den här skärmen bara om du är inloggad som intern användare via **use-login.duckduckgo.com**.";
 
 /* Button on the Add to Dock tutorial screen of the onboarding, it will proceed to the next step of the onboarding. */
 "onboarding.addToDock.buttons.gotIt" = "Jag fattar";
@@ -2827,9 +2820,6 @@
 
 /* No comment provided by engineer. */
 "Opting Out..." = "Väljer bort ...";
-
-/* No comment provided by engineer. */
-"Override" = "Åsidosättning";
 
 /* Description for the feedback form when there is an issue with accessing the paid tier models */
 "paid-duck-ai.feedback-form.category.access-subscription-models" = "Det går inte att komma åt Duck.ai-modellerna för prenumeranter";
@@ -4129,6 +4119,12 @@
 
 /* Data syncing unavailable warning message */
 "sync.warning.data.syncing.disabled.upgrade.required" = "Tyvärr är synkronisering och säkerhetskopiering inte längre tillgängliga i den här appversionen. Uppdatera DuckDuckGo till den senaste versionen för att fortsätta.";
+
+/* Accessibility label for the close button on a tab cell */
+"tab.cell.closeButton.accessibility" = "Stäng flik";
+
+/* Accessibility label for the unread indicator on a tab cell */
+"tab.cell.unread.accessibility" = "Fliken oläst";
 
 /* Accessibility label on remove button */
 "tab.close.home" = "Stäng hemfliken";

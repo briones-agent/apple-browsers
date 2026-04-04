@@ -1225,8 +1225,6 @@
 /* No comment provided by engineer. */
 "Custom URL: %@" = "Персонализиран URL: %@";
 
-/* No comment provided by engineer. */
-
 /* Button label to select zip or html file for importing */
 "data.import.bookmarks.file-button" = "Импортиране на файл с отметки...";
 
@@ -2605,8 +2603,6 @@
 "No active subscriptions" = "Няма активни абонаменти";
 
 /* No comment provided by engineer. */
-
-/* No comment provided by engineer. */
 "No existing subscription found" = "Не е намерен съществуващ абонамент";
 
 /* No comment provided by engineer. */
@@ -2647,9 +2643,6 @@
 
 /* Text displayed on notification appearing in the address bar when the browser blocks trackers. The %d placeholder represents the number of trackers blocked. For languages which translation is longer than 30 characters, we should only translate 'Trackers', instead of 'Trackers Blocked'. Pluralization is handled by Localizable.stringsdict. */
 "omnibar.notification.trackers-blocked" = "%d Trackers";
-
-/* No comment provided by engineer. */
-"On App Store builds, this screen will only show if you're signed in as an internal user via **use-login.duckduckgo.com**." = "При версиите с App Store този екран ще се покаже само ако сте влезли като вътрешен потребител чрез **use-login.duckduckgo.com**.";
 
 /* Button on the Add to Dock tutorial screen of the onboarding, it will proceed to the next step of the onboarding. */
 "onboarding.addToDock.buttons.gotIt" = "Разбрах";
@@ -2827,9 +2820,6 @@
 
 /* No comment provided by engineer. */
 "Opting Out..." = "Отписване...";
-
-/* No comment provided by engineer. */
-"Override" = "Заместване";
 
 /* Description for the feedback form when there is an issue with accessing the paid tier models */
 "paid-duck-ai.feedback-form.category.access-subscription-models" = "Няма достъп до моделите на Duck.ai, достъпни само за абонати";
@@ -4129,6 +4119,12 @@
 
 /* Data syncing unavailable warning message */
 "sync.warning.data.syncing.disabled.upgrade.required" = "Съжаляваме, но функцията за синхронизиране и архивиране вече не се предлага в тази версия на приложението. Моля, актуализирайте DuckDuckGo до най-новата версия, за да продължите.";
+
+/* Accessibility label for the close button on a tab cell */
+"tab.cell.closeButton.accessibility" = "Затваряне на раздел";
+
+/* Accessibility label for the unread indicator on a tab cell */
+"tab.cell.unread.accessibility" = "Непрочетен раздел";
 
 /* Accessibility label on remove button */
 "tab.close.home" = "Затваряне на началния раздел";

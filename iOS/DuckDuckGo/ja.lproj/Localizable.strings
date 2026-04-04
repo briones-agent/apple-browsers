@@ -1225,8 +1225,6 @@
 /* No comment provided by engineer. */
 "Custom URL: %@" = "カスタムURL：%@";
 
-/* No comment provided by engineer. */
-
 /* Button label to select zip or html file for importing */
 "data.import.bookmarks.file-button" = "ブックマークファイルをインポート...";
 
@@ -2605,8 +2603,6 @@
 "No active subscriptions" = "アクティブなサブスクリプションはありません";
 
 /* No comment provided by engineer. */
-
-/* No comment provided by engineer. */
 "No existing subscription found" = "既存のサブスクリプションが見つかりません";
 
 /* No comment provided by engineer. */
@@ -2647,9 +2643,6 @@
 
 /* Text displayed on notification appearing in the address bar when the browser blocks trackers. The %d placeholder represents the number of trackers blocked. For languages which translation is longer than 30 characters, we should only translate 'Trackers', instead of 'Trackers Blocked'. Pluralization is handled by Localizable.stringsdict. */
 "omnibar.notification.trackers-blocked" = "%d Trackers";
-
-/* No comment provided by engineer. */
-"On App Store builds, this screen will only show if you're signed in as an internal user via **use-login.duckduckgo.com**." = "App Storeのビルドでは、この画面は**use-login.duckduckgo.com**で内部ユーザーとしてサインインしている場合にのみ表示されます。";
 
 /* Button on the Add to Dock tutorial screen of the onboarding, it will proceed to the next step of the onboarding. */
 "onboarding.addToDock.buttons.gotIt" = "了解";
@@ -2827,9 +2820,6 @@
 
 /* No comment provided by engineer. */
 "Opting Out..." = "オプトアウトしています...";
-
-/* No comment provided by engineer. */
-"Override" = "オーバーライド";
 
 /* Description for the feedback form when there is an issue with accessing the paid tier models */
 "paid-duck-ai.feedback-form.category.access-subscription-models" = "登録者限定のDuck.aiモデルにアクセスできない";
@@ -4129,6 +4119,12 @@
 
 /* Data syncing unavailable warning message */
 "sync.warning.data.syncing.disabled.upgrade.required" = "申し訳ありませんが、Sync & Backupはこのアプリバージョンでは利用できなくなりました。続行するには、DuckDuckGoを最新バージョンに更新してください。";
+
+/* Accessibility label for the close button on a tab cell */
+"tab.cell.closeButton.accessibility" = "タブを閉じる";
+
+/* Accessibility label for the unread indicator on a tab cell */
+"tab.cell.unread.accessibility" = "未読タブ";
 
 /* Accessibility label on remove button */
 "tab.close.home" = "ホームタブを閉じる";

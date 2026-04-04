@@ -1225,8 +1225,6 @@
 /* No comment provided by engineer. */
 "Custom URL: %@" = "Pielāgots URL: %@";
 
-/* No comment provided by engineer. */
-
 /* Button label to select zip or html file for importing */
 "data.import.bookmarks.file-button" = "Importēt grāmatzīmes failu...";
 
@@ -2605,8 +2603,6 @@
 "No active subscriptions" = "Nav aktīvu abonementu";
 
 /* No comment provided by engineer. */
-
-/* No comment provided by engineer. */
 "No existing subscription found" = "Nav atrasts neviens esošs abonements";
 
 /* No comment provided by engineer. */
@@ -2647,9 +2643,6 @@
 
 /* Text displayed on notification appearing in the address bar when the browser blocks trackers. The %d placeholder represents the number of trackers blocked. For languages which translation is longer than 30 characters, we should only translate 'Trackers', instead of 'Trackers Blocked'. Pluralization is handled by Localizable.stringsdict. */
 "omnibar.notification.trackers-blocked" = "%d Trackers";
-
-/* No comment provided by engineer. */
-"On App Store builds, this screen will only show if you're signed in as an internal user via **use-login.duckduckgo.com**." = "App Store versijās šis ekrāns tiks parādīts tikai tad, ja esi pierakstījies kā iekšējais lietotājs, izmantojot **use-login.duckduckgo.com**.";
 
 /* Button on the Add to Dock tutorial screen of the onboarding, it will proceed to the next step of the onboarding. */
 "onboarding.addToDock.buttons.gotIt" = "Sapratu";
@@ -2827,9 +2820,6 @@
 
 /* No comment provided by engineer. */
 "Opting Out..." = "Izvēlas atteikties...";
-
-/* No comment provided by engineer. */
-"Override" = "Ignorēt";
 
 /* Description for the feedback form when there is an issue with accessing the paid tier models */
 "paid-duck-ai.feedback-form.category.access-subscription-models" = "Nevaru piekļūt tikai abonentiem paredzētajiem Duck.ai modeļiem.";
@@ -4129,6 +4119,12 @@
 
 /* Data syncing unavailable warning message */
 "sync.warning.data.syncing.disabled.upgrade.required" = "Diemžēl sinhronizācija un dublēšana šajā lietotnes versijā vairs nav pieejama. Lai turpinātu, lūdzu, atjaunini DuckDuckGo uz jaunāko versiju.";
+
+/* Accessibility label for the close button on a tab cell */
+"tab.cell.closeButton.accessibility" = "Aizvērt cilni";
+
+/* Accessibility label for the unread indicator on a tab cell */
+"tab.cell.unread.accessibility" = "Nelasīta cilne";
 
 /* Accessibility label on remove button */
 "tab.close.home" = "Aizvērt sākuma cilni";

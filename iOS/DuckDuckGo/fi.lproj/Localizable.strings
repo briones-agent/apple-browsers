@@ -1225,8 +1225,6 @@
 /* No comment provided by engineer. */
 "Custom URL: %@" = "Mukautettu URL-osoite: %@";
 
-/* No comment provided by engineer. */
-
 /* Button label to select zip or html file for importing */
 "data.import.bookmarks.file-button" = "Tuo kirjanmerkkitiedosto...";
 
@@ -2605,8 +2603,6 @@
 "No active subscriptions" = "Ei aktiivisia tilauksia";
 
 /* No comment provided by engineer. */
-
-/* No comment provided by engineer. */
 "No existing subscription found" = "Olemassa olevaa tilausta ei löytynyt";
 
 /* No comment provided by engineer. */
@@ -2647,9 +2643,6 @@
 
 /* Text displayed on notification appearing in the address bar when the browser blocks trackers. The %d placeholder represents the number of trackers blocked. For languages which translation is longer than 30 characters, we should only translate 'Trackers', instead of 'Trackers Blocked'. Pluralization is handled by Localizable.stringsdict. */
 "omnibar.notification.trackers-blocked" = "%d Trackers";
-
-/* No comment provided by engineer. */
-"On App Store builds, this screen will only show if you're signed in as an internal user via **use-login.duckduckgo.com**." = "App Storen versioissa tämä näyttö näkyy vain, jos olet kirjautunut sisään sisäisenä käyttäjänä osoitteen **use-login.duckduckgo.com** kautta.";
 
 /* Button on the Add to Dock tutorial screen of the onboarding, it will proceed to the next step of the onboarding. */
 "onboarding.addToDock.buttons.gotIt" = "Selvä";
@@ -2827,9 +2820,6 @@
 
 /* No comment provided by engineer. */
 "Opting Out..." = "Kieltäytyminen...";
-
-/* No comment provided by engineer. */
-"Override" = "Ohitus";
 
 /* Description for the feedback form when there is an issue with accessing the paid tier models */
 "paid-duck-ai.feedback-form.category.access-subscription-models" = "En voi käyttää tilaajille tarkoitettuja Duck.ai-malleja.";
@@ -4129,6 +4119,12 @@
 
 /* Data syncing unavailable warning message */
 "sync.warning.data.syncing.disabled.upgrade.required" = "Sync & Backup ei valitettavasti ole käytettävissä tässä sovellusversiossa. Päivitä DuckDuckGo uusimpaan versioon jatkaaksesi.";
+
+/* Accessibility label for the close button on a tab cell */
+"tab.cell.closeButton.accessibility" = "Sulje välilehti";
+
+/* Accessibility label for the unread indicator on a tab cell */
+"tab.cell.unread.accessibility" = "Lukematon välilehti";
 
 /* Accessibility label on remove button */
 "tab.close.home" = "Sulje koti-välilehti";
