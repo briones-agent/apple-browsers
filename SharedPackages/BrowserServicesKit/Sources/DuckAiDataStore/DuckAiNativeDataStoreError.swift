@@ -24,4 +24,6 @@ public enum DuckAiNativeDataStoreError: Error {
     case fileReadError(Error)
     case fileNotFound(String)
     case directoryCreationFailed(Error)
+    case fileEncryptionError
+    case keychainError(status: OSStatus)
 }
