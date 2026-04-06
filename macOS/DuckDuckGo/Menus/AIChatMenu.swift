@@ -173,35 +173,41 @@ final class AIChatMenu: NSMenu {
 
     @objc private func newChatTapped() {
         actions.openNewChat()
-        PixelKit.fire(AIChatPixel.aiChatNewChatMainMenu, frequency: .dailyAndStandard)
+        let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatNewChatMoreOptionsMenu : .aiChatNewChatMainMenu
+        PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }
 
     @objc private func newVoiceChatTapped() {
         actions.openNewVoiceChat()
-        PixelKit.fire(AIChatPixel.aiChatNewVoiceChatMainMenu, frequency: .dailyAndStandard)
+        let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatNewVoiceChatMoreOptionsMenu : .aiChatNewVoiceChatMainMenu
+        PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }
 
     @objc private func newImageChatTapped() {
         actions.openNewImageChat()
-        PixelKit.fire(AIChatPixel.aiChatNewImageChatMainMenu, frequency: .dailyAndStandard)
+        let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatNewImageChatMoreOptionsMenu : .aiChatNewImageChatMainMenu
+        PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }
 
     @objc private func chatItemTapped(_ sender: NSMenuItem) {
         guard let chat = sender.representedObject as? AIChatSuggestion else { return }
         actions.openChat(chat)
-        PixelKit.fire(AIChatPixel.aiChatRecentChatSelectedMainMenu, frequency: .dailyAndStandard)
+        let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatRecentChatSelectedMoreOptionsMenu : .aiChatRecentChatSelectedMainMenu
+        PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }
 
     @objc private func viewAllChatsTapped() {
         actions.viewAllChats()
-        PixelKit.fire(AIChatPixel.aiChatViewAllChatsMainMenu, frequency: .dailyAndStandard)
+        let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatViewAllChatsMoreOptionsMenu : .aiChatViewAllChatsMainMenu
+        PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }
 
     @objc private func deleteAllChatsTapped() {
         var dialog = AIChatDeleteChatsDialog(chatCount: chatItems.count)
         dialog.confirmed = { [weak self] in
             guard let self else { return }
-            PixelKit.fire(AIChatPixel.aiChatDeleteAllChatsMainMenu, frequency: .dailyAndStandard)
+            let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatDeleteAllChatsMoreOptionsMenu : .aiChatDeleteAllChatsMainMenu
+            PixelKit.fire(pixel, frequency: .dailyAndStandard)
             Task { @MainActor in
                 await self.actions.deleteAllChats()
             }

@@ -756,6 +756,7 @@ private final class DummyAIChatHistoryCleaner: AIChatHistoryCleaning {
 class DummyAIChatConfig: AIChatMenuVisibilityConfigurable {
     var shouldDisplayNewTabPageShortcut = false
     var shouldDisplayApplicationMenuShortcut = false
+    var shouldDisplayMoreOptionsMenuShortcut = false
     var shouldDisplayAddressBarShortcut = false
     var shouldDisplayAddressBarShortcutWhenTyping = false
     var shouldDisplayAnyAIChatFeature = false

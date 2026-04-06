@@ -267,6 +267,26 @@ enum AIChatPixel: PixelKitEvent {
     /// Event Trigger: User confirms Delete All Chats from the main menu
     case aiChatDeleteAllChatsMainMenu
 
+    // MARK: - More options menu
+
+    /// Event Trigger: User opens a new Duck.ai chat from the more options menu
+    case aiChatNewChatMoreOptionsMenu
+
+    /// Event Trigger: User opens a new Duck.ai voice chat from the more options menu
+    case aiChatNewVoiceChatMoreOptionsMenu
+
+    /// Event Trigger: User opens a new Duck.ai image chat from the more options menu
+    case aiChatNewImageChatMoreOptionsMenu
+
+    /// Event Trigger: User selects a recent chat from the more options menu
+    case aiChatRecentChatSelectedMoreOptionsMenu
+
+    /// Event Trigger: User clicks View All Chats in the more options menu
+    case aiChatViewAllChatsMoreOptionsMenu
+
+    /// Event Trigger: User confirms Delete All Chats from the more options menu
+    case aiChatDeleteAllChatsMoreOptionsMenu
+
     // MARK: - Daily
 
     /// Event Trigger: Fires daily when the app becomes active, reporting whether AI Chat features are enabled or disabled
@@ -429,6 +449,18 @@ enum AIChatPixel: PixelKitEvent {
             return "aichat_view_all_chats_main_menu"
         case .aiChatDeleteAllChatsMainMenu:
             return "aichat_delete_all_chats_main_menu"
+        case .aiChatNewChatMoreOptionsMenu:
+            return "aichat_new_chat_more_options_menu"
+        case .aiChatNewVoiceChatMoreOptionsMenu:
+            return "aichat_new_voice_chat_more_options_menu"
+        case .aiChatNewImageChatMoreOptionsMenu:
+            return "aichat_new_image_chat_more_options_menu"
+        case .aiChatRecentChatSelectedMoreOptionsMenu:
+            return "aichat_recent_chat_selected_more_options_menu"
+        case .aiChatViewAllChatsMoreOptionsMenu:
+            return "aichat_view_all_chats_more_options_menu"
+        case .aiChatDeleteAllChatsMoreOptionsMenu:
+            return "aichat_delete_all_chats_more_options_menu"
         case .aiChatIsEnabled:
             return "aichat_is_enabled"
         }
@@ -497,7 +529,13 @@ enum AIChatPixel: PixelKitEvent {
                 .aiChatNewImageChatMainMenu,
                 .aiChatRecentChatSelectedMainMenu,
                 .aiChatViewAllChatsMainMenu,
-                .aiChatDeleteAllChatsMainMenu:
+                .aiChatDeleteAllChatsMainMenu,
+                .aiChatNewChatMoreOptionsMenu,
+                .aiChatNewVoiceChatMoreOptionsMenu,
+                .aiChatNewImageChatMoreOptionsMenu,
+                .aiChatRecentChatSelectedMoreOptionsMenu,
+                .aiChatViewAllChatsMoreOptionsMenu,
+                .aiChatDeleteAllChatsMoreOptionsMenu:
             return nil
         case .aiChatIsEnabled(let isEnabled):
             return ["is_enabled": isEnabled ? "1" : "0"]
@@ -606,6 +644,12 @@ enum AIChatPixel: PixelKitEvent {
                 .aiChatRecentChatSelectedMainMenu,
                 .aiChatViewAllChatsMainMenu,
                 .aiChatDeleteAllChatsMainMenu,
+                .aiChatNewChatMoreOptionsMenu,
+                .aiChatNewVoiceChatMoreOptionsMenu,
+                .aiChatNewImageChatMoreOptionsMenu,
+                .aiChatRecentChatSelectedMoreOptionsMenu,
+                .aiChatViewAllChatsMoreOptionsMenu,
+                .aiChatDeleteAllChatsMoreOptionsMenu,
                 .aiChatIsEnabled:
             return [.pixelSource]
         }

@@ -560,16 +560,17 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
 
     @MainActor
     private func makeAIChatMenu() -> AIChatMenu {
+        let remoteSettings = AIChatRemoteSettings()
         let actions = AIChatMenu.Actions(
             openNewChat: {
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
             },
             openNewVoiceChat: {
-                let url = AIChatURLParameters.voiceModeURL(from: AIChatRemoteSettings().aiChatURL)
+                let url = AIChatURLParameters.voiceModeURL(from: remoteSettings.aiChatURL)
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
             },
             openNewImageChat: {
-                let url = AIChatURLParameters.imageModeURL(from: AIChatRemoteSettings().aiChatURL)
+                let url = AIChatURLParameters.imageModeURL(from: remoteSettings.aiChatURL)
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
             },
             openChat: { suggestion in
@@ -584,6 +585,12 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
             deleteAllChats: {
                 if case .failure(let error) = await NSApp.delegateTyped.aiChatHistoryCleaner.cleanAIChatHistory() {
                     Logger.aiChat.error("Failed to delete all Duck.ai chats: \(error.localizedDescription)")
+                    return
+                }
+                for windowController in Application.appDelegate.windowControllersManager.mainWindowControllers {
+                    for tab in windowController.mainViewController.tabCollectionViewModel.tabs where tab.url?.isDuckAIURL == true {
+                        tab.reload()
+                    }
                 }
             }
         )

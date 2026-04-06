@@ -149,6 +149,49 @@ final class AIChatMenuTests: XCTestCase {
         XCTAssertEqual(suggestionsReader.receivedMaxChats, .max)
     }
 
+    // MARK: - Action handlers
+
+    func testNewChatTappedCallsAction() {
+        let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
+        let item = menu.items.first { $0.title == UserText.aiChatMenuNewChat }!
+        menu.performActionForItem(at: menu.index(of: item))
+        XCTAssertTrue(openNewChatCalled)
+    }
+
+    func testNewVoiceChatTappedCallsAction() {
+        let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
+        let item = menu.items.first { $0.title == UserText.aiChatMenuNewVoiceChat }!
+        menu.performActionForItem(at: menu.index(of: item))
+        XCTAssertTrue(openNewVoiceChatCalled)
+    }
+
+    func testNewImageChatTappedCallsAction() {
+        let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
+        let item = menu.items.first { $0.title == UserText.aiChatMenuNewImageChat }!
+        menu.performActionForItem(at: menu.index(of: item))
+        XCTAssertTrue(openNewImageChatCalled)
+    }
+
+    func testViewAllChatsTappedCallsAction() {
+        let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
+        let item = menu.items.first { $0.title == UserText.aiChatMenuViewAllChats }!
+        menu.performActionForItem(at: menu.index(of: item))
+        XCTAssertTrue(viewAllChatsCalled)
+    }
+
+    func testChatItemTappedCallsOpenChatWithCorrectSuggestion() async {
+        let chat = makeChat(chatId: "abc", title: "My Chat")
+        suggestionsReader.recentChats = [chat]
+
+        let menu = AIChatMenu(suggestionsReader: suggestionsReader, actions: actions)
+        menu.update()
+        await fulfillment(of: [suggestionsReader.fetchExpectation], timeout: 1)
+
+        let item = menu.items.first { $0.title == "My Chat" }!
+        menu.performActionForItem(at: menu.index(of: item))
+        XCTAssertEqual(openedChat?.chatId, "abc")
+    }
+
     // MARK: - Private helpers
 
     private func makeChat(chatId: String, title: String, timestamp: Date = .distantPast) -> AIChatSuggestion {

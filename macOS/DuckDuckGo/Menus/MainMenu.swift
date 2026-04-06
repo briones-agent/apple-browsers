@@ -1205,16 +1205,17 @@ final class MainMenu: NSMenu {
     }
 
     @MainActor private func makeAIChatMenu() -> AIChatMenu {
+        let remoteSettings = AIChatRemoteSettings()
         let actions = AIChatMenu.Actions(
             openNewChat: {
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
             },
             openNewVoiceChat: {
-                let url = AIChatURLParameters.voiceModeURL(from: AIChatRemoteSettings().aiChatURL)
+                let url = AIChatURLParameters.voiceModeURL(from: remoteSettings.aiChatURL)
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
             },
             openNewImageChat: {
-                let url = AIChatURLParameters.imageModeURL(from: AIChatRemoteSettings().aiChatURL)
+                let url = AIChatURLParameters.imageModeURL(from: remoteSettings.aiChatURL)
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
             },
             openChat: { suggestion in
@@ -1224,7 +1225,6 @@ final class MainMenu: NSMenu {
                 )
             },
             viewAllChats: {
-                // TODO: Replace .newChat with the correct view-all-chats trigger once URL is confirmed with the team
                 NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
             },
             deleteAllChats: { [weak self] in
