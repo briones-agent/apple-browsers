@@ -16,12 +16,14 @@
 //  limitations under the License.
 //
 
+import AppKit
 import SwiftUI
 import SwiftUIExtensions
 
 struct AIChatDeleteChatsDialog: ModalView {
 
     let chatCount: Int
+    @ObservedObject private var themeManager: ThemeManager = NSApp.delegateTyped.themeManager
     @Environment(\.dismiss) private var dismiss
 
     var confirmed: (() -> Void)?
@@ -69,6 +71,6 @@ struct AIChatDeleteChatsDialog: ModalView {
         }
         .padding(20)
         .frame(width: 330)
-        .background(Color(designSystemColor: .surfaceSecondary))
+        .background(Color(designSystemColor: .surfaceSecondary, palette: themeManager.designColorPalette))
     }
 }
