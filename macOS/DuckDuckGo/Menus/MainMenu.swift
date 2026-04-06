@@ -1205,40 +1205,11 @@ final class MainMenu: NSMenu {
     }
 
     @MainActor private func makeAIChatMenu() -> AIChatMenu {
-        let remoteSettings = AIChatRemoteSettings()
-        let actions = AIChatMenu.Actions(
-            openNewChat: {
-                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
-            },
-            openNewVoiceChat: {
-                let url = AIChatURLParameters.voiceModeURL(from: remoteSettings.aiChatURL)
-                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
-            },
-            openNewImageChat: {
-                let url = AIChatURLParameters.imageModeURL(from: remoteSettings.aiChatURL)
-                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
-            },
-            openChat: { suggestion in
-                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(
-                    with: .existingChat(chatId: suggestion.chatId),
-                    behavior: .currentTab
-                )
-            },
-            viewAllChats: {
-                NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
-            },
-            deleteAllChats: { [weak self] in
-                guard let self else { return }
-                if case .failure(let error) = await aiChatHistoryCleaner.cleanAIChatHistory() {
-                    Logger.aiChat.error("Failed to delete all Duck.ai chats: \(error.localizedDescription)")
-                    return
-                }
-                for windowController in Application.appDelegate.windowControllersManager.mainWindowControllers {
-                    for tab in windowController.mainViewController.tabCollectionViewModel.tabs where tab.url?.isDuckAIURL == true {
-                        tab.reload()
-                    }
-                }
-            }
+        let actions = AIChatMenu.Actions.makeDefault(
+            remoteSettings: AIChatRemoteSettings(),
+            tabOpener: NSApp.delegateTyped.aiChatTabOpener,
+            historyCleaner: aiChatHistoryCleaner,
+            windowControllersManager: Application.appDelegate.windowControllersManager
         )
         return AIChatMenu(suggestionsReader: aiChatSuggestionsReader, actions: actions, viewAllChatsThreshold: 10)
     }

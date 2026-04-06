@@ -18,7 +18,9 @@
 
 import AIChat
 import AppKit
+import Common
 import DesignResourcesKitIcons
+import OSLog
 import PixelKit
 import SwiftUI
 
@@ -213,5 +215,50 @@ final class AIChatMenu: NSMenu {
             }
         }
         dialog.show()
+    }
+}
+
+// MARK: - Default actions factory
+
+extension AIChatMenu.Actions {
+
+    @MainActor
+    static func makeDefault(
+        remoteSettings: AIChatRemoteSettings,
+        tabOpener: AIChatTabOpening,
+        historyCleaner: AIChatHistoryCleaning,
+        windowControllersManager: WindowControllersManager
+    ) -> AIChatMenu.Actions {
+        AIChatMenu.Actions(
+            openNewChat: {
+                tabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
+            },
+            openNewVoiceChat: {
+                let url = AIChatURLParameters.voiceModeURL(from: remoteSettings.aiChatURL)
+                tabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
+            },
+            openNewImageChat: {
+                let url = AIChatURLParameters.imageModeURL(from: remoteSettings.aiChatURL)
+                tabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
+            },
+            openChat: { suggestion in
+                tabOpener.openAIChatTab(with: .existingChat(chatId: suggestion.chatId), behavior: .currentTab)
+            },
+            viewAllChats: {
+                // TODO: Replace .newChat with the correct view-all-chats trigger once URL is confirmed with the team
+                tabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
+            },
+            deleteAllChats: {
+                if case .failure(let error) = await historyCleaner.cleanAIChatHistory() {
+                    Logger.aiChat.error("Failed to delete all Duck.ai chats: \(error.localizedDescription)")
+                    return
+                }
+                for windowController in windowControllersManager.mainWindowControllers {
+                    for tab in windowController.mainViewController.tabCollectionViewModel.tabs where tab.url?.isDuckAIURL == true {
+                        tab.reload()
+                    }
+                }
+            }
+        )
     }
 }

@@ -22,7 +22,6 @@ import SwiftUIExtensions
 
 struct AIChatDeleteChatsDialog: ModalView {
 
-    let chatCount: Int
     @ObservedObject private var themeManager: ThemeManager = NSApp.delegateTyped.themeManager
     @Environment(\.dismiss) private var dismiss
 
