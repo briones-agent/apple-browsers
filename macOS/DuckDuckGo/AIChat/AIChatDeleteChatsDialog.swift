@@ -26,16 +26,12 @@ struct AIChatDeleteChatsDialog: ModalView {
 
     var confirmed: (() -> Void)?
 
-    var title: String {
-        chatCount > 2 ? UserText.aiChatMenuDeleteChatsDialogTitle(count: chatCount) : UserText.aiChatMenuDeleteAllChatsDialogTitle
-    }
-
     var body: some View {
         VStack(spacing: 16) {
             Image(.fireChat)
 
             VStack(spacing: 8) {
-                Text(title)
+                Text(UserText.aiChatMenuDeleteAllChatsDialogTitle)
                     .multilineTextAlignment(.center)
                     .fixMultilineScrollableText()
                     .font(.system(size: 15).weight(.semibold))

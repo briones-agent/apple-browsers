@@ -625,12 +625,8 @@ struct UserText {
     static let aiChatMenuViewAllChats = NSLocalizedString("duckai.menu.view-all-chats", value: "View All Chats...", comment: "Duck.ai main menu item to view all chats")
     static let aiChatMenuDeleteAllChats = NSLocalizedString("duckai.menu.delete-all-chats", value: "Delete All Chats...", comment: "Duck.ai main menu item to delete all chat history")
     static let aiChatMenuDeleteAllChatsAlertTitle = NSLocalizedString("duckai.menu.delete-all-chats.alert-title", value: "Delete All Duck.ai Chats?", comment: "Title of the confirmation alert before deleting all Duck.ai chats")
-    static let aiChatMenuDeleteAllChatsDialogTitle = NSLocalizedString("duckai.menu.delete-all-chats.dialog-title", value: "Delete all chats?", comment: "Title of the custom delete dialog when there are 2 or fewer chats to delete")
-    static func aiChatMenuDeleteChatsDialogTitle(count: Int) -> String {
-        let format = NSLocalizedString("duckai.menu.delete-all-chats.dialog-title-count", value: "Delete %d chats?", comment: "Title of the custom delete dialog showing the number of chats to be deleted (shown when count > 2)")
-        return String(format: format, count)
-    }
-    static let aiChatMenuDeleteAllChatsAlertMessage = NSLocalizedString("duckai.menu.delete-all-chats.alert-message", value: "This will delete all your chats. This cannot be undone.", comment: "Message body of the confirmation dialog before deleting all Duck.ai chats")
+    static let aiChatMenuDeleteAllChatsDialogTitle = NSLocalizedString("duckai.menu.delete-all-chats.dialog-title", value: "Delete Chats", comment: "Title of the custom delete dialog when there are 2 or fewer chats to delete")
+    static let aiChatMenuDeleteAllChatsAlertMessage = NSLocalizedString("duckai.menu.delete-all-chats.alert-message", value: "This will permanently delete all your Duck.ai chats.", comment: "Message body of the confirmation dialog before deleting all Duck.ai chats")
     static let aiChatMenuDeleteAllChatsConfirmButton = NSLocalizedString("duckai.menu.delete-all-chats.confirm-button", value: "Delete Chats", comment: "Confirm button in the Delete All Duck.ai Chats alert")
 
     static let aiChatAddressBarTrustedIndicator = NSLocalizedString("aichat.address-bar.trusted-indicator", value: "Duck.ai", comment: "Label for the AI Chat displayed in the address bar")

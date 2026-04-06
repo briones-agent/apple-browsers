@@ -26030,7 +26030,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "This will delete all your chats. This cannot be undone."
+            "value" : "This will permanently delete all your Duck.ai chats."
           }
         }
       }
@@ -26066,19 +26066,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Delete all chats?"
-          }
-        }
-      }
-    },
-    "duckai.menu.delete-all-chats.dialog-title-count" : {
-      "comment" : "Title of the custom delete dialog showing the number of chats to be deleted (shown when count > 2)",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %d chats?"
+            "value" : "Delete Chats"
           }
         }
       }
