@@ -219,7 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let aiChatPreferences: AIChatPreferences
     private(set) var aiChatHistoryCleaner: AIChatHistoryCleaning!
 
-    private(set) lazy var aiChatSuggestionsReader: AIChatSuggestionsReading = MainActor.assumeIsolated {
+    private(set) lazy var aiChatSuggestionsReader: AIChatSuggestionsReading = MainActor.assumeMainThread {
         AIChatSuggestionsReader(
             suggestionsReader: SuggestionsReader(
                 featureFlagger: featureFlagger,

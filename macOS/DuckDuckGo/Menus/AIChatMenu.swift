@@ -205,7 +205,7 @@ final class AIChatMenu: NSMenu {
     }
 
     @objc private func deleteAllChatsTapped() {
-        var dialog = AIChatDeleteChatsDialog(chatCount: chatItems.count)
+        var dialog = AIChatDeleteChatsDialog()
         dialog.confirmed = { [weak self] in
             guard let self else { return }
             let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatDeleteAllChatsMoreOptionsMenu : .aiChatDeleteAllChatsMainMenu
@@ -245,7 +245,6 @@ extension AIChatMenu.Actions {
                 tabOpener.openAIChatTab(with: .existingChat(chatId: suggestion.chatId), behavior: .currentTab)
             },
             viewAllChats: {
-                // TODO: Replace .newChat with the correct view-all-chats trigger once URL is confirmed with the team
                 tabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
             },
             deleteAllChats: {
