@@ -192,9 +192,9 @@ final class AIChatViewAllChatsRowView: NSView {
         } else {
             backgroundLayer.backgroundColor = NSColor.clear.cgColor
             titleLabel.textColor = Constants.textColor
-            openDuckAILabel.textColor = Constants.secondaryTextColor
+            openDuckAILabel.textColor = themeProvider.accentPrimaryColor
             iconImageView.contentTintColor = Constants.iconColor
-            arrowImageView.contentTintColor = Constants.iconColor
+            arrowImageView.contentTintColor = themeProvider.accentPrimaryColor
             keyboardShortcutView.isHighlighted = false
         }
 
