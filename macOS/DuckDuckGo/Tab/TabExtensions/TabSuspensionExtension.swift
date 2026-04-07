@@ -54,8 +54,14 @@ final class TabSuspensionExtension {
         // feature flag on
         guard featureFlagger.isFeatureOn(.tabSuspension) else { return false }
 
-        // only URLs, except Duck Player, SERP and Duck.ai
-        guard case let .url(url, _, _) = tabContent, !url.isDuckPlayer, !url.isDuckDuckGoSearch, !url.isDuckAIURL else { return false }
+        // only URL tab content
+        guard case let .url(url, _, _) = tabContent else { return false }
+
+        // only HTTP/HTTPS (this skips Duck Player which is duck://)
+        guard url.navigationalScheme?.isHypertextScheme == true else { return false }
+
+        // skip Duck.ai
+        guard !url.isDuckAIURL else { return false }
 
         // domain not in exceptions list
         guard privacyConfigurationManager.privacyConfig.isFeature(.tabSuspension, enabledForDomain: url.host) else { return false }

@@ -120,6 +120,19 @@ final class TabSuspensionExtensionTests: XCTestCase {
     }
 
     @MainActor
+    func testWhenContentIsFileURL_ThenCanBeSuspendedIsFalse() throws {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        sut = makeSUT()
+
+        let fileURL = try XCTUnwrap(URL(string: "file:///Users/test/document.html"))
+        let webView = MockTabSuspensionWebView()
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(fileURL, credential: nil, source: .link))
+
+        XCTAssertFalse(sut.canBeSuspended)
+    }
+
+    @MainActor
     func testWhenContentIsDuckPlayerURL_ThenCanBeSuspendedIsFalse() throws {
         featureFlagger.enabledFeatureFlags = [.tabSuspension]
         sut = makeSUT()
@@ -128,6 +141,19 @@ final class TabSuspensionExtensionTests: XCTestCase {
         let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.url(duckPlayerURL, credential: nil, source: .link))
+
+        XCTAssertFalse(sut.canBeSuspended)
+    }
+
+    @MainActor
+    func testWhenContentIsDuckAIURL_ThenCanBeSuspendedIsFalse() throws {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        sut = makeSUT()
+
+        let duckAIURL = try XCTUnwrap(URL(string: "https://duck.ai"))
+        let webView = MockTabSuspensionWebView()
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(duckAIURL, credential: nil, source: .link))
 
         XCTAssertFalse(sut.canBeSuspended)
     }
