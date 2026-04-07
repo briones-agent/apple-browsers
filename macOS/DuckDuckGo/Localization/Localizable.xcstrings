@@ -26155,18 +26155,6 @@
         }
       }
     },
-    "duckai.menu.delete-all-chats.alert-title" : {
-      "comment" : "Title of the confirmation alert before deleting all Duck.ai chats",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete All Duck.ai Chats?"
-          }
-        }
-      }
-    },
     "duckai.menu.delete-all-chats.confirm-button" : {
       "comment" : "Confirm button in the Delete All Duck.ai Chats alert",
       "extractionState" : "extracted_with_value",
