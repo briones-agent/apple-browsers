@@ -287,6 +287,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213489080183740
     case webViewLookUpAction
 
+    /// Autoplay policy control via WKWebpagePreferences
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213734484627619
+    case autoplayPolicy
+
     /// Window Semaphore Fullscreen Behavior Flag
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213585076410725?focus=true
     case semaphoreAlwaysVisible
@@ -330,6 +334,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// Enables the Duck.ai submenu in the more options (hamburger) menu (macOS only, disabled by default)
     /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1213833143996470
     case aiChatMoreOptionsMenuShortcut
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213973058005627?focus=true
+    case aiChatSidebarAboutSchemeNavigationFix
 
     case aiChatNativeStorage
 }
@@ -554,12 +561,19 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .disabled)
         case .tabSuspensionDebugging:
             Config(source: .disabled)
+<<<<<<< HEAD
         case .aiChatMoreOptionsMenuShortcut:
             Config(defaultValue: .disabled, source: .remoteReleasable(.subfeature(AIChatSubfeature.moreOptionsMenuShortcut)), category: .duckAI)
         case .aiChatMainMenuShortcut:
             Config(defaultValue: .disabled, source: .remoteReleasable(.subfeature(AIChatSubfeature.mainMenuShortcut)), category: .duckAI)
+=======
+        case .aiChatSidebarAboutSchemeNavigationFix:
+            Config(defaultValue: .enabled, source: .remoteReleasable(.subfeature(AIChatSubfeature.sidebarAboutSchemeNavigationFix)), category: .duckAI)
+>>>>>>> main
         case .aiChatNativeStorage:
             Config(source: .remoteReleasable(.subfeature(AIChatSubfeature.nativeStorage)), category: .duckAI)
+        case .autoplayPolicy:
+            Config(defaultValue: .disabled, source: .remoteReleasable(.subfeature(MacOSBrowserConfigSubfeature.autoplayPolicy)), supportsLocalOverriding: true)
         }
     }
 
