@@ -566,7 +566,7 @@ final class MoreOptionsMenu: NSMenu, NSMenuDelegate {
             historyCleaner: NSApp.delegateTyped.aiChatHistoryCleaner,
             windowControllersManager: Application.appDelegate.windowControllersManager
         )
-        return AIChatMenu(suggestionsReader: aiChatSuggestionsReader, actions: actions, maxChatItems: 10, origin: .moreOptionsMenu)
+        return AIChatMenu(suggestionsReader: aiChatSuggestionsReader, actions: actions, maxChatItems: 8, origin: .moreOptionsMenu)
     }
 
     @MainActor

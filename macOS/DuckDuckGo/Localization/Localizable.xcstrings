@@ -26613,7 +26613,6 @@
     },
     "duckai.menu.open-duck-ai" : {
       "comment" : "Duck.ai menu item to open Duck.ai",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringUnit" : {

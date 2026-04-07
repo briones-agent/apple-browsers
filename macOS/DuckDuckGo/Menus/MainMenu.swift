@@ -1211,7 +1211,7 @@ final class MainMenu: NSMenu {
             historyCleaner: aiChatHistoryCleaner,
             windowControllersManager: Application.appDelegate.windowControllersManager
         )
-        return AIChatMenu(suggestionsReader: aiChatSuggestionsReader, actions: actions, maxChatItems: 10)
+        return AIChatMenu(suggestionsReader: aiChatSuggestionsReader, actions: actions, maxChatItems: 8)
     }
 
     private func setupAIChatMenu() {
