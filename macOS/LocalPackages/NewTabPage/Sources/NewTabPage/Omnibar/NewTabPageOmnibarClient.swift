@@ -100,13 +100,10 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             showAiSetting: configProvider.isAIChatSettingVisible,
             showCustomizePopover: configProvider.showCustomizePopover,
             enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled,
-<<<<<<< HEAD
-            showViewAllAiChats: configProvider.showViewAllAiChats
-=======
+            showViewAllAiChats: configProvider.showViewAllAiChats,
             enableAiChatTools: configProvider.isAIChatToolsEnabled,
             selectedModelId: configProvider.selectedModelId,
             aiModelSections: aiModelSections
->>>>>>> main
         )
     }
 
@@ -140,13 +137,10 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             showAiSetting: configProvider.isAIChatSettingVisible,
             showCustomizePopover: configProvider.showCustomizePopover,
             enableRecentAiChats: configProvider.isAIChatRecentChatsEnabled,
-<<<<<<< HEAD
-            showViewAllAiChats: configProvider.showViewAllAiChats
-=======
+            showViewAllAiChats: configProvider.showViewAllAiChats,
             enableAiChatTools: configProvider.isAIChatToolsEnabled,
             selectedModelId: configProvider.selectedModelId,
             aiModelSections: modelsProvider?.lastFetchedSections
->>>>>>> main
         )
         pushMessage(named: MessageName.onConfigUpdate.rawValue, params: config)
     }
