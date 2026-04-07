@@ -31,13 +31,24 @@ final class TabSuspensionExtension {
     private let featureFlagger: FeatureFlagger
 
     var canBeSuspended: Bool {
+
+        // feature flag on
         guard featureFlagger.isFeatureOn(.tabSuspension) else { return false }
-        guard case let .url(url, _, _) = tabContent, !url.isDuckPlayer else { return false }
+
+        // only URLs, except Duck Player, SERP and Duck.ai
+        guard case let .url(url, _, _) = tabContent, !url.isDuckPlayer, !url.isDuckDuckGoSearch, !url.isDuckAIURL else { return false }
+
+        // not pinned
         guard !isTabPinned() else { return false }
+
         guard let webView else {
             return false
         }
-        return !webView.audioState.isPlayingAudio
+
+        // not playing audio
+        guard !webView.audioState.isPlayingAudio else { return false }
+
+        return true
     }
 
     init(
