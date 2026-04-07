@@ -30,6 +30,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
     private var contentPublisher: PassthroughSubject<Tab.TabContent, Never>!
     private var featureFlagger: MockFeatureFlagger!
     private var privacyConfigurationManager: MockPrivacyConfigurationManager!
+    private var mockPrivacyConfig: MockPrivacyConfiguration!
     private var isPinned: Bool!
 
     private var sut: TabSuspensionExtension!
@@ -39,7 +40,8 @@ final class TabSuspensionExtensionTests: XCTestCase {
         webViewPublisher = PassthroughSubject<TabSuspensionWebViewChecking, Never>()
         contentPublisher = PassthroughSubject<Tab.TabContent, Never>()
         featureFlagger = MockFeatureFlagger()
-        privacyConfigurationManager = MockPrivacyConfigurationManager()
+        mockPrivacyConfig = MockPrivacyConfiguration()
+        privacyConfigurationManager = MockPrivacyConfigurationManager(privacyConfig: mockPrivacyConfig)
         isPinned = false
     }
 
@@ -48,6 +50,8 @@ final class TabSuspensionExtensionTests: XCTestCase {
         webViewPublisher = nil
         contentPublisher = nil
         featureFlagger = nil
+        mockPrivacyConfig = nil
+        privacyConfigurationManager = nil
         isPinned = nil
         super.tearDown()
     }
@@ -70,7 +74,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
         featureFlagger.enabledFeatureFlags = []
         sut = makeSUT()
 
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
 
@@ -82,7 +86,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
         featureFlagger.enabledFeatureFlags = [.tabSuspension]
         sut = makeSUT()
 
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
 
@@ -96,7 +100,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
         featureFlagger.enabledFeatureFlags = [.tabSuspension]
         sut = makeSUT()
 
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.none)
 
@@ -108,7 +112,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
         featureFlagger.enabledFeatureFlags = [.tabSuspension]
         sut = makeSUT()
 
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.newtab)
 
@@ -121,7 +125,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
         sut = makeSUT()
 
         let duckPlayerURL = try XCTUnwrap(URL(string: "duck://player/abc123"))
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.url(duckPlayerURL, credential: nil, source: .link))
 
@@ -133,9 +137,49 @@ final class TabSuspensionExtensionTests: XCTestCase {
         featureFlagger.enabledFeatureFlags = [.tabSuspension]
         sut = makeSUT()
 
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
+
+        XCTAssertTrue(sut.canBeSuspended)
+    }
+
+    // MARK: - Privacy Configuration
+
+    @MainActor
+    func testWhenDomainIsInExceptionsList_ThenCanBeSuspendedIsFalse() throws {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        mockPrivacyConfig.isFeatureEnabledForDomainCheck = { feature, domain in
+            if feature == .tabSuspension && domain == "example.com" {
+                return false
+            }
+            return true
+        }
+        sut = makeSUT()
+
+        let url = try XCTUnwrap(URL(string: "https://example.com/page"))
+        let webView = MockTabSuspensionWebView()
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(url, credential: nil, source: .link))
+
+        XCTAssertFalse(sut.canBeSuspended)
+    }
+
+    @MainActor
+    func testWhenDomainIsNotInExceptionsList_ThenCanBeSuspendedIsTrue() throws {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        mockPrivacyConfig.isFeatureEnabledForDomainCheck = { feature, _ in
+            if feature == .tabSuspension {
+                return true
+            }
+            return true
+        }
+        sut = makeSUT()
+
+        let url = try XCTUnwrap(URL(string: "https://example.com/page"))
+        let webView = MockTabSuspensionWebView()
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(url, credential: nil, source: .link))
 
         XCTAssertTrue(sut.canBeSuspended)
     }
@@ -148,7 +192,7 @@ final class TabSuspensionExtensionTests: XCTestCase {
         isPinned = true
         sut = makeSUT()
 
-        let webView = WKWebView(frame: .zero)
+        let webView = MockTabSuspensionWebView()
         webViewPublisher.send(webView)
         contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
 
@@ -166,4 +210,57 @@ final class TabSuspensionExtensionTests: XCTestCase {
 
         XCTAssertFalse(sut.canBeSuspended)
     }
+
+    // MARK: - Audio Playback
+
+    @MainActor
+    func testWhenWebViewIsPlayingAudio_ThenCanBeSuspendedIsFalse() {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        sut = makeSUT()
+
+        let webView = MockTabSuspensionWebView()
+        webView.isPlayingAudio = true
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
+
+        XCTAssertFalse(sut.canBeSuspended)
+    }
+
+    // MARK: - Audio Capture
+
+    @MainActor
+    func testWhenWebViewIsCapturingAudio_ThenCanBeSuspendedIsFalse() {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        sut = makeSUT()
+
+        let webView = MockTabSuspensionWebView()
+        webView.isCapturingAudio = true
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
+
+        XCTAssertFalse(sut.canBeSuspended)
+    }
+
+    // MARK: - Video Capture
+
+    @MainActor
+    func testWhenWebViewIsCapturingVideo_ThenCanBeSuspendedIsFalse() {
+        featureFlagger.enabledFeatureFlags = [.tabSuspension]
+        sut = makeSUT()
+
+        let webView = MockTabSuspensionWebView()
+        webView.isCapturingVideo = true
+        webViewPublisher.send(webView)
+        contentPublisher.send(.url(.duckDuckGo, credential: nil, source: .link))
+
+        XCTAssertFalse(sut.canBeSuspended)
+    }
+}
+
+// MARK: - MockTabSuspensionWebView
+
+private final class MockTabSuspensionWebView: TabSuspensionWebViewChecking {
+    var isPlayingAudio: Bool = false
+    var isCapturingAudio: Bool = false
+    var isCapturingVideo: Bool = false
 }
