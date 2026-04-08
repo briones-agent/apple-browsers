@@ -30,15 +30,22 @@ protocol AIChatSuggestionsReading {
     var maxHistoryCount: Int { get }
 
     /// Fetches AI chat suggestions from duck.ai.
-    /// - Parameters:
-    ///   - query: Optional search query to filter results
-    ///   - maxChats: Maximum number of chats to fetch. Pass `maxHistoryCount + 1` to detect overflow.
+    /// - Parameter query: Optional search query to filter results
+    /// - Parameter maxChats: Maximum number of chat items to return. Pass `maxHistoryCount + 1` to detect overflow.
     /// - Returns: Tuple of pinned and recent suggestions. Returns empty arrays on failure.
     func fetchSuggestions(query: String?, maxChats: Int) async -> (pinned: [AIChatSuggestion], recent: [AIChatSuggestion])
 
     /// Tears down the WebView and releases resources.
     /// Should be called when the AI chat mode is deactivated.
     func tearDown()
+}
+
+extension AIChatSuggestionsReading {
+    /// Convenience overload that uses `maxHistoryCount` as the limit.
+    /// Existing callers pass through without changes.
+    func fetchSuggestions(query: String?) async -> (pinned: [AIChatSuggestion], recent: [AIChatSuggestion]) {
+        return await fetchSuggestions(query: query, maxChats: maxHistoryCount)
+    }
 }
 
 // MARK: - AIChatSuggestionsReader
@@ -59,7 +66,10 @@ final class AIChatSuggestionsReader: AIChatSuggestionsReading {
 
     func fetchSuggestions(query: String?, maxChats: Int) async -> (pinned: [AIChatSuggestion], recent: [AIChatSuggestion]) {
         let result = await suggestionsReader.fetchSuggestions(query: query, maxChats: maxChats)
+<<<<<<< HEAD
 
+=======
+>>>>>>> juan/feature/duck-ai-main-menu
         switch result {
         case .success(let suggestions):
             return suggestions
