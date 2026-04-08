@@ -29,15 +29,6 @@
       }
     },
     {
-      "identity" : "content-scope-scripts",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/duckduckgo/content-scope-scripts.git",
-      "state" : {
-        "branch" : "moon0326/ntp/view-all-chats-link",
-        "revision" : "7e7f736f81b51bb78f200a3f97931142a65cc002"
-      }
-    },
-    {
       "identity" : "duckduckgo-autofill",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/duckduckgo/duckduckgo-autofill.git",
