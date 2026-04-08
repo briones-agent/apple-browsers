@@ -574,8 +574,12 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatSidebarAboutSchemeNavigationFix:
             Config(defaultValue: .enabled, source: .remoteReleasable(.subfeature(AIChatSubfeature.sidebarAboutSchemeNavigationFix)), category: .duckAI)
         case .aiChatViewAllChatsNativeOmnibar:
-            Config(defaultValue: .disabled,
+            Config(defaultValue: .internalOnly,
                    source: .remoteReleasable(.subfeature(AIChatSubfeature.viewAllChatsNativeOmnibar)),
+                   category: .duckAI)
+        case .aiChatViewAllChatsNativeNTP:
+            Config(defaultValue: .disabled,
+                   source: .remoteReleasable(.subfeature(AIChatSubfeature.viewAllChatsNativeNTP)),
                    category: .duckAI)
         case .aiChatNativeStorage:
             Config(source: .remoteReleasable(.subfeature(AIChatSubfeature.nativeStorage)), category: .duckAI)

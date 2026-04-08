@@ -447,6 +447,7 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     case sidebarAboutSchemeNavigationFix
 
     case viewAllChatsNativeOmnibar
+    case viewAllChatsNativeNTP
 }
 
 public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {
