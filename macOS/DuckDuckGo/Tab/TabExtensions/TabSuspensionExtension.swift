@@ -156,6 +156,7 @@ extension TabSuspensionExtension: NavigationResponder {
     @MainActor
     func didCommit(_ navigation: Navigation) {
         pageReportsUnableToSuspend = false
+        isDisplayingPDF = false
     }
 
     @MainActor
