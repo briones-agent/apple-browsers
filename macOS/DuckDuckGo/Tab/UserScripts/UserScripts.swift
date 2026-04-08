@@ -61,6 +61,7 @@ final class UserScripts: UserScriptsProvider {
     let newTabPageUserScript: NewTabPageUserScript?
     let serpSettingsUserScript: SERPSettingsUserScript?
     let faviconScript = FaviconUserScript()
+    let webTelemetrySubfeature = WebTelemetrySubfeature()
 
     private let contentScopePreferences: ContentScopePreferences
 
@@ -109,7 +110,7 @@ final class UserScripts: UserScriptsProvider {
                                            currentCohorts: currentCohorts,
                                            themeVariant: themeVariant)
         do {
-            contentScopeUserScript = try ContentScopeUserScript(sourceProvider.privacyConfigurationManager, properties: prefs, scriptContext: .contentScope, allowedNonisolatedFeatures: [PageContextUserScript.featureName, "webCompat"], privacyConfigurationJSONGenerator: ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: sourceProvider.featureFlagger, privacyConfigurationManager: sourceProvider.privacyConfigurationManager))
+            contentScopeUserScript = try ContentScopeUserScript(sourceProvider.privacyConfigurationManager, properties: prefs, scriptContext: .contentScope, allowedNonisolatedFeatures: [PageContextUserScript.featureName, "webCompat", WebTelemetrySubfeature.featureNameValue], privacyConfigurationJSONGenerator: ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: sourceProvider.featureFlagger, privacyConfigurationManager: sourceProvider.privacyConfigurationManager))
             contentScopeUserScriptIsolated = try ContentScopeUserScript(sourceProvider.privacyConfigurationManager, properties: prefs, scriptContext: .contentScopeIsolated, privacyConfigurationJSONGenerator: ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: sourceProvider.featureFlagger, privacyConfigurationManager: sourceProvider.privacyConfigurationManager))
         } catch {
             if let error = error as? UserScriptError {
@@ -176,6 +177,7 @@ final class UserScripts: UserScriptsProvider {
 
         contentScopeUserScriptIsolated.registerSubfeature(delegate: faviconScript)
         contentScopeUserScriptIsolated.registerSubfeature(delegate: clickToLoadScript)
+        contentScopeUserScript.registerSubfeature(delegate: webTelemetrySubfeature)
 
         if let aiChatUserScript {
             contentScopeUserScriptIsolated.registerSubfeature(delegate: aiChatUserScript)

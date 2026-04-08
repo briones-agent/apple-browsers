@@ -171,6 +171,10 @@ extension TabExtensionsBuilder {
         }
 
         add {
+            WebTelemetryTabExtension(userScriptsPublisher: userScripts.compactMap { $0 })
+        }
+
+        add {
             BrokenSiteInfoTabExtension(contentPublisher: args.contentPublisher,
                                        webViewPublisher: args.webViewFuture,
                                        contentScopeUserScriptPublisher: userScripts.compactMap(\.?.contentScopeUserScriptIsolated))

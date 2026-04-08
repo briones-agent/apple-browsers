@@ -1539,6 +1539,9 @@ extension Pixel {
         case tabInteractionStateFailedToRestore
         case tabInteractionStateRestorationTime(_ time: BucketAggregation)
 
+        // MARK: Web Telemetry
+        case webTelemetryVideoPlayback(userInteraction: Bool)
+
         // MARK: Malicious Site Protection
         case maliciousSiteProtection(event: MaliciousSiteProtectionEvent)
 
@@ -3050,6 +3053,10 @@ extension Pixel.Event {
         case .appDidTransitionToUnexpectedState: return "m_debug_app-did-transition-to-unexpected-state-4"
 
         case .debugBreakageExperiment: return "m_debug_breakage_experiment_u"
+
+        // MARK: Web Telemetry
+        case .webTelemetryVideoPlayback(let userInteraction):
+            return "m_web-telemetry_video-playback_\(userInteraction ? "user" : "autoplay")"
 
         // MARK: Malicious Site Protection
         case .maliciousSiteProtection(let event): return "m_\(event.name)"

@@ -3036,6 +3036,7 @@ extension TabViewController: UserContentControllerDelegate {
         userScripts.autofillUserScript.passwordImportDelegate = credentialsImportManager
         userScripts.faviconScript.delegate = faviconUpdater
         userScripts.printingSubfeature.delegate = self
+        userScripts.webTelemetrySubfeature.delegate = self
         userScripts.loginFormDetectionScript?.delegate = self
         userScripts.autoconsentUserScript.delegate = self
         userScripts.contentScopeUserScript.delegate = self
@@ -3171,6 +3172,14 @@ extension TabViewController: PrintingSubfeatureDelegate {
         controller.present(animated: true, completionHandler: nil)
     }
 
+}
+
+// MARK: - WebTelemetrySubfeatureDelegate
+extension TabViewController: WebTelemetrySubfeatureDelegate {
+
+    func webTelemetryDidDetectVideoPlayback(userInteraction: Bool) {
+        Pixel.fire(pixel: .webTelemetryVideoPlayback(userInteraction: userInteraction))
+    }
 }
 
 // MARK: - ContentScopeUserScriptDelegate

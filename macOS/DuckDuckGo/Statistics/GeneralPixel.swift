@@ -142,6 +142,9 @@ enum GeneralPixel: PixelKitEvent {
      */
     case fireButtonDetailsViewed
 
+    // Web Telemetry
+    case webTelemetryVideoPlayback(userInteraction: Bool)
+
     // Duck Player
     case duckPlayerDailyUniqueView
     case duckPlayerWeeklyUniqueView
@@ -803,6 +806,9 @@ enum GeneralPixel: PixelKitEvent {
             return "m_mac_fire_animation_\(enabled ? "on" : "off")"
         case .fireButtonDetailsViewed:
             return "m_mac_fire_button_details_viewed"
+
+        case .webTelemetryVideoPlayback(let userInteraction):
+            return "m_mac_web-telemetry_video-playback_\(userInteraction ? "user" : "autoplay")"
 
         case .duckPlayerWeeklyUniqueView:
             return "duckplayer_weekly-unique-view"
