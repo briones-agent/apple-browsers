@@ -1559,9 +1559,12 @@ final class NavigationBarViewController: NSViewController {
                   let isCosmetic = sender.userInfo?["isCosmetic"] as? Bool
             else { return }
 
-            guard let self = self, self.tabCollectionViewModel.selectedTabViewModel?.tab.url == topUrl else {
-                return // if the tab is not active, don't show the popup
-            }
+            guard let self = self,
+                  self.tabCollectionViewModel.selectedTabViewModel?.tab.url == topUrl,
+                  self.addressBarViewController?.addressBarButtonsViewController?
+                      .shouldSuppressForAdBlocking(url: topUrl) != true
+            else { return }
+
             let animationType: NavigationBarBadgeAnimationView.AnimationType = isCosmetic ? .cookiePopupHidden : .cookiePopupManaged
             self.addressBarViewController?.addressBarButtonsViewController?.showBadgeNotification(animationType)
         }

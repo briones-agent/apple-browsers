@@ -284,7 +284,6 @@ final class AddressBarButtonsViewController: NSViewController {
 
     private var lastNotificationType: NavigationBarBadgeAnimationView.AnimationType?
     private var trackerAnimationDomainStateByTabID: [String: TrackerAnimationDomainState] = [:]
-    private var shouldSuppressNonAdBlockBadgeAnimations = false
     private let tld: TLD = NSApp.delegateTyped.tld
 
     private lazy var buttonsBadgeAnimator = {
@@ -537,8 +536,6 @@ final class AddressBarButtonsViewController: NSViewController {
         if case .youTubeAdBlockOn = type {
             guard adBlockingAvailability.isFeatureAvailable else { return }
             buttonsBadgeAnimator.cancelPendingAnimations()
-        } else if shouldSuppressNonAdBlockBadgeAnimations {
-            return
         }
 
         let priority: NavigationBarBadgeAnimator.AnimationPriority
@@ -560,6 +557,10 @@ final class AddressBarButtonsViewController: NSViewController {
             buttonsContainer: buttonsContainer,
             notificationBadgeContainer: notificationAnimationView
         )
+    }
+
+    func shouldSuppressForAdBlocking(url: URL) -> Bool {
+        adBlockingAvailability.shouldShowAnimation(for: url)
     }
 
     /// Shows a tracker notification with the count of trackers blocked
@@ -657,7 +658,6 @@ final class AddressBarButtonsViewController: NSViewController {
                 stopAnimations()
                 lastNotificationType = nil
                 hasShieldAnimationCompleted = false
-                shouldSuppressNonAdBlockBadgeAnimations = false
                 updateTrackerAnimationDomainState(for: self.urlForTrackerAnimation(), tabID: self.tabViewModel?.tab.uuid)
                 updateBookmarkButtonImage()
                 updateButtons()
@@ -678,9 +678,7 @@ final class AddressBarButtonsViewController: NSViewController {
     private func subscribeToYouTubeAdBlockAnimationTrigger() {
         youtubeAdBlockAnimationTriggerCancellable = tabViewModel?.youtubeAdBlockAnimationTriggerPublisher
             .sink { [weak self] _ in
-                guard let self else { return }
-                shouldSuppressNonAdBlockBadgeAnimations = true
-                showBadgeNotification(.youTubeAdBlockOn)
+                self?.showBadgeNotification(.youTubeAdBlockOn)
             }
     }
 
@@ -2394,6 +2392,13 @@ final class AddressBarButtonsViewController: NSViewController {
 
     private func animateTrackers() {
         guard privacyDashboardButton.isShown, let tabViewModel else { return }
+
+        if case .url(let url, _, _) = tabViewModel.tab.content,
+           adBlockingAvailability.shouldShowAnimation(for: url) {
+            updatePrivacyEntryPointIcon()
+            updateAllPermissionButtons()
+            return
+        }
 
         // Show tracker notification only once per eTLD+1 per domain visit
         if let trackerInfo = tabViewModel.tab.privacyInfo?.trackerInfo,
