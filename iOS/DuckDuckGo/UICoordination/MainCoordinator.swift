@@ -427,9 +427,7 @@ final class MainCoordinator {
         if darkReaderFeatureSettings.isForceDarkModeEnabled == true {
             enabledTypes.insert(.darkReader)
         }
-        let youTubeAdBlockingStorage: any ThrowingKeyedStoring<YouTubeAdBlockingKeys> = keyValueStore.throwingKeyedStoring()
-        let youTubeAdBlockingEnabled = (try? youTubeAdBlockingStorage.value(for: \.youTubeAdBlockingEnabled)) ?? true
-        if featureFlagger.isFeatureOn(.adBlockingExtension) && youTubeAdBlockingEnabled {
+        if controller.adBlockingAvailability.isEnabled {
             enabledTypes.insert(.adBlockingExtension)
         }
         await webExtensionManager.syncEmbeddedExtensions(enabledTypes: enabledTypes)

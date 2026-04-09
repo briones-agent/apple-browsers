@@ -465,7 +465,8 @@ extension MainViewController {
                                                   mobileCustomization: mobileCustomization,
                                                   userScriptsDependencies: userScriptsDependencies,
                                                   whatsNewCoordinator: whatsNewCoordinator,
-                                                  darkReaderFeatureSettings: darkReaderFeatureSettings)
+                                                  darkReaderFeatureSettings: darkReaderFeatureSettings,
+                                                  adBlockingAvailability: adBlockingAvailability)
 
         settingsViewModel.autoClearActionDelegate = self
         Pixel.fire(pixel: .settingsPresented)
