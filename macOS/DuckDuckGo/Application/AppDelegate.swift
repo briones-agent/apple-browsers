@@ -101,6 +101,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let internalUserDecider: InternalUserDecider
     private var isInternalUserSharingCancellable: AnyCancellable?
     let featureFlagger: FeatureFlagger
+    private(set) lazy var adBlockingAvailability: AdBlockingAvailabilityProviding = AdBlockingAvailability(
+        featureFlagger: featureFlagger,
+        isEnabledByUserProvider: {
+            UserDefaults.standard.object(forKey: UserDefaultsKeys.youTubeAdBlockingEnabled.rawValue) as? Bool ?? true
+        }
+    )
     let visualizeFireSettingsDecider: VisualizeFireSettingsDecider
     let contentScopeExperimentsManager: ContentScopeExperimentsManaging
     let contentScopePreferences: ContentScopePreferences
@@ -1893,8 +1899,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if darkReaderFeatureSettings?.isForceDarkModeEnabled == true {
             enabledTypes.insert(.darkReader)
         }
-        let youTubeAdBlockingEnabled = UserDefaults.standard.object(forKey: UserDefaultsKeys.youTubeAdBlockingEnabled.rawValue) as? Bool ?? true
-        if featureFlagger.isFeatureOn(.adBlockingExtension) && youTubeAdBlockingEnabled {
+        if adBlockingAvailability.isEnabled {
             enabledTypes.insert(.adBlockingExtension)
         }
         await webExtensionManager.syncEmbeddedExtensions(enabledTypes: enabledTypes)

@@ -26,6 +26,7 @@ import PrivacyConfig
 import PrivacyDashboard
 import WebKit
 import DesignResourcesKitIcons
+import WebExtensions
 
 final class TabViewModel: NSObject {
 
@@ -33,6 +34,7 @@ final class TabViewModel: NSObject {
     private let appearancePreferences: AppearancePreferences
     private let accessibilityPreferences: AccessibilityPreferences
     private let featureFlagger: FeatureFlagger
+    private let adBlockingAvailability: AdBlockingAvailabilityProviding
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var canGoForward: Bool = false
@@ -136,11 +138,13 @@ final class TabViewModel: NSObject {
     init(tab: Tab,
          appearancePreferences: AppearancePreferences = NSApp.delegateTyped.appearancePreferences,
          accessibilityPreferences: AccessibilityPreferences = NSApp.delegateTyped.accessibilityPreferences,
-         featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger) {
+         featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger,
+         adBlockingAvailability: AdBlockingAvailabilityProviding = NSApp.delegateTyped.adBlockingAvailability) {
         self.tab = tab
         self.appearancePreferences = appearancePreferences
         self.accessibilityPreferences = accessibilityPreferences
         self.featureFlagger = featureFlagger
+        self.adBlockingAvailability = adBlockingAvailability
         zoomLevel = accessibilityPreferences.defaultPageZoom
 
         super.init()
@@ -536,7 +540,7 @@ final class TabViewModel: NSObject {
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self,
-                      featureFlagger.isFeatureOn(.adBlockingExtension) else { return }
+                      adBlockingAvailability.isFeatureAvailable else { return }
                 youtubeAdBlockAnimationTriggerPublisher.send()
             }
             .store(in: &cancellables)
@@ -544,7 +548,7 @@ final class TabViewModel: NSObject {
         tab.webViewDidFinishNavigationPublisher
             .sink { [weak self] _ in
                 guard let self,
-                      featureFlagger.isFeatureOn(.adBlockingExtension) else { return }
+                      adBlockingAvailability.isFeatureAvailable else { return }
                 youtubeAdBlockAnimationTriggerPublisher.send()
             }
             .store(in: &cancellables)

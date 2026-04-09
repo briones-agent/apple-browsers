@@ -30,6 +30,7 @@ import AIChat
 import UIComponents
 import DesignResourcesKitIcons
 import SwiftUI
+import WebExtensions
 
 // MARK: - Toggle Interaction Tracking
 
@@ -75,6 +76,7 @@ final class AddressBarButtonsViewController: NSViewController {
     private let accessibilityPreferences: AccessibilityPreferences
     private let tabsPreferences: TabsPreferences
     private let featureFlagger: FeatureFlagger
+    private let adBlockingAvailability: AdBlockingAvailabilityProviding
     private let privacyConfigurationManager: PrivacyConfigurationManaging
     private let permissionManager: PermissionManagerProtocol
 
@@ -329,7 +331,8 @@ final class AddressBarButtonsViewController: NSViewController {
           aiChatCoordinator: AIChatCoordinating,
           aiChatSettings: AIChatPreferencesStorage,
           themeManager: ThemeManaging = NSApp.delegateTyped.themeManager,
-          featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger) {
+          featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger,
+          adBlockingAvailability: AdBlockingAvailabilityProviding = NSApp.delegateTyped.adBlockingAvailability) {
         self.tabCollectionViewModel = tabCollectionViewModel
         self.bookmarkManager = bookmarkManager
         self.accessibilityPreferences = accessibilityPreferences
@@ -343,6 +346,7 @@ final class AddressBarButtonsViewController: NSViewController {
         self.aiChatSettings = aiChatSettings
         self.themeManager = themeManager
         self.featureFlagger = featureFlagger
+        self.adBlockingAvailability = adBlockingAvailability
         self.privacyConfigurationManager = privacyConfigurationManager
         self.permissionManager = permissionManager
         super.init(coder: coder)
@@ -531,7 +535,7 @@ final class AddressBarButtonsViewController: NSViewController {
 
     func showBadgeNotification(_ type: NavigationBarBadgeAnimationView.AnimationType) {
         if case .youTubeAdBlockOn = type {
-            guard featureFlagger.isFeatureOn(.adBlockingExtension) else { return }
+            guard adBlockingAvailability.isFeatureAvailable else { return }
             buttonsBadgeAnimator.cancelPendingAnimations()
         } else if shouldSuppressNonAdBlockBadgeAnimations {
             return
