@@ -161,7 +161,7 @@ final class UnifiedToggleInputToolbarView: UIView {
 
     private lazy var reasoningButton: UIButton = {
         let button = makeToolButton(
-            image: DesignSystemImages.Color.Size24.lightning,
+            image: DesignSystemImages.Glyphs.Size24.lightning,
             accessibilityLabel: UserText.aiChatToolbarReasoningButtonAccessibilityLabel,
             action: nil
         )

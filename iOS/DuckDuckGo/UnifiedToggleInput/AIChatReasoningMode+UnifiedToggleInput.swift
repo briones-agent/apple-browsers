@@ -23,6 +23,17 @@ import DesignResourcesKitIcons
 import UIKit
 
 extension AIChatReasoningMode {
+    private var unifiedToggleInputIconImage: UIImage? {
+        switch self {
+        case .fast:
+            return DesignSystemImages.Glyphs.Size24.lightning
+        case .reasoning:
+            return DesignSystemImages.Glyphs.Size24.thinking
+        case .extendedReasoning:
+            return DesignSystemImages.Glyphs.Size24.timer
+        }
+    }
+
     var unifiedToggleInputTitle: String {
         switch self {
         case .fast:
@@ -46,35 +57,14 @@ extension AIChatReasoningMode {
     }
 
     var unifiedToggleInputMenuImage: UIImage? {
-        switch self {
-        case .fast:
-            return DesignSystemImages.Color.Size24.lightning
-        case .reasoning:
-            return UIImage(systemName: "brain.head.profile")
-        case .extendedReasoning:
-            return UIImage(systemName: "timer")
-        }
+        unifiedToggleInputIconImage?.withTintColor(UIColor(designSystemColor: .iconsSecondary), renderingMode: .alwaysOriginal)
     }
 
     var unifiedToggleInputButtonImage: UIImage? {
-        switch self {
-        case .fast:
-            return DesignSystemImages.Color.Size24.lightning
-        case .reasoning:
-            return UIImage(systemName: "brain.head.profile")?.withConfiguration(UIImage.SymbolConfiguration(pointSize: 20, weight: .medium))
-        case .extendedReasoning:
-            return UIImage(systemName: "timer")?.withConfiguration(UIImage.SymbolConfiguration(pointSize: 20, weight: .medium))
-        }
+        unifiedToggleInputIconImage
     }
 
     var unifiedToggleInputButtonTintColor: UIColor {
-        switch self {
-        case .fast:
-            return UIColor(designSystemColor: .iconsSecondary)
-        case .reasoning:
-            return UIColor(designSystemColor: .accent)
-        case .extendedReasoning:
-            return UIColor(designSystemColor: .alertYellow)
-        }
+        UIColor(designSystemColor: .iconsSecondary)
     }
 }
