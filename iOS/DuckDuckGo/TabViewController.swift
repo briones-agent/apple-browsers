@@ -1109,7 +1109,8 @@ class TabViewController: UIViewController {
     
     func webViewUrlHasChanged(previousURL: URL? = nil, newURL: URL? = nil) {
         // Handle DuckPlayer Navigation URL changes
-        if let currentURL = newURL ?? webView.url {
+        if let currentURL = newURL ?? webView.url,
+           shouldHandleUpdate(previousURL, newURL) {
             adBlockNavigationHandler.handleURLChange(previousURL: previousURL, newURL: currentURL)
             _ = duckPlayerNavigationHandler.handleURLChange(webView: webView, previousURL: previousURL, newURL: currentURL, isNavigationError: lastError != nil)
         }
@@ -1141,6 +1142,17 @@ class TabViewController: UIViewController {
     func dismissContextualDaxFireDialog() {
         guard contextualOnboardingLogic.isShowingFireDialog else { return }
         contextualOnboardingPresenter.dismissContextualOnboardingIfNeeded(from: self)
+    }
+
+    private func shouldHandleUpdate(_ previousURL: URL?, _ newURL: URL?) -> Bool {
+        guard let previousURL, let newURL,
+              previousURL.isYoutube,
+              newURL.isYoutube,
+              previousURL.youtubeVideoID == newURL.youtubeVideoID,
+              newURL.getParameter(named: "ra") != nil
+        else { return true }
+
+        return previousURL != newURL.removingParameters(named: ["ra"])
     }
 
     private func checkForReloadOnError() {
