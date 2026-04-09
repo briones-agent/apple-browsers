@@ -474,13 +474,22 @@ class TabViewController: UIViewController {
 
 
     let historyManager: HistoryManaging
-    private lazy var adBlockNavigationHandler: AdBlockNavigationHandling = AdBlockNavigationHandler(
-        featureFlagger: featureFlagger,
-        onShouldShowAdBlockAnimation: { [weak self] in
-            guard let self else { return }
-            self.delegate?.tabDidRequestPresentingYouTubeAdBlockAnimation(tab: self)
-        }
-    )
+    private(set) lazy var adBlockNavigationHandler: AdBlockNavigationHandling = {
+        let youTubeAdBlockingStorage: any ThrowingKeyedStoring<YouTubeAdBlockingKeys> = keyValueStore.throwingKeyedStoring()
+        let availability = AdBlockingAvailability(
+            featureFlagger: featureFlagger,
+            isEnabledByUserProvider: {
+                (try? youTubeAdBlockingStorage.value(for: \.youTubeAdBlockingEnabled)) ?? true
+            }
+        )
+        return AdBlockNavigationHandler(
+            availability: availability,
+            onShouldShowAdBlockAnimation: { [weak self] in
+                guard let self else { return }
+                self.delegate?.tabDidRequestPresentingYouTubeAdBlockAnimation(tab: self)
+            }
+        )
+    }()
 
     private lazy var duckPlayerNavigationHandler: DuckPlayerNavigationHandling = {
         let duckPlayer = DuckPlayer(settings: DuckPlayerSettingsDefault(),

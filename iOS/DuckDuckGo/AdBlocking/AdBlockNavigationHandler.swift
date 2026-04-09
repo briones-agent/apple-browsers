@@ -18,9 +18,8 @@
 //
 
 import Foundation
-import BrowserServicesKit
-import PrivacyConfig
 import DuckPlayer
+import WebExtensions
 
 protocol AdBlockNavigationHandling {
 
@@ -37,20 +36,18 @@ protocol AdBlockNavigationHandling {
 
 final class AdBlockNavigationHandler: AdBlockNavigationHandling {
 
-    private let featureFlagger: FeatureFlagger
+    private let availability: AdBlockingAvailabilityProviding
     private let onShouldShowAdBlockAnimation: () -> Void
     private var lastAnimatedVideoID: String?
 
-    init(featureFlagger: FeatureFlagger, onShouldShowAdBlockAnimation: @escaping () -> Void) {
-        self.featureFlagger = featureFlagger
+    init(availability: AdBlockingAvailabilityProviding, onShouldShowAdBlockAnimation: @escaping () -> Void) {
+        self.availability = availability
         self.onShouldShowAdBlockAnimation = onShouldShowAdBlockAnimation
     }
 
     func handleURLChange(previousURL: URL?, newURL: URL?) {
-        guard featureFlagger.isFeatureOn(.adBlockingExtension) else { return }
-
+        guard availability.isEnabled else { return }
         guard let newURL, newURL.isPlayableYoutubeVideoContent else { return }
-
         guard let newVideoID = newURL.youtubeVideoID else { return }
 
         let isNewVideo = newVideoID != previousURL?.youtubeVideoID
@@ -59,7 +56,6 @@ final class AdBlockNavigationHandler: AdBlockNavigationHandling {
         if isNewVideo || hasNotAnimatedForCurrentVideo {
             lastAnimatedVideoID = newVideoID
             onShouldShowAdBlockAnimation()
-            Logger.general.debug("---- AdBlockNavigationHandler animation!")
         }
     }
 

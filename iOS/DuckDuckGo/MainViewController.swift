@@ -281,6 +281,15 @@ class MainViewController: UIViewController {
     let themeManager: ThemeManaging
     let keyValueStore: ThrowingKeyValueStoring
     let systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging
+    private(set) lazy var adBlockingAvailability: AdBlockingAvailabilityProviding = {
+        let storage: any ThrowingKeyedStoring<YouTubeAdBlockingKeys> = keyValueStore.throwingKeyedStoring()
+        return AdBlockingAvailability(
+            featureFlagger: featureFlagger,
+            isEnabledByUserProvider: {
+                (try? storage.value(for: \.youTubeAdBlockingEnabled)) ?? true
+            }
+        )
+    }()
 
     private var duckPlayerEntryPointVisible = false
     private var subscriptionManager = AppDependencyProvider.shared.subscriptionManager
@@ -4331,7 +4340,9 @@ extension MainViewController: TabDelegate {
     func tab(_ tab: TabViewController,
              didRequestPresentingTrackerAnimation privacyInfo: PrivacyInfo,
              isCollapsing: Bool) {
-        guard currentTab === tab else { return }
+        guard currentTab === tab,
+              !adBlockingAvailability.shouldShowAnimation(for: privacyInfo.url)
+        else { return }
         viewCoordinator.omniBar?.startTrackersAnimation(privacyInfo, forDaxDialog: !isCollapsing)
     }
 

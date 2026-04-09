@@ -115,8 +115,6 @@ class OmniBarViewController: UIViewController, OmniBar {
     private var isPageLoading: Bool = false
     @MainActor
     private var pendingNotifications: [(priority: AnimationPriority, block: () -> Void)] = []
-    @MainActor
-    private var shouldSuppressNonAdBlockAnimations = false
 
     // Work item for cancellable delayed notification processing
     private var pendingNotificationWorkItem: DispatchWorkItem?
@@ -321,7 +319,6 @@ class OmniBarViewController: UIViewController, OmniBar {
 
     func startLoading() {
         cancelAllAnimations()
-        shouldSuppressNonAdBlockAnimations = false
 
         pendingNotificationWorkItem?.cancel()
         pendingNotificationWorkItem = nil
@@ -409,7 +406,6 @@ class OmniBarViewController: UIViewController, OmniBar {
     }
 
     func showOrScheduleCookiesManagedNotification(isCosmetic: Bool) {
-        guard !shouldSuppressNonAdBlockAnimations else { return }
         let type: OmniBarNotificationType = isCosmetic ? .cookiePopupHidden : .cookiePopupManaged
 
         enqueueAnimationIfNeeded(priority: .low) { [weak self] in
@@ -421,8 +417,6 @@ class OmniBarViewController: UIViewController, OmniBar {
     }
 
     func showYouTubeAdBlockNotification() {
-        shouldSuppressNonAdBlockAnimations = true
-
         enqueueAnimationIfNeeded(priority: .low) { [weak self] in
             guard let self else { return }
             self.notificationAnimator.showNotification(.youTubeAdBlockOn, in: barView, viewController: self) { [weak self] in
@@ -445,7 +439,6 @@ class OmniBarViewController: UIViewController, OmniBar {
     }
 
     func startTrackersAnimation(_ privacyInfo: PrivacyInfo, forDaxDialog: Bool) {
-        guard !shouldSuppressNonAdBlockAnimations else { return }
         guard state.allowsTrackersAnimation else { return }
 
         let trackerCount = privacyInfo.trackerInfo.trackersBlocked.count
