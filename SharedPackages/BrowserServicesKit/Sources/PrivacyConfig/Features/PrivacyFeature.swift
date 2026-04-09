@@ -420,6 +420,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables recent AI chats on the New Tab Page omnibar
     case ntpRecentChats
 
+    /// Enables the "View all chats" button on the New Tab Page omnibar
+    case ntpViewAllChats
+
     /// Enables AI chat tools (model selector, image upload) on the New Tab Page omnibar
     case ntpChatTools
 
@@ -455,6 +458,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
 
     /// Prevents about: scheme navigations (e.g. about:srcdoc) from opening new tabs in the sidebar
     case sidebarAboutSchemeNavigationFix
+
+    /// Enabled 'View all chats' for Duck.ai in the omnibar
+    case viewAllChatsNativeOmnibar
 
     /// Enables image generation mode toggle in the Duck.ai omnibar
     case omnibarImageGeneration

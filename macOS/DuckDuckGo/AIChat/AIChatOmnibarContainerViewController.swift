@@ -642,6 +642,10 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             }
         }
 
+        suggestionsView.onViewAllChatsClicked = { [weak self] in
+            self?.omnibarController.viewAllChats()
+        }
+
         // Bind to view model with height change callback
         suggestionsView.bind(to: omnibarController.suggestionsViewModel) { [weak self] newHeight in
             self?.updateSuggestionsHeight(newHeight)
