@@ -1535,7 +1535,7 @@
 "duckplayer.settings.autoplay.label" = "Autoplay Videos";
 
 /* Footer text for Enable Duck Player toggle */
-"duckplayer.settings.enable-footer" = "Opens videos in a private theatre mode that prevents what you watch from influencing your YouTube feed.";
+"duckplayer.settings.enable-footer" = "Opens videos in a private theater mode that prevents what you watch from influencing your YouTube feed.";
 
 /* Toggle to enable Duck Player */
 "duckplayer.settings.enable-toggle" = "Enable Duck Player";
