@@ -48,14 +48,10 @@ final class AdBlockingNavigationHandler: AdBlockingNavigationHandling {
         guard availability.isEnabled else { return }
         guard let newURL, newURL.isPlayableYoutubeVideoContent else { return }
         guard let newVideoID = newURL.youtubeVideoID else { return }
+        guard newVideoID != lastAnimatedVideoID else { return }
 
-        let isNewVideo = newVideoID != previousURL?.youtubeVideoID
-        let hasNotAnimatedForCurrentVideo = lastAnimatedVideoID != newVideoID
-
-        if isNewVideo || hasNotAnimatedForCurrentVideo {
-            lastAnimatedVideoID = newVideoID
-            onShouldShowAdBlockingAnimation()
-        }
+        lastAnimatedVideoID = newVideoID
+        onShouldShowAdBlockingAnimation()
     }
 
     func handleReload() {

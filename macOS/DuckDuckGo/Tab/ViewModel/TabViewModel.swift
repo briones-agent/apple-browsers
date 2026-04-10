@@ -509,22 +509,23 @@ final class TabViewModel: NSObject {
     }
 
     private func subscribeToYouTubeAdBlockAnimationTrigger() {
-        tab.$content
+        let contentURLChanges = tab.$content
             .compactMap { content -> URL? in
                 guard case .url(let url, _, source: .webViewUpdated) = content else { return nil }
                 return url
             }
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+
+        let navigationFinished = tab.webViewDidFinishNavigationPublisher
+            .compactMap { [weak tab] _ -> URL? in
+                guard let tab, case .url(let url, _, _) = tab.content else { return nil }
+                return url
+            }
+
+        contentURLChanges.merge(with: navigationFinished)
+            .throttle(for: .milliseconds(500), scheduler: RunLoop.main, latest: true)
             .sink { [weak self] url in
                 self?.adBlockingNavigationHandler.handleURLChange(previousURL: nil, newURL: url)
-            }
-            .store(in: &cancellables)
-
-        tab.webViewDidFinishNavigationPublisher
-            .sink { [weak self] _ in
-                guard let self,
-                      case .url(let url, _, _) = tab.content else { return }
-                adBlockingNavigationHandler.handleURLChange(previousURL: nil, newURL: url)
             }
             .store(in: &cancellables)
     }
