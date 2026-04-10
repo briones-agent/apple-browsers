@@ -64,6 +64,7 @@ public enum PrivacyFeature: String {
     case forceOldAppDelegate
     case htmlHistoryPage
     case tabManager
+    case tabSuspension
     case tabSwitcherTrackerCount
     case webViewStateRestoration
     case experimentalTheming
@@ -90,6 +91,7 @@ public enum PrivacyFeature: String {
     case webExtensions
     case forceDarkModeOnWebsites
     case promoQueue
+    case adBlockingExtension
 }
 
 /// An abstraction to be implemented by any "subfeature" of a given `PrivacyConfiguration` feature.
@@ -163,10 +165,6 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/72649045549333/task/1212762049862432?focus=true
     case memoryUsageReporting
 
-    /// Failsafe flag to bring back keys sorting in crash collector
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213037849588149
-    case crashCollectionDisableKeysSorting
-
     /// Failsafe flag for disabling call stack tree depth limiting in crash collector
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213037858764817
     case crashCollectionLimitCallStackTreeDepth
@@ -181,6 +179,9 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     case websitesHistoryFirstTimeQuitSurvey
 
     case semaphoreAlwaysVisible
+
+    /// Autoplay policy control via WKWebpagePreferences
+    case autoplayPolicy
 
     case tabAnimations
 
@@ -228,10 +229,6 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/1199333091098016/task/1212738953909168?focus=true
     case wideEventPostEndpoint
 
-    /// Failsafe flag to bring back keys sorting in crash collector
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213037849588149
-    case crashCollectionDisableKeysSorting
-
     /// Failsafe flag for disabling call stack tree depth limiting in crash collector
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213037858764805
     case crashCollectionLimitCallStackTreeDepth
@@ -239,14 +236,11 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212835969125260
     case browsingMenuSheetEnabledByDefault
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212556727029805
-    case enhancedDataClearingSettings
-
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212632627091091
-    case burnSingleTab
-
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213336304802675
     case showNTPAfterIdleReturn
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213557229772465?focus=true
+    case autoplayBlocking
 
     case customXSafariRedirectHandling
 
@@ -257,6 +251,18 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     case screenTimeCleaning
 
     case minimalChromeInLandscape
+
+    /// https://app.asana.com/1/137249556945/project/1206329551987282/task/1211806114021630?focus=true
+    case onboardingRebranding
+
+    /// https://app.asana.com/1/137249556945/task/1213314048601761
+    case fireMode
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213965646075290
+    case fireButtonRefinements
+
+    /// https://app.asana.com/1/137249556945/project/715106103902962/task/1212810377867736
+    case filterAddressBarUpdates
 }
 
 public enum TabManagerSubfeature: String, PrivacySubfeature {
@@ -312,6 +318,7 @@ public enum DBPSubfeature: String, Equatable, PrivacySubfeature {
     case foregroundRunningOnAppActive
     case foregroundRunningWhenDashboardOpen
     case clickActionDelayReductionOptimization
+    case continuedProcessing
     case pirRollout
     case goToMarket
     case webViewUserAgent
@@ -382,6 +389,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables the omnibar tools (customize, search toggle, image upload) for AI Chat
     case omnibarTools
 
+    /// Enables the default omnibar toggle position setting for AI Chat
+    case omnibarDefaultPosition
+
     /// Controls showing the Hide AI section in Settings -> AI Features
     case showHideAiGeneratedImages
 
@@ -409,8 +419,17 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables recent AI chats on the New Tab Page omnibar
     case ntpRecentChats
 
+    /// Enables the "View all chats" button on the New Tab Page omnibar
+    case ntpViewAllChats
+
+    /// Enables AI chat tools (model selector, image upload) on the New Tab Page omnibar
+    case ntpChatTools
+
     /// Enables support for adding multiple page contexts to a single chat session
     case multiplePageContexts
+
+    /// Enables attaching content from multiple open tabs to Duck.ai chat
+    case attachMoreTabs
 
     /// Enables page context feature on iPad
     case iPadPageContext
@@ -418,11 +437,35 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables voice chat shortcut in the focused address bar
     case voiceShortcut
 
+    /// Enables improved contextual sheet UX (welcome message, ask about page, etc.)
+    case contextualSheetImprovements
+
     /// Enables removing individual AI chat suggestions
     case removeSuggestion
 
     /// Enables the fire button in the contextual AI chat sheet
     case contextualFireButton
+
+    /// Enables the Duck.ai top-level main menu shortcut (macOS only)
+    case mainMenuShortcut
+
+    /// Enables the Duck.ai submenu in the more options (hamburger) menu (macOS only)
+    case moreOptionsMenuShortcut
+
+    /// Enables native-side storage for AI Chat (settings, chats, files)
+    case nativeStorage
+
+    /// Prevents about: scheme navigations (e.g. about:srcdoc) from opening new tabs in the sidebar
+    case sidebarAboutSchemeNavigationFix
+
+    /// Enabled 'View all chats' for Duck.ai in the omnibar
+    case viewAllChatsNativeOmnibar
+
+    /// Enables image generation mode toggle in the Duck.ai omnibar
+    case omnibarImageGeneration
+
+    /// Enables web search tool in the Duck.ai omnibar
+    case omnibarWebSearch
 }
 
 public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {

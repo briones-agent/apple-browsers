@@ -66,6 +66,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         var aiChatSessionStore: AIChatSessionStoring
         var tabCrashAggregator: TabCrashAggregator
         var tabsPreferences: TabsPreferences
+        var autoplayPreferences: AutoplayPreferences
+        var permissionManager: PermissionManagerProtocol
         var webTrackingProtectionPreferences: WebTrackingProtectionPreferences
     }
 
@@ -144,6 +146,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                      tunnelController: NetworkProtectionIPCTunnelController? = TunnelControllerProvider.shared.tunnelController,
                      maliciousSiteDetector: MaliciousSiteDetecting = MaliciousSiteProtectionManager.shared,
                      tabsPreferences: TabsPreferences? = nil,
+                     autoplayPreferences: AutoplayPreferences? = nil,
                      webTrackingProtectionPreferences: WebTrackingProtectionPreferences? = nil,
                      onboardingPixelReporter: OnboardingAddressBarReporting = OnboardingPixelReporter(),
                      pageRefreshMonitor: PageRefreshMonitoring = PageRefreshMonitor(onDidDetectRefreshPattern: PageRefreshMonitor.onDidDetectRefreshPattern),
@@ -209,6 +212,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                   tunnelController: tunnelController,
                   maliciousSiteDetector: maliciousSiteDetector,
                   tabsPreferences: tabsPreferences ?? NSApp.delegateTyped.tabsPreferences,
+                  autoplayPreferences: autoplayPreferences ?? NSApp.delegateTyped.autoplayPreferences,
                   webTrackingProtectionPreferences: webTrackingProtectionPreferences ?? NSApp.delegateTyped.webTrackingProtectionPreferences,
                   onboardingPixelReporter: onboardingPixelReporter,
                   pageRefreshMonitor: pageRefreshMonitor,
@@ -259,6 +263,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
          tunnelController: NetworkProtectionIPCTunnelController?,
          maliciousSiteDetector: MaliciousSiteDetecting,
          tabsPreferences: TabsPreferences,
+         autoplayPreferences: AutoplayPreferences,
          webTrackingProtectionPreferences: WebTrackingProtectionPreferences,
          onboardingPixelReporter: OnboardingAddressBarReporting,
          pageRefreshMonitor: PageRefreshMonitoring,
@@ -280,7 +285,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         self.title = title
         self.favicon = favicon
         self.parentTab = parentTab
-        self.parentTabID = parentTab?.id
+        self.parentTabID = parentTab?.uuid
         self.securityOrigin = securityOrigin ?? .empty
         self.burnerMode = burnerMode
         self._canBeClosedWithBack = canBeClosedWithBack
@@ -349,6 +354,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                                                           aiChatSessionStore: aiChatSessionStore,
                                                           tabCrashAggregator: tabCrashAggregator,
                                                           tabsPreferences: tabsPreferences,
+                                                          autoplayPreferences: autoplayPreferences,
+                                                          permissionManager: permissionManager,
                                                           webTrackingProtectionPreferences: webTrackingProtectionPreferences)
         let tabExtensionsBuilderArguments: TabExtensionsBuilderArguments = (tabIdentifier: instrumentation.currentTabIdentifier,
                                                                             tabID: self.uuid,
@@ -440,7 +447,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                 let knownUserContentControllers = processPool.knownUserContentControllers
                 processPool.onDeinit {
                     for controller in knownUserContentControllers {
-                        assert(controller.userContentController == nil, "\(controller.userContentController!) has not been deallocated")
+                        controller.userContentController?.ensureObjectDeallocated(after: 1, do: .assert)
                     }
                 }
             }
@@ -458,12 +465,6 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
             (tabExtension as? (any NSCodingExtension))?.awakeAfter(using: decoder)
         }
         return self
-    }
-
-    func encodeExtensions(with coder: NSCoder) {
-        for tabExtension in self.extensions {
-            (tabExtension as? (any NSCodingExtension))?.encode(using: coder)
-        }
     }
 
     @MainActor
@@ -562,6 +563,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     }
 
     @Published private(set) var audioStateTest: WebView.AudioState = .unmuted(isPlayingAudio: false)
+
+    // MARK: - Tab Suspension
 
     var audioStatePublisher: AnyPublisher<WebView.AudioState, Never> {
         webView.audioStatePublisher
@@ -1271,6 +1274,19 @@ extension Tab {
     }
 }
 
+// MARK: - Autoplay
+
+extension Tab {
+
+    var mustDisplayAutoplayPolicy: Bool {
+        guard featureFlagger.isFeatureOn(.autoplayPolicy), let targetURL = content.urlForWebView else {
+            return false
+        }
+
+        return targetURL.isHttp || targetURL.isHttps
+    }
+}
+
 // MARK: -
 
 extension Tab: UserContentControllerDelegate {
@@ -1363,7 +1379,7 @@ extension Tab/*: NavigationResponder*/ { // to be moved to Tab+Navigation.swift
             navigation.navigationAction.sourceFrame.securityOrigin
         }
         if !securityOrigin.isEmpty || self.hasCommittedContent {
-            // don‘t reset the initially passed parent tab SecurityOrigin to an empty one for "about:blank" page
+            // don't reset the initially passed parent tab SecurityOrigin to an empty one for "about:blank" page
             self.securityOrigin = securityOrigin
         }
 
@@ -1535,8 +1551,8 @@ extension Tab/*: NavigationResponder*/ { // to be moved to Tab+Navigation.swift
 
     func renderingProgressDidChange(progressEvents: UInt) {
         // Emit only after first paint event, when the white background content is not visible anymore
-        // https://github.com/WebKit/WebKit/blob/407a96d094af6d48100f4524d964667336d962b4/Source/WebKit/Shared/API/Cocoa/_WKRenderingProgressEvents.h
-        if progressEvents >= 4 {
+        let events = _WKRenderingProgressEvents(rawValue: progressEvents)
+        if events.contains(.firstVisuallyNonEmptyLayout) {
             webViewRenderingProgressDidChangePublisher.send()
         }
     }
@@ -1569,6 +1585,25 @@ extension Tab: TabDataClearing {
 
         webView.navigationDelegate = caller
         webView.load(URLRequest(url: .blankPage))
+    }
+}
+
+// MARK: - Tab Suspension
+
+extension Tab {
+
+    /// Creates an UnloadedTab to hold the slot. Because it never navigates,
+    /// no web content process is spawned. The old Tab (and its WKWebView) is released
+    /// when replaceTab assigns the new one, letting the OS reclaim the process memory.
+    func makeSuspendedTab() -> UnloadedTab {
+        let unloadedTab = UnloadedTab(from: self.makeRestorationData())
+        unloadedTab.isSuspended = true
+
+        if let snapshotsExtension = self.tabSnapshots {
+            snapshotsExtension.shouldClearSnapshotOnDeinit = false
+        }
+
+        return unloadedTab
     }
 }
 
