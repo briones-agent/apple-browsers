@@ -628,17 +628,23 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         divider.isHidden = duckAIHidden || (sidebarHidden && voiceHidden)
         container.isHidden = duckAIHidden && sidebarHidden && voiceHidden
 
-        if !duckAIHidden && !sidebarHidden {
-            titleButton.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
-            sidebarButton.layer?.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-            container.backgroundColor = isFireWindow ? .clear : theme.colorsProvider.buttonMouseOverColor
-        } else if !duckAIHidden {
-            titleButton.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-            container.backgroundColor = isFireWindow ? .clear : theme.colorsProvider.buttonMouseOverColor
-        } else if !sidebarHidden {
-            sidebarButton.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-            container.backgroundColor = .clear
+        // Layout order: [titleButton | voiceButton | sidebarButton]
+        // Leftmost visible button gets left-side rounded corners; rightmost gets right-side rounded corners.
+        titleButton.layer?.maskedCorners = []
+        duckAIVoiceChatButton?.layer?.maskedCorners = []
+        sidebarButton.layer?.maskedCorners = []
+
+        let leftButton: NSView? = !duckAIHidden ? titleButton : (!voiceHidden ? duckAIVoiceChatButton : (!sidebarHidden ? sidebarButton : nil))
+        let rightButton: NSView? = !sidebarHidden ? sidebarButton : (!voiceHidden ? duckAIVoiceChatButton : (!duckAIHidden ? titleButton : nil))
+
+        if leftButton === rightButton {
+            leftButton?.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+        } else {
+            leftButton?.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
+            rightButton?.layer?.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         }
+
+        container.backgroundColor = isFireWindow ? .clear : (duckAIHidden ? .clear : theme.colorsProvider.buttonMouseOverColor)
 
         updateDuckAIChromeVibrancyBackground()
     }
@@ -687,6 +693,15 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         duckAIChromeSidebarButton.mouseDownTintColor = colorsProvider.iconsColor
         duckAIChromeSidebarButton.setCornerRadius(theme.toolbarButtonsCornerRadius)
         duckAIChromeSidebarButton.layer?.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+
+        duckAIVoiceChatButton?.backgroundColor = .clear
+        duckAIVoiceChatButton?.mouseOverColor = colorsProvider.buttonMouseDownColor
+        duckAIVoiceChatButton?.mouseDownColor = colorsProvider.buttonMouseDownPressedColor
+        duckAIVoiceChatButton?.normalTintColor = colorsProvider.iconsColor
+        duckAIVoiceChatButton?.mouseOverTintColor = colorsProvider.iconsColor
+        duckAIVoiceChatButton?.mouseDownTintColor = colorsProvider.iconsColor
+        duckAIVoiceChatButton?.setCornerRadius(theme.toolbarButtonsCornerRadius)
+
         applyDuckAIChromeButtonVisibility()
         updateDuckAIChromeDividerState()
     }
