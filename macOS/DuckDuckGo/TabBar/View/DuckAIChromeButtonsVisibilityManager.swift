@@ -21,6 +21,7 @@ import Foundation
 enum DuckAIChromeButtonType {
     case duckAI
     case sidebar
+    case voiceChat
 }
 
 protocol DuckAIChromeButtonsVisibilityManaging {
@@ -43,6 +44,8 @@ final class LocalDuckAIChromeButtonsVisibilityManager: DuckAIChromeButtonsVisibi
             persistor.isDuckAIButtonHidden
         case .sidebar:
             persistor.isSidebarButtonHidden
+        case .voiceChat:
+            persistor.isVoiceChatButtonHidden
         }
     }
 
@@ -59,6 +62,8 @@ final class LocalDuckAIChromeButtonsVisibilityManager: DuckAIChromeButtonsVisibi
             persistor.isDuckAIButtonHidden = hidden
         case .sidebar:
             persistor.isSidebarButtonHidden = hidden
+        case .voiceChat:
+            persistor.isVoiceChatButtonHidden = hidden
         }
 
         NotificationCenter.default.post(name: .duckAIChromeButtonsVisibilityChanged, object: nil)
