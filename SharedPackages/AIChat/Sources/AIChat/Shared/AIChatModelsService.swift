@@ -64,9 +64,10 @@ public struct AIChatRemoteModel: Decodable, Equatable {
     public let entityHasAccess: Bool
     public let supportsImageUpload: Bool
     public let supportedTools: [String]
+    public let supportedReasoningEffort: [String]
     public let accessTier: [String]
 
-    public init(id: String, name: String, modelShortName: String? = nil, provider: String, entityHasAccess: Bool, supportsImageUpload: Bool, supportedTools: [String], accessTier: [String]) {
+    public init(id: String, name: String, modelShortName: String? = nil, provider: String, entityHasAccess: Bool, supportsImageUpload: Bool, supportedTools: [String], supportedReasoningEffort: [String] = [], accessTier: [String]) {
         self.id = id
         self.name = name
         self.modelShortName = modelShortName
@@ -74,6 +75,7 @@ public struct AIChatRemoteModel: Decodable, Equatable {
         self.entityHasAccess = entityHasAccess
         self.supportsImageUpload = supportsImageUpload
         self.supportedTools = supportedTools
+        self.supportedReasoningEffort = supportedReasoningEffort
         self.accessTier = accessTier
     }
 }
@@ -159,7 +161,8 @@ extension AIChatModel {
             supportsImageUpload: remoteModel.supportsImageUpload,
             supportedImageFormats: remoteModel.supportsImageUpload ? Self.nativeSupportedImageFormats : [],
             entityHasAccess: hasAccess,
-            accessTier: remoteModel.accessTier
+            accessTier: remoteModel.accessTier,
+            supportedReasoningEffort: remoteModel.supportedReasoningEffort
         )
     }
 }

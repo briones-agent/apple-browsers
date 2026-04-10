@@ -37,6 +37,8 @@ public struct AIChatModel {
     public let entityHasAccess: Bool
     /// The access tiers this model belongs to (e.g. ["free", "plus", "pro", "internal"]).
     public let accessTier: [String]
+    /// Supported reasoning effort levels (e.g. ["none", "low", "medium"]). Empty when reasoning is not supported.
+    public let supportedReasoningEffort: [String]
 
     public enum ModelProvider {
         case openAI
@@ -47,7 +49,7 @@ public struct AIChatModel {
         case unknown
     }
 
-    public init(id: String, name: String, shortName: String? = nil, provider: ModelProvider, supportsImageUpload: Bool, supportedImageFormats: [String] = [], entityHasAccess: Bool, accessTier: [String] = []) {
+    public init(id: String, name: String, shortName: String? = nil, provider: ModelProvider, supportsImageUpload: Bool, supportedImageFormats: [String] = [], entityHasAccess: Bool, accessTier: [String] = [], supportedReasoningEffort: [String] = []) {
         self.id = id
         self.name = name
         self.shortName = shortName ?? name
@@ -56,6 +58,7 @@ public struct AIChatModel {
         self.supportedImageFormats = supportedImageFormats
         self.entityHasAccess = entityHasAccess
         self.accessTier = accessTier
+        self.supportedReasoningEffort = supportedReasoningEffort
     }
 
     /// Returns a platform-appropriate icon for use in menu items.

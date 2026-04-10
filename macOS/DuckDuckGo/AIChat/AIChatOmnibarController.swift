@@ -44,6 +44,7 @@ final class AIChatOmnibarController {
 
     @Published private(set) var currentText: String = ""
     @Published private(set) var activeToolMode: ToolMode?
+    @Published private(set) var selectedReasoningEffort: String?
     @Published var hasImageAttachments: Bool = false
 
     var isImageGenerationMode: Bool { activeToolMode == .imageGeneration }
@@ -299,6 +300,16 @@ final class AIChatOmnibarController {
         return models.first(where: { $0.id == persistedModelId })?.supportedImageFormats ?? ["png", "jpeg", "webp"]
     }
 
+    /// Supported reasoning effort levels for the currently selected model.
+    var selectedModelReasoningEfforts: [String] {
+        models.first(where: { $0.id == persistedModelId })?.supportedReasoningEffort ?? []
+    }
+
+    /// Updates the selected reasoning effort.
+    func updateSelectedReasoningEffort(_ effort: String?) {
+        selectedReasoningEffort = effort
+    }
+
     /// The model ID to use for the current submission.
     /// Returns nil when image generation mode is active — the mode field handles routing.
     var effectiveModelId: String? {
@@ -313,6 +324,11 @@ final class AIChatOmnibarController {
     /// The tool choice to include in the prompt payload (e.g., ["WebSearch"]).
     var effectiveToolChoice: [String]? {
         isWebSearchMode ? [AIChatRAGTool.webSearch.rawValue] : nil
+    }
+
+    /// The reasoning effort to include in the prompt payload.
+    var effectiveReasoningEffort: String? {
+        selectedReasoningEffort
     }
 
     /// Updates the selected model ID and persists it (along with its short name) for future sessions.
@@ -333,6 +349,7 @@ final class AIChatOmnibarController {
     func cleanup() {
         currentText = ""
         activeToolMode = nil
+        selectedReasoningEffort = nil
         hasImageAttachments = false
         hasBeenActivated = false
         suggestionsViewModel.clearAllChats()
@@ -454,10 +471,11 @@ final class AIChatOmnibarController {
             PixelKit.fire(AIChatPixel.aiChatAddressBarWebSearchSubmitted, frequency: .dailyAndCount, includeAppVersionParameter: true)
         }
 
-        // Capture mode/model/toolChoice before async work — cleanup() may reset activeToolMode
+        // Capture mode/model/toolChoice/reasoning before async work — cleanup() may reset state
         let modelId = effectiveModelId
         let mode = effectiveMode
         let toolChoice = effectiveToolChoice
+        let reasoningEffort = effectiveReasoningEffort
 
         Task { @MainActor in
             // Wait for any pending image resizes to complete
@@ -476,7 +494,7 @@ final class AIChatOmnibarController {
                 behavior: .currentTab
             )
             // Re-set prompt after tab opener to include images, model selection, and mode (tab opener overwrites with a plain query)
-            let prompt = AIChatNativePrompt.queryPrompt(trimmedText, autoSubmit: true, toolChoice: toolChoice, images: images, modelId: modelId, mode: mode)
+            let prompt = AIChatNativePrompt.queryPrompt(trimmedText, autoSubmit: true, toolChoice: toolChoice, images: images, modelId: modelId, mode: mode, reasoningEffort: reasoningEffort)
             promptHandler.setData(prompt)
 
             self.activeToolMode = nil
