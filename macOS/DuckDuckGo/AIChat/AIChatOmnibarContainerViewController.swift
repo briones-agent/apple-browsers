@@ -78,6 +78,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     private let imageGenActiveButton = AIChatOmnibarToolButton()
     private let webSearchActiveButton = AIChatOmnibarToolButton()
     private let modelPickerButton = AIChatModelPickerButton()
+    private let voiceChatLeftButton = AIChatOmnibarToolButton()   // Position A: right of image attachment
+    private let voiceChatRightButton = AIChatOmnibarToolButton()  // Position B: left of submit
     private let attachmentsContainerView = AIChatImageAttachmentsContainerView()
 
     private let attachmentsErrorLabel: NSTextField = {
@@ -455,6 +457,21 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         imageUploadButton.onTabPressed = { [weak self] in guard let self else { return }; self.advanceFocusAfter(self.imageUploadButton) }
         containerView.addSubview(imageUploadButton)
 
+        // Position A: right of image attachment — gated by feature flag
+        if NSApp.delegateTyped.featureFlagger.isFeatureOn(.aiChatOmnibarVoiceChatLeft) {
+            voiceChatLeftButton.translatesAutoresizingMaskIntoConstraints = false
+            voiceChatLeftButton.target = self
+            voiceChatLeftButton.action = #selector(voiceChatLeftButtonClicked)
+            voiceChatLeftButton.image = DesignSystemImages.Glyphs.Size16.voice
+            voiceChatLeftButton.toolTip = "New Voice Chat"
+            containerView.addSubview(voiceChatLeftButton)
+            NSLayoutConstraint.activate([
+                voiceChatLeftButton.leadingAnchor.constraint(equalTo: imageUploadButton.trailingAnchor, constant: Constants.toolButtonSpacing),
+                voiceChatLeftButton.widthAnchor.constraint(equalToConstant: Constants.toolButtonSize),
+                voiceChatLeftButton.heightAnchor.constraint(equalToConstant: Constants.toolButtonSize),
+            ])
+        }
+
         toolsButton.translatesAutoresizingMaskIntoConstraints = false
         toolsButton.target = self
         toolsButton.action = #selector(toolsButtonClicked)
@@ -563,7 +580,23 @@ final class AIChatOmnibarContainerViewController: NSViewController {
 
         // Model picker trailing: next to submit button when visible, or near container edge when hidden
         // Submit button is always visible, so model picker always sits to its left
-        modelPickerButton.trailingAnchor.constraint(equalTo: submitButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing).isActive = true
+        // Position B: left of submit — gated by feature flag
+        if NSApp.delegateTyped.featureFlagger.isFeatureOn(.aiChatOmnibarVoiceChatRight) {
+            voiceChatRightButton.translatesAutoresizingMaskIntoConstraints = false
+            voiceChatRightButton.target = self
+            voiceChatRightButton.action = #selector(voiceChatRightButtonClicked)
+            voiceChatRightButton.image = DesignSystemImages.Glyphs.Size16.voice
+            voiceChatRightButton.toolTip = "New Voice Chat"
+            containerView.addSubview(voiceChatRightButton)
+            NSLayoutConstraint.activate([
+                voiceChatRightButton.trailingAnchor.constraint(equalTo: submitButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing),
+                voiceChatRightButton.widthAnchor.constraint(equalToConstant: Constants.toolButtonSize),
+                voiceChatRightButton.heightAnchor.constraint(equalToConstant: Constants.toolButtonSize),
+            ])
+            modelPickerButton.trailingAnchor.constraint(equalTo: voiceChatRightButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing).isActive = true
+        } else {
+            modelPickerButton.trailingAnchor.constraint(equalTo: submitButton.leadingAnchor, constant: -Constants.modelPickerTrailingSpacing).isActive = true
+        }
 
         applyTheme(theme: themeManager.theme)
     }
@@ -595,8 +628,19 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             modelPickerButton.bottomAnchor.constraint(equalTo: suggestionsView.topAnchor, constant: -Constants.toolButtonBottomInset)
         ])
 
-        // Tools button chains after image upload button, or aligns to container when upload is hidden
-        toolsLeadingToUploadButton = toolsButton.leadingAnchor.constraint(equalTo: imageUploadButton.trailingAnchor, constant: Constants.toolButtonSpacing)
+        // Voice buttons — only constrain if they were added to the view
+        if NSApp.delegateTyped.featureFlagger.isFeatureOn(.aiChatOmnibarVoiceChatLeft) {
+            voiceChatLeftButton.bottomAnchor.constraint(equalTo: suggestionsView.topAnchor, constant: -Constants.toolButtonBottomInset).isActive = true
+        }
+        if NSApp.delegateTyped.featureFlagger.isFeatureOn(.aiChatOmnibarVoiceChatRight) {
+            voiceChatRightButton.bottomAnchor.constraint(equalTo: suggestionsView.topAnchor, constant: -Constants.toolButtonBottomInset).isActive = true
+        }
+
+        // Tools button chains after image upload button (or voice left button if enabled), or aligns to container when upload is hidden
+        let voiceLeftEnabled = NSApp.delegateTyped.featureFlagger.isFeatureOn(.aiChatOmnibarVoiceChatLeft)
+        toolsLeadingToUploadButton = voiceLeftEnabled
+            ? toolsButton.leadingAnchor.constraint(equalTo: voiceChatLeftButton.trailingAnchor, constant: Constants.toolButtonSpacing)
+            : toolsButton.leadingAnchor.constraint(equalTo: imageUploadButton.trailingAnchor, constant: Constants.toolButtonSpacing)
         toolsLeadingToContainer = toolsButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.toolButtonLeadingInset)
         toolsLeadingToUploadButton?.isActive = true
         toolsLeadingToContainer?.isActive = false
@@ -754,6 +798,18 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     @objc private func webSearchActiveButtonClicked() {
         PixelKit.fire(AIChatPixel.aiChatAddressBarWebSearchDeactivated, frequency: .dailyAndCount, includeAppVersionParameter: true)
         omnibarController.toggleWebSearchMode()
+    }
+
+    @objc private func voiceChatLeftButtonClicked() {
+        PixelKit.fire(AIChatPixel.aiChatNewVoiceChatOmnibarLeft, frequency: .dailyAndStandard)
+        let url = AIChatURLParameters.voiceModeURL(from: AIChatRemoteSettings().aiChatURL)
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
+    }
+
+    @objc private func voiceChatRightButtonClicked() {
+        PixelKit.fire(AIChatPixel.aiChatNewVoiceChatOmnibarRight, frequency: .dailyAndStandard)
+        let url = AIChatURLParameters.voiceModeURL(from: AIChatRemoteSettings().aiChatURL)
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
     }
 
     private func buildToolsMenu() -> NSMenu {
