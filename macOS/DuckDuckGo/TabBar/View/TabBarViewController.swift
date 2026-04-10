@@ -711,9 +711,11 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
             duckAIChromeSidebarButton?.isEnabled == true
         let isInteracting = isInteractionEnabled && (
             duckAIChromeTitleButton?.isMouseOver == true ||
-                            duckAIChromeTitleButton?.isMouseDown == true ||
-                            duckAIChromeSidebarButton?.isMouseOver == true ||
-                            duckAIChromeSidebarButton?.isMouseDown == true
+            duckAIChromeTitleButton?.isMouseDown == true ||
+            duckAIVoiceChatButton?.isMouseOver == true ||
+            duckAIVoiceChatButton?.isMouseDown == true ||
+            duckAIChromeSidebarButton?.isMouseOver == true ||
+            duckAIChromeSidebarButton?.isMouseDown == true
         )
         let showFullHeight = isInteracting || currentAIChatPresentationMode != .hidden
 
