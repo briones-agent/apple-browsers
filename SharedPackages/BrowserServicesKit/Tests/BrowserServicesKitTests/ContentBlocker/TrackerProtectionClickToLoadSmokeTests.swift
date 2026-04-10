@@ -60,8 +60,11 @@ final class TrackerProtectionClickToLoadSmokeTests: XCTestCase {
     private func evaluateJS(_ script: String, in webView: WKWebView) async throws -> Any? {
         try await withCheckedThrowingContinuation { cont in
             webView.evaluateJavaScript(script) { result, error in
-                if let error { cont.resume(throwing: error) }
-                else { cont.resume(returning: result) }
+                if let error {
+                    cont.resume(throwing: error)
+                } else {
+                    cont.resume(returning: result)
+                }
             }
         }
     }
