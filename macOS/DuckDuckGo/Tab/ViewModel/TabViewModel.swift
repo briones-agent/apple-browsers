@@ -35,6 +35,12 @@ final class TabViewModel: NSObject {
     private let accessibilityPreferences: AccessibilityPreferences
     private let featureFlagger: FeatureFlagger
     private let adBlockingAvailability: AdBlockingAvailabilityProviding
+    private lazy var adBlockingNavigationHandler: AdBlockingNavigationHandling = AdBlockingNavigationHandler(
+        availability: adBlockingAvailability,
+        onShouldShowAdBlockingAnimation: { [weak self] in
+            self?.youtubeAdBlockAnimationTriggerPublisher.send()
+        }
+    )
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var canGoForward: Bool = false
@@ -481,6 +487,7 @@ final class TabViewModel: NSObject {
     }
 
     func reload() {
+        adBlockingNavigationHandler.handleReload()
         tab.reload()
         updateAddressBarStrings()
         self.updateZoomForWebsite()
@@ -504,25 +511,20 @@ final class TabViewModel: NSObject {
     private func subscribeToYouTubeAdBlockAnimationTrigger() {
         tab.$content
             .compactMap { content -> URL? in
-                guard case .url(let url, _, source: .webViewUpdated) = content,
-                      url.isPlayableYoutubeVideoContent else { return nil }
+                guard case .url(let url, _, source: .webViewUpdated) = content else { return nil }
                 return url
             }
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
-            .sink { [weak self] _ in
-                guard let self,
-                      adBlockingAvailability.isEnabled else { return }
-                youtubeAdBlockAnimationTriggerPublisher.send()
+            .sink { [weak self] url in
+                self?.adBlockingNavigationHandler.handleURLChange(previousURL: nil, newURL: url)
             }
             .store(in: &cancellables)
 
         tab.webViewDidFinishNavigationPublisher
             .sink { [weak self] _ in
                 guard let self,
-                      adBlockingAvailability.isEnabled,
-                      case .url(let url, _, _) = tab.content,
-                      url.isPlayableYoutubeVideoContent else { return }
-                youtubeAdBlockAnimationTriggerPublisher.send()
+                      case .url(let url, _, _) = tab.content else { return }
+                adBlockingNavigationHandler.handleURLChange(previousURL: nil, newURL: url)
             }
             .store(in: &cancellables)
     }
