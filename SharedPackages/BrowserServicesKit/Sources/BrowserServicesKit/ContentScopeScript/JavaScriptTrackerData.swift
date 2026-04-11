@@ -105,7 +105,14 @@ private enum JSONValue: Encodable {
         case .object(let value):
             var container = encoder.container(keyedBy: DynamicCodingKey.self)
             for (key, nestedValue) in value {
-                try container.encode(nestedValue, forKey: DynamicCodingKey(stringValue: key))
+                guard let dynamicCodingKey = DynamicCodingKey(stringValue: key) else {
+                    throw EncodingError.invalidValue(
+                        key,
+                        .init(codingPath: container.codingPath,
+                              debugDescription: "Unsupported object key: \(key)")
+                    )
+                }
+                try container.encode(nestedValue, forKey: dynamicCodingKey)
             }
         case .array(let value):
             var container = encoder.unkeyedContainer()
