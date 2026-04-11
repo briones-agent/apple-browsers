@@ -301,15 +301,13 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
                                       config: WebkitMessagingConfig,
                                       privacyConfigurationJSONGenerator: (any CustomisedPrivacyConfigurationJSONGenerating)? = nil
     ) throws -> String {
-        if scriptContext != .contentScope {
-            properties.trackerData = nil
-        }
-
         let privacyConfigJsonData = privacyConfigurationJSONGenerator?.privacyConfiguration ?? privacyConfigurationManager.currentConfig
         guard let privacyConfigJson = String(data: privacyConfigJsonData, encoding: .utf8),
               let userUnprotectedDomains = try? JSONEncoder().encode(privacyConfigurationManager.privacyConfig.userUnprotectedDomains),
               let userUnprotectedDomainsString = String(data: userUnprotectedDomains, encoding: .utf8),
-              let jsonPropertiesString = try? encodeProperties(properties, messagingContextName: scriptContext.messagingContextName),
+              let jsonPropertiesString = try? encodeProperties(properties,
+                                                               messagingContextName: scriptContext.messagingContextName,
+                                                               includeTrackerData: scriptContext == .contentScope),
               let jsonConfig = try? JSONEncoder().encode(config),
               let jsonConfigString = String(data: jsonConfig, encoding: .utf8)
         else {
@@ -324,9 +322,14 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
         ])
     }
 
-    private static func encodeProperties(_ properties: ContentScopeProperties, messagingContextName: String) throws -> String {
+    private static func encodeProperties(_ properties: ContentScopeProperties,
+                                         messagingContextName: String,
+                                         includeTrackerData: Bool) throws -> String {
         let jsonProperties = try JSONEncoder().encode(properties)
         var dict = try JSONSerialization.jsonObject(with: jsonProperties, options: []) as? [String: Any] ?? [:]
+        if !includeTrackerData {
+            dict.removeValue(forKey: "trackerData")
+        }
         dict["messagingContextName"] = messagingContextName
 
         let encoded = try JSONSerialization.data(withJSONObject: dict, options: [])
