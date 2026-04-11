@@ -43,7 +43,9 @@ public struct TrackerProtectionEventMapper {
     private let unprotectedSites: [String]
     private let tempList: [String]
     private let contentBlockingEnabled: Bool
-    private let trackerAllowlist: PrivacyConfigurationData.TrackerAllowlistData
+    /// Pre-compiled allowlist: domain → [(regex, domains)] for O(1) lookup + match without
+    /// per-call NSRegularExpression compilation.
+    private let compiledAllowlist: [String: [(regex: NSRegularExpression, domains: [String])]]
 
     public init(tld: TLD,
                 mainTrackerData: TrackerData,
@@ -58,7 +60,7 @@ public struct TrackerProtectionEventMapper {
         self.unprotectedSites = unprotectedSites
         self.tempList = tempList
         self.contentBlockingEnabled = contentBlockingEnabled
-        self.trackerAllowlist = trackerAllowlist
+        self.compiledAllowlist = Self.compileAllowlist(trackerAllowlist)
     }
 
     /// Convenience init matching the old single-resolver API.
@@ -69,7 +71,21 @@ public struct TrackerProtectionEventMapper {
         self.unprotectedSites = trackerResolver.unprotectedSites
         self.tempList = trackerResolver.tempList
         self.contentBlockingEnabled = privacyConfig.isEnabled(featureKey: .contentBlocking)
-        self.trackerAllowlist = privacyConfig.trackerAllowlist.entries
+        self.compiledAllowlist = Self.compileAllowlist(privacyConfig.trackerAllowlist.entries)
+    }
+
+    /// Pre-compile all allowlist regex patterns at init time to avoid per-call compilation.
+    private static func compileAllowlist(
+        _ allowlist: PrivacyConfigurationData.TrackerAllowlistData
+    ) -> [String: [(regex: NSRegularExpression, domains: [String])]] {
+        var compiled: [String: [(regex: NSRegularExpression, domains: [String])]] = [:]
+        for (domain, entries) in allowlist {
+            compiled[domain] = entries.compactMap { entry in
+                guard let regex = try? NSRegularExpression(pattern: entry.rule, options: []) else { return nil }
+                return (regex: regex, domains: entry.domains)
+            }
+        }
+        return compiled
     }
 
     // MARK: - ResourceObservation classification
@@ -229,7 +245,7 @@ public struct TrackerProtectionEventMapper {
     /// the request URL must match a rule pattern, and the page host must be in the
     /// rule's domain list (or the domain list contains `<all>`).
     private func isTrackerAllowlisted(_ urlString: String, pageUrlString: String) -> Bool {
-        guard !trackerAllowlist.isEmpty,
+        guard !compiledAllowlist.isEmpty,
               let requestURL = URL(string: urlString),
               let requestHost = requestURL.host,
               let pageHost = URL(string: pageUrlString)?.host
@@ -244,11 +260,10 @@ public struct TrackerProtectionEventMapper {
         var domainParts = requestHost.split(separator: ".").map(String.init)
         while domainParts.count > 1 {
             let domain = domainParts.joined(separator: ".")
-            if let entries = trackerAllowlist[domain] {
+            if let entries = compiledAllowlist[domain] {
                 for entry in entries {
-                    guard let regex = try? NSRegularExpression(pattern: entry.rule, options: []),
-                          regex.firstMatch(in: normalizedForMatching, options: [],
-                                           range: NSRange(normalizedForMatching.startIndex..., in: normalizedForMatching)) != nil
+                    guard entry.regex.firstMatch(in: normalizedForMatching, options: [],
+                                                 range: NSRange(normalizedForMatching.startIndex..., in: normalizedForMatching)) != nil
                     else { continue }
 
                     if entry.domains.contains("<all>") { return true }
