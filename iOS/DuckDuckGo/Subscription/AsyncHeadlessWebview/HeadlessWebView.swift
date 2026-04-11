@@ -60,7 +60,7 @@ struct HeadlessWebView: UIViewRepresentable {
 #if DEBUG
             webView.isInspectable = true
 #else
-            webView.isInspectable = AppDependencyProvider.shared.subscriptionManager.currentEnvironment.serviceEnvironment == .staging
+            webView.isInspectable = AppUserDefaults().inspectableWebViewEnabled
 #endif
         }
         
