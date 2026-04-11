@@ -97,9 +97,7 @@ let package = Package(
             ],
             resources: [
                 .process("SmarterEncryption/Store/HTTPSUpgrade.xcdatamodeld"),
-                .copy("../../PrivacyInfo.xcprivacy"),
-                .process("ContentBlocking/UserScripts/contentblockerrules.js"),
-                .process("ContentBlocking/UserScripts/surrogates.js")
+                .copy("../../PrivacyInfo.xcprivacy")
             ],
             swiftSettings: [
                 .define("DEBUG", .when(configuration: .debug))

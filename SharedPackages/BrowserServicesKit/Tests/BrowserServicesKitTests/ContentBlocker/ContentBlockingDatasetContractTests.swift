@@ -96,30 +96,6 @@ class ContentBlockingDatasetContractTests: XCTestCase {
                      "ContentScopeProperties must not contain trackerData on A1 baseline (no C-S-S trackerProtection)")
     }
 
-    // MARK: - JS source structure (ContentBlockerRulesUserScript / SurrogatesUserScript)
-
-    func testWhenContentBlockerRulesSourceIsGeneratedThenProcessRuleIsPresent() throws {
-        let mockConfig = MockPrivacyConfiguration()
-        let source = try ContentBlockerRulesUserScript.generateSource(privacyConfiguration: mockConfig)
-
-        XCTAssertTrue(source.contains("processRule"),
-                      "contentblockerrules.js generated source must contain processRule")
-    }
-
-    func testWhenSurrogatesSourceIsGeneratedThenCTLGatingIsPresent() throws {
-        let mockConfig = MockPrivacyConfiguration()
-        let source = try SurrogatesUserScript.generateSource(
-            privacyConfiguration: mockConfig,
-            surrogates: "",
-            encodedSurrogateTrackerData: nil,
-            isDebugBuild: false)
-
-        XCTAssertTrue(source.contains("ctlSurrogates"),
-                      "surrogates.js generated source must contain ctlSurrogates list for CTL gating")
-        XCTAssertTrue(source.contains("isCTLEnabled"),
-                      "surrogates.js generated source must contain isCTLEnabled handler for CTL surrogate gating")
-    }
-
     func testWhenRulesEncodedTrackerDataIsDecodedThenItContainsOnlySurrogateTrackers() throws {
         let tds = Self.tdsWithMixedTrackers
         let surrogateTDS = ContentBlockerRulesManager.extractSurrogates(from: tds)
