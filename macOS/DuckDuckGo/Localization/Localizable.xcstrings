@@ -26258,8 +26258,8 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Öffnet Videos in einem privaten Theatermodus, der verhindert, dass das, was du ansiehst, deinen YouTube-Feed beeinflusst."
+            "state" : "translated",
+            "value" : "Öffnet Videos im Theatermodus, der verhindert, dass das, was du ansiehst, deinen YouTube-Feed beeinflusst."
           }
         },
         "en" : {
@@ -26270,44 +26270,44 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abre vídeos en modo teatro privado que impide que lo que ves influya en tu feed de YouTube."
+            "state" : "translated",
+            "value" : "Abre vídeos en modo teatro que impide que lo que ves influya en tu feed de YouTube."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ouvre les vidéos en mode « Salle de projection privée », ce qui empêche ce que vous regardez d'influencer votre fil d'actualité YouTube."
+            "state" : "translated",
+            "value" : "Ouvre les vidéos en mode « Salle de projection », ce qui empêche ce que vous regardez d'influencer votre fil d'actualité YouTube."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apre i video in una modalità cinema privata che impedisce a ciò che guardi di influenzare il tuo feed di YouTube."
+            "state" : "translated",
+            "value" : "Apre i video in una modalità cinema che impedisce a ciò che guardi di influenzare il tuo feed di YouTube."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Opent video's in een privébioscoopmodus die voorkomt dat wat je bekijkt je YouTube-feed beïnvloedt."
+            "state" : "translated",
+            "value" : "Opent video's in een bioscoopmodus die voorkomt dat wat je bekijkt je YouTube-feed beïnvloedt."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Otwiera filmy w prywatnym trybie kinowym, dzięki czemu oglądane treści nie wpływają na Twój kanał na YouTube."
+            "state" : "translated",
+            "value" : "Otwiera filmy w trybie kinowym, dzięki czemu oglądane treści nie wpływają na Twój kanał na YouTube."
           }
         },
         "pt" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abre vídeos num modo de cinema privado que impede que o que vês influencie o teu feed do YouTube."
+            "state" : "translated",
+            "value" : "Abre vídeos num modo de cinema que impede que o que vês influencie o teu feed do YouTube."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Открывает видео в режиме «личного кинотеатра»: ваши просмотры не влияют на ленту рекомендаций YouTube."
+            "state" : "translated",
+            "value" : "Открывает видео в режиме кинотеатра: ваши просмотры не влияют на ленту рекомендаций YouTube."
           }
         }
       }
