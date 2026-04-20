@@ -47,6 +47,7 @@ import SERPSettings
 import AIChat
 import PixelKit
 import PrivacyConfig
+import WebExtensions
 
 class TabViewController: UIViewController {
 
@@ -1164,6 +1165,10 @@ class TabViewController: UIViewController {
     func dismissContextualDaxFireDialog() {
         guard contextualOnboardingLogic.isShowingFireDialog else { return }
         contextualOnboardingPresenter.dismissContextualOnboardingIfNeeded(from: self)
+    }
+
+    func presentExperimentContextualDaxFireDialog() {
+        contextualOnboardingPresenter.presentContextualOnboarding(for: .fireDuckAIOnboarding, in: self)
     }
 
     private func checkForReloadOnError() {
