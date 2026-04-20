@@ -360,7 +360,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         let mockUserScript = MockAIChatUserScript()
         let mockWebView = WKWebView()
         handler.setup(with: mockUserScript, webView: mockWebView, displayMode: .fullTab)
-        handler.aiChatUserScript(makeTestUserScript(), didReceiveMessage: .getAIChatNativeConfigValues)
+        handler.aiChatUserScript(makeTestUserScript(), didReceiveMessage: .openAIChat)
 
         // When
         handler.submitToggleSidebarAction()
@@ -382,7 +382,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         XCTAssertEqual(mockUserScript.submitToggleSidebarActionCallCount, 0)
 
         // When - frontend becomes ready
-        handler.aiChatUserScript(makeTestUserScript(), didReceiveMessage: .getAIChatNativeConfigValues)
+        handler.aiChatUserScript(makeTestUserScript(), didReceiveMessage: .openAIChat)
 
         // Then - queued action is flushed
         XCTAssertEqual(mockUserScript.submitToggleSidebarActionCallCount, 1)
