@@ -1510,10 +1510,20 @@ class TabViewController: UIViewController {
         webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.isLoading))
     }
 
-    public func makeBreakageAdditionalInfo() -> PrivacyDashboardViewController.BreakageAdditionalInfo? {
+    public func makeBreakageAdditionalInfo(webExtensionManager: WebExtensionManaging? = nil) -> PrivacyDashboardViewController.BreakageAdditionalInfo? {
         
         guard let currentURL = url else {
             return nil
+        }
+
+        let loadedWebExtensions: String?
+        let adBlockingExtensionScriptletsVersion: String?
+        if #available(iOS 18.4, *), let webExtensionManager {
+            loadedWebExtensions = webExtensionManager.loadedWebExtensionsString()
+            adBlockingExtensionScriptletsVersion = webExtensionManager.adBlockingScriptletsVersion()
+        } else {
+            loadedWebExtensions = nil
+            adBlockingExtensionScriptletsVersion = nil
         }
 
         return PrivacyDashboardViewController.BreakageAdditionalInfo(currentURL: currentURL,
@@ -1529,7 +1539,9 @@ class TabViewController: UIViewController {
                                                                      breakageReportingSubfeature: breakageReportingSubfeature,
                                                                      isForceDarkModeEnabled: darkReaderFeatureSettings.isForceDarkModeEnabled,
                                                                      autoplayBlockingMode: featureFlagger.isFeatureOn(.autoplayBlocking) ? autoplaySettings.currentAutoplayBlockingMode.rawValue : nil,
-                                                                     isAfterSuppressedXSafariRedirect: safariRedirectHandler.isAfterSuppressedXSafariRedirect(for: currentURL))
+                                                                     isAfterSuppressedXSafariRedirect: safariRedirectHandler.isAfterSuppressedXSafariRedirect(for: currentURL),
+                                                                     loadedWebExtensions: loadedWebExtensions,
+                                                                     adBlockingExtensionScriptletsVersion: adBlockingExtensionScriptletsVersion)
     }
 
     public func print() {

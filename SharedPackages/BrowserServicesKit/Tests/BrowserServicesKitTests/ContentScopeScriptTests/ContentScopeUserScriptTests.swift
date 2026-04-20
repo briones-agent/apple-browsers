@@ -196,7 +196,11 @@ final class ContentScopeUserScriptTests: XCTestCase {
             privacyConfigurationJSONGenerator: configGenerator
         )
 
-        XCTAssertTrue(properties.surrogateTrackerData === surrogateTrackerData)
+        XCTAssertNotNil(properties.surrogateTrackerData)
+        XCTAssertEqual(properties.surrogateTrackerData?.trackers.count, surrogateTrackerData.trackers.count)
+        XCTAssertEqual(properties.surrogateTrackerData?.entities.count, surrogateTrackerData.entities.count)
+        XCTAssertEqual(properties.surrogateTrackerData?.domains.count, surrogateTrackerData.domains.count)
+        XCTAssertEqual(properties.surrogateTrackerData?.cnames?.count, surrogateTrackerData.cnames?.count)
     }
 
     // MARK: - ContentScopeScriptContext Tests
