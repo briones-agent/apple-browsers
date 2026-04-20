@@ -222,7 +222,7 @@ extension URL {
     }
 
     var isHttpOrHttps: Bool {
-        isHttps || isHttp
+        isHttps || isHttp || (AppVersion.runType == .uiTests && isFailureDemoURLScheme)
     }
 
     // MARK: ATB
@@ -403,6 +403,7 @@ extension URL {
 
     var isExternalSchemeLink: Bool {
         return ![.https, .http, .about, .file, .blob, .data, .ftp, .javascript, .duck, .webkitExtension].contains(navigationalScheme)
+        && !(AppVersion.runType == .uiTests && isFailureDemoURLScheme)
     }
 
     var isWebExtensionUrl: Bool {

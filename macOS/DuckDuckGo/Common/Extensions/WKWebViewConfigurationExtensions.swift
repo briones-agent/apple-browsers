@@ -62,12 +62,15 @@ extension WKWebViewConfiguration {
         preferences.javaScriptCanOpenWindowsAutomatically = true
         preferences.isFraudulentWebsiteWarningEnabled = false
 
+        lazy var duckHandler = DuckURLSchemeHandler(featureFlagger: NSApp.delegateTyped.featureFlagger)
         if urlSchemeHandler(forURLScheme: URL.NavigationalScheme.duck.rawValue) == nil {
             let featureFlagger = NSApp.delegateTyped.featureFlagger
-            setURLSchemeHandler(
-                DuckURLSchemeHandler(featureFlagger: featureFlagger),
-                forURLScheme: URL.NavigationalScheme.duck.rawValue
-            )
+            setURLSchemeHandler(duckHandler, forURLScheme: URL.NavigationalScheme.duck.rawValue)
+        }
+
+        if AppVersion.runType == .uiTests,
+           urlSchemeHandler(forURLScheme: URL.failureDemoURLScheme) == nil {
+            setURLSchemeHandler(duckHandler, forURLScheme: URL.failureDemoURLScheme)
         }
 
         if #available(macOS 15.4, *), let webExtensionManager = NSApp.delegateTyped.webExtensionManager {

@@ -16,10 +16,13 @@
 //  limitations under the License.
 //
 
+import BrowserServicesKit
+import Common
 import ContentScopeScripts
 import FeatureFlags
 import Foundation
 import MaliciousSiteProtection
+import Persistence
 import PrivacyConfig
 import WebKit
 
@@ -29,6 +32,10 @@ final class DuckURLSchemeHandler: NSObject, WKURLSchemeHandler {
     let faviconManager: FaviconManagement
     let isNTPSpecialPageSupported: Bool
     let userBackgroundImagesManager: UserBackgroundImagesManaging?
+
+    private var failureURLSchemeDebugKeyedStorage: some KeyedStoring<FailureURLSchemeDebugSettingsKeys> {
+        UserDefaults.standard.keyedStoring()
+    }
 
     init(
         featureFlagger: FeatureFlagger,
@@ -47,6 +54,12 @@ final class DuckURLSchemeHandler: NSObject, WKURLSchemeHandler {
             assertionFailure("No URL for Duck scheme handler")
             return
         }
+
+        if requestURL.navigationalScheme == .failureDemo {
+            handleFailureSchemeURL(requestURL: requestURL, urlSchemeTask: urlSchemeTask)
+            return
+        }
+
         let webViewURL = webView.url ?? requestURL
 
         switch webViewURL.type {
@@ -80,6 +93,128 @@ final class DuckURLSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 
     func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+
+    private static let failureSchemeDemoHtml = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <title>failure:// demo</title>
+      <style>
+        body { font: -apple-system-body; margin: 2rem; line-height: 1.4; }
+        code { font: -apple-system-monospaced; }
+      </style>
+    </head>
+    <body>
+      <h1><code>failure://</code> demo</h1>
+      <p>This page is served by the app URL scheme handler.</p>
+      <p>Turn on <strong>Debug → failure:// URL scheme → Simulate failure:// connection error</strong> to produce a
+      connection-lost navigation failure instead of this page.</p>
+    </body>
+    </html>
+    """
+
+    /// UI tests only: `failure://demo?alternatingFailures=1` alternates simulated `URLError` on successive handler invocations (tab reactivation / reload), matching `ErrorPageTests` connection-lost vs not-connected style updates without the tests server.
+    ///
+    /// `failure://demo?simulatedError=notConnected` always uses `URLError.notConnectedToInternet`. Simulated failures append ` · attempt N` to `NSLocalizedDescriptionKey` (counter resets with the alternating pass index when the Debug simulate toggle changes).
+    static func resetFailureSchemeAlternatingStateForUITests() {
+        alternatingFailuresLock.lock()
+        alternatingFailuresPassIndex = 0
+        alternatingFailuresLock.unlock()
+        failureSimulateAttemptLock.lock()
+        failureSimulateAttemptIndex = 0
+        failureSimulateAttemptLock.unlock()
+    }
+
+    private static let alternatingFailuresLock = NSLock()
+    private static var alternatingFailuresPassIndex = 0
+
+    private static let failureSimulateAttemptLock = NSLock()
+    private static var failureSimulateAttemptIndex = 0
+
+    private static func nextSimulatedFailureAttemptNumber() -> Int {
+        failureSimulateAttemptLock.lock()
+        failureSimulateAttemptIndex += 1
+        let n = failureSimulateAttemptIndex
+        failureSimulateAttemptLock.unlock()
+        return n
+    }
+
+    private func shouldUseAlternatingSimulatedFailures(requestURL: URL) -> Bool {
+        guard AppVersion.runType == .uiTests else { return false }
+        guard let items = URLComponents(url: requestURL, resolvingAgainstBaseURL: false)?.queryItems else { return false }
+        return items.contains { $0.name == "alternatingFailures" && ($0.value == nil || $0.value == "1") }
+    }
+
+    /// UI tests: `failure://demo?simulatedError=notConnected` always fails with `URLError.notConnectedToInternet` (when simulate is on).
+    private func failureSchemeForcesNotConnectedToInternetError(requestURL: URL) -> Bool {
+        guard AppVersion.runType == .uiTests else { return false }
+        guard let items = URLComponents(url: requestURL, resolvingAgainstBaseURL: false)?.queryItems else { return false }
+        return items.contains { item in
+            guard item.name.caseInsensitiveCompare("simulatedError") == .orderedSame else { return false }
+            guard let value = item.value else { return false }
+            return value.caseInsensitiveCompare("notConnected") == .orderedSame
+                || value.caseInsensitiveCompare("notConnectedToInternet") == .orderedSame
+        }
+    }
+
+    private func handleFailureSchemeURL(requestURL: URL, urlSchemeTask: WKURLSchemeTask) {
+        guard AppVersion.runType == .uiTests else {
+            urlSchemeTask.didFailWithError(URLError(.unsupportedURL))
+            return
+        }
+
+        if failureURLSchemeDebugKeyedStorage.simulateConnectionLost == true {
+            if failureSchemeForcesNotConnectedToInternetError(requestURL: requestURL) {
+                let attempt = Self.nextSimulatedFailureAttemptNumber()
+                let error = URLError(.notConnectedToInternet, userInfo: [
+                    NSURLErrorFailingURLErrorKey: requestURL,
+                    NSLocalizedDescriptionKey: "Debug simulated not connected to internet (failure://) · attempt \(attempt)"
+                ])
+                urlSchemeTask.didFailWithError(error)
+                return
+            }
+            if shouldUseAlternatingSimulatedFailures(requestURL: requestURL) {
+                Self.alternatingFailuresLock.lock()
+                let pass = Self.alternatingFailuresPassIndex
+                Self.alternatingFailuresPassIndex += 1
+                Self.alternatingFailuresLock.unlock()
+
+                let attempt = Self.nextSimulatedFailureAttemptNumber()
+                let error: URLError
+                if pass % 2 == 0 {
+                    error = URLError(.networkConnectionLost, userInfo: [
+                        NSURLErrorFailingURLErrorKey: requestURL,
+                        NSLocalizedDescriptionKey: "Debug simulated connection lost (failure://) · attempt \(attempt)"
+                    ])
+                } else {
+                    error = URLError(.notConnectedToInternet, userInfo: [
+                        NSURLErrorFailingURLErrorKey: requestURL,
+                        NSLocalizedDescriptionKey: "Debug simulated not connected to internet (failure://) · attempt \(attempt)"
+                    ])
+                }
+                urlSchemeTask.didFailWithError(error)
+                return
+            }
+
+            let attempt = Self.nextSimulatedFailureAttemptNumber()
+            let error = URLError(.networkConnectionLost, userInfo: [
+                NSURLErrorFailingURLErrorKey: requestURL,
+                NSLocalizedDescriptionKey: "Debug simulated connection lost (failure://) · attempt \(attempt)"
+            ])
+            urlSchemeTask.didFailWithError(error)
+            return
+        }
+
+        let data = Self.failureSchemeDemoHtml.utf8data
+        let response = URLResponse(url: requestURL,
+                                   mimeType: "text/html",
+                                   expectedContentLength: data.count,
+                                   textEncodingName: "utf-8")
+        urlSchemeTask.didReceive(response)
+        urlSchemeTask.didReceive(data)
+        urlSchemeTask.didFinish()
+    }
 
     private lazy var faviconsFetcherOnboarding: FaviconsFetcherOnboarding? = {
         guard let syncService = NSApp.delegateTyped.syncService, let syncBookmarksAdapter = NSApp.delegateTyped.syncDataProviders?.bookmarksAdapter else {

@@ -1000,7 +1000,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         // In the case of an error only reload web URLs to prevent uxss attacks via redirecting to javascript://
         if let error = error,
            let failingUrl = error.failingUrl ?? content.urlForWebView,
-           failingUrl.isHttp || failingUrl.isHttps,
+           failingUrl.isHttpOrHttps,
            // navigate in-place to preserve back-forward history
            // launch navigation using javascript: URL navigation to prevent WebView from
             // interpreting the action as user-initiated link navigation causing a new tab opening when Cmd is pressed
@@ -1074,7 +1074,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     @MainActor
     private func shouldReload(_ url: URL, source: ReloadIfNeededSource) -> Bool {
         /// Use unified logic if enabled to decide if URL is valid
-        guard url.isValid(usingUnifiedLogic: featureFlagger.isFeatureOn(.unifiedURLPredictor)) else { return false }
+        guard url.isValid(usingUnifiedLogic: featureFlagger.isFeatureOn(.unifiedURLPredictor)) || (AppVersion.runType == .uiTests && url.isFailureDemoURLScheme) else { return false }
 
         switch source {
         // should load when Web View is displayed?
