@@ -332,7 +332,7 @@ class MainViewController: UIViewController {
     }
 
     private(set) var darkReaderFeatureSettings: DarkReaderFeatureSettings
-    private let fireModePromotionEligibility: FireModePromotionCoordinating?
+    private(set) var fireModePromotionEligibility: FireModePromotionCoordinating?
 
     init(
         privacyConfigurationManager: PrivacyConfigurationManaging,
