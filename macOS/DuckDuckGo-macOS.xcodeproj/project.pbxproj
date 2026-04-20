@@ -473,6 +473,7 @@
 		36E19A062F3230D900556F78 /* DataClearingPixelsReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E19A042F3230D200556F78 /* DataClearingPixelsReporter.swift */; };
 		3701C9CE29BD040C00305B15 /* FirefoxBerkeleyDatabaseReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3701C9CD29BD040900305B15 /* FirefoxBerkeleyDatabaseReader.swift */; };
 		3701C9CF29BD040C00305B15 /* FirefoxBerkeleyDatabaseReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3701C9CD29BD040900305B15 /* FirefoxBerkeleyDatabaseReader.swift */; };
+		370245392F95F3690068F91B /* PrivacyConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 370245382F95F3690068F91B /* PrivacyConfig */; };
 		370245FD2CF7C65400CD79A3 /* PrivacyStatsTrackerDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370245FC2CF7C64B00CD79A3 /* PrivacyStatsTrackerDataProvider.swift */; };
 		370245FE2CF7C65400CD79A3 /* PrivacyStatsTrackerDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370245FC2CF7C64B00CD79A3 /* PrivacyStatsTrackerDataProvider.swift */; };
 		370270BC2C78AC6F002E44E4 /* NewTabBackgroundPixel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370270BB2C78AC6F002E44E4 /* NewTabBackgroundPixel.swift */; };
@@ -7138,6 +7139,7 @@
 				9D9DE5792C63AA1A00D20B15 /* AppKitExtensions in Frameworks */,
 				4B9EE3842D76CC0A00DDC75C /* Networking in Frameworks */,
 				4B9EE3822D76CC0400DDC75C /* Common in Frameworks */,
+				370245392F95F3690068F91B /* PrivacyConfig in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -13421,6 +13423,7 @@
 				9D9DE5782C63AA1A00D20B15 /* AppKitExtensions */,
 				4B9EE3812D76CC0400DDC75C /* Common */,
 				4B9EE3832D76CC0A00DDC75C /* Networking */,
+				370245382F95F3690068F91B /* PrivacyConfig */,
 			);
 			productName = VPNProxyExtension;
 			productReference = 7BDA36E52B7E037100AD5388 /* VPNProxyExtension.appex */;
@@ -20044,6 +20047,10 @@
 		31D49A3A2DC294A200262F26 /* UIComponents */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = UIComponents;
+		};
+		370245382F95F3690068F91B /* PrivacyConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PrivacyConfig;
 		};
 		3706FA71293F65D500E42796 /* BrowserServicesKit */ = {
 			isa = XCSwiftPackageProductDependency;
