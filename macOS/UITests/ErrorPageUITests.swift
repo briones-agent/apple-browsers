@@ -29,7 +29,7 @@ class ErrorPageUITests: UITestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
         continueAfterFailure = false
-        app = XCUIApplication.setUp()
+        app = XCUIApplication.setUp(environment: ["FAILURE_URL_SCHEME_ENABLED": "1"])
         app.enforceSingleWindow()
         webView = app.webViews.firstMatch
         removePinnedTabsForTestCleanup()
@@ -66,6 +66,8 @@ class ErrorPageUITests: UITestCase {
 
     /// Same back-stack shape as `testWhenPageFailsToLoad_errorPageShown`: new tab → unreachable host error → Back returns to the new tab surface (not the error page).
     func testErrorPage_FromNewTab_UnreachableHost_BackReturnsToNewTabSurface() throws {
+        // setUp closes all windows; open a new one to restore the New Tab surface.
+        app.openNewWindow()
         XCTAssertTrue(webView.waitForExistence(timeout: UITests.Timeouts.navigation), "WebView should be ready after launch")
         let newTabChrome = webView.popUpButtons["Customize"]
         XCTAssertTrue(
@@ -184,14 +186,15 @@ class ErrorPageUITests: UITestCase {
         selectUnpinnedTab(at: 0)
         assertFailureSchemeDemoPageBodyVisible()
 
-        // `testWhenTabWithNoConnectionErrorActivated_reloadTriggered`: recovered tab has no forward stack; back still reaches prior history.
+        // `testWhenTabWithNoConnectionErrorActivated_reloadTriggered`: recovered tab has no forward stack; back is disabled
+        // because failure:// was the first navigation in this window (no prior New Tab entry committed).
         XCTAssertTrue(app.forwardButton.waitForExistence(timeout: UITests.Timeouts.elementExistence))
         XCTAssertFalse(app.forwardButton.isEnabled, "After recovery, tab should not expose forward history")
-        XCTAssertTrue(app.backButton.isEnabled)
+        XCTAssertFalse(app.backButton.isEnabled, "failure:// was the first navigation — no prior page to go back to")
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.backButton),
-            [Self.failureSchemeDocumentTitle, "New Tab"],
-            "Recovered `failure://` demo should match reload-success back shape (demo document title, then home)"
+            [],
+            "Back button disabled when failure:// was the first navigation in this window"
         )
     }
 
@@ -239,7 +242,7 @@ class ErrorPageUITests: UITestCase {
             "Error copy should remain on the second attempt"
         )
 
-        assertNavigationChromeMatchesTransientConnectionErrorCase()
+        assertNavigationChromeMatchesTransientConnectionErrorNoBackCase()
     }
 
     /// `failure://demo?simulatedError=notConnected` with simulate on always uses `URLError.notConnectedToInternet` (literal code path), not only when `alternatingFailures` is enabled.
@@ -262,7 +265,7 @@ class ErrorPageUITests: UITestCase {
             webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulateAttemptSuffix(2)).firstMatch.exists,
             "Single navigation should not advance to attempt 2"
         )
-        assertNavigationChromeMatchesTransientConnectionErrorCase()
+        assertNavigationChromeMatchesTransientConnectionErrorNoBackCase()
     }
 
     // MARK: - Connection-style tab switch
@@ -366,7 +369,9 @@ class ErrorPageUITests: UITestCase {
         assertGenericErrorPageVisible()
         assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
-        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
+        // Cmd+R re-invokes the URL scheme handler (debug-menu click on the same URL only triggers reload()
+        // which reuses the cached simulated response and does not advance the alternating counter).
+        app.typeKey("r", modifierFlags: [.command])
         assertGenericErrorPageVisible()
         let notConnectedAfterResubmit = webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedNotConnectedDescription).firstMatch
         XCTAssertTrue(
@@ -380,16 +385,24 @@ class ErrorPageUITests: UITestCase {
         assertFailureSchemeDemoPageBodyVisible()
     }
 
-    /// Aligned with `testWhenReloadingBySubmittingSameURL_errorPageRemainsSame`: demo → B → Back → two failing `failure://` submits; Forward still reaches B.
+    /// Aligned with `testWhenReloadingBySubmittingSameURL_errorPageRemainsSame`: two failing `failure://` submits on the same URL; Forward still reaches B.
+    ///
+    /// Structure: failure://demo?alt error → B → Back (forward: [B]) → Cmd+R (second submit, advances alternating) → Forward reaches B.
+    /// The alternating-failures URL is the *first* navigation so that B can be added on top and Back preserves it in forward.
     func testErrorPage_FailureScheme_ResubmitSameURL_Twice_ThenForwardToB() throws {
         let bTitle = "FailureScheme Resubmit Seq B"
         let urlB = UITests.simpleServedPage(titled: bTitle)
 
-        // Build history: demo → B, then back to demo (forward still holds B).
-        ensureSimulateFailureURLSchemeOff()
-        openFailureURLSchemeDemoViaDebugMenu()
-        assertFailureSchemeDemoPageBodyVisible()
+        // Open a new window so that "New Tab" is committed to history before the failure:// navigation.
+        app.openNewWindow()
 
+        // First submit: alternating-failures URL with simulate on → error (attempt 1, connectionLost).
+        ensureSimulateFailureURLSchemeOn()
+        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
+        assertGenericErrorPageVisible()
+        assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
+
+        // Navigate to B then back so forward holds B.
         app.activateAddressBar()
         addressBarTextField.pasteURL(urlB, pressingEnter: true)
         XCTAssertTrue(
@@ -398,20 +411,15 @@ class ErrorPageUITests: UITestCase {
         )
 
         app.backButton.click()
-        assertFailureSchemeDemoPageBodyVisible()
-
-        // Two Debug opens to alternating-failures demo while simulate on: stay on error, preserve forward to B.
-        ensureSimulateFailureURLSchemeOn()
-        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
         assertGenericErrorPageVisible()
-        assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
-        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
+        // Back re-invokes the scheme handler (attempt 2 → not-connected); Cmd+R advances to attempt 3 (connection-lost).
+        app.typeKey("r", modifierFlags: [.command])
         assertGenericErrorPageVisible()
-        let notConnectedSecondSubmit = webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedNotConnectedDescription).firstMatch
+        let connectionLostSecondSubmit = webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedConnectionLostDescription).firstMatch
         XCTAssertTrue(
-            notConnectedSecondSubmit.waitForExistence(timeout: UITests.Timeouts.navigation),
-            "Second failing navigation should show the other simulated description (alternating failure chain)"
+            connectionLostSecondSubmit.waitForExistence(timeout: UITests.Timeouts.navigation),
+            "Cmd+R after back (attempt 3) should show the connection-lost simulated description (alternating failure chain)"
         )
 
         XCTAssertTrue(app.forwardButton.waitForExistence(timeout: UITests.Timeouts.elementExistence))
@@ -423,8 +431,8 @@ class ErrorPageUITests: UITestCase {
         )
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.backButton),
-            [Self.failureSchemeCommittedHostMenuLabel, Self.failureSchemeDocumentTitle, "New Tab"],
-            "Back list should include error row, demo document title, then new tab (forward/back preservation)"
+            [Self.failureSchemeCommittedHostMenuLabel, "New Tab"],
+            "Back list: error row then new tab (failure:// was opened from the fresh New Tab window)"
         )
         // Forward should still reach B after two failing submits on the failure URL.
         app.forwardButton.click()
@@ -434,21 +442,23 @@ class ErrorPageUITests: UITestCase {
         )
     }
 
-    /// Aligned with forward history after error + recovery: A → B → Back → `failure://` error → simulate off + reload → Forward still reaches B.
+    /// Aligned with forward history after error + recovery: `failure://` error → B → Back → simulate off + reload → Forward still reaches B.
+    ///
+    /// Structure: open new window → failure://demo error → B → Back (forward: [B]) → sim off Cmd+R → demo → Forward still has B.
+    /// The failure:// URL is the first navigation so that navigating to B and coming back keeps B in the forward stack.
     func testErrorPage_HistoryChain_FailureScheme_SimulateOffReload_ShowsDemo_ForwardToB() throws {
-        let aTitle = "History FailureScheme Page A"
         let bTitle = "History FailureScheme Page B"
-        let urlA = UITests.simpleServedPage(titled: aTitle)
         let urlB = UITests.simpleServedPage(titled: bTitle)
 
-        // A → B, then Back so forward still holds B while current is A.
-        app.activateAddressBar()
-        addressBarTextField.pasteURL(urlA, pressingEnter: true)
-        XCTAssertTrue(
-            webView.staticTexts.containing(\.value, containing: aTitle).firstMatch
-                .waitForExistence(timeout: UITests.Timeouts.localTestServer)
-        )
+        // Open a new window so that "New Tab" is committed to history before the failure:// navigation.
+        app.openNewWindow()
 
+        // Navigate to failure://demo with simulate on → error.
+        ensureSimulateFailureURLSchemeOn()
+        openFailureURLSchemeDemoViaDebugMenu()
+        assertGenericErrorPageVisible()
+
+        // Navigate to B then back so forward holds B.
         app.activateAddressBar()
         addressBarTextField.pasteURL(urlB, pressingEnter: true)
         XCTAssertTrue(
@@ -457,17 +467,9 @@ class ErrorPageUITests: UITestCase {
         )
 
         app.backButton.click()
-        XCTAssertTrue(
-            webView.staticTexts.containing(\.value, containing: aTitle).firstMatch
-                .waitForExistence(timeout: UITests.Timeouts.localTestServer)
-        )
-
-        // User navigates to failure:// with simulate on → error replaces A; B stays in forward history.
-        ensureSimulateFailureURLSchemeOn()
-        openFailureURLSchemeDemoViaDebugMenu()
         assertGenericErrorPageVisible()
 
-        // Simulate off + reload should serve demo HTML for the committed failure URL.
+        // Simulate off + reload should serve demo HTML; B stays in forward history.
         ensureSimulateFailureURLSchemeOff()
         app.typeKey("r", modifierFlags: [.command])
         assertFailureSchemeDemoPageBodyVisible()
@@ -478,12 +480,12 @@ class ErrorPageUITests: UITestCase {
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.forwardButton),
             [Self.failureSchemeDocumentTitle, bTitle],
-            "Same forward shape as `testErrorPage_FailureScheme_HistoryBack_ReloadFailThenSimulateOff_ReloadSuccess_ForwardToB`"
+            "Recovered demo should have B ahead in forward history"
         )
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.backButton),
             [Self.failureSchemeDocumentTitle, "New Tab"],
-            "Recovered demo keeps a single prior back entry"
+            "Recovered demo: single prior back entry (New Tab committed before failure:// navigation)"
         )
         app.forwardButton.click()
         XCTAssertTrue(
@@ -529,16 +531,22 @@ class ErrorPageUITests: UITestCase {
         )
     }
 
-    /// Aligned with `testWhenPageLoadedAndFailsOnRefreshAndOnConsequentRefresh…`: demo → B → Back; two Cmd+R while simulate is on stay on error; Forward reaches B.
+    /// Aligned with `testWhenPageLoadedAndFailsOnRefreshAndOnConsequentRefresh…`: two Cmd+R while simulate is on stay on error; Forward reaches B.
+    ///
+    /// Structure: open new window → failure://demo?alt error → B → Back (forward: [B]) → Cmd+R x2 (alternating copy) → Forward reaches B.
     func testErrorPage_FailureScheme_HistoryBack_ReloadTwice_ForwardToB() throws {
         let bTitle = "FailureScheme Reload Chain B"
         let urlB = UITests.simpleServedPage(titled: bTitle)
 
-        // demo → B, Back to demo so forward holds B.
-        ensureSimulateFailureURLSchemeOff()
-        openFailureURLSchemeDemoViaDebugMenu()
-        assertFailureSchemeDemoPageBodyVisible()
+        // Open a new window so that "New Tab" is committed to history before the failure:// navigation.
+        app.openNewWindow()
 
+        // Navigate to alternating-failures URL with simulate on → error (attempt 1, connectionLost).
+        ensureSimulateFailureURLSchemeOn()
+        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
+        assertGenericErrorPageVisible()
+
+        // Navigate to B then back so forward holds B.
         app.activateAddressBar()
         addressBarTextField.pasteURL(urlB, pressingEnter: true)
         XCTAssertTrue(
@@ -547,46 +555,48 @@ class ErrorPageUITests: UITestCase {
         )
 
         app.backButton.click()
-        assertFailureSchemeDemoPageBodyVisible()
-
-        // Commit alternating failure URL on top of demo (simulate on) → error; two Cmd+R advance alternating copy.
-        ensureSimulateFailureURLSchemeOn()
-        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
         assertGenericErrorPageVisible()
+
+        // Back navigation re-invokes the URL scheme handler (attempt 2 → not-connected copy).
+        // Two subsequent Cmd+R advance: attempt 3 → connection-lost, attempt 4 → not-connected.
         let connectionLostLine = webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedConnectionLostDescription).firstMatch
         let notConnectedLine = webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedNotConnectedDescription).firstMatch
-        XCTAssertTrue(connectionLostLine.exists, "Initial alternating open should show connection-lost copy")
-
-        // First reload: other alternating line.
-        app.typeKey("r", modifierFlags: [.command])
         XCTAssertTrue(
             notConnectedLine.waitForExistence(timeout: UITests.Timeouts.navigation),
-            "First reload should surface the alternating not-connected copy"
+            "Back re-invokes the scheme handler (attempt 2) → not-connected copy should be visible"
+        )
+        XCTAssertFalse(connectionLostLine.exists, "Back (attempt 2) should not show connection-lost copy")
+
+        // First reload: connection-lost (attempt 3).
+        app.typeKey("r", modifierFlags: [.command])
+        XCTAssertTrue(
+            connectionLostLine.waitForExistence(timeout: UITests.Timeouts.navigation),
+            "First reload (attempt 3) should surface the alternating connection-lost copy"
         )
         XCTAssertTrue(
             webView.staticTexts.containing(\.value, containing: Self.errorPageHeader).firstMatch.exists,
             "Error page header should stay visible after first reload"
         )
-        XCTAssertFalse(connectionLostLine.exists, "First reload should move off the connection-lost line of copy")
+        XCTAssertFalse(notConnectedLine.exists, "First reload (attempt 3) should move off the not-connected line of copy")
 
-        // Second reload: back to first alternating line.
+        // Second reload: back to not-connected (attempt 4).
         app.typeKey("r", modifierFlags: [.command])
         XCTAssertTrue(
-            connectionLostLine.waitForExistence(timeout: UITests.Timeouts.navigation),
-            "Second reload should return to the connection-lost line of copy"
+            notConnectedLine.waitForExistence(timeout: UITests.Timeouts.navigation),
+            "Second reload (attempt 4) should return to the not-connected line of copy"
         )
         XCTAssertTrue(
             webView.staticTexts.containing(\.value, containing: Self.errorPageHeader).firstMatch.exists,
             "Error page header should stay visible after second reload"
         )
-        XCTAssertFalse(notConnectedLine.exists, "Second reload should move off the not-connected line of copy")
+        XCTAssertFalse(connectionLostLine.exists, "Second reload (attempt 4) should move off the connection-lost line of copy")
 
         assertNavigationChromeMatchesErrorWithBackAndForwardCase()
 
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.backButton),
-            [Self.failureSchemeCommittedHostMenuLabel, Self.failureSchemeDocumentTitle, "New Tab"],
-            "Back list should list error on current URL, prior demo, new tab"
+            [Self.failureSchemeCommittedHostMenuLabel, "New Tab"],
+            "Back list: error row then New Tab (failure:// was opened from the fresh New Tab window, no prior demo)"
         )
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.forwardButton),
@@ -604,15 +614,22 @@ class ErrorPageUITests: UITestCase {
     }
 
     /// Aligned with `testWhenPageLoadedAndFailsOnRefreshAndSucceedsOnConsequentRefresh…`: reload fails with simulate on; simulate off + reload restores demo; Forward to B.
+    ///
+    /// Structure: open new window → failure://demo?alt error → B → Back (forward: [B]) → sim off Cmd+R → demo → Forward reaches B.
     func testErrorPage_FailureScheme_HistoryBack_ReloadFailThenSimulateOff_ReloadSuccess_ForwardToB() throws {
         let bTitle = "FailureScheme Reload Recover B"
         let urlB = UITests.simpleServedPage(titled: bTitle)
 
-        // Same history setup: demo → B → Back to demo.
-        ensureSimulateFailureURLSchemeOff()
-        openFailureURLSchemeDemoViaDebugMenu()
-        assertFailureSchemeDemoPageBodyVisible()
+        // Open a new window so that "New Tab" is committed to history before the failure:// navigation.
+        app.openNewWindow()
 
+        // Navigate to alternating-failures URL with simulate on → error (attempt 1, connectionLost).
+        ensureSimulateFailureURLSchemeOn()
+        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
+        assertGenericErrorPageVisible()
+        assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
+
+        // Navigate to B then back so forward holds B.
         app.activateAddressBar()
         addressBarTextField.pasteURL(urlB, pressingEnter: true)
         XCTAssertTrue(
@@ -621,14 +638,9 @@ class ErrorPageUITests: UITestCase {
         )
 
         app.backButton.click()
-        assertFailureSchemeDemoPageBodyVisible()
-
-        // One failed reload chain on alternating URL, then simulate off + reload succeeds.
-        ensureSimulateFailureURLSchemeOn()
-        openFailureURLSchemeAlternatingFailuresViaDebugMenu()
         assertGenericErrorPageVisible()
-        assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
+        // Simulate off + reload succeeds; B stays in forward history.
         ensureSimulateFailureURLSchemeOff()
         app.typeKey("r", modifierFlags: [.command])
         assertFailureSchemeDemoPageBodyVisible()
@@ -641,7 +653,7 @@ class ErrorPageUITests: UITestCase {
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.backButton),
             [Self.failureSchemeDocumentTitle, "New Tab"],
-            "Back from recovered demo should be new tab only (single prior history entry)"
+            "Back from recovered demo: New Tab committed before failure:// navigation"
         )
         app.forwardButton.click()
         XCTAssertTrue(
@@ -1289,7 +1301,10 @@ class ErrorPageUITests: UITestCase {
             "Back menu: recovered failure:// demo document title, prior middle, new tab (no duplicate error-only row)"
         )
 
-        // Jump back through history via Back menu, then walk Forward twice (error → demo).
+        // Jump back through history via Back menu, then walk Forward to the recovered demo.
+        // The recovery reload (sim-off Cmd+R) replaces the error history entry in-place, so there is
+        // only ONE forward hop from "Session Restore Middle" to the recovered demo page — no separate
+        // error-state entry in the forward stack.
         clickNavigationHistoryMenuItem(on: app.backButton, itemIndex: 1)
         XCTAssertTrue(
             app.windows.webViews["Session Restore Middle"].waitForExistence(timeout: UITests.Timeouts.localTestServer),
@@ -1299,19 +1314,11 @@ class ErrorPageUITests: UITestCase {
             navigationHistoryMenuTitlesFromRightClicking(app.forwardButton),
             [
                 "Session Restore Middle",
-                Self.failureSchemeCommittedHostMenuLabel,
                 Self.failureSchemeDocumentTitle
             ],
-            "Forward from middle should reach the failure:// commit (`demo`) then the recovered demo document title"
+            "Forward from middle should reach the recovered demo (error entry replaced by recovery reload)"
         )
 
-        XCTAssertTrue(app.forwardButton.isEnabled)
-        app.forwardButton.click()
-        XCTAssertTrue(
-            webView.staticTexts.containing(\.value, containing: Self.errorPageHeader).firstMatch
-                .waitForExistence(timeout: UITests.Timeouts.navigation),
-            "First forward hop should be the restored error state"
-        )
         XCTAssertTrue(app.forwardButton.isEnabled)
         app.forwardButton.click()
         assertFailureSchemeDemoPageBodyVisible()
@@ -1717,6 +1724,21 @@ private extension ErrorPageUITests {
         XCTAssertTrue(back.waitForExistence(timeout: UITests.Timeouts.elementExistence), file: file, line: line)
         XCTAssertTrue(forward.exists && reload.exists, file: file, line: line)
         XCTAssertTrue(back.isEnabled, file: file, line: line)
+        XCTAssertFalse(forward.isEnabled, file: file, line: line)
+        XCTAssertTrue(reload.isEnabled, file: file, line: line)
+        assertSaveAsMenuItemEnabled(false, file: file, line: line)
+    }
+
+    /// Transient connection-style error where `failure://` was the **first** navigation in the window
+    /// (no prior page — back is disabled).  Used when the debug-menu action opens a fresh window directly
+    /// to the failure URL without committing a New Tab entry first.
+    func assertNavigationChromeMatchesTransientConnectionErrorNoBackCase(file: StaticString = #filePath, line: UInt = #line) {
+        let back = app.backButton
+        let forward = app.forwardButton
+        let reload = app.reloadButton
+        XCTAssertTrue(back.waitForExistence(timeout: UITests.Timeouts.elementExistence), file: file, line: line)
+        XCTAssertTrue(forward.exists && reload.exists, file: file, line: line)
+        XCTAssertFalse(back.isEnabled, "Back should be disabled: failure:// was the first navigation in this window", file: file, line: line)
         XCTAssertFalse(forward.isEnabled, file: file, line: line)
         XCTAssertTrue(reload.isEnabled, file: file, line: line)
         assertSaveAsMenuItemEnabled(false, file: file, line: line)
