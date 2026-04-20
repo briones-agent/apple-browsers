@@ -21,6 +21,7 @@ import Common
 import ContentScopeScripts
 import Foundation
 import PrivacyConfig
+import TrackerRadarKit
 import UserScript
 import WebKit
 
@@ -96,6 +97,10 @@ public final class ContentScopeProperties: Encodable {
     public let features: [String: ContentScopeFeature]
     public var currentCohorts: [ContentScopeExperimentData]
     public let themeVariant: String?
+    /// Surrogate-filtered tracker data for C-S-S surrogate injection.
+    /// Contains only trackers with surrogate rules, not the full TDS.
+    /// Encoded as "trackerData" for C-S-S compatibility.
+    public var surrogateTrackerData: TrackerData?
 
     public init(gpcEnabled: Bool,
                 sessionKey: String,
@@ -104,7 +109,8 @@ public final class ContentScopeProperties: Encodable {
                 debug: Bool = false,
                 featureToggles: ContentScopeFeatureToggles,
                 currentCohorts: [ContentScopeExperimentData] = [],
-                themeVariant: String? = nil) {
+                themeVariant: String? = nil,
+                surrogateTrackerData: TrackerData? = nil) {
         self.globalPrivacyControlValue = gpcEnabled
         self.debug = debug
         self.sessionKey = sessionKey
@@ -116,6 +122,7 @@ public final class ContentScopeProperties: Encodable {
         ]
         self.currentCohorts = currentCohorts
         self.themeVariant = themeVariant
+        self.surrogateTrackerData = surrogateTrackerData
     }
 
     enum CodingKeys: String, CodingKey {
@@ -130,6 +137,7 @@ public final class ContentScopeProperties: Encodable {
         case features
         case currentCohorts
         case themeVariant
+        case surrogateTrackerData = "trackerData"
     }
 
 }
@@ -253,7 +261,7 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
                 properties: ContentScopeProperties,
                 scriptContext: ContentScopeScriptContext = .contentScope,
                 allowedNonisolatedFeatures: [String] = [],
-                privacyConfigurationJSONGenerator: CustomisedPrivacyConfigurationJSONGenerating?
+                privacyConfigurationJSONGenerator: (any CustomisedPrivacyConfigurationJSONGenerating)? = nil
     ) throws {
         self.scriptContext = scriptContext
         self.allowedNonisolatedFeatures = allowedNonisolatedFeatures
@@ -275,8 +283,12 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
                                       properties: ContentScopeProperties,
                                       scriptContext: ContentScopeScriptContext,
                                       config: WebkitMessagingConfig,
-                                      privacyConfigurationJSONGenerator: CustomisedPrivacyConfigurationJSONGenerating?
+                                      privacyConfigurationJSONGenerator: (any CustomisedPrivacyConfigurationJSONGenerating)? = nil
     ) throws -> String {
+        if scriptContext != .contentScope {
+            properties.surrogateTrackerData = nil
+        }
+
         let privacyConfigJsonData = privacyConfigurationJSONGenerator?.privacyConfiguration ?? privacyConfigurationManager.currentConfig
         guard let privacyConfigJson = String(data: privacyConfigJsonData, encoding: .utf8),
               let userUnprotectedDomains = try? JSONEncoder().encode(privacyConfigurationManager.privacyConfig.userUnprotectedDomains),
