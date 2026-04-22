@@ -19,7 +19,6 @@
 
 #if os(iOS)
 import AVFoundation
-import os.log
 import UIKit
 import WebKit
 
@@ -140,7 +139,6 @@ extension AIChatWebViewController {
     }
 
     func loadQuery(_ query: String, autoSend: Bool, flowType: AIChatOnboardingFlowType = .default, tools: [AIChatRAGTool]?, modelId: String? = nil, reasoningEffort: AIChatReasoningEffort? = nil) {
-        Logger.aiChat.info("Loading AIChat query in web view with modelId=\(modelId ?? "nil", privacy: .public) reasoningEffort=\(reasoningEffort?.rawValue ?? "nil", privacy: .public) autoSend=\(autoSend, privacy: .public)")
         let prompt = AIChatNativePrompt.queryPrompt(
             query,
             autoSubmit: autoSend,

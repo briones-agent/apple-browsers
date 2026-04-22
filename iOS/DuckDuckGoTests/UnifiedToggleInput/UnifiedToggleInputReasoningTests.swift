@@ -93,6 +93,20 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
         XCTAssertEqual(mockDelegate.submittedReasoningEffort, .low)
     }
 
+    func testSubmitAIChatAfterChangingToFastPassesNoReasoningEffort() {
+        mockPreferences.selectedModelId = "gpt-5.2"
+        mockPreferences.selectedReasoningMode = .reasoning
+        sut.modelStore.models = [makeReasoningModel(id: "gpt-5.2", supportedReasoningEffort: [.none, .low, .medium])]
+
+        sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "first", mode: .aiChat)
+        sut.updateSelectedReasoningMode(.fast)
+        mockDelegate.submittedReasoningEffort = nil
+
+        sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "second", mode: .aiChat)
+
+        XCTAssertEqual(mockDelegate.submittedReasoningEffort, AIChatReasoningEffort.none)
+    }
+
     func testBindToExistingChatWhenReasoningModelKeepsReasoningButtonAvailable() {
         sut.modelStore.models = [makeReasoningModel(id: "gpt-5.2", supportedReasoningEffort: [.none, .low, .medium])]
         mockPreferences.selectedModelId = "gpt-5.2"
@@ -138,6 +152,7 @@ private final class MockUnifiedToggleInputReasoningDelegate: UnifiedToggleInputD
     func unifiedToggleInputDidSubmitQuery(_ query: String) {}
     func unifiedToggleInputDidRequestVoiceSearch() {}
     func unifiedToggleInputDidChangeHeight() {}
+    func unifiedToggleInputDidCommitMode(_ mode: TextEntryMode) {}
 }
 
 private final class MockAIChatReasoningPreferences: AIChatPreferencesPersisting {

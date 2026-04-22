@@ -19,7 +19,6 @@
 
 import AIChat
 import Combine
-import os.log
 import Subscription
 import UIKit
 
@@ -616,7 +615,6 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     func submitVoicePrompt(_ text: String) {
         guard let userScript = boundUserScript else { return }
         let configuration = promptSubmissionConfiguration
-        logVoicePromptSubmission(configuration: configuration)
         hasSubmittedPrompt = true
         updateModelChipVisibility()
         syncHasSubmittedPromptToHandler()
@@ -773,7 +771,6 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
 
     func updateSelectedReasoningMode(_ mode: AIChatReasoningMode) {
         modelStore.updateSelectedReasoningMode(mode)
-        logReasoningModeSelection(mode)
         updateReasoningPicker()
     }
 
@@ -828,7 +825,6 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     private func updateReasoningPicker() {
         let selectedMode = resolvedSelectedReasoningMode
         let shouldHide = !(selectedModel?.supportsReasoningPicker ?? false)
-        logReasoningPickerVisibility(hidden: shouldHide)
         viewController.selectedReasoningMode = selectedMode
         viewController.isReasoningButtonHidden = shouldHide
         viewController.reasoningPickerMenu = shouldHide ? nil : buildReasoningPickerMenu()
@@ -917,7 +913,6 @@ extension UnifiedToggleInputCoordinator: UnifiedToggleInputViewControllerDelegat
                 ? UnifiedToggleInputImageEncoder.encode(viewController.currentAttachments)
                 : nil
             let configuration = promptSubmissionConfiguration
-            logPromptSubmission(configuration: configuration, images: images)
             clearAttachments()
             hasSubmittedPrompt = true
             updateModelChipVisibility()
@@ -1075,22 +1070,6 @@ private extension UnifiedToggleInputCoordinator {
 
     var resolvedSelectedReasoningMode: AIChatReasoningMode? {
         selectedModel?.resolvedReasoningMode(from: persistedReasoningMode)
-    }
-
-    func logPromptSubmission(configuration: PromptSubmissionConfiguration, images: [AIChatNativePrompt.NativePromptImage]?) {
-        Logger.aiChat.info("UTI prompt submit with modelId=\(configuration.modelId ?? "nil", privacy: .public) reasoningEffort=\(configuration.reasoningEffort?.rawValue ?? "nil", privacy: .public) hasImages=\(!(images?.isEmpty ?? true), privacy: .public) imageCount=\(images?.count ?? 0, privacy: .public) firstSubmission=\(!self.hasSubmittedPrompt, privacy: .public)")
-    }
-
-    func logVoicePromptSubmission(configuration: PromptSubmissionConfiguration) {
-        Logger.aiChat.info("UTI voice prompt submit with modelId=\(configuration.modelId ?? "nil", privacy: .public) reasoningEffort=\(configuration.reasoningEffort?.rawValue ?? "nil", privacy: .public)")
-    }
-
-    func logReasoningModeSelection(_ mode: AIChatReasoningMode) {
-        Logger.aiChat.debug("UTI reasoning mode updated to \(mode.rawValue, privacy: .public) for modelId=\(self.selectedModel?.id ?? "nil", privacy: .public)")
-    }
-
-    func logReasoningPickerVisibility(hidden: Bool) {
-        Logger.aiChat.debug("UTI reasoning picker hidden=\(hidden, privacy: .public) modelId=\(self.selectedModel?.id ?? "nil", privacy: .public) availableEfforts=\(self.selectedModel?.supportedReasoningEffort.map(\.rawValue).joined(separator: ",") ?? "none", privacy: .public)")
     }
 
     // MARK: Subscriptions

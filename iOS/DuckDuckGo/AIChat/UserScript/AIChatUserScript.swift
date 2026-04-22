@@ -252,7 +252,8 @@ final class AIChatUserScript: NSObject, Subfeature {
         inputBoxHandler?.didSubmitPrompt
             .sink(receiveValue: { [weak self] prompt in
                 let modelId = self?.inputBoxHandler?.persistedModelId
-                self?.submitPrompt(prompt, modelId: modelId)
+                let reasoningEffort = self?.inputBoxHandler?.persistedReasoningEffort
+                self?.submitPrompt(prompt, modelId: modelId, reasoningEffort: reasoningEffort)
             })
             .store(in: &inputBoxCancellables)
 
@@ -278,11 +279,10 @@ final class AIChatUserScript: NSObject, Subfeature {
     // MARK: - AI Chat Actions
 
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData? = nil) {
-        submitPrompt(prompt, pageContext: pageContext, modelId: nil, reasoningEffort: nil)
+        submitPrompt(prompt, pageContext: pageContext, modelId: nil, reasoningEffort: inputBoxHandler?.persistedReasoningEffort)
     }
 
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData? = nil, modelId: String?, reasoningEffort: AIChatReasoningEffort? = nil) {
-        Logger.aiChat.info("Queueing native AIChat prompt with modelId=\(modelId ?? "nil", privacy: .public) reasoningEffort=\(reasoningEffort?.rawValue ?? "nil", privacy: .public) hasPageContext=\(pageContext != nil, privacy: .public)")
         let promptPayload = AIChatNativePrompt.queryPrompt(prompt, autoSubmit: true, modelId: modelId, pageContext: pageContext, reasoningEffort: reasoningEffort)
         push(.submitPrompt(promptPayload))
     }
@@ -292,7 +292,6 @@ final class AIChatUserScript: NSObject, Subfeature {
     }
 
     func submitPrompt(_ prompt: String, images: [AIChatNativePrompt.NativePromptImage]?, modelId: String?, tools: [AIChatRAGTool]?, reasoningEffort: AIChatReasoningEffort? = nil) {
-        Logger.aiChat.info("Queueing native AIChat prompt with modelId=\(modelId ?? "nil", privacy: .public) reasoningEffort=\(reasoningEffort?.rawValue ?? "nil", privacy: .public) imageCount=\(images?.count ?? 0, privacy: .public)")
         let promptPayload = AIChatNativePrompt.queryPrompt(
             prompt,
             autoSubmit: true,
