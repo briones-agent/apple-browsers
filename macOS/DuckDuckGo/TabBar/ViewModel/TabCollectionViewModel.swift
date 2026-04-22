@@ -797,9 +797,8 @@ final class TabCollectionViewModel: NSObject {
         let newIndex = tabIndex.makeNext()
 
         tabCollection(for: tabIndex)?.insert(tabCopy, at: newIndex.item)
-        select(at: newIndex)
-
         delegate?.tabCollectionViewModelDidInsert(self, at: newIndex, selected: true)
+        select(at: newIndex)
     }
 
     func pinTab(at index: Int) {
