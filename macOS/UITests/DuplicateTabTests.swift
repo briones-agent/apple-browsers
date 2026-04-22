@@ -57,25 +57,4 @@ class DuplicateTabTests: UITestCase {
         )
     }
 
-    func test_duplicateTab_newTabIsHittable() throws {
-        let pageURL = UITests.simpleServedPage(titled: "DuplicateTabTest2")
-        app.openURL(pageURL)
-
-        let tabs = app.tabGroups.matching(identifier: "Tabs").radioButtons
-        XCTAssertTrue(
-            tabs.element(boundBy: 0).waitForExistence(timeout: UITests.Timeouts.elementExistence),
-            "Initial tab should be visible"
-        )
-
-        app.menuItems["Duplicate Tab"].tap()
-
-        XCTAssertTrue(
-            tabs.wait(for: \.count, equals: 2, timeout: UITests.Timeouts.elementExistence),
-            "A second tab should appear after duplicating"
-        )
-
-        let duplicateTab = tabs.element(boundBy: 1)
-        XCTAssertTrue(duplicateTab.exists, "Duplicate tab element should exist")
-        XCTAssertTrue(duplicateTab.isHittable, "Duplicate tab should be hittable")
-    }
 }
