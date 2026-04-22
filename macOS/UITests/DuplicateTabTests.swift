@@ -37,7 +37,8 @@ class DuplicateTabTests: UITestCase {
     }
 
     func test_duplicateTab_appearsInTabBar_viaWindowMenu() throws {
-        app.openURL(URL(string: "http://example.com")!)
+        let pageURL = UITests.simpleServedPage(titled: "DuplicateTabTest")
+        app.openURL(pageURL)
 
         let tabs = app.tabGroups.matching(identifier: "Tabs").radioButtons
         XCTAssertTrue(
@@ -57,7 +58,8 @@ class DuplicateTabTests: UITestCase {
     }
 
     func test_duplicateTab_newTabIsHittable() throws {
-        app.openURL(URL(string: "http://example.com")!)
+        let pageURL = UITests.simpleServedPage(titled: "DuplicateTabTest2")
+        app.openURL(pageURL)
 
         let tabs = app.tabGroups.matching(identifier: "Tabs").radioButtons
         XCTAssertTrue(
