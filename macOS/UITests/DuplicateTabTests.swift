@@ -70,12 +70,12 @@ class DuplicateTabTests: UITestCase {
         app.menuItems["Duplicate Tab"].tap()
 
         XCTAssertTrue(
-            tabs.wait(for: \.count, in: 2..., timeout: UITests.Timeouts.elementExistence),
+            tabs.wait(for: \.count, equals: 2, timeout: UITests.Timeouts.elementExistence),
             "A second tab should appear after duplicating"
         )
 
         let duplicateTab = tabs.element(boundBy: 1)
         XCTAssertTrue(duplicateTab.exists, "Duplicate tab element should exist")
-        XCTAssertTrue(duplicateTab.isHittable, "Duplicate tab should be hittable (visible and interactable)")
+        XCTAssertTrue(duplicateTab.isHittable, "Duplicate tab should be hittable")
     }
 }
