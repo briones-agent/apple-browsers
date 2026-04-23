@@ -188,15 +188,11 @@ extension AdClickAttributionTabExtension: AdClickAttributionLogicDelegate {
         let attributedTempListName = AdClickAttributionRulesProvider.Constants.attributedTempRuleListName
 
         trackerProtectionSubfeature?.currentAdClickAttributionVendor = vendor
-        trackerProtectionSubfeature?.currentAdClickAttributionAllowlistHosts = vendor != nil
-            ? dependencies.adClickAttribution.allowlist.map(\.host)
-            : []
         trackerProtectionSubfeature?.currentAttributionTrackerData = rules?.trackerData
 
         guard dependencies.privacyConfigurationManager.privacyConfig.isEnabled(featureKey: .contentBlocking) else {
             userContentController.removeLocalContentRuleList(withIdentifier: attributedTempListName)
             trackerProtectionSubfeature?.currentAdClickAttributionVendor = nil
-            trackerProtectionSubfeature?.currentAdClickAttributionAllowlistHosts = []
             trackerProtectionSubfeature?.currentAttributionTrackerData = nil
             return
         }
