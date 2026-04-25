@@ -37,7 +37,7 @@ final class AIChatReasoningTests: XCTestCase {
         let model = makeModel(supportedReasoningEffort: [.none, .low, .medium, .high])
 
         XCTAssertEqual(model.availableReasoningModes, [.fast, .reasoning, .extendedReasoning])
-        XCTAssertEqual(model.reasoningEffort(for: .fast), .none)
+        XCTAssertEqual(model.reasoningEffort(for: .fast), AIChatReasoningEffort.none)
         XCTAssertEqual(model.reasoningEffort(for: .reasoning), .low)
         XCTAssertEqual(model.reasoningEffort(for: .extendedReasoning), .high)
     }
@@ -46,7 +46,7 @@ final class AIChatReasoningTests: XCTestCase {
         let model = makeModel(supportedReasoningEffort: [.medium, .low, .none])
 
         XCTAssertEqual(model.availableReasoningModes, [.fast, .reasoning, .extendedReasoning])
-        XCTAssertEqual(model.reasoningEffort(for: .fast), .none)
+        XCTAssertEqual(model.reasoningEffort(for: .fast), AIChatReasoningEffort.none)
         XCTAssertEqual(model.reasoningEffort(for: .reasoning), .low)
         XCTAssertEqual(model.reasoningEffort(for: .extendedReasoning), .medium)
     }

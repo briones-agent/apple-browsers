@@ -1132,8 +1132,8 @@ final class AIChatOmnibarControllerTests: XCTestCase {
             entityHasAccess: entityHasAccess,
             supportsImageUpload: supportsImageUpload,
             supportedTools: supportedTools,
-            supportedReasoningEffort: supportedReasoningEffort,
-            accessTier: entityHasAccess ? ["free"] : ["plus", "pro"]
+            accessTier: entityHasAccess ? ["free"] : ["plus", "pro"],
+            supportedReasoningEffort: supportedReasoningEffort
         )
     }
 
