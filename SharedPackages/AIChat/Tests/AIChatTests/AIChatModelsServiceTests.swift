@@ -83,6 +83,31 @@ final class AIChatModelsServiceTests: XCTestCase {
         XCTAssertEqual(response.models[0].supportedReasoningEffort, [])
     }
 
+    func testWhenJSONIncludesNullSupportedReasoningEffort_ThenDecodesWithEmptyArray() throws {
+        let json = """
+        {
+            "models": [
+                {
+                    "id": "gpt-4o-mini",
+                    "name": "GPT-4o mini",
+                    "provider": "openai",
+                    "entityHasAccess": true,
+                    "supportsImageUpload": false,
+                    "supportedTools": [],
+                    "supportedReasoningEffort": null,
+                    "accessTier": ["free"]
+                }
+            ]
+        }
+        """
+        let data = try XCTUnwrap(json.data(using: .utf8))
+
+        let response = try JSONDecoder().decode(AIChatModelsResponse.self, from: data)
+
+        XCTAssertEqual(response.models.count, 1)
+        XCTAssertEqual(response.models[0].supportedReasoningEffort, [])
+    }
+
     func testWhenJSONIncludesSupportedReasoningEffort_ThenValueIsDecoded() throws {
         let json = """
         {

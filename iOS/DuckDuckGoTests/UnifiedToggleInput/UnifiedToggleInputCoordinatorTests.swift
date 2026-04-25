@@ -1378,12 +1378,32 @@ final class UnifiedToggleInputToolbarViewTests: XCTestCase {
         XCTAssertLessThanOrEqual(submitFrame.maxX, sut.bounds.maxX)
     }
 
+    func test_reasoningButton_hasAccessibilityIdentifier() {
+        let sut = UnifiedToggleInputToolbarView()
+
+        let reasoningButton = findButton(accessibilityIdentifier: "AIChat.Toolbar.Button.Reasoning", in: sut)
+
+        XCTAssertEqual(reasoningButton?.accessibilityLabel, UserText.aiChatToolbarReasoningButtonAccessibilityLabel)
+    }
+
     private func findButton(accessibilityLabel: String, in view: UIView) -> UIButton? {
         for subview in view.subviews {
             if let button = subview as? UIButton, button.accessibilityLabel == accessibilityLabel {
                 return button
             }
             if let button = findButton(accessibilityLabel: accessibilityLabel, in: subview) {
+                return button
+            }
+        }
+        return nil
+    }
+
+    private func findButton(accessibilityIdentifier: String, in view: UIView) -> UIButton? {
+        for subview in view.subviews {
+            if let button = subview as? UIButton, button.accessibilityIdentifier == accessibilityIdentifier {
+                return button
+            }
+            if let button = findButton(accessibilityIdentifier: accessibilityIdentifier, in: subview) {
                 return button
             }
         }

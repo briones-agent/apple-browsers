@@ -271,7 +271,7 @@ final class AIChatUserScript: NSObject, Subfeature {
     // MARK: - AI Chat Actions
 
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData? = nil) {
-        submitPrompt(prompt, pageContext: pageContext, modelId: nil, reasoningEffort: inputBoxHandler?.persistedReasoningEffort)
+        submitPrompt(prompt, pageContext: pageContext, modelId: nil)
     }
 
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData? = nil, modelId: String?, reasoningEffort: AIChatReasoningEffort? = nil) {

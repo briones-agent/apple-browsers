@@ -166,6 +166,7 @@ final class UnifiedToggleInputToolbarView: UIView {
             action: nil
         )
         button.isHidden = true
+        button.accessibilityIdentifier = "AIChat.Toolbar.Button.Reasoning"
         return button
     }()
 

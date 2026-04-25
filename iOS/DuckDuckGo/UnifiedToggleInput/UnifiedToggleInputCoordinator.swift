@@ -106,9 +106,12 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     var persistedReasoningEffort: AIChatReasoningEffort? {
         selectedModel?.reasoningEffort(for: persistedReasoningMode)
     }
+    private var promptSubmissionModelId: String? {
+        hasSubmittedPrompt ? nil : persistedModelId
+    }
     private var promptSubmissionConfiguration: PromptSubmissionConfiguration {
         PromptSubmissionConfiguration(
-            modelId: hasSubmittedPrompt ? nil : persistedModelId,
+            modelId: promptSubmissionModelId,
             reasoningEffort: persistedReasoningEffort
         )
     }
@@ -614,13 +617,13 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
 
     func submitVoicePrompt(_ text: String) {
         guard let userScript = boundUserScript else { return }
-        let configuration = promptSubmissionConfiguration
+        let modelId = promptSubmissionModelId
         hasSubmittedPrompt = true
         updateModelChipVisibility()
         syncHasSubmittedPromptToHandler()
         resetToolsSelection()
         showCollapsed()
-        userScript.submitPrompt(text, images: nil, modelId: configuration.modelId, reasoningEffort: configuration.reasoningEffort)
+        userScript.submitPrompt(text, images: nil, modelId: modelId, reasoningEffort: nil)
     }
 
     func handleExternalSubmission(_ type: ExternalSubmissionType) {
