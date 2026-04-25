@@ -81,14 +81,14 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
         XCTAssertEqual(actions?.map(\.title), ["Fast", "Reasoning", "Extended Reasoning"])
     }
 
-    func testReasoningPickerMenuReversesChildrenWhenBottomAnchored() {
+    func testReasoningPickerMenuKeepsStaticOrderWhenBottomAnchored() {
         sut.viewController.cardPosition = .bottom
         sut.modelStore.models = [makeReasoningModel(id: "gpt-5.2", supportedReasoningEffort: [.medium, .low, .none])]
 
         sut.updateSelectedModel("gpt-5.2")
 
         let actions = sut.viewController.reasoningPickerMenu?.children.compactMap { $0 as? UIAction }
-        XCTAssertEqual(actions?.map(\.title), ["Extended Reasoning", "Reasoning", "Fast"])
+        XCTAssertEqual(actions?.map(\.title), ["Fast", "Reasoning", "Extended Reasoning"])
     }
 
     func testUpdateSelectedModelWhenOnlyOneReasoningModeHidesReasoningButton() {
