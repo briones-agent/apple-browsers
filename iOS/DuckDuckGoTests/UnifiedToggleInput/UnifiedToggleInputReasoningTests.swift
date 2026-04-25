@@ -172,6 +172,7 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
         sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "second", mode: .aiChat)
 
         XCTAssertEqual(mockDelegate.submittedReasoningEffort, .low)
+        XCTAssertNil(mockDelegate.submittedModelId)
     }
 
     func testSubmitAIChatAfterChangingToFastPassesNoReasoningEffort() {

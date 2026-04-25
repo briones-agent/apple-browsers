@@ -167,6 +167,9 @@ final class UnifiedToggleInputToolbarView: UIView {
         )
         button.isHidden = true
         button.accessibilityIdentifier = "AIChat.Toolbar.Button.Reasoning"
+        if #available(iOS 16.0, *) {
+            button.preferredMenuElementOrder = .fixed
+        }
         return button
     }()
 

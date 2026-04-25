@@ -1384,6 +1384,9 @@ final class UnifiedToggleInputToolbarViewTests: XCTestCase {
         let reasoningButton = findButton(accessibilityIdentifier: "AIChat.Toolbar.Button.Reasoning", in: sut)
 
         XCTAssertEqual(reasoningButton?.accessibilityLabel, UserText.aiChatToolbarReasoningButtonAccessibilityLabel)
+        if #available(iOS 16.0, *) {
+            XCTAssertEqual(reasoningButton?.preferredMenuElementOrder, .fixed)
+        }
     }
 
     private func findButton(accessibilityLabel: String, in view: UIView) -> UIButton? {
