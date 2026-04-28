@@ -108,7 +108,7 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
 
         XCTAssertNil(mockPreferences.selectedReasoningMode)
         XCTAssertEqual(sut.viewController.selectedReasoningMode, .fast)
-        XCTAssertNil(sut.persistedReasoningEffort)
+        XCTAssertEqual(sut.persistedReasoningEffort, AIChatReasoningEffort.none)
     }
 
     func testUpdateSelectedModelWhenReasoningModeUnavailableDoesNotRestoreStaleMode() {
@@ -122,13 +122,13 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
 
         XCTAssertNil(mockPreferences.selectedReasoningMode)
         XCTAssertEqual(sut.viewController.selectedReasoningMode, .fast)
-        XCTAssertNil(sut.persistedReasoningEffort)
+        XCTAssertEqual(sut.persistedReasoningEffort, AIChatReasoningEffort.none)
 
         sut.updateSelectedModel("gpt-5.2")
 
         XCTAssertNil(mockPreferences.selectedReasoningMode)
         XCTAssertEqual(sut.viewController.selectedReasoningMode, .fast)
-        XCTAssertNil(sut.persistedReasoningEffort)
+        XCTAssertEqual(sut.persistedReasoningEffort, AIChatReasoningEffort.none)
     }
 
     func testUpdateSelectedReasoningModeWhenModeUnavailableDoesNotPersistInvalidSelection() {
@@ -149,6 +149,16 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
         sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "hello AI", mode: .aiChat)
 
         XCTAssertNil(mockDelegate.submittedReasoningEffort)
+    }
+
+    func testSubmitAIChatWhenNoReasoningModeIsPersistedPassesDisplayedDefaultReasoningEffort() {
+        sut.modelStore.models = [makeReasoningModel(id: "gpt-oss", supportedReasoningEffort: [.low, .medium])]
+        sut.updateSelectedModel("gpt-oss")
+
+        sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "hello AI", mode: .aiChat)
+
+        XCTAssertEqual(sut.viewController.selectedReasoningMode, .reasoning)
+        XCTAssertEqual(mockDelegate.submittedReasoningEffort, .low)
     }
 
     func testSubmitAIChatWhenOnlyOneReasoningModeAndSelectionIsValidPassesReasoningEffort() {
@@ -183,6 +193,18 @@ final class UnifiedToggleInputReasoningTests: XCTestCase {
         let submission = sut.prepareExternalPromptSubmission()
 
         XCTAssertEqual(submission.reasoningEffort, .medium)
+    }
+
+    func testVoicePromptSubmissionConfigurationOmitsReasoningEffort() {
+        mockPreferences.selectedModelId = "gpt-5.2"
+        mockPreferences.selectedReasoningMode = .reasoning
+        sut.modelStore.models = [makeReasoningModel(id: "gpt-5.2", supportedReasoningEffort: [.none, .low, .medium])]
+
+        let configuration = sut.voicePromptSubmissionConfiguration
+
+        XCTAssertEqual(sut.persistedReasoningEffort, .low)
+        XCTAssertEqual(configuration.modelId, "gpt-5.2")
+        XCTAssertNil(configuration.reasoningEffort)
     }
 
     func testSubmitAIChatAfterChangingToFastPassesNoReasoningEffort() {

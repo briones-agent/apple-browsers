@@ -264,7 +264,7 @@ struct AIChatNativePromptTests {
         #expect(imagesArray[0]["format"] == "png")
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func encodingQueryWithReasoningEffort() throws {
         let prompt = AIChatNativePrompt.queryPrompt("Describe this", autoSubmit: true, modelId: "gpt-5.2", reasoningEffort: .medium)
         let jsonDict = try encodePrompt(prompt)
@@ -274,7 +274,7 @@ struct AIChatNativePromptTests {
         #expect(queryDict["reasoningEffort"] as? String == "medium")
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func encodingQueryWithNoReasoningEffort() throws {
         let prompt = AIChatNativePrompt.queryPrompt("Answer quickly", autoSubmit: true, modelId: "gpt-5.2", reasoningEffort: AIChatReasoningEffort.none)
         let jsonDict = try encodePrompt(prompt)
@@ -323,7 +323,7 @@ struct AIChatNativePromptTests {
         #expect(prompt == expected)
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func decodingQueryWithReasoningEffort() throws {
         let json = """
             {
@@ -340,6 +340,26 @@ struct AIChatNativePromptTests {
 
         let prompt = try decodePrompt(from: json)
         let expected = AIChatNativePrompt.queryPrompt("Think through this", autoSubmit: true, modelId: "claude-opus-4-6", reasoningEffort: .low)
+        #expect(prompt == expected)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func decodingQueryWithUnknownReasoningEffortIgnoresReasoningEffort() throws {
+        let json = """
+            {
+                "platform": "\(Platform.name)",
+                "tool": "query",
+                "query": {
+                    "prompt": "Think through this",
+                    "autoSubmit": true,
+                    "modelId": "future-model",
+                    "reasoningEffort": "future-effort"
+                }
+            }
+            """
+
+        let prompt = try decodePrompt(from: json)
+        let expected = AIChatNativePrompt.queryPrompt("Think through this", autoSubmit: true, modelId: "future-model")
         #expect(prompt == expected)
     }
 

@@ -206,6 +206,46 @@ public struct AIChatNativePrompt: Codable, Equatable {
         public let modelId: String?
         public let mode: String?
         public let reasoningEffort: AIChatReasoningEffort?
+
+        private enum CodingKeys: String, CodingKey {
+            case prompt
+            case autoSubmit
+            case toolChoice
+            case images
+            case modelId
+            case mode
+            case reasoningEffort
+        }
+
+        public init(
+            prompt: String,
+            autoSubmit: Bool,
+            toolChoice: [String]?,
+            images: [NativePromptImage]?,
+            modelId: String?,
+            mode: String?,
+            reasoningEffort: AIChatReasoningEffort?
+        ) {
+            self.prompt = prompt
+            self.autoSubmit = autoSubmit
+            self.toolChoice = toolChoice
+            self.images = images
+            self.modelId = modelId
+            self.mode = mode
+            self.reasoningEffort = reasoningEffort
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            prompt = try container.decode(String.self, forKey: .prompt)
+            autoSubmit = try container.decode(Bool.self, forKey: .autoSubmit)
+            toolChoice = try container.decodeIfPresent([String].self, forKey: .toolChoice)
+            images = try container.decodeIfPresent([NativePromptImage].self, forKey: .images)
+            modelId = try container.decodeIfPresent(String.self, forKey: .modelId)
+            mode = try container.decodeIfPresent(String.self, forKey: .mode)
+            let rawReasoningEffort = try container.decodeIfPresent(String.self, forKey: .reasoningEffort)
+            reasoningEffort = rawReasoningEffort.flatMap(AIChatReasoningEffort.init(rawValue:))
+        }
     }
 
     public struct TextSummary: Codable, Equatable {

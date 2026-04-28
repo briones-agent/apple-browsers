@@ -380,7 +380,11 @@ private extension UnifiedToggleInputToolbarView {
     }
 
     private func updateReasoningButtonAppearance() {
-        let mode = selectedReasoningMode ?? .fast
+        guard let mode = selectedReasoningMode else {
+            reasoningButton.setImage(nil, for: .normal)
+            return
+        }
+
         reasoningButton.setImage(mode.unifiedToggleInputButtonImage, for: .normal)
         reasoningButton.tintColor = mode.unifiedToggleInputButtonTintColor
     }

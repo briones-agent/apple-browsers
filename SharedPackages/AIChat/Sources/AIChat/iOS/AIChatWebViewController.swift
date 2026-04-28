@@ -139,14 +139,16 @@ extension AIChatWebViewController {
     }
 
     func loadQuery(_ query: String, autoSend: Bool, flowType: AIChatOnboardingFlowType = .default, tools: [AIChatRAGTool]?, modelId: String? = nil, reasoningEffort: AIChatReasoningEffort? = nil) {
-        let prompt = AIChatNativePrompt.queryPrompt(
-            query,
-            autoSubmit: autoSend,
-            toolChoice: tools?.map(\.rawValue),
-            modelId: modelId,
-            reasoningEffort: reasoningEffort
-        )
-        AIChatPromptHandler.shared.setData(prompt)
+        if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let prompt = AIChatNativePrompt.queryPrompt(
+                query,
+                autoSubmit: autoSend,
+                toolChoice: tools?.map(\.rawValue),
+                modelId: modelId,
+                reasoningEffort: reasoningEffort
+            )
+            AIChatPromptHandler.shared.setData(prompt)
+        }
         let url = buildQueryURL(
             query: query,
             autoSend: autoSend,

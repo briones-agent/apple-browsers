@@ -104,7 +104,10 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     var aiChatInputBoxVisibilityPublisher: Published<AIChatInputBoxVisibility>.Publisher { $aiChatInputBoxVisibility }
     var attachmentUsagePublisher: Published<AIChatAttachmentUsage?>.Publisher { $attachmentUsage }
     var persistedReasoningEffort: AIChatReasoningEffort? {
-        selectedModel?.reasoningEffort(for: persistedReasoningMode)
+        guard let selectedModel else { return nil }
+        guard persistedReasoningMode != nil || selectedModel.supportsReasoningPicker else { return nil }
+
+        return selectedModel.resolvedReasoningEffort(from: persistedReasoningMode)
     }
     private var promptSubmissionModelId: String? {
         hasSubmittedPrompt ? nil : persistedModelId
@@ -114,6 +117,9 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
             modelId: promptSubmissionModelId,
             reasoningEffort: persistedReasoningEffort
         )
+    }
+    var voicePromptSubmissionConfiguration: (modelId: String?, reasoningEffort: AIChatReasoningEffort?) {
+        (promptSubmissionModelId, nil)
     }
 
     @Published var aiChatStatus: AIChatStatusValue = .unknown
@@ -617,13 +623,13 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
 
     func submitVoicePrompt(_ text: String) {
         guard let userScript = boundUserScript else { return }
-        let modelId = promptSubmissionModelId
+        let configuration = voicePromptSubmissionConfiguration
         hasSubmittedPrompt = true
         updateModelChipVisibility()
         syncHasSubmittedPromptToHandler()
         resetToolsSelection()
         showCollapsed()
-        userScript.submitPrompt(text, images: nil, modelId: modelId, reasoningEffort: nil)
+        userScript.submitPrompt(text, images: nil, modelId: configuration.modelId, reasoningEffort: configuration.reasoningEffort)
     }
 
     func prepareExternalPromptSubmission() -> (modelId: String?, reasoningEffort: AIChatReasoningEffort?) {

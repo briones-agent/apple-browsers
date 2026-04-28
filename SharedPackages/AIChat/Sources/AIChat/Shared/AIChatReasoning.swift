@@ -18,7 +18,7 @@
 
 import Foundation
 
-public enum AIChatReasoningEffort: String, Codable, Equatable {
+public enum AIChatReasoningEffort: String, CaseIterable, Codable, Equatable, Sendable {
     case none
     case minimal
     case low
@@ -26,7 +26,7 @@ public enum AIChatReasoningEffort: String, Codable, Equatable {
     case high
 }
 
-public enum AIChatReasoningMode: String, CaseIterable, Codable, Equatable {
+public enum AIChatReasoningMode: String, CaseIterable, Codable, Equatable, Sendable {
     case fast
     case reasoning
     case extendedReasoning = "extended_reasoning"
@@ -54,13 +54,19 @@ public extension AIChatModel {
 
         return reasoningModeMappings.first { $0.mode == selectedMode }?.effort
     }
+
+    func resolvedReasoningEffort(from preferredMode: AIChatReasoningMode?) -> AIChatReasoningEffort? {
+        guard let resolvedMode = resolvedReasoningMode(from: preferredMode) else { return nil }
+
+        return reasoningEffort(for: resolvedMode)
+    }
 }
 
 private extension AIChatModel {
     var reasoningModeMappings: [(mode: AIChatReasoningMode, effort: AIChatReasoningEffort)] {
-        AIChatReasoningMode.allCases.compactMap { mode in
-            guard let effort = firstSupportedReasoningEffort(in: mode.supportedEfforts) else { return nil }
-            return (mode, effort)
+        AIChatReasoningMode.mappings.compactMap { mapping in
+            guard let effort = firstSupportedReasoningEffort(in: mapping.supportedEfforts) else { return nil }
+            return (mapping.mode, effort)
         }
     }
 
@@ -69,15 +75,15 @@ private extension AIChatModel {
     }
 }
 
+private struct AIChatReasoningModeMapping {
+    let mode: AIChatReasoningMode
+    let supportedEfforts: [AIChatReasoningEffort]
+}
+
 private extension AIChatReasoningMode {
-    var supportedEfforts: [AIChatReasoningEffort] {
-        switch self {
-        case .fast:
-            return [.none, .minimal]
-        case .reasoning:
-            return [.low]
-        case .extendedReasoning:
-            return [.high, .medium]
-        }
-    }
+    static let mappings: [AIChatReasoningModeMapping] = [
+        AIChatReasoningModeMapping(mode: .fast, supportedEfforts: [.none, .minimal]),
+        AIChatReasoningModeMapping(mode: .reasoning, supportedEfforts: [.low]),
+        AIChatReasoningModeMapping(mode: .extendedReasoning, supportedEfforts: [.high, .medium])
+    ]
 }
