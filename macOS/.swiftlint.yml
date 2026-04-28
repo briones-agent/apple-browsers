@@ -27,6 +27,14 @@ opt_in_rules:
   - single_test_class
 
 custom_rules:
+  prefer_unicode_ellipsis:
+    name: "Prefer Unicode ellipsis"
+    included: ".*\\.swift"
+    regex: "\\.\\.\\."
+    match_kinds:
+      - string
+    message: "Prefer Unicode ellipsis (…) over three ASCII periods (...) in string literals."
+    severity: warning
   explicit_non_final_class:
     included: ".*\\.swift"
     name: "Implicitly non-final class"

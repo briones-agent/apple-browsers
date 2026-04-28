@@ -26,6 +26,14 @@ opt_in_rules:
   - closure_spacing
 
 custom_rules:
+  prefer_unicode_ellipsis:
+    name: "Prefer Unicode ellipsis"
+    included: ".*\\.swift"
+    regex: "\\.\\.\\."
+    match_kinds:
+      - string
+    message: "Prefer Unicode ellipsis (\u2026) over three ASCII periods (...) in string literals."
+    severity: warning
   explicit_non_final_class:
     name: "Implicitly non-final class"
     included: ".*\\.swift"
