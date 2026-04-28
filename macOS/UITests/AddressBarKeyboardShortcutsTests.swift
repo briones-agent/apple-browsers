@@ -173,6 +173,31 @@ class AddressBarKeyboardShortcutsTests: UITestCase {
         )
     }
 
+    /// Regression test for: pressing Opt+Shift+Left twice in succession (with no prior selection)
+    /// must EXTEND the selection further left on the second press — not collapse the upstream
+    /// selection that the first press just created. This mirrors standard NSTextView behaviour
+    /// where consecutive Opt+Shift+Left presses keep extending the selection word-by-word.
+    func test_addressBar_optShiftLeft_twiceInSuccession_extendsSelectionWordByWord() throws {
+        // Start: cursor at end of URL (setUp typed it without pressing Enter).
+        // First press: creates an upstream selection covering the last word ("translation/").
+        addressBarTextField.typeKey(.leftArrow, modifierFlags: [.option, .shift])
+        // Second press: must extend the selection further left by one more word ("results/").
+        // If the bug is present, the second press hits the contraction branch and collapses
+        // the upstream selection, leaving only an empty caret at the first word boundary.
+        addressBarTextField.typeKey(.leftArrow, modifierFlags: [.option, .shift])
+
+        // Delete what is now selected. With the fix, "results/translation/" is selected and
+        // removed. Without the fix, the selection was collapsed and nothing is deleted.
+        addressBarTextField.typeKey(.delete, modifierFlags: [])
+        let remaining = try XCTUnwrap(addressBarTextField.value as? String).removingTagLine()
+
+        XCTAssertEqual(
+            remaining,
+            "https://duckduckgo.com/duckduckgo-help-pages/",
+            "Two consecutive Opt+Shift+Left presses must extend the selection across two words (\"results/translation/\"). If the upstream selection from the first press is being collapsed instead of extended on the second press, only the last word \"translation/\" is removed (or nothing is removed at all)."
+        )
+    }
+
     /// Regression test for: Opt+Shift+Right when address bar has a full upstream selection should CONTRACT
     /// the selection by one word from the left end — not collapse the cursor to the right end.
     func test_addressBar_optShiftRight_contractsSelectionWordByWord_whenFullySelected() throws {
