@@ -105,7 +105,7 @@ class DownloadsUITests: UITestCase {
         app.openFireWindow()
 
         let fireWindow = burnerWindow()
-        let filename = downloadLargeFile(onFireWindow: true)
+        let filename = downloadLargeFile(fireWindow: fireWindow)
         // Wait for the download to actually start (Downloads button becomes available)
         let downloadsButton = fireWindow.buttons["NavigationBarViewController.downloadsButton"]
         _ = downloadsButton.waitForExistence(timeout: UITests.Timeouts.elementExistence)
@@ -934,8 +934,7 @@ class DownloadsUITests: UITestCase {
     }
 
     @discardableResult
-    private func downloadLargeFile(onFireWindow: Bool = false) -> String {
-        let fireWindow = onFireWindow ? burnerWindow() : nil
+    private func downloadLargeFile(fireWindow: XCUIElement? = nil) -> String {
         if fireWindow == nil {
             app.openNewTab()
             // wait for the New Tab page to load
