@@ -190,8 +190,8 @@ final class AppStateRestorationManager: NSObject, AppStateRestorationManaging {
             .map { controllers -> AnyPublisher<Void, Never> in
                 let sharedPublisher = Application.appDelegate.pinnedTabsManager.tabCollection.$tabs
                     .dropFirst().map { _ in () }.eraseToAnyPublisher()
-                let perWindowPublishers = controllers.map { controller in
-                    controller.mainViewController.tabCollectionViewModel.pinnedTabsManager
+                let perWindowPublishers = controllers.compactMap { controller in
+                    controller.mainViewController.tabCollectionViewModel.pinnedTabsManager?
                         .tabCollection.$tabs
                         .dropFirst().map { _ in () }.eraseToAnyPublisher()
                 }
