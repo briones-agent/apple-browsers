@@ -19,6 +19,7 @@
 import AppKit
 import Carbon
 import Combine
+import Common
 import Foundation
 
 protocol BookmarksBarMenuViewControllerDelegate: AnyObject {
@@ -114,24 +115,50 @@ final class BookmarksBarMenuViewController: NSViewController {
 
     // MARK: View Lifecycle
     override func loadView() {
-        view = NSView()
-        view.autoresizesSubviews = false
-        view.wantsLayer = true
-        view.layer?.cornerRadius = Self.popoverCornerRadius
-        view.layer?.masksToBounds = true
+        if #available(macOS 26.0, *), AppVersion.isLiquidGlassSupported {
+            // Liquid Glass — matches the look of macOS 26 context menus.
+            // `NSGlassEffectView`'s `cornerRadius` shapes the glass rendering but the
+            // layer's bounds outside that rounded shape stay opaque, which makes
+            // NSWindow draw a rectangular shadow. Wrap it in a layer-clipped host so
+            // the corner pixels are actual alpha-zero and the window shadow follows.
+            let host = NSView()
+            host.wantsLayer = true
+            host.layer?.cornerRadius = Self.popoverCornerRadius
+            host.layer?.masksToBounds = true
 
-        let backdrop = NSVisualEffectView()
-        backdrop.material = .popover
-        backdrop.blendingMode = .behindWindow
-        backdrop.state = .active
-        backdrop.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(backdrop)
-        NSLayoutConstraint.activate([
-            backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            backdrop.topAnchor.constraint(equalTo: view.topAnchor),
-            backdrop.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = Self.popoverCornerRadius
+            glass.translatesAutoresizingMaskIntoConstraints = false
+            host.addSubview(glass)
+            NSLayoutConstraint.activate([
+                glass.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+                glass.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+                glass.topAnchor.constraint(equalTo: host.topAnchor),
+                glass.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            ])
+
+            view = host
+            view.autoresizesSubviews = false
+        } else {
+            view = NSView()
+            view.autoresizesSubviews = false
+            view.wantsLayer = true
+            view.layer?.cornerRadius = Self.popoverCornerRadius
+            view.layer?.masksToBounds = true
+
+            let backdrop = NSVisualEffectView()
+            backdrop.material = .popover
+            backdrop.blendingMode = .behindWindow
+            backdrop.state = .active
+            backdrop.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(backdrop)
+            NSLayoutConstraint.activate([
+                backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                backdrop.topAnchor.constraint(equalTo: view.topAnchor),
+                backdrop.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            ])
+        }
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.drawsBackground = false
