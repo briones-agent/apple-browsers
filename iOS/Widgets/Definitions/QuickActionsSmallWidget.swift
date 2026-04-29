@@ -76,6 +76,8 @@ enum ShortcutOption: String, CaseIterable, Identifiable, AppEnum {
     case voiceSearch
     case favorites
     case emailProtection
+    case vpn
+    case bookmarks
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Shortcut Option"
     static var caseDisplayRepresentations: [ShortcutOption: DisplayRepresentation] = [
@@ -84,7 +86,9 @@ enum ShortcutOption: String, CaseIterable, Identifiable, AppEnum {
         .duckAIVoice: "Duck.ai Voice",
         .voiceSearch: "Voice Search",
         .favorites: "Favorites",
-        .emailProtection: "Duck Address"
+        .emailProtection: "Duck Address",
+        .vpn: "VPN",
+        .bookmarks: "Bookmarks"
     ]
 
     var id: String { self.rawValue }
@@ -97,17 +101,27 @@ enum ShortcutOption: String, CaseIterable, Identifiable, AppEnum {
         case .voiceSearch: return Image(uiImage: DesignSystemImages.Glyphs.Size24.microphone)
         case .favorites: return Image(uiImage: DesignSystemImages.Glyphs.Size24.favorite)
         case .emailProtection: return Image(uiImage: DesignSystemImages.Glyphs.Size24.email)
+        case .vpn: return Image(uiImage: DesignSystemImages.Glyphs.Size24.vpn)
+        case .bookmarks: return Image(uiImage: DesignSystemImages.Glyphs.Size24.bookmarks)
         }
     }
 
-    var destination: URL {
+    func destination(for source: WidgetSourceType) -> URL {
+        baseURL
+            .appendingParameter(name: WidgetSourceType.sourceKey, value: source.rawValue)
+            .appendingParameter(name: WidgetSourceType.shortcutKey, value: rawValue)
+    }
+
+    private var baseURL: URL {
         switch self {
         case .passwords: return DeepLinks.openPasswords
-        case .duckAI: return DeepLinks.openAIChat.appendingParameter(name: WidgetSourceType.sourceKey, value: WidgetSourceType.quickActions.rawValue)
-        case .duckAIVoice: return DeepLinks.openAIVoiceChat.appendingParameter(name: WidgetSourceType.sourceKey, value: WidgetSourceType.quickActions.rawValue)
+        case .duckAI: return DeepLinks.openAIChat
+        case .duckAIVoice: return DeepLinks.openAIVoiceChat
         case .voiceSearch: return DeepLinks.voiceSearch
         case .favorites: return DeepLinks.favorites
         case .emailProtection: return DeepLinks.newEmail
+        case .vpn: return DeepLinks.openVPN
+        case .bookmarks: return DeepLinks.openBookmarks
         }
     }
 }

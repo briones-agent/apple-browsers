@@ -266,4 +266,30 @@ struct UserText {
     static let quickActionsMediumWidgetGalleryDescription = NSLocalizedString("widget.gallery.quickactions.medium.display.description",
                                                                   value: "Shortcuts to your favorite actions.",
                                                                   comment: "Description of medium quickActions widget in widget gallery")
+
+    // MARK: - Quick Actions Medium Configuration
+
+    static let quickActionsMediumWidgetEditShortcutsTitle = NSLocalizedString("widget.gallery.medium.customshortcuts.edit.title",
+                                                                  value: "Configure Shortcuts",
+                                                                  comment: "Title for editing medium widget custom shortcuts")
+
+    static let quickActionsMediumWidgetEditShortcutsDescription = NSLocalizedString("widget.gallery.medium.customshortcuts.edit.description",
+                                                                  value: "Choose your shortcuts",
+                                                                  comment: "Description for editing medium widget custom shortcuts")
+
+    static let quickActionsMediumWidgetEditShortcut1Label = NSLocalizedString("widget.gallery.medium.customshortcuts.edit.shortcut1",
+                                                                  value: "Shortcut 1",
+                                                                  comment: "Label for first shortcut slot in medium widget configuration")
+
+    static let quickActionsMediumWidgetEditShortcut2Label = NSLocalizedString("widget.gallery.medium.customshortcuts.edit.shortcut2",
+                                                                  value: "Shortcut 2",
+                                                                  comment: "Label for second shortcut slot in medium widget configuration")
+
+    static let quickActionsMediumWidgetEditShortcut3Label = NSLocalizedString("widget.gallery.medium.customshortcuts.edit.shortcut3",
+                                                                  value: "Shortcut 3",
+                                                                  comment: "Label for third shortcut slot in medium widget configuration")
+
+    static let quickActionsMediumWidgetEditShortcut4Label = NSLocalizedString("widget.gallery.medium.customshortcuts.edit.shortcut4",
+                                                                  value: "Shortcut 4",
+                                                                  comment: "Label for fourth shortcut slot in medium widget configuration")
 }
