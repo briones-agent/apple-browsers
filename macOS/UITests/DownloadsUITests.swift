@@ -965,6 +965,7 @@ class DownloadsUITests: UITestCase {
             window.click()
             let addressBar = window.textFields[XCUIApplication.AccessibilityIdentifiers.addressBarTextField]
             XCTAssertTrue(addressBar.waitForExistence(timeout: UITests.Timeouts.elementExistence))
+            addressBar.click()
             addressBar.pasteURL(URL(string: url)!, pressingEnter: true)
             return
         }
