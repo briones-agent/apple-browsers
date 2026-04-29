@@ -46,14 +46,14 @@ final class UserText {
     static let networkProtectionOnboardingAllowExtensionDescPrefix = NSLocalizedString("network.protection.onboarding.allow.extension.desc.prefix", bundle: Bundle.module, value: "Open System Settings to Privacy & Security. Scroll and select ", comment: "Non-bold prefix for the onboarding allow-extension description")
     static let networkProtectionOnboardingAllowExtensionDescAllow = NSLocalizedString("network.protection.onboarding.allow.extension.desc.allow", bundle: Bundle.module, value: "Allow", comment: "'Allow' word between the prefix and suffix for the onboarding allow-extension description")
     static let networkProtectionOnboardingAllowExtensionDescSuffix = NSLocalizedString("network.protection.onboarding.allow.extension.desc.suffix", bundle: Bundle.module, value: " for DuckDuckGo software.", comment: "Non-bold suffix for the onboarding allow-extension description")
-    static let networkProtectionOnboardingAllowExtensionAction = NSLocalizedString("network.protection.onboarding.allow.extension.action", bundle: Bundle.module, value: "Open System Settings...", comment: "Action button title for the onboarding allow-extension view")
+    static let networkProtectionOnboardingAllowExtensionAction = NSLocalizedString("network.protection.onboarding.allow.extension.action", bundle: Bundle.module, value: "Open System Settings…", comment: "Action button title for the onboarding allow-extension view")
 
     static let networkProtectionOnboardingAllowVPNTitle = NSLocalizedString("network.protection.onboarding.allow.vpn.title", bundle: Bundle.module, value: "Add VPN Configuration", comment: "Title for the onboarding allow-VPN step")
     static let networkProtectionOnboardingAllowVPNDescPrefix = NSLocalizedString("network.protection.onboarding.allow.vpn.desc.prefix", bundle: Bundle.module, value: "Select ", comment: "Non-bold prefix for the onboarding allow-VPN description")
     static let networkProtectionOnboardingAllowVPNDescAllow = NSLocalizedString("network.protection.onboarding.allow.vpn.desc.allow", bundle: Bundle.module, value: "Allow", comment: "'Allow' word between the prefix and suffix for the onboarding allow-VPN description")
     static let networkProtectionOnboardingAllowVPNDescSuffix = NSLocalizedString("network.protection.onboarding.allow.vpn.desc.suffix", bundle: Bundle.module, value: " when prompted to finish setting up VPN.", comment: "Non-bold suffix for the onboarding allow-VPN description")
     static let networkProtectionOnboardingAllowVPNDescExpandedSuffix = NSLocalizedString("network.protection.onboarding.allow.vpn.desc.expanded.suffix", bundle: Bundle.module, value: " when prompted to finish setting up VPN.\n\nThis adds a shortcut in the menu bar so you can still access the VPN if the browser isn't running.", comment: "Non-bold suffix for the onboarding allow-VPN description")
-    static let networkProtectionOnboardingAllowVPNAction = NSLocalizedString("network.protection.onboarding.allow.vpn.action", bundle: Bundle.module, value: "Add VPN Configuration...", comment: "Action button title for the onboarding allow-VPN view")
+    static let networkProtectionOnboardingAllowVPNAction = NSLocalizedString("network.protection.onboarding.allow.vpn.action", bundle: Bundle.module, value: "Add VPN Configuration…", comment: "Action button title for the onboarding allow-VPN view")
 
     static let networkProtectionOnboardingMoveToApplicationsTitle = NSLocalizedString("network.protection.onboarding.move.to.applications.title", bundle: Bundle.module, value: "Move DuckDuckGo App", comment: "Title for the onboarding move-app-to-applications step")
     static let networkProtectionOnboardingMoveToApplicationsDesc = NSLocalizedString("network.protection.onboarding.move.to.applications.desc", bundle: Bundle.module, value: "To use the VPN, the DuckDuckGo app needs to be in the Applications folder on your Mac. Click the button below to move the app and restart the browser.", comment: "Description for the onboarding move-app-to-applications step")
@@ -62,21 +62,21 @@ final class UserText {
     // MARK: - Connection Status
 
     static let networkProtectionStatusDisconnected = NSLocalizedString("network.protection.status.disconnected", bundle: Bundle.module, value: "Not connected", comment: "The label for the NetP VPN when disconnected")
-    static let networkProtectionStatusDisconnecting = NSLocalizedString("network.protection.status.disconnecting", bundle: Bundle.module, value: "Disconnecting...", comment: "The label for the NetP VPN when disconnecting")
+    static let networkProtectionStatusDisconnecting = NSLocalizedString("network.protection.status.disconnecting", bundle: Bundle.module, value: "Disconnecting…", comment: "The label for the NetP VPN when disconnecting")
     static let networkProtectionStatusConnected = NSLocalizedString("network.protection.status.connected", bundle: Bundle.module, value: "Connected", comment: "The label for the NetP VPN when connected")
-    static let networkProtectionStatusConnecting = NSLocalizedString("network.protection.status.connecting", bundle: Bundle.module, value: "Connecting...", comment: "The label for the NetP VPN when connecting")
+    static let networkProtectionStatusConnecting = NSLocalizedString("network.protection.status.connecting", bundle: Bundle.module, value: "Connecting…", comment: "The label for the NetP VPN when connecting")
 
     // MARK: - Connection Issues
 
-    static let networkProtectionInterruptedReconnecting = NSLocalizedString("network.protection.interrupted.reconnecting", bundle: Bundle.module, value: "Your VPN connection was interrupted. Attempting to reconnect now...", comment: "The warning message shown in NetP's status view when the connection is interrupted and its attempting to reconnect.")
+    static let networkProtectionInterruptedReconnecting = NSLocalizedString("network.protection.interrupted.reconnecting", bundle: Bundle.module, value: "Your VPN connection was interrupted. Attempting to reconnect now…", comment: "The warning message shown in NetP's status view when the connection is interrupted and its attempting to reconnect.")
     static let networkProtectionInterrupted = NSLocalizedString("network.protection.interrupted", bundle: Bundle.module, value: "The VPN was unable to connect at this time. Please try again later.", comment: "The warning message shown in NetP's status view when the connection is interrupted.")
 
     // MARK: - Connection Information
 
     static let networkProtectionServerAddressUnknown = NSLocalizedString("network.protection.server.address.unknown", bundle: Bundle.module, value: "Unknown", comment: "When we can't tell the user the IP of the NetP server is")
-    static let networkProtectionServerLocationUnknown = NSLocalizedString("network.protection.server.location.unknown", bundle: Bundle.module, value: "Unknown...", comment: "When we can't tell the user the location of the NetP server")
+    static let networkProtectionServerLocationUnknown = NSLocalizedString("network.protection.server.location.unknown", bundle: Bundle.module, value: "Unknown…", comment: "When we can't tell the user the location of the NetP server")
     static func networkProtectionFormattedServerLocation(_ location: String) -> String {
-        let localized = NSLocalizedString("network.protection.server.location.link", bundle: Bundle.module, value: "%@...", comment: "Clickable text linking to the server location picker screen")
+        let localized = NSLocalizedString("network.protection.server.location.link", bundle: Bundle.module, value: "%@…", comment: "Clickable text linking to the server location picker screen")
         return String(format: localized, location)
     }
 

@@ -82,8 +82,8 @@ enum UserText {
     // synced devices
     static let syncedDevices = NSLocalizedString("preferences.sync.synced-devices", bundle: Bundle.module, value: "Synced Devices", comment: "Settings section title")
     static let thisDevice = NSLocalizedString("preferences.sync.this-device", bundle: Bundle.module, value: "This Device", comment: "Indicator of a current user's device on the list")
-    static let currentDeviceDetails = NSLocalizedString("preferences.sync.current-device-details", bundle: Bundle.module, value: "Details...", comment: "Sync Settings device details button")
-    static let removeDeviceButton = NSLocalizedString("preferences.sync.remove-device", bundle: Bundle.module, value: "Remove...", comment: "Button to remove a device")
+    static let currentDeviceDetails = NSLocalizedString("preferences.sync.current-device-details", bundle: Bundle.module, value: "Details…", comment: "Sync Settings device details button")
+    static let removeDeviceButton = NSLocalizedString("preferences.sync.remove-device", bundle: Bundle.module, value: "Remove…", comment: "Button to remove a device")
 
     // Remove device dialog
     static let removeDeviceConfirmTitle = NSLocalizedString("preferences.sync.remove-device-title", bundle: Bundle.module, value: "Remove device?", comment: "Title on remove a device confirmation")

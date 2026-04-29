@@ -42,7 +42,7 @@ enum UserText {
     // MARK: Preferences - Personal Information Removal
 
     static let preferencesPersonalInformationRemovalTitle = NSLocalizedString("subscription.preferences.personal.information.removal.title", bundle: Bundle.module, value: "Personal Information Removal", comment: "Title of the preferences pane for Personal Information Removal")
-    static let openPersonalInformationRemovalButton = NSLocalizedString("subscription.preferences.open.personal.information.removal.button", bundle: Bundle.module, value: "Open Personal Information Removal...", comment: "Title for the preferences pane button to open Personal Information Removal")
+    static let openPersonalInformationRemovalButton = NSLocalizedString("subscription.preferences.open.personal.information.removal.button", bundle: Bundle.module, value: "Open Personal Information Removal…", comment: "Title for the preferences pane button to open Personal Information Removal")
 
     // MARK: Preferences - Duck.ai Premium
     static let preferencesPaidAIChatTitle = NSLocalizedString("subscription.paid.ai.chat.title", bundle: Bundle.module, value: "Duck.ai", comment: "Title of the preferences pane for Duck.ai Pro")
@@ -56,7 +56,7 @@ enum UserText {
     // MARK: Preferences - Identity Theft Restoration
 
     static let preferencesIdentityTheftRestorationTitle = NSLocalizedString("subscription.preferences.identity.theft.restoration.title", bundle: Bundle.module, value: "Identity Theft Restoration", comment: "Title of the preferences pane for PersoIdentity Theft Restorationmoval")
-    static let openIdentityTheftRestorationButton = NSLocalizedString("subscription.preferences.open.identity.theft.restoration.button", bundle: Bundle.module, value: "Open Identity Theft Restoration...", comment: "Title for the preferences pane button to open Identity Theft Restoration")
+    static let openIdentityTheftRestorationButton = NSLocalizedString("subscription.preferences.open.identity.theft.restoration.button", bundle: Bundle.module, value: "Open Identity Theft Restoration…", comment: "Title for the preferences pane button to open Identity Theft Restoration")
 
     // MARK: Preferences - Subscription Settings
 
@@ -89,7 +89,7 @@ enum UserText {
     static let activateSectionLearnMoreButton = NSLocalizedString("subscription.preferences.subscription.activate.learn.more.button", bundle: Bundle.module, value: "Learn More", comment: "Button that opens help pages explaining subscription activation via email")
 
     static let editEmailButton = NSLocalizedString("subscription.preferences.subscription.activate.edit.email.button", bundle: Bundle.module, value: "Edit", comment: "Button for editing email address added to subscription")
-    static let addToDeviceButtonTitle = NSLocalizedString("subscription.preferences.subscription.add.to.device.button.title", bundle: Bundle.module, value: "Add to Device...", comment: "Button for adding subscription to other devices")
+    static let addToDeviceButtonTitle = NSLocalizedString("subscription.preferences.subscription.add.to.device.button.title", bundle: Bundle.module, value: "Add to Device…", comment: "Button for adding subscription to other devices")
     static let addToDeviceLinkTitle = NSLocalizedString("subscription.preferences.subscription.add.to.device.link.title", bundle: Bundle.module, value: "Add to Device", comment: "Button for adding subscription to other devices")
 
     // MARK: Preferences settings section

@@ -183,7 +183,7 @@ final class TunnelControllerViewModelTests: XCTestCase {
         XCTAssertEqual(model.featureStatusDescription, UserText.networkProtectionStatusViewFeatureOn)
         XCTAssertFalse(model.showServerDetails)
         XCTAssertEqual(model.serverAddress, "Unknown")
-        XCTAssertEqual(model.serverLocation, "Unknown...")
+        XCTAssertEqual(model.serverLocation, "Unknown…")
     }
 
     /// We expect the model to properly reflect the connected status.
@@ -222,7 +222,7 @@ final class TunnelControllerViewModelTests: XCTestCase {
         XCTAssertEqual(model.featureStatusDescription, UserText.networkProtectionStatusViewFeatureOn)
         XCTAssertTrue(model.showServerDetails)
         XCTAssertEqual(model.serverAddress, mockServerIP)
-        XCTAssertEqual(model.serverLocation, "El Segundo, United States...")
+        XCTAssertEqual(model.serverLocation, "El Segundo, United States…")
     }
 
     /// We expect the model to properly reflect the connecting status.

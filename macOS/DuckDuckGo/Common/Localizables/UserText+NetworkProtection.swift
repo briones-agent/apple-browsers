@@ -234,7 +234,7 @@ extension UserText {
 
     // MARK: - Location
 
-    static let vpnLocationChangeButtonTitle = NSLocalizedString("vpn.location.change.button.title", value: "Change...", comment: "Title of the VPN location preference change button")
+    static let vpnLocationChangeButtonTitle = NSLocalizedString("vpn.location.change.button.title", value: "Change…", comment: "Title of the VPN location preference change button")
 
     static let vpnLocationListTitle = NSLocalizedString("vpn.location.list.title", value: "VPN Location", comment: "Title of the VPN location list screen")
 
@@ -261,7 +261,7 @@ extension UserText {
 
     static let vpnSettingsExclusionsDescription = NSLocalizedString("vpn.setting.exclusions.description", value: "Some websites and apps are not compatible with VPNs. Exclude these sites and apps to use them while connected to the VPN.", comment: "The description shown for the exclusions section in VPN settings")
 
-    static let vpnSettingsManageExclusionsButtonTitle = NSLocalizedString("vpn.setting.exclusions.manage.button.title", value: "Manage...", comment: "Title for the button to manage exclusions")
+    static let vpnSettingsManageExclusionsButtonTitle = NSLocalizedString("vpn.setting.exclusions.manage.button.title", value: "Manage…", comment: "Title for the button to manage exclusions")
 
     static let vpnNoExclusionsFoundText = NSLocalizedString("vpn.no.exclusions.found.text", value: "None", comment: "Text shown in VPN settings when no exclusions are configured")
 

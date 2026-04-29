@@ -1,5 +1,4 @@
 disabled_rules:
-  - prefer_unicode_ellipsis
   - file_length
   - unused_closure_parameter
   - type_name
