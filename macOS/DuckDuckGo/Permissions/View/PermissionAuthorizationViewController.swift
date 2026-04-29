@@ -186,7 +186,12 @@ final class PermissionAuthorizationViewController: NSViewController {
     @IBAction func grantAction(_ sender: NSButton) {
         guard !newPermissionView else { return }
         self.dismiss()
-        query?.handleDecision(grant: true, remember: query!.shouldShowAlwaysAllowCheckbox && alwaysAllowCheckbox.state == .on)
+        // Fire Windows never persist permission decisions — even if (due to a regression in
+        // the calling code) the checkbox were visible and ticked, refuse the "remember" bit.
+        let shouldRemember = query?.isBurner != true
+            && query?.shouldShowAlwaysAllowCheckbox == true
+            && alwaysAllowCheckbox.state == .on
+        query?.handleDecision(grant: true, remember: shouldRemember)
     }
 
     @IBAction func denyAction(_ sender: NSButton) {
@@ -266,7 +271,10 @@ final class PermissionAuthorizationViewController: NSViewController {
         fireAuthorizationPixel(decision: .allow)
         dismiss()
         // For duck.ai microphone, persist "always allow" so voice chat doesn't re-prompt on every session.
-        let alwaysRemember = query?.permissions.contains(.microphone) == true && query?.domain.isDuckAIHost == true
+        // Skip in Fire Windows — permissions there must not survive the window's lifetime.
+        let alwaysRemember = query?.isBurner != true
+            && query?.permissions.contains(.microphone) == true
+            && query?.domain.isDuckAIHost == true
         query?.handleDecision(grant: true, remember: alwaysRemember ? true : nil)
     }
 

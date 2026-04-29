@@ -40,6 +40,10 @@ final class PermissionContextMenu: NSMenu {
     private let permissionManager: PermissionManagerProtocol
     private let featureFlagger: FeatureFlagger
     private let hasTemporaryPopupAllowance: Bool
+    /// `true` when the menu is being shown for a Fire Window (burner) tab. Persistent
+    /// "Always allow / Always deny / Notify" options are suppressed in that case so a
+    /// permission decision cannot leak past the window's lifetime.
+    let isBurnerWindow: Bool
 
     required init(coder: NSCoder) {
         fatalError("PermissionContextMenu: Bad initializer")
@@ -50,13 +54,15 @@ final class PermissionContextMenu: NSMenu {
          domain: String,
          delegate: PermissionContextMenuDelegate?,
          featureFlagger: FeatureFlagger,
-         hasTemporaryPopupAllowance: Bool = false) {
+         hasTemporaryPopupAllowance: Bool = false,
+         isBurnerWindow: Bool = false) {
         self.permissionManager = permissionManager
         self.domain = domain.droppingWwwPrefix()
         self.permissions = permissions
         self.actionDelegate = delegate
         self.featureFlagger = featureFlagger
         self.hasTemporaryPopupAllowance = hasTemporaryPopupAllowance
+        self.isBurnerWindow = isBurnerWindow
         super.init(title: "")
 
         setupMenuItems()
@@ -167,6 +173,12 @@ final class PermissionContextMenu: NSMenu {
     }
 
     private func addPersistenceItems() {
+        // Fire Windows do not persist permission decisions, so the "Always allow / Always
+        // deny / Notify" affordances are suppressed entirely. Showing them would invite the
+        // user to write into the global permission store and break the Fire Window privacy
+        // promise.
+        guard !isBurnerWindow else { return }
+
         // only show one persistence option per permission type
         let reduced = permissions.reduce(into: [:], { $0[$1.key] = $1.value })
         for (permission, state) in reduced {

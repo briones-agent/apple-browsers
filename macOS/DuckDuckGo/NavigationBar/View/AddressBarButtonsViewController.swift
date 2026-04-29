@@ -234,6 +234,14 @@ final class AddressBarButtonsViewController: NSViewController {
         }
     }
 
+    /// `true` when the currently selected tab belongs to a Fire Window. Used to suppress
+    /// "Always allow / Always deny" affordances and to short-circuit any persistence call
+    /// that the permission dialogs or context menus would otherwise make. Defaults to
+    /// `false` if no tab is selected.
+    private var isBurnerTab: Bool {
+        tabViewModel?.tab.burnerMode.isBurner ?? false
+    }
+
     private let popovers: NavigationBarPopovers?
     private let bookmarkManager: BookmarkManager
 
@@ -1821,6 +1829,14 @@ final class AddressBarButtonsViewController: NSViewController {
                 }
             }
         }
+
+        // Fire Window: never offer the "Always allow on …" checkbox, regardless of the
+        // permission type. The persistence path itself is also gated in PermissionModel,
+        // but suppressing the affordance here keeps the UI honest about what the dialog
+        // can actually do in a Fire Window.
+        if query.isBurner {
+            query.shouldShowAlwaysAllowCheckbox = false
+        }
         guard button.isVisible else { return }
 
         button.backgroundColor = .buttonMouseDown
@@ -2042,7 +2058,8 @@ final class AddressBarButtonsViewController: NSViewController {
             hasTemporaryPopupAllowance: tabViewModel.tab.popupHandling?.popupsTemporarilyAllowedForCurrentPage ?? false,
             pageInitiatedPopupOpened: tabViewModel.tab.popupHandling?.pageInitiatedPopupOpened ?? false,
             displaysAutoplayPolicy: tabViewModel.tab.mustDisplayAutoplayPolicy,
-            permissionsNeedReload: tabViewModel.permissionsNeedReload
+            permissionsNeedReload: tabViewModel.permissionsNeedReload,
+            isBurner: tabViewModel.tab.burnerMode.isBurner
         )
 
         let popover = PermissionCenterPopover(viewModel: viewModel)
@@ -2077,7 +2094,7 @@ final class AddressBarButtonsViewController: NSViewController {
         let url = tabViewModel.tab.content.urlForWebView ?? .empty
         let domain = url.isFileURL ? .localhost : (url.host ?? "")
 
-        PermissionContextMenu(permissionManager: permissionManager, permissions: permissions.map { ($0, $1) }, domain: domain, delegate: self, featureFlagger: featureFlagger)
+        PermissionContextMenu(permissionManager: permissionManager, permissions: permissions.map { ($0, $1) }, domain: domain, delegate: self, featureFlagger: featureFlagger, isBurnerWindow: isBurnerTab)
             .popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
     }
 
@@ -2096,7 +2113,7 @@ final class AddressBarButtonsViewController: NSViewController {
         let url = tabViewModel.tab.content.urlForWebView ?? .empty
         let domain = url.isFileURL ? .localhost : (url.host ?? "")
 
-        PermissionContextMenu(permissionManager: permissionManager, permissions: [(.microphone, state)], domain: domain, delegate: self, featureFlagger: featureFlagger)
+        PermissionContextMenu(permissionManager: permissionManager, permissions: [(.microphone, state)], domain: domain, delegate: self, featureFlagger: featureFlagger, isBurnerWindow: isBurnerTab)
             .popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
     }
 
@@ -2115,7 +2132,7 @@ final class AddressBarButtonsViewController: NSViewController {
         let url = tabViewModel.tab.content.urlForWebView ?? .empty
         let domain = url.isFileURL ? .localhost : (url.host ?? "")
 
-        PermissionContextMenu(permissionManager: permissionManager, permissions: [(.geolocation, state)], domain: domain, delegate: self, featureFlagger: featureFlagger)
+        PermissionContextMenu(permissionManager: permissionManager, permissions: [(.geolocation, state)], domain: domain, delegate: self, featureFlagger: featureFlagger, isBurnerWindow: isBurnerTab)
             .popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
     }
 
@@ -2151,7 +2168,8 @@ final class AddressBarButtonsViewController: NSViewController {
                               domain: domain,
                               delegate: self,
                               featureFlagger: featureFlagger,
-                              hasTemporaryPopupAllowance: tabViewModel.tab.popupHandling?.popupsTemporarilyAllowedForCurrentPage ?? false)
+                              hasTemporaryPopupAllowance: tabViewModel.tab.popupHandling?.popupsTemporarilyAllowedForCurrentPage ?? false,
+                              isBurnerWindow: isBurnerTab)
         .popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
     }
 
@@ -2174,7 +2192,7 @@ final class AddressBarButtonsViewController: NSViewController {
         let url = tabViewModel.tab.content.urlForWebView ?? .empty
         let domain = url.isFileURL ? .localhost : (url.host ?? "")
 
-        PermissionContextMenu(permissionManager: permissionManager, permissions: permissions, domain: domain, delegate: self, featureFlagger: featureFlagger)
+        PermissionContextMenu(permissionManager: permissionManager, permissions: permissions, domain: domain, delegate: self, featureFlagger: featureFlagger, isBurnerWindow: isBurnerTab)
             .popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
     }
 
@@ -2193,7 +2211,7 @@ final class AddressBarButtonsViewController: NSViewController {
         let url = tabViewModel.tab.content.urlForWebView ?? .empty
         let domain = url.isFileURL ? .localhost : (url.host ?? "")
 
-        PermissionContextMenu(permissionManager: permissionManager, permissions: [(.notification, state)], domain: domain, delegate: self, featureFlagger: featureFlagger)
+        PermissionContextMenu(permissionManager: permissionManager, permissions: [(.notification, state)], domain: domain, delegate: self, featureFlagger: featureFlagger, isBurnerWindow: isBurnerTab)
             .popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
     }
 
@@ -2811,12 +2829,26 @@ extension AddressBarButtonsViewController: PermissionContextMenuDelegate {
         tabViewModel?.tab.permissions.allow(query)
     }
     func permissionContextMenu(_ menu: PermissionContextMenu, alwaysAllowPermission permission: PermissionType) {
+        // Defense-in-depth: in a Fire Window, the menu does not show this item at all,
+        // so reaching this delegate would mean a regression. Refuse to persist either way.
+        guard !menu.isBurnerWindow else {
+            assertionFailure("alwaysAllow chosen in a Fire Window — UI suppression must have regressed")
+            return
+        }
         permissionManager.setPermission(.allow, forDomain: menu.domain, permissionType: permission)
     }
     func permissionContextMenu(_ menu: PermissionContextMenu, alwaysDenyPermission permission: PermissionType) {
+        guard !menu.isBurnerWindow else {
+            assertionFailure("alwaysDeny chosen in a Fire Window — UI suppression must have regressed")
+            return
+        }
         permissionManager.setPermission(.deny, forDomain: menu.domain, permissionType: permission)
     }
     func permissionContextMenu(_ menu: PermissionContextMenu, resetStoredPermission permission: PermissionType) {
+        guard !menu.isBurnerWindow else {
+            assertionFailure("resetStoredPermission chosen in a Fire Window — UI suppression must have regressed")
+            return
+        }
         permissionManager.setPermission(.ask, forDomain: menu.domain, permissionType: permission)
     }
     func permissionContextMenu(_ menu: PermissionContextMenu, resetTemporaryPopupAllowance: Void) {
