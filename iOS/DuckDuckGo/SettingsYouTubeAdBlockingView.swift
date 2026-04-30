@@ -106,9 +106,11 @@ struct SettingsYouTubeAdBlockingView: View {
         }
         .alert(UserText.youTubeAdBlockingAnalyticsOptInAlertTitle, isPresented: $showAnalyticsOptInAlert) {
             Button(UserText.youTubeAdBlockingAnalyticsOptInAlertConfirmButton) {
-                print("YouTube ad blocking analytics opt-in confirmed")
+                viewModel.setYouTubeAnalyticsEnabled(true)
             }
-            Button(UserText.youTubeAdBlockingAnalyticsOptInAlertCancelButton, role: .cancel) { }
+            Button(UserText.youTubeAdBlockingAnalyticsOptInAlertCancelButton, role: .cancel) {
+                viewModel.setYouTubeAnalyticsEnabled(false)
+            }
         } message: {
             Text(UserText.youTubeAdBlockingAnalyticsOptInAlertMessage)
         }

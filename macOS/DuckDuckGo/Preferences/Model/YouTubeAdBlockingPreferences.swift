@@ -27,6 +27,7 @@ import SwiftUI
 
 struct YouTubeAdBlockingSettings: StoringKeys {
     let youTubeAdBlockingEnabled = StorageKey<Bool>(.youTubeAdBlockingEnabled)
+    let youTubeAnalyticsEnabled = StorageKey<Bool>(.youTubeAnalyticsEnabled)
 }
 
 final class YouTubeAdBlockingPreferences: ObservableObject {
@@ -47,6 +48,11 @@ final class YouTubeAdBlockingPreferences: ObservableObject {
                 frequency: .dailyAndCount)
             NotificationCenter.default.post(name: Self.youTubeAdBlockingEnabledDidChangeNotification, object: nil)
         }
+    }
+
+    var youTubeAnalyticsEnabled: Bool {
+        get { settings.youTubeAnalyticsEnabled ?? false }
+        set { settings.youTubeAnalyticsEnabled = newValue }
     }
 
     var duckPlayerPreferences: DuckPlayerPreferences

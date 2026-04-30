@@ -44,9 +44,7 @@ extension Preferences {
                 model.youTubeAdBlockingEnabled = newValue
                 guard isTurningOn else { return }
                 let response = NSAlert.youTubeAdBlockingAnalyticsOptIn().runModal()
-                if response == .alertFirstButtonReturn {
-                    print("YouTube ad blocking analytics opt-in confirmed")
-                }
+                model.youTubeAnalyticsEnabled = (response == .alertFirstButtonReturn)
             }
         }
 
