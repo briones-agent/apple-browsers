@@ -30,21 +30,24 @@ struct NewAddressBarPickerRefreshContentView: View {
     @ObservedObject var viewModel: NewAddressBarPickerViewModel
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color(designSystemColor: .background)
-                .ignoresSafeArea()
-
-            BackgroundIllustration()
-
+        ScrollView {
             VStack(spacing: 24) {
                 Header()
                 PickerCard(viewModel: viewModel)
-                Spacer(minLength: 0)
             }
             .frame(maxWidth: 440)
+            .frame(maxWidth: .infinity)
             .padding(.top, 24)
             .padding(.horizontal, 16)
         }
+        .background(
+            ZStack(alignment: .bottom) {
+                Color(designSystemColor: .background)
+                BackgroundIllustration()
+            }
+            .ignoresSafeArea()
+        )
+        .modifier(ScrollBounceBehaviorModifier())
     }
 }
 
@@ -113,6 +116,7 @@ private struct BackgroundIllustration: View {
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .ignoresSafeArea(edges: [.bottom, .leading, .trailing])
     }

@@ -294,7 +294,8 @@ extension DebugScreensViewModel {
         guard let controller = UIApplication.shared.firstKeyWindow?.rootViewController?.presentedViewController else { return }
 
         let pickerViewController = NewAddressBarPickerViewController(aiChatSettings: AIChatSettings())
-        pickerViewController.modalPresentationStyle = .pageSheet
+
+        pickerViewController.modalPresentationStyle = pickerViewController.isPad ? .formSheet : .pageSheet
         pickerViewController.modalTransitionStyle = .coverVertical
         pickerViewController.isModalInPresentation = true
 
