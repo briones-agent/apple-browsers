@@ -1571,28 +1571,7 @@ class MainViewController: UIViewController {
             lastActiveTabStore.recordActiveTab(uid: tabModel.uid)
         }
 
-        if let hatch {
-            let targetTab = hatch.targetTab
-            unifiedToggleInputCoordinator?.setEscapeHatch(
-                hatch,
-                openTabCount: tabManager.currentTabsModel.count,
-                onTapped: { [weak self] in
-                    guard let self else { return }
-                    guard tabManager.tabsModel(for: targetTab.mode).tabExists(tab: targetTab) else {
-                        clearEscapeHatch()
-                        return
-                    }
-                    onSwitchToTab(targetTab)
-                },
-                onTabSwitcherTapped: { [weak self] in
-                    guard let self else { return }
-                    unifiedToggleInputCoordinator?.contentViewController.dismissAnimated()
-                    showTabSwitcher()
-                }
-            )
-        } else {
-            clearEscapeHatch()
-        }
+        configureUnifiedInputEscapeHatch(hatch)
 
         addToContentContainer(controller: controller)
         viewCoordinator.logoContainer.isHidden = true
@@ -1619,6 +1598,31 @@ class MainViewController: UIViewController {
         }
 
         syncService.scheduler.requestSyncImmediately()
+    }
+
+    private func configureUnifiedInputEscapeHatch(_ hatch: EscapeHatchModel?) {
+        guard let hatch else {
+            clearEscapeHatch()
+            return
+        }
+        let targetTab = hatch.targetTab
+        unifiedToggleInputCoordinator?.setEscapeHatch(
+            hatch,
+            openTabCount: tabManager.currentTabsModel.count,
+            onTapped: { [weak self] in
+                guard let self else { return }
+                guard tabManager.tabsModel(for: targetTab.mode).tabExists(tab: targetTab) else {
+                    clearEscapeHatch()
+                    return
+                }
+                onSwitchToTab(targetTab)
+            },
+            onTabSwitcherTapped: { [weak self] in
+                guard let self else { return }
+                unifiedToggleInputCoordinator?.contentViewController.dismissAnimated()
+                showTabSwitcher()
+            }
+        )
     }
 
     private func fireNTPShownInstrumentation(openedAfterIdle: Bool) {
