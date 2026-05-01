@@ -127,18 +127,19 @@ private struct PickerCard: View {
 
 private struct BackgroundIllustration: View {
 
-    @State private var imageSize: CGSize = .zero
-
     var body: some View {
-        GeometryReader { proxy in
+        VStack {
+            Spacer()
             OnboardingRebrandingImages.Linear.addressBarSearchPreferenceBackground
-                .modifier(SizeModifier())
-                .onPreferenceChange(SizePreferenceKey.self) { imageSize = $0 }
-                .position(
-                    x: imageSize.width * 0.5,
-                    y: proxy.size.height - imageSize.height * 0.5
-                )
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxHeight: Metrics.backgroundMaxHeight)
         }
         .ignoresSafeArea()
+    }
+
+    private enum Metrics {
+        static let backgroundMaxHeight: CGFloat = 294
     }
 }
