@@ -54,12 +54,14 @@ struct NewAddressBarPickerRefreshContentView: View {
 private struct Header: View {
     var body: some View {
         VStack(spacing: 12) {
-            Image(uiImage: DesignSystemImages.Color.Size32.duckDuckGo)
+            Image(uiImage: DesignSystemImages.Color.Size32.duckDuckAI)
                 .resizable()
                 .frame(width: 32, height: 32)
 
             HStack(spacing: 8) {
                 BadgeView(text: UserText.settingsItemNewBadge)
+                    .cornerRadius(8)
+
                 Text(UserText.newAddressBarPickerTitle)
                     .textCase(.uppercase)
                     .font(.system(size: 12, weight: .semibold))
