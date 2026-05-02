@@ -69,6 +69,7 @@ final class MainCoordinator {
     private let featureFlagger: FeatureFlagger
     private let modalPromptCoordinationService: ModalPromptCoordinationService
     private let launchSourceManager: LaunchSourceManaging
+    private let keyValueStore: ThrowingKeyValueStoring
     private let onboardingSearchExperienceSelectionHandler: OnboardingSearchExperienceSelectionHandler
     private let privacyStats: PrivacyStatsProviding
     private let wideEvent: WideEventManaging
@@ -82,7 +83,9 @@ final class MainCoordinator {
     private let darkReaderFeatureSettings: DarkReaderFeatureSettings
     private var isSyncingEmbeddedExtensions = false
     private var darkReaderCancellables = Set<AnyCancellable>()
+    private var youTubeAdBlockingCancellable: AnyCancellable?
     private var webExtensionLoadTask: Task<Void, Never>?
+    private var isWebExtensionLoadPending = false
     private var privacyConfigurationManager: PrivacyConfigurationManaging?
 
     init(privacyConfigurationManager: PrivacyConfigurationManaging,
@@ -120,6 +123,7 @@ final class MainCoordinator {
     ) throws {
         self.subscriptionManager = subscriptionManager
         self.featureFlagger = featureFlagger
+        self.keyValueStore = keyValueStore
         self.darkReaderFeatureSettings = AppDarkReaderFeatureSettings(featureFlagger: featureFlagger,
                                                                       privacyConfigurationManager: privacyConfigurationManager)
         self.modalPromptCoordinationService = modalPromptCoordinationService
@@ -151,7 +155,6 @@ final class MainCoordinator {
         onboardingSearchExperienceSelectionHandler = OnboardingSearchExperienceSelectionHandler(
             daxDialogs: daxDialogs,
             aiChatSettings: aiChatSettings,
-            featureFlagger: featureFlagger,
             onboardingSearchExperienceProvider: OnboardingSearchExperience()
         )
         self.privacyStats = PrivacyStats(databaseProvider: PrivacyStatsDatabase())
@@ -190,6 +193,7 @@ final class MainCoordinator {
                                 launchSourceManager: launchSourceManager,
                                 darkReaderFeatureSettings: darkReaderFeatureSettings,
                                 duckAiNativeStorageHandler: contentBlockingService.duckAiNativeStorageHandler,
+                                duckAiFireModeStorageHandler: contentBlockingService.duckAiFireModeStorageHandler,
                                 toggleModeStorage: toggleModeStorage,
                                 fireModePromotionEligibility: fireModePromotionsCoordinator)
         let fireExecutor = FireExecutor(tabManager: tabManager,
@@ -208,6 +212,7 @@ final class MainCoordinator {
                                         privacyStats: privacyStats,
                                         aiChatSyncCleaner: syncService.aiChatSyncCleaner,
                                         duckAiNativeStorageHandler: contentBlockingService.duckAiNativeStorageHandler,
+                                        fireModeStorageController: contentBlockingService.fireModeStorageController,
                                         wideEvent: wideEvent)
         let syncAutoRestoreHandler = SyncAutoRestoreHandler(
             decisionManager: syncAutoRestoreDecisionManager,
@@ -229,6 +234,7 @@ final class MainCoordinator {
                                         userScriptsDependencies: contentBlockingService.userScriptsDependencies,
                                         contentBlockingAssetsPublisher: contentBlockingService.updating.userContentBlockingAssets,
                                         duckAiNativeStorageHandler: contentBlockingService.duckAiNativeStorageHandler,
+                                        duckAiFireModeStorageHandler: contentBlockingService.duckAiFireModeStorageHandler,
                                         appSettings: AppDependencyProvider.shared.appSettings,
                                         previewsSource: previewsSource,
                                         tabManager: tabManager,
@@ -317,10 +323,27 @@ final class MainCoordinator {
             .removeDuplicates()
             .eraseToAnyPublisher()
 
+        let adBlockingExtensionPublisher = featureFlagger.updatesPublisher
+            .compactMap { [weak featureFlagger] in
+                featureFlagger?.isFeatureOn(.adBlockingExtension)
+            }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+
+        youTubeAdBlockingCancellable = NotificationCenter.default
+            .publisher(for: YouTubeAdBlockingStorageKeys.youTubeAdBlockingEnabledDidChangeNotification)
+            .sink { [weak self] _ in
+                guard #available(iOS 18.4, *) else { return }
+                Task { @MainActor in
+                    await self?.syncEmbeddedExtensions()
+                }
+            }
+
         webExtensionFeatureFlagHandler = WebExtensionFeatureFlagHandler(
             webExtensionManagerProvider: { [weak self] in self?.webExtensionManager },
             featureFlagPublisher: webExtensionsPublisher,
             embeddedExtensionFlagPublisher: embeddedExtensionPublisher,
+            adBlockingExtensionFlagPublisher: adBlockingExtensionPublisher,
             onFeatureFlagEnabled: { [weak self] in
                 self?.initializeWebExtensions()
             },
@@ -328,6 +351,9 @@ final class MainCoordinator {
                 self?.clearWebExtensionReferences()
             },
             onEmbeddedExtensionFlagEnabled: { [weak self] in
+                await self?.syncEmbeddedExtensions()
+            },
+            onAdBlockingExtensionFlagEnabled: { [weak self] in
                 await self?.syncEmbeddedExtensions()
             }
         )
@@ -343,14 +369,7 @@ final class MainCoordinator {
     private func initializeWebExtensions() {
         guard webExtensionManager == nil else {
             // Already initialized, just reload extensions and re-register tabs
-            webExtensionLoadTask?.cancel()
-            webExtensionLoadTask = Task { @MainActor [weak self] in
-                await self?.webExtensionManager?.loadInstalledExtensions()
-                guard !Task.isCancelled else { return }
-                await self?.syncEmbeddedExtensions()
-                guard !Task.isCancelled else { return }
-                self?.webExtensionEventsCoordinator?.registerExistingTabsAndWindow()
-            }
+            scheduleExtensionLoad()
             return
         }
 
@@ -375,13 +394,31 @@ final class MainCoordinator {
         controller.setWebExtensionManager(webExtensionManager)
         subscribeToDarkReaderChanges()
 
-        // Load extensions asynchronously - the controller is already attached to tabs
+        // Defer extension loading until onAppReadyForInteractions to ensure
+        // the WebKit process, protected data, and UI are fully available.
+        // Loading too early blocks the main thread with WKWebExtension file I/O,
+        // risking a watchdog kill (0x8badf00d) during launch.
+        isWebExtensionLoadPending = true
+        if UIApplication.shared.applicationState == .active {
+            loadWebExtensionsIfPending()
+        }
+    }
+
+    @available(iOS 18.4, *)
+    func loadWebExtensionsIfPending() {
+        guard isWebExtensionLoadPending else { return }
+        scheduleExtensionLoad()
+    }
+
+    @available(iOS 18.4, *)
+    private func scheduleExtensionLoad() {
+        isWebExtensionLoadPending = false
+        webExtensionLoadTask?.cancel()
         webExtensionLoadTask = Task { @MainActor [weak self] in
-            await webExtensionManager.loadInstalledExtensions()
+            guard let self, let manager = self.webExtensionManager as? WebExtensionManager else { return }
+            await self.loadAndSyncEmbeddedExtensions(manager)
             guard !Task.isCancelled else { return }
-            await self?.syncEmbeddedExtensions()
-            guard !Task.isCancelled else { return }
-            self?.webExtensionEventsCoordinator?.registerExistingTabsAndWindow()
+            self.webExtensionEventsCoordinator?.registerExistingTabsAndWindow()
         }
     }
 
@@ -396,6 +433,7 @@ final class MainCoordinator {
             privacyConfigManager: ContentBlocking.shared.privacyConfigurationManager,
             apiService: DefaultAPIService(),
             baseDirectory: scriptletsDirectory,
+            pixelFiring: iOSWebExtensionPixelFiring(),
             isProduction: !isDebugBuild
         )
     }
@@ -408,6 +446,17 @@ final class MainCoordinator {
         isSyncingEmbeddedExtensions = true
         defer { isSyncingEmbeddedExtensions = false }
 
+        await webExtensionManager.syncEmbeddedExtensions(enabledTypes: enabledEmbeddedExtensionTypes())
+    }
+
+    @available(iOS 18.4, *)
+    @MainActor
+    private func loadAndSyncEmbeddedExtensions(_ webExtensionManager: WebExtensionManager) async {
+        await webExtensionManager.loadAndSyncExtensions(enabledTypes: enabledEmbeddedExtensionTypes())
+    }
+
+    @available(iOS 18.4, *)
+    private func enabledEmbeddedExtensionTypes() -> Set<DuckDuckGoWebExtensionType> {
         var enabledTypes: Set<DuckDuckGoWebExtensionType> = []
         if featureFlagger.isFeatureOn(.embeddedExtension) {
             enabledTypes.insert(.embedded)
@@ -415,10 +464,14 @@ final class MainCoordinator {
         if darkReaderFeatureSettings.isForceDarkModeEnabled == true {
             enabledTypes.insert(.darkReader)
         }
-        await webExtensionManager.syncEmbeddedExtensions(enabledTypes: enabledTypes)
+        if controller.adBlockingAvailability.isEnabled {
+            enabledTypes.insert(.adBlockingExtension)
+        }
+        return enabledTypes
     }
 
     private func clearWebExtensionReferences() {
+        isWebExtensionLoadPending = false
         webExtensionLoadTask?.cancel()
         webExtensionLoadTask = nil
         webExtensionManager = nil
@@ -449,7 +502,8 @@ final class MainCoordinator {
         let normalModel: TabsModel
         let fireModel: TabsModel
 
-        if AutoClearSettingsModel(settings: appSettings) != nil {
+        if let autoClearSettings = AutoClearSettingsModel(settings: appSettings),
+           autoClearSettings.action.contains(.tabs) {
             normalModel = TabsModel(desktop: isPadDevice, mode: .normal)
             fireModel = TabsModel(desktop: isPadDevice, mode: .fire)
             tabsPersistence.clearAll()
@@ -513,6 +567,8 @@ final class MainCoordinator {
         controller.showBars()
         controller.onForeground()
 
+        fireDailyAdBlockingPixel()
+
         if #available(iOS 18.4, *) {
             webExtensionEventsCoordinator?.didFocusWindow()
         }
@@ -527,6 +583,14 @@ final class MainCoordinator {
 
     private func resetAppStartTime() {
         controller.appDidFinishLaunchingStartTime = nil
+    }
+
+    private func fireDailyAdBlockingPixel() {
+        let isEnabled = controller.adBlockingAvailability.isEnabled
+        DailyPixel.fire(
+            pixel: .webExtensionDailyAdBlockingState,
+            withAdditionalParameters: ["is_enabled": isEnabled ? "true" : "false"]
+        )
     }
 
 }
@@ -593,14 +657,7 @@ extension MainCoordinator: URLHandling {
                 controller.segueToSettingsSync(with: nil, pairingInfo: pairingInfo)
                 return true
             }
-            guard application.applicationState == .active, let currentTab = controller.currentTab else {
-                return false
-            }
-            // If app is in active state, treat this navigation as something initiated form the context of the current tab.
-            controller.tab(currentTab,
-                           didRequestNewTabForUrl: url,
-                           openedByPage: true,
-                           inheritingAttribution: nil)
+            return false
         }
         return true
     }
@@ -667,20 +724,31 @@ extension MainCoordinator: UserActivityHandling {
 
     @discardableResult
     func handleUserActivity(_ userActivity: NSUserActivity) -> Bool {
-        switch userActivity.activityType {
-        case DataImportUserActivityHandler.browserKitImportActivityType:
-            if dataImportUserActivityHandler == nil {
-                dataImportUserActivityHandler = makeDataImportUserActivityHandler()
-            }
-            return dataImportUserActivityHandler?.handle(userActivity) ?? false
-        default:
+        if dataImportUserActivityHandler == nil {
+            dataImportUserActivityHandler = makeDataImportUserActivityHandler()
+        }
+
+        guard dataImportUserActivityHandler?.handle(userActivity) == true else {
             Logger.general.debug("Unhandled user activity type: \(userActivity.activityType)")
             return false
         }
+
+        return true
     }
 
     private func makeDataImportUserActivityHandler() -> DataImportUserActivityHandler {
-        DataImportUserActivityHandler()
+        DataImportUserActivityHandler(keyValueStore: keyValueStore) { [weak self] result in
+            self?.handleDataImportResult(result)
+        }
+    }
+
+    private func handleDataImportResult(_ result: Result<DataImportSummary, Error>) {
+        switch result {
+        case .success(let summary):
+            controller.presentDataImportSummary(summary, importScreen: .passwords)
+        case .failure(let error):
+            Logger.general.error("Data import failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
 }
@@ -698,6 +766,10 @@ extension MainCoordinator: IdleReturnLaunchDelegate {
             guard let self else { return }
             self.controller.newTab(reuseExisting: true, allowingKeyboard: true, openedAfterIdle: true)
         }
+    }
+
+    func markLastUsedTabAsResumedAfterIdle() {
+        controller.postIdleSessionInstrumentation.sessionStarted(surface: .lut)
     }
 
 }

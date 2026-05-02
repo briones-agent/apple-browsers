@@ -149,7 +149,7 @@ extension MainViewController {
                                                         entryPoint: entryPoint,
                                                         privacyConfigurationManager: self.privacyConfigurationManager,
                                                         contentBlockingManager: ContentBlocking.shared.contentBlockingManager,
-                                                        breakageAdditionalInfo: self.currentTab?.makeBreakageAdditionalInfo())
+                                                        breakageAdditionalInfo: self.currentTab?.makeBreakageAdditionalInfo(webExtensionManager: webExtensionManager))
 
         currentTab?.privacyDashboard = controller
 
@@ -184,15 +184,10 @@ extension MainViewController {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()
 
-        let storyboard = UIStoryboard(name: "Downloads", bundle: nil)
-        guard let controller = storyboard.instantiateInitialViewController() else {
-            assertionFailure()
-            return
-        }
-        present(controller, animated: true)
+        present(DownloadsListHostingController(), animated: true)
     }
 
-    func segueToTabSwitcher() async {
+    func segueToTabSwitcher(forceFireTabsTip: Bool = false) async {
         Logger.lifecycle.debug(#function)
 
         // Guard against concurrent presentations
@@ -242,6 +237,8 @@ extension MainViewController {
         controller.transitioningDelegate = tabSwitcherTransition
         controller.delegate = self
         controller.previewsSource = previewsSource
+        controller.fireModePromotionsCoordinator = fireModePromotionEligibility
+        controller.shouldForceShowFireTabsTip = forceFireTabsTip
         controller.modalPresentationStyle = .overCurrentContext
 
         tabSwitcherController = controller
@@ -389,6 +386,27 @@ extension MainViewController {
         }
     }
 
+    func presentDataImportSummary(_ summary: DataImportSummary,
+                                  importScreen: DataImportViewModel.ImportScreen = .passwords) {
+        let presenter = topMostPresentedViewController(startingFrom: self)
+
+        guard !(presenter is DataImportSummaryViewController) else {
+            Logger.autofill.debug("Data import summary already presented")
+            return
+        }
+
+        let summaryViewController = DataImportSummaryViewController(summary: summary,
+                                                                    importScreen: importScreen,
+                                                                    syncService: syncService) { [weak self] source in
+            guard let self else { return }
+            dismissPresentedDataImportSummaryIfNeeded {
+                self.segueToSettingsSync(with: source)
+            }
+        } onCompletion: { }
+
+        presenter.present(summaryViewController, animated: true)
+    }
+
     func segueToFeedback() {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()
@@ -457,7 +475,8 @@ extension MainViewController {
                                                   mobileCustomization: mobileCustomization,
                                                   userScriptsDependencies: userScriptsDependencies,
                                                   whatsNewCoordinator: whatsNewCoordinator,
-                                                  darkReaderFeatureSettings: darkReaderFeatureSettings)
+                                                  darkReaderFeatureSettings: darkReaderFeatureSettings,
+                                                  adBlockingAvailability: adBlockingAvailability)
 
         settingsViewModel.autoClearActionDelegate = self
         Pixel.fire(pixel: .settingsPresented)
@@ -545,7 +564,25 @@ extension MainViewController {
             ViewHighlighter.hideAll()
         }
     }
-    
+
+    private func dismissPresentedDataImportSummaryIfNeeded(completion: @escaping () -> Void) {
+        let topMostViewController = topMostPresentedViewController(startingFrom: self)
+        guard topMostViewController is DataImportSummaryViewController else {
+            completion()
+            return
+        }
+
+        topMostViewController.dismiss(animated: true, completion: completion)
+    }
+
+    private func topMostPresentedViewController(startingFrom rootViewController: UIViewController) -> UIViewController {
+        var currentViewController = rootViewController
+        while let presentedViewController = currentViewController.presentedViewController {
+            currentViewController = presentedViewController
+        }
+        return currentViewController
+    }
+
 }
 
 // Exists to fire a did disappear notification for settings when the controller did disappear

@@ -30,9 +30,10 @@ final class UnifiedToggleInputHandler: SwitchBarHandling {
     let isUsingExpandedBottomBarHeight: Bool = false
     /// The fadeOutOnToggle experiment applies only to the OmniBar editing state, not here.
     let isUsingFadeOutAnimation: Bool = false
+    let shouldDisableAutocorrectOnEmpty: Bool = true
     let isCurrentTextValidURL: Bool = false
     let modeParameters: [String: String] = [:]
-    var isFireTab: Bool = false // TODO: - Handle injecting and updating this. And customizing the new tinput view for fire tabs.
+    var isFireTab: Bool
 
     // MARK: - SwitchBarHandling — Dynamic State
 
@@ -84,6 +85,13 @@ final class UnifiedToggleInputHandler: SwitchBarHandling {
     var isToggleEnabled: Bool {
         didSet {
             guard isToggleEnabled != oldValue else { return }
+            updateButtonState()
+        }
+    }
+
+    var isAIChatShortcutAvailable: Bool = false {
+        didSet {
+            guard isAIChatShortcutAvailable != oldValue else { return }
             updateButtonState()
         }
     }
@@ -142,9 +150,14 @@ final class UnifiedToggleInputHandler: SwitchBarHandling {
 
     // MARK: - Initialization
 
-    init(isVoiceSearchEnabled: Bool, isToggleEnabled: Bool = true) {
+    init(isVoiceSearchEnabled: Bool,
+         isToggleEnabled: Bool = true,
+         isAIChatShortcutAvailable: Bool = false,
+         isFireTab: Bool = false) {
         self.isVoiceSearchEnabled = isVoiceSearchEnabled
         self.isToggleEnabled = isToggleEnabled
+        self.isAIChatShortcutAvailable = isAIChatShortcutAvailable
+        self.isFireTab = isFireTab
         updateButtonState()
     }
 
@@ -209,10 +222,14 @@ final class UnifiedToggleInputHandler: SwitchBarHandling {
             nextButtonState = .stopGeneratingAndSearchGoTo
         } else if isGenerating && !isExpanded && currentToggleState == .aiChat {
             nextButtonState = .stopGeneratingOnly
+        } else if !currentText.isEmpty && !isToggleEnabled && currentToggleState == .search && isAIChatShortcutAvailable {
+            nextButtonState = .clearAndAIChatShortcut
         } else if !currentText.isEmpty {
             nextButtonState = .clearOnly
         } else if !isToggleEnabled && currentToggleState == .aiChat && !isExpanded {
             nextButtonState = voiceAvailable ? .voiceAndSearchGoTo : .searchGoToOnly
+        } else if !isToggleEnabled && currentToggleState == .search && isAIChatShortcutAvailable {
+            nextButtonState = voiceAvailable ? .voiceAndAIChatShortcut : .aiChatShortcutOnly
         } else if voiceAvailable {
             nextButtonState = .voiceOnly
         } else {
