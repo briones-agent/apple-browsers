@@ -18,7 +18,7 @@
 
 import Foundation
 
-public struct TimeoutError: Error, LocalizedError, CustomDebugStringConvertible {
+public struct TimeoutError: Error, LocalizedError, CustomDebugStringConvertible, Sendable {
 
 #if DEBUG
     public let interval: TimeInterval?

@@ -24,7 +24,7 @@ public protocol OSVersionProviding {
 
 }
 
-public struct AppVersion: OSVersionProviding {
+public struct AppVersion: OSVersionProviding, @unchecked Sendable {
 
     public static let shared = AppVersion()
 
@@ -90,7 +90,7 @@ public struct AppVersion: OSVersionProviding {
         return "\(os.majorVersion).\(os.minorVersion)"
     }
 
-    public enum AppRunType: String {
+    public enum AppRunType: String, Sendable {
         case normal
         case unitTests
         case integrationTests
@@ -181,7 +181,7 @@ public struct AppVersion: OSVersionProviding {
     ///
     /// This check works across all targets including VPN agents and system extensions
     /// by examining the bundle identifier prefix.
-    public static var isAppStoreBuild: Bool = {
+    public static let isAppStoreBuild: Bool = {
         guard let bundleId = Bundle.main.bundleIdentifier else { return false }
         return bundleId.hasPrefix("com.duckduckgo.mobile.ios")
     }()

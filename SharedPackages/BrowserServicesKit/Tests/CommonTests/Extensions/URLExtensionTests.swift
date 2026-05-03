@@ -32,7 +32,7 @@ final class URLExtensionTests {
         #expect("ftp://example.com".url!.isValid)
     }
 
-    static let navigational_urls_args: [(String, UInt)] = [
+    nonisolated static let navigational_urls_args: [(String, UInt)] = [
         ("http://example.com", #line),
         ("https://example.com", #line),
         ("http://localhost", #line),
@@ -75,7 +75,7 @@ final class URLExtensionTests {
         #expect(url!.isValid, sourceLocation: .init(fileID: #fileID, filePath: #filePath, line: Int(line), column: 1))
     }
 
-    static let non_valid_urls_args = [
+    nonisolated static let non_valid_urls_args = [
         "about:user:pass@blank",
         "data:user:pass@text/vnd-example+xyz;foo=bar;base64,R0lGODdh",
     ]
@@ -133,7 +133,7 @@ final class URLExtensionTests {
         #expect(rootUrl.isRoot)
     }
 
-    static let basicAuthCredential_args: [(String, String?, String?, UInt)] = [
+    nonisolated static let basicAuthCredential_args: [(String, String?, String?, UInt)] = [
         ("https://dax%40duck.com:123%3A456A@www.duckduckgo.com/test.php?test=S&info=test#fragment", "dax@duck.com", "123:456A", #line),
         ("user@somehost.local:9091/index.html", "user", "", #line),
         ("user:@something.local:9100", "user", "", #line),
@@ -163,7 +163,7 @@ final class URLExtensionTests {
         #expect(credential?.password == password, sourceLocation: .init(fileID: #fileID, filePath: #filePath, line: Int(line), column: 1))
     }
 
-    static let urlRemovingBasicAuthCredential_args: [(String, String, UInt)] = [
+    nonisolated static let urlRemovingBasicAuthCredential_args: [(String, String, UInt)] = [
         ("https://dax%40duck.com:123%3A456A@www.duckduckgo.com/test.php?test=S&info=test#fragment", "https://www.duckduckgo.com/test.php?test=S&info=test#fragment", #line),
         ("user@somehost.local:9091/index.html", "http://somehost.local:9091/index.html", #line),
         ("user:@something.local:9100", "http://something.local:9100", #line),
@@ -214,7 +214,7 @@ final class URLExtensionTests {
         )
     }
 
-    static let rfc3986QueryReservedChars_args: [(String, String, String, UInt)] = [
+    nonisolated static let rfc3986QueryReservedChars_args: [(String, String, String, UInt)] = [
         (":", ":", "https://duck.com/?%3A=%3A", #line),
         ("/", "/", "https://duck.com/?%2F=%2F", #line),
         ("?", "?", "https://duck.com/?%3F=%3F", #line),
@@ -287,7 +287,7 @@ final class URLExtensionTests {
         #expect(URL(trimmedAddressBarString: "define:300/spartans")?.absoluteString == nil)
     }
 
-    static let addressBarURLParsing_args: [(String, String?, String?, UInt)] = [
+    nonisolated static let addressBarURLParsing_args: [(String, String?, String?, UInt)] = [
         ("user@somehost.local:9091/index.html", "http://user@somehost.local:9091/index.html", "http", #line),
         ("something.local:9100", "http://something.local:9100/", "http", #line),
         ("user@localhost:5000", "http://user@localhost:5000/", "http", #line),
@@ -358,7 +358,7 @@ final class URLExtensionTests {
                "https://duckduckgo.com/html?q=a%20b#")
     }
 
-    static let punycodeUrls_args: [(String, String, UInt)] = [
+    nonisolated static let punycodeUrls_args: [(String, String, UInt)] = [
         ("💩.la", "http://xn--ls8h.la", #line),
         ("💩.la/", "http://xn--ls8h.la/", #line),
         ("82.мвд.рф", "http://82.xn--b1aew.xn--p1ai", #line),
@@ -490,7 +490,7 @@ final class URLExtensionTests {
         #expect(actual == expected)
     }
 
-    static let matches_comparator_args: [(String, String, Bool, UInt)] = [
+    nonisolated static let matches_comparator_args: [(String, String, Bool, UInt)] = [
         ("youtube.com", "http://youtube.com", true, #line),
         ("youtube.com/", "http://youtube.com", true, #line),
         ("youtube.com", "http://youtube.com/", true, #line),
@@ -519,7 +519,7 @@ final class URLExtensionTests {
         }
     }
 
-    static let matches_protection_space_args: [(String, String, Int, String, Bool, UInt)] = [
+    nonisolated static let matches_protection_space_args: [(String, String, Int, String, Bool, UInt)] = [
         ("youtube.com", "youtube.com", 80, "http", true, #line),
         ("http://youtube.com", "youtube.com", 80, "http", true, #line),
         ("https://youtube.com:123", "youtube.com", 123, "https", true, #line),

@@ -18,7 +18,6 @@
 
 import XCTest
 @testable import PixelExperimentKit
-@testable import BrowserServicesKit
 import PixelKit
 import PrivacyConfig
 import Combine

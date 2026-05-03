@@ -29,7 +29,6 @@ extension NSObject {
             self.callback = callback
         }
 
-        @MainActor
         public func disarm() {
             dispatchPrecondition(condition: .onQueue(.main))
             callback = nil
@@ -53,19 +52,27 @@ extension NSObject {
         return self.deinitObservers.insert(DeinitObserver(onDeinit)).memberAfterInsert
     }
 
-    private static let deinitObserversKey = UnsafeRawPointer(bitPattern: "deinitObserversKey".hashValue)!
+    private struct AssociatedObjectKey: @unchecked Sendable {
+        let rawValue: UnsafeRawPointer
+    }
+
+    private struct WeakObject: @unchecked Sendable {
+        weak var object: NSObject?
+    }
+
+    private static let deinitObserversKey = AssociatedObjectKey(rawValue: UnsafeRawPointer(bitPattern: "deinitObserversKey".hashValue)!)
     public var deinitObservers: Set<DeinitObserver> {
         get {
             dispatchPrecondition(condition: .onQueue(.main))
-            return objc_getAssociatedObject(self, Self.deinitObserversKey) as? Set<DeinitObserver> ?? []
+            return objc_getAssociatedObject(self, Self.deinitObserversKey.rawValue) as? Set<DeinitObserver> ?? []
         }
         set {
             dispatchPrecondition(condition: .onQueue(.main))
-            objc_setAssociatedObject(self, Self.deinitObserversKey, newValue, .OBJC_ASSOCIATION_RETAIN)
+            objc_setAssociatedObject(self, Self.deinitObserversKey.rawValue, newValue, .OBJC_ASSOCIATION_RETAIN)
         }
     }
 
-    public struct DeallocationCheckAction {
+    public struct DeallocationCheckAction: @unchecked Sendable {
         let perform: (NSObject) -> Void
         public init(action: @escaping (NSObject) -> Void) {
             self.perform = action
@@ -88,8 +95,9 @@ extension NSObject {
     /// will raise an assertionFailure if the object is not deallocated after the timeout
     public func ensureObjectDeallocated(after timeout: TimeInterval = 0, do action: DeallocationCheckAction) {
         guard Thread.isMainThread else {
-            DispatchQueue.main.async { [weak self] in
-                self?.assertObjectDeallocated(after: timeout)
+            let weakObject = WeakObject(object: self)
+            DispatchQueue.main.async {
+                weakObject.object?.ensureObjectDeallocated(after: timeout, do: action)
             }
             return
         }

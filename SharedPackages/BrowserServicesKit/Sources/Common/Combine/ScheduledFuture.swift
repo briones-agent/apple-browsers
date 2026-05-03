@@ -19,17 +19,18 @@
 import Foundation
 import Combine
 
-public final class ScheduledFuture<Output, Failure: Error>: Publisher {
+public final class ScheduledFuture<Output: Sendable, Failure: Error & Sendable>: Publisher {
 
     private var future: Future<Output, Failure>
 
     public init(
         scheduler: DispatchQueue,
-        _ attemptToFulfill: @escaping (@escaping Future<Output, Failure>.Promise) -> Void
+        _ attemptToFulfill: @escaping @Sendable (@escaping Future<Output, Failure>.Promise) -> Void
     ) {
         future = Future<Output, Failure> { promise in
+            let promise = SendablePromise(promise)
             scheduler.async {
-                attemptToFulfill(promise)
+                attemptToFulfill(promise.callAsFunction)
             }
         }
     }
@@ -37,6 +38,20 @@ public final class ScheduledFuture<Output, Failure: Error>: Publisher {
     public func receive<Downstream: Subscriber>(subscriber: Downstream)
         where Output == Downstream.Input, Failure == Downstream.Failure {
         future.receive(subscriber: subscriber)
+    }
+
+}
+
+private struct SendablePromise<Output: Sendable, Failure: Error & Sendable>: @unchecked Sendable {
+
+    private let promise: Future<Output, Failure>.Promise
+
+    init(_ promise: @escaping Future<Output, Failure>.Promise) {
+        self.promise = promise
+    }
+
+    func callAsFunction(_ result: Result<Output, Failure>) {
+        promise(result)
     }
 
 }

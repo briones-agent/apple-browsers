@@ -53,13 +53,19 @@ extension AsyncStream {
   /// ```
   ///
   /// - Parameter sequence: An async sequence.
-  public init<S: AsyncSequence>(_ sequence: S) where S.Element == Element {
-    var iterator: S.AsyncIterator?
-    self.init {
-      if iterator == nil {
-        iterator = sequence.makeAsyncIterator()
+  public init<S: AsyncSequence & Sendable>(_ sequence: S) where S.Element == Element, S.AsyncIterator: Sendable, Element: Sendable {
+    self.init { continuation in
+      let task = Task {
+        do {
+          for try await element in sequence {
+            continuation.yield(element)
+          }
+        } catch {}
+        continuation.finish()
       }
-      return try? await iterator?.next()
+      continuation.onTermination = { _ in
+        task.cancel()
+      }
     }
   }
 
@@ -134,7 +140,7 @@ extension AsyncStream {
   }
 }
 
-extension AsyncSequence {
+extension AsyncSequence where Self: Sendable, AsyncIterator: Sendable, Element: Sendable {
   /// Erases this async sequence to an async stream that produces elements till this sequence
   /// terminates (or fails).
   public func eraseToStream() -> AsyncStream<Element> {

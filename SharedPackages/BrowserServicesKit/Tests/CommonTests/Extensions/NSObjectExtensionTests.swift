@@ -55,21 +55,21 @@ struct NSObjectExtensionTests {
     @Test("DeinitObserver disarm prevents callback execution")
     @MainActor
     func deinitObserverDisarmPreventsCallback() async throws {
-        var callbackExecuted = false
-        var deinitCalled = false
+        let callbackExecuted = Locked(wrappedValue: false)
+        let deinitCalled = Locked(wrappedValue: false)
 
         try await withTimeout(.seconds(1)) {
             await withCheckedContinuation { continuation in
                 autoreleasepool {
                     let testObject = TestObject()
                     testObject.onDeinitCalled = {
-                        deinitCalled = true
+                        deinitCalled.wrappedValue = true
                         continuation.resume()
                     }
 
                     // Use onDeinit to get the observer, then disarm it
                     let observer = testObject.onDeinit {
-                        callbackExecuted = true
+                        callbackExecuted.wrappedValue = true
                     }
 
                     // Disarm the observer before object goes out of scope
@@ -81,20 +81,20 @@ struct NSObjectExtensionTests {
         }
 
         // Deinit should have been called, but callback should NOT have been executed
-        #expect(deinitCalled == true)
-        #expect(callbackExecuted == false)
+        #expect(deinitCalled.wrappedValue == true)
+        #expect(callbackExecuted.wrappedValue == false)
     }
 
     @Test("DeinitObserver executes callback on deinit")
     @MainActor
     func deinitObserverExecutesCallback() async throws {
-        var callbackExecuted = false
+        let callbackExecuted = Locked(wrappedValue: false)
 
         try await withTimeout(.seconds(1)) {
             await withCheckedContinuation { continuation in
                 autoreleasepool {
                     _=NSObject.DeinitObserver {
-                        callbackExecuted = true
+                        callbackExecuted.wrappedValue = true
                         continuation.resume()
                     }
                     // Observer goes out of scope when autoreleasepool ends
@@ -102,7 +102,7 @@ struct NSObjectExtensionTests {
             }
         }
 
-        #expect(callbackExecuted)
+        #expect(callbackExecuted.wrappedValue)
     }
 
     // MARK: - onDeinit Tests

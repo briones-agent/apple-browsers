@@ -51,3 +51,5 @@ public final class Locked<Value> {
         }
     }
 }
+
+extension Locked: @unchecked Sendable where Value: Sendable {}

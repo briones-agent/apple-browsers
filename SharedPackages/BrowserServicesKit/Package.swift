@@ -277,7 +277,8 @@ let package = Package(
                 .product(name: "URLPredictor", package: "URLPredictor"),
             ],
             swiftSettings: [
-                .define("DEBUG", .when(configuration: .debug))
+                .define("DEBUG", .when(configuration: .debug)),
+                .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
         .target(

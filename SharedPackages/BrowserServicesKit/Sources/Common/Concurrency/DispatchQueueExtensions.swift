@@ -29,7 +29,7 @@ public extension DispatchQueue {
     }
 
     /// executes the work item synchronously when running on the main thread, otherwise - schedules asynchronous dispatch
-    func asyncOrNow(execute workItem: @escaping @MainActor () -> Void) {
+    func asyncOrNow(execute workItem: @escaping @MainActor @Sendable () -> Void) {
         assert(self == .main)
         if Thread.isMainThread {
             MainActor.assumeMainThread(workItem)

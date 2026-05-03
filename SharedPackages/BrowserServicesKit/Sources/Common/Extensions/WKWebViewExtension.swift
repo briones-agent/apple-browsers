@@ -23,13 +23,13 @@ public extension WKWebView {
     /// Calling this method is equivalent to calling `evaluateJavaScript:inFrame:inContentWorld:completionHandler:` with:
     /// - A `frame` value of `nil` to represent the main frame
     /// - A `contentWorld` value of `WKContentWorld.pageWorld`
-    @MainActor func evaluateJavaScript<T>(_ script: String) async throws -> T? {
+    @MainActor func evaluateJavaScript<T: Sendable>(_ script: String) async throws -> T? {
         try await withUnsafeThrowingContinuation { c in
             evaluateJavaScript(script) { result, error in
                 if let error {
-                    c.resume(with: .failure(error))
+                    c.resume(throwing: error)
                 } else {
-                    c.resume(with: .success(result as? T))
+                    c.resume(returning: result as? T)
                 }
             }
         }
