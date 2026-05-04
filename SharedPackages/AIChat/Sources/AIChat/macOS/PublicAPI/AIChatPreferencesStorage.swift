@@ -45,6 +45,9 @@ public protocol AIChatPreferencesStorage {
     var showSearchAndDuckAIToggle: Bool { get set }
     var showSearchAndDuckAITogglePublisher: AnyPublisher<Bool, Never> { get }
 
+    var isGlobalShortcutEnabled: Bool { get set }
+    var isGlobalShortcutEnabledPublisher: AnyPublisher<Bool, Never> { get }
+
     var userDidSeeToggleOnboarding: Bool { get set }
 
     var lastUsedSidebarWidth: Double? { get set }
@@ -88,6 +91,10 @@ public struct DefaultAIChatPreferencesStorage: AIChatPreferencesStorage {
 
     public var showSearchAndDuckAITogglePublisher: AnyPublisher<Bool, Never> {
         userDefaults.showSearchAndDuckAITogglePublisher
+    }
+
+    public var isGlobalShortcutEnabledPublisher: AnyPublisher<Bool, Never> {
+        userDefaults.isGlobalShortcutEnabledPublisher
     }
 
     public init(userDefaults: UserDefaults = .standard,
@@ -136,6 +143,11 @@ public struct DefaultAIChatPreferencesStorage: AIChatPreferencesStorage {
         set { userDefaults.showSearchAndDuckAIToggle = newValue }
     }
 
+    public var isGlobalShortcutEnabled: Bool {
+        get { userDefaults.isGlobalShortcutEnabled }
+        set { userDefaults.isGlobalShortcutEnabled = newValue }
+    }
+
     public var userDidSeeToggleOnboarding: Bool {
         get { userDefaults.userDidSeeToggleOnboarding }
         set { userDefaults.userDidSeeToggleOnboarding = newValue }
@@ -160,6 +172,7 @@ public struct DefaultAIChatPreferencesStorage: AIChatPreferencesStorage {
         userDefaults.openAIChatInSidebar = UserDefaults.openAIChatInSidebarDefaultValue
         userDefaults.shouldAutomaticallySendPageContext = UserDefaults.shouldAutomaticallySendPageContextDefaultValue
         userDefaults.showSearchAndDuckAIToggle = UserDefaults.showSearchAndDuckAIToggleDefaultValue
+        userDefaults.isGlobalShortcutEnabled = UserDefaults.isGlobalShortcutEnabledDefaultValue
         userDefaults.userDidSeeToggleOnboarding = false
         userDefaults.lastUsedSidebarWidth = nil
         userDefaults.hasAcceptedTermsAndConditions = false
@@ -176,6 +189,7 @@ private extension UserDefaults {
         static let openAIChatInSidebar = "aichat.openAIChatInSidebar"
         static let shouldAutomaticallySendPageContext = "aichat.sendPageContextAutomatically"
         static let showSearchAndDuckAIToggle = "aichat.showSearchAndDuckAIToggle"
+        static let isGlobalShortcutEnabled = "aichat.isGlobalShortcutEnabled"
         static let userDidSeeToggleOnboarding = "aichat.userDidSeeToggleOnboarding"
         static let lastUsedSidebarWidth = "aichat.sidebar.lastUsedWidth"
         static let hasAcceptedTermsAndConditions = "aichat.hasAcceptedTermsAndConditions"
@@ -189,6 +203,7 @@ private extension UserDefaults {
     static let openAIChatInSidebarDefaultValue = true
     static let shouldAutomaticallySendPageContextDefaultValue = false
     static let showSearchAndDuckAIToggleDefaultValue = true
+    static let isGlobalShortcutEnabledDefaultValue = false
 
     @objc dynamic var isAIFeaturesEnabled: Bool {
         get {
@@ -313,6 +328,21 @@ private extension UserDefaults {
 
     var showSearchAndDuckAITogglePublisher: AnyPublisher<Bool, Never> {
         publisher(for: \.showSearchAndDuckAIToggle).eraseToAnyPublisher()
+    }
+
+    @objc dynamic var isGlobalShortcutEnabled: Bool {
+        get {
+            value(forKey: Keys.isGlobalShortcutEnabled) as? Bool ?? Self.isGlobalShortcutEnabledDefaultValue
+        }
+
+        set {
+            guard newValue != isGlobalShortcutEnabled else { return }
+            set(newValue, forKey: Keys.isGlobalShortcutEnabled)
+        }
+    }
+
+    var isGlobalShortcutEnabledPublisher: AnyPublisher<Bool, Never> {
+        publisher(for: \.isGlobalShortcutEnabled).eraseToAnyPublisher()
     }
 
     var userDidSeeToggleOnboarding: Bool {

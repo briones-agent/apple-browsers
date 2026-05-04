@@ -170,6 +170,12 @@ final class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         showSearchAndDuckAIToggleSubject.eraseToAnyPublisher()
     }
 
+    private let isGlobalShortcutEnabledSubject = PassthroughSubject<Bool, Never>()
+    var isGlobalShortcutEnabled: Bool = false
+    var isGlobalShortcutEnabledPublisher: AnyPublisher<Bool, Never> {
+        isGlobalShortcutEnabledSubject.eraseToAnyPublisher()
+    }
+
     var userDidSeeToggleOnboarding: Bool = false
     var lastUsedSidebarWidth: Double?
     var hasAcceptedTermsAndConditions: Bool = false
@@ -183,6 +189,7 @@ final class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         openAIChatInSidebar = false
         shouldAutomaticallySendPageContext = false
         showSearchAndDuckAIToggle = true
+        isGlobalShortcutEnabled = false
         userDidSeeToggleOnboarding = false
         lastUsedSidebarWidth = nil
         hasAcceptedTermsAndConditions = false

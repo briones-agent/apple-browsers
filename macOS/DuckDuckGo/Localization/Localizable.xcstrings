@@ -27392,6 +27392,42 @@
         }
       }
     },
+    "duckai.global-entry-point.section.title" : {
+      "comment" : "Section title for the OS-level Duck.ai entry point setting",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Duck.ai global entry point"
+          }
+        }
+      }
+    },
+    "duckai.global-entry-point.toggle.caption" : {
+      "comment" : "Caption explaining what the global Duck.ai entry-point toggle does",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adds a Duck.ai icon to the menu bar and the global keyboard shortcut Ctrl+Option+Space to open Duck.ai from any app. DuckDuckGo will start at login. Background activation requires Accessibility permission."
+          }
+        }
+      }
+    },
+    "duckai.global-entry-point.toggle.label" : {
+      "comment" : "Toggle label to enable the OS-level Duck.ai entry point",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable global Duck.ai shortcut"
+          }
+        }
+      }
+    },
     "duckai.hide-ai-generated-images-settings" : {
       "comment" : "The section name in preferences for Hide AI-Generated Images Settings",
       "extractionState" : "extracted_with_value",

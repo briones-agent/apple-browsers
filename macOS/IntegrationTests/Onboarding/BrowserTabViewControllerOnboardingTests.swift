@@ -91,6 +91,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
     var openAIChatInSidebar: Bool = true
     var shouldAutomaticallySendPageContext: Bool = true
     var showSearchAndDuckAIToggle: Bool = true
+    var isGlobalShortcutEnabled: Bool = false
     var userDidSeeToggleOnboarding: Bool = false
     var lastUsedSidebarWidth: Double?
     var hasAcceptedTermsAndConditions: Bool = false
@@ -103,6 +104,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
     let openAIChatInSidebarPublisher: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher()
     let shouldAutomaticallySendPageContextPublisher: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher()
     let showSearchAndDuckAITogglePublisher: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher()
+    let isGlobalShortcutEnabledPublisher: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher()
 
     func reset() {
         isAIFeaturesEnabled = true
@@ -114,6 +116,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         openAIChatInSidebar = true
         shouldAutomaticallySendPageContext = true
         showSearchAndDuckAIToggle = true
+        isGlobalShortcutEnabled = false
         userDidSeeToggleOnboarding = false
         lastUsedSidebarWidth = nil
         hasAcceptedTermsAndConditions = false

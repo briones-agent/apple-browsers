@@ -51,6 +51,7 @@ final class AIChatPreferences: ObservableObject {
         openAIChatInSidebar = storage.openAIChatInSidebar
         shouldAutomaticallySendPageContext = storage.shouldAutomaticallySendPageContext
         showSearchAndDuckAIToggle = storage.showSearchAndDuckAIToggle
+        isGlobalShortcutEnabled = storage.isGlobalShortcutEnabled
         showDuckAIButtonInTabBar = !duckAIChromeButtonsVisibilityManager.isHidden(.duckAI)
         showSidebarButtonInTabBar = !duckAIChromeButtonsVisibilityManager.isHidden(.sidebar)
 
@@ -99,6 +100,12 @@ final class AIChatPreferences: ObservableObject {
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .assign(to: \.showSearchAndDuckAIToggle, onWeaklyHeld: self)
+            .store(in: &cancellables)
+
+        storage.isGlobalShortcutEnabledPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.isGlobalShortcutEnabled, onWeaklyHeld: self)
             .store(in: &cancellables)
     }
 
@@ -171,6 +178,10 @@ final class AIChatPreferences: ObservableObject {
 
     @Published var showSearchAndDuckAIToggle: Bool {
         didSet { storage.showSearchAndDuckAIToggle = showSearchAndDuckAIToggle }
+    }
+
+    @Published var isGlobalShortcutEnabled: Bool {
+        didSet { storage.isGlobalShortcutEnabled = isGlobalShortcutEnabled }
     }
 
     @Published var showDuckAIButtonInTabBar: Bool {

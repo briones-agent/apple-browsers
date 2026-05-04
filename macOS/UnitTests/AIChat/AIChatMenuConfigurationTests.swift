@@ -300,6 +300,12 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         }
     }
 
+    var isGlobalShortcutEnabled: Bool = false {
+        didSet {
+            isGlobalShortcutEnabledSubject.send(isGlobalShortcutEnabled)
+        }
+    }
+
     var userDidSeeToggleOnboarding: Bool = false
     var lastUsedSidebarWidth: Double?
     var hasAcceptedTermsAndConditions: Bool = false
@@ -312,6 +318,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
     private var openAIChatInSidebarSubject = PassthroughSubject<Bool, Never>()
     private var shouldAutomaticallySendPageContextSubject = PassthroughSubject<Bool, Never>()
     private var showSearchAndDuckAIToggleSubject = PassthroughSubject<Bool, Never>()
+    private var isGlobalShortcutEnabledSubject = PassthroughSubject<Bool, Never>()
 
     var isAIFeaturesEnabledPublisher: AnyPublisher<Bool, Never> {
         isAIFeaturesEnabledSubject.eraseToAnyPublisher()
@@ -345,6 +352,10 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         showSearchAndDuckAIToggleSubject.eraseToAnyPublisher()
     }
 
+    var isGlobalShortcutEnabledPublisher: AnyPublisher<Bool, Never> {
+        isGlobalShortcutEnabledSubject.eraseToAnyPublisher()
+    }
+
     func reset() {
         isAIFeaturesEnabled = true
         showShortcutOnNewTabPage = false
@@ -355,6 +366,7 @@ class MockAIChatPreferencesStorage: AIChatPreferencesStorage {
         openAIChatInSidebar = false
         shouldAutomaticallySendPageContext = false
         showSearchAndDuckAIToggle = true
+        isGlobalShortcutEnabled = false
         userDidSeeToggleOnboarding = false
         lastUsedSidebarWidth = nil
         hasAcceptedTermsAndConditions = false

@@ -152,6 +152,14 @@ extension Preferences {
                 }
                                       .visibility(model.shouldShowAIFeatures ? .visible : .gone)
 
+                PreferencePaneSection(UserText.aiChatGlobalEntryPointSectionTitle, spacing: 6) {
+                    ToggleMenuItem(UserText.aiChatGlobalEntryPointToggleLabel,
+                                   isOn: $model.isGlobalShortcutEnabled)
+                    .accessibilityIdentifier("Preferences.AIChat.globalShortcutToggle")
+                    TextMenuItemCaption(UserText.aiChatGlobalEntryPointToggleCaption)
+                }
+                .visibility(model.shouldShowAIFeatures ? .visible : .gone)
+
                 Divider()
                     .padding(.bottom, 8)
 
