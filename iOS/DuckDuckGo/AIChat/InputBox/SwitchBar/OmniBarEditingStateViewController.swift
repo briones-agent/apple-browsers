@@ -564,9 +564,20 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         navigationActionBarManager?.navigationActionBarViewController?.view.removeFromSuperview()
         navigationActionBarManager?.navigationActionBarViewController?.removeFromParent()
 
+        // The chat history view was just detached when contentContainerView's subviews were
+        // removed; tear down the orphaned manager so installChatHistoryList below sets up a
+        // fresh one in the new swipe container. Without this, the chat history (and its escape
+        // hatch) silently disappear after a layout-change like a portrait↔landscape rotation.
+        aiChatHistoryManager?.tearDown()
+        aiChatHistoryManager = nil
+
         switchBarVC.showsSeparator = !isUsingTopBarPosition
 
         installComponents()
+
+        if featureFlagger.isFeatureOn(.aiChatSuggestions) && aiChatSettings.isChatSuggestionsEnabled {
+            installChatHistoryList()
+        }
 
         if let currentSelection {
             switchBarVC.textEntryViewController.focusTextField()
