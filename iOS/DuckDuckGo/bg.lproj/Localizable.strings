@@ -117,6 +117,7 @@
 
 /* Open in New Fire Tab action */
 "action.title.newFireTabForUrl" = "Отваряне в раздел Fire";
+
 /* Create New Tab action */
 "action.title.newTabAction" = "Нов раздел";
 
@@ -1515,9 +1516,6 @@
 /* No comment provided by engineer. */
 "Debug" = "Отстраняване на грешки";
 
-/* No comment provided by engineer. */
-"Delete" = "Изтриване";
-
 /* Default string used if users device is not iPhone or iPad */
 "device.type.default" = "устройство";
 
@@ -1629,11 +1627,11 @@
 /* AI features settings explanation */
 "duckai.preferences.text.markdown" = "Функциите на DuckDuckGo AI са поверителни и незадължителни. Вашите данни не се използват за обучение на изкуствен интелект.";
 
-/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
-"duckai.quick.action.attach" = "Прикачи съдържанието на страницата";
-
 /* Title for the ask about page quick action chip in Duck.ai contextual sheet. Tapping attaches the current page content. */
 "duckai.quick.action.ask.about.page" = "Попитайте за страницата";
+
+/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
+"duckai.quick.action.attach" = "Прикачи съдържанието на страницата";
 
 /* Title for the summarize quick action chip in Duck.ai contextual sheet */
 "duckai.quick.action.summarize" = "Обобщи тази страница";
@@ -1985,6 +1983,7 @@
 
 /* Title shown on the escape hatch card when the target is a fire tab */
 "escapeHatch.fireTab.title" = "Последно използван раздел Fire";
+
 /* Accessibility label for escape hatch card; %@ is the tab title */
 "escapeHatch.returnTo.accessibility.label" = "Връщане към %@";
 
@@ -2335,6 +2334,7 @@
 
 /* Title shown on the Fire tab empty state screen */
 "fire.tab.empty.state.title" = "Раздел Fire";
+
 /* No comment provided by engineer. */
 "fireButtonAnimation.airstream.name" = "Въздушна струя";
 
@@ -3354,6 +3354,7 @@
 
 /* Title for scoped fire confirmation dialog in fire mode, asking user to delete all fire tabs and their data */
 "scoped.fire.confirmation.alert.fireMode.title" = "Изтриване на разделите Fire и данните в тях?";
+
 /* Title for scoped fire confirmation dialog asking user to delete tabs and site data */
 "scoped.fire.confirmation.alert.title" = "Да изтрием ли разделите и данните от сайта?";
 
@@ -4380,9 +4381,6 @@
 /* Toast message shown after copying sync code to clipboard */
 "sync.simplified.code.copied.toast" = "Кодът е копиран";
 
-/* Toast message shown after sync is enabled by connecting with another device */
-"sync.simplified.device-synced.toast" = "Устройството е синхронизирано успешно!";
-
 /* Toast message shown after sync is successfully enabled */
 "sync.simplified.enabled.toast" = "Функцията Sync & Backup е активирана";
 
@@ -4430,6 +4428,7 @@
 
 /* Accessibility label on tab cell */
 "tab.close.closeNewTab" = "Затваряне на раздел";
+
 /* Accessibility label on remove button */
 "tab.close.home" = "Затваряне на началния раздел";
 
@@ -4441,6 +4440,7 @@
 
 /* New tab title */
 "tab.new.title" = "Нов раздел";
+
 /* Accessibility label on tab cell */
 "tab.open.home" = "Отваряне на началния раздел";
 
@@ -4449,6 +4449,7 @@
 
 /* Accessibility label on tab cell */
 "tab.open.newFireTab" = "Отваряне на раздел Fire";
+
 /* Accesibility label: first string is website title, second is address */
 "tab.open.with.title.and.address" = "Отваряне на \"%1$@\" с адрес %2$@";
 

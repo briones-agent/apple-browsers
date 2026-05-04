@@ -85,6 +85,18 @@
 /* Title for editing custom shortcuts */
 "widget.gallery.customshortcuts.edit.title" = "Konfigūruoti sparčiuosius klavišus";
 
+/* Label for first shortcut slot in medium widget configuration */
+"widget.gallery.medium.customshortcuts.edit.shortcut1" = "1 nuoroda";
+
+/* Label for second shortcut slot in medium widget configuration */
+"widget.gallery.medium.customshortcuts.edit.shortcut2" = "2 nuoroda";
+
+/* Label for third shortcut slot in medium widget configuration */
+"widget.gallery.medium.customshortcuts.edit.shortcut3" = "3 nuoroda";
+
+/* Label for fourth shortcut slot in medium widget configuration */
+"widget.gallery.medium.customshortcuts.edit.shortcut4" = "4 nuoroda";
+
 /* Description of search passwords widget in widget gallery */
 "widget.gallery.passwords.description" = "Greitai ieškokite išsaugotų „DuckDuckGo“ slaptažodžių.";
 
