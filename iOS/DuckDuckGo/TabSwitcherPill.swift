@@ -24,7 +24,15 @@ struct TabSwitcherPill: View {
     let count: Int
     let onTap: () -> Void
 
-    @StateObject private var tabCountModel = TabCountModel()
+    @StateObject private var tabCountModel: TabCountModel
+
+    init(count: Int, onTap: @escaping () -> Void) {
+        self.count = count
+        self.onTap = onTap
+        // Seed the model with the correct count up front so the badge
+        // renders with the number on the first frame instead of flashing empty.
+        _tabCountModel = StateObject(wrappedValue: TabCountModel(count: count))
+    }
 
     var body: some View {
         Button(action: onTap) {
@@ -37,7 +45,6 @@ struct TabSwitcherPill: View {
                 )
         }
         .buttonStyle(.plain)
-        .onAppear { tabCountModel.count = count }
         .onChange(of: count) { newValue in tabCountModel.count = newValue }
         .accessibilityLabel(Text(UserText.tabSwitcherAccessibilityLabel))
         .accessibilityValue(Text(UserText.numberOfTabs(count)))
