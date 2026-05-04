@@ -117,6 +117,7 @@
 
 /* Open in New Fire Tab action */
 "action.title.newFireTabForUrl" = "Otwórz w karcie Fire";
+
 /* Create New Tab action */
 "action.title.newTabAction" = "Nowa karta";
 
@@ -1410,9 +1411,6 @@
 /* No comment provided by engineer. */
 "Debug" = "Debugowanie";
 
-/* No comment provided by engineer. */
-"Delete" = "Usuń";
-
 /* Default string used if users device is not iPhone or iPad */
 "device.type.default" = "tym urządzeniu";
 
@@ -1524,11 +1522,11 @@
 /* AI features settings explanation */
 "duckai.preferences.text.markdown" = "Funkcje sztucznej inteligencji DuckDuckGo są prywatne i opcjonalne. Twoje dane nie są używane do trenowania AI.";
 
-/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
-"duckai.quick.action.attach" = "Dołącz zawartość strony";
-
 /* Title for the ask about page quick action chip in Duck.ai contextual sheet. Tapping attaches the current page content. */
 "duckai.quick.action.ask.about.page" = "Zapytaj o stronę";
+
+/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
+"duckai.quick.action.attach" = "Dołącz zawartość strony";
 
 /* Title for the summarize quick action chip in Duck.ai contextual sheet */
 "duckai.quick.action.summarize" = "Podsumuj tę stronę";
@@ -1880,6 +1878,7 @@
 
 /* Title shown on the escape hatch card when the target is a fire tab */
 "escapeHatch.fireTab.title" = "Ostatnio używana karta Fire";
+
 /* Accessibility label for escape hatch card; %@ is the tab title */
 "escapeHatch.returnTo.accessibility.label" = "Wróć do karty %@";
 
@@ -2230,6 +2229,7 @@
 
 /* Title shown on the Fire tab empty state screen */
 "fire.tab.empty.state.title" = "Karta Fire";
+
 /* No comment provided by engineer. */
 "fireButtonAnimation.airstream.name" = "Strumień powietrza";
 
@@ -3249,6 +3249,7 @@
 
 /* Title for scoped fire confirmation dialog in fire mode, asking user to delete all fire tabs and their data */
 "scoped.fire.confirmation.alert.fireMode.title" = "Usunąć karty Fire i ich dane?";
+
 /* Title for scoped fire confirmation dialog asking user to delete tabs and site data */
 "scoped.fire.confirmation.alert.title" = "Usunąć karty i dane witryny?";
 
@@ -4322,6 +4323,7 @@
 
 /* Accessibility label on tab cell */
 "tab.close.closeNewTab" = "Zamknij kartę";
+
 /* Accessibility label on remove button */
 "tab.close.home" = "Zamknij kartę główną";
 
@@ -4333,6 +4335,7 @@
 
 /* New tab title */
 "tab.new.title" = "Nowa karta";
+
 /* Accessibility label on tab cell */
 "tab.open.home" = "Otwórz kartę główną";
 
@@ -4341,6 +4344,7 @@
 
 /* Accessibility label on tab cell */
 "tab.open.newFireTab" = "Otwórz kartę Fire";
+
 /* Accesibility label: first string is website title, second is address */
 "tab.open.with.title.and.address" = "Otwórz „%1$@” w %2$@";
 
@@ -4754,6 +4758,18 @@
 
 /* Title for the Windows browser download link page */
 "windows-waitlist.waitlist-download-screen.try-duckduckgo-for-windows" = "Pobierz DuckDuckGo dla systemu Windows.";
+
+/* Cancel button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.cancel" = "Nie, dziękuję";
+
+/* Confirm button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.confirm" = "Wysyłaj anonimowe raporty";
+
+/* Description of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.message" = "Automatycznie wysyłaj anonimowe raporty o awarii do DuckDuckGo, gdy blokowanie reklam na YouTube jest włączone.";
+
+/* Title of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.title" = "Pomóż usprawnić blokowanie reklam na YouTube dla wszystkich";
 
 /* Explanation text for YouTube Ad Blocking feature */
 "youtube.ad.blocking.explanation" = "DuckDuckGo usuwa reklamy wideo z YouTube, dzięki czemu możesz oglądać filmy bez przerw.";

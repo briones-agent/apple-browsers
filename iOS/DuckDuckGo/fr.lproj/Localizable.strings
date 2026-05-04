@@ -116,7 +116,8 @@
 "action.title.newFireTabAction" = "Nouveau Fire Tab";
 
 /* Open in New Fire Tab action */
-"action.title.newFireTabForUrl" = "Ouvrir dans un nouvel onglet Fire";
+"action.title.newFireTabForUrl" = "Ouvrir dans l'onglet Fire";
+
 /* Create New Tab action */
 "action.title.newTabAction" = "Nouvel onglet";
 
@@ -1410,9 +1411,6 @@
 /* No comment provided by engineer. */
 "Debug" = "Déboguer";
 
-/* No comment provided by engineer. */
-"Delete" = "Supprimer";
-
 /* Default string used if users device is not iPhone or iPad */
 "device.type.default" = "appareil";
 
@@ -1524,11 +1522,11 @@
 /* AI features settings explanation */
 "duckai.preferences.text.markdown" = "Les fonctionnalités de DuckDuckGo AI sont privées et facultatives. Vos données ne servent pas à entraîner l'IA.";
 
-/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
-"duckai.quick.action.attach" = "Joindre le contenu de la page";
-
 /* Title for the ask about page quick action chip in Duck.ai contextual sheet. Tapping attaches the current page content. */
 "duckai.quick.action.ask.about.page" = "Poser des questions sur la page";
+
+/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
+"duckai.quick.action.attach" = "Joindre le contenu de la page";
 
 /* Title for the summarize quick action chip in Duck.ai contextual sheet */
 "duckai.quick.action.summarize" = "Résumer cette page";
@@ -1880,6 +1878,7 @@
 
 /* Title shown on the escape hatch card when the target is a fire tab */
 "escapeHatch.fireTab.title" = "Dernier Onglet Fire utilisé";
+
 /* Accessibility label for escape hatch card; %@ is the tab title */
 "escapeHatch.returnTo.accessibility.label" = "Retour à %@";
 
@@ -2230,6 +2229,7 @@
 
 /* Title shown on the Fire tab empty state screen */
 "fire.tab.empty.state.title" = "Onglet Fire";
+
 /* No comment provided by engineer. */
 "fireButtonAnimation.airstream.name" = "Courant d'air";
 
@@ -3249,6 +3249,7 @@
 
 /* Title for scoped fire confirmation dialog in fire mode, asking user to delete all fire tabs and their data */
 "scoped.fire.confirmation.alert.fireMode.title" = "Supprimer les onglets Fire et leurs données ?";
+
 /* Title for scoped fire confirmation dialog asking user to delete tabs and site data */
 "scoped.fire.confirmation.alert.title" = "Supprimer les onglets et les données du site ?";
 
@@ -4322,6 +4323,7 @@
 
 /* Accessibility label on tab cell */
 "tab.close.closeNewTab" = "Fermer l'onglet";
+
 /* Accessibility label on remove button */
 "tab.close.home" = "Fermer l'onglet d'accueil";
 
@@ -4333,6 +4335,7 @@
 
 /* New tab title */
 "tab.new.title" = "Nouvel onglet";
+
 /* Accessibility label on tab cell */
 "tab.open.home" = "Ouvrir l'onglet d'accueil";
 
@@ -4341,6 +4344,7 @@
 
 /* Accessibility label on tab cell */
 "tab.open.newFireTab" = "Ouvrir l'Onglet Fire";
+
 /* Accesibility label: first string is website title, second is address */
 "tab.open.with.title.and.address" = "Ouvrir « %1$@ » via %2$@";
 
@@ -4754,6 +4758,18 @@
 
 /* Title for the Windows browser download link page */
 "windows-waitlist.waitlist-download-screen.try-duckduckgo-for-windows" = "Procurez-vous DuckDuckGo pour Windows !";
+
+/* Cancel button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.cancel" = "Non merci";
+
+/* Confirm button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.confirm" = "Envoyer des rapports anonymes";
+
+/* Description of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.message" = "Envoyez automatiquement des rapports anonymes de dysfonctionnement à DuckDuckGo lorsque le blocage des publicités sur YouTube est activé.";
+
+/* Title of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.title" = "Contribuez à améliorer le blocage des publicités YouTube pour tous.";
 
 /* Explanation text for YouTube Ad Blocking feature */
 "youtube.ad.blocking.explanation" = "DuckDuckGo supprime les publicités vidéo sur YouTube, afin que vous puissiez regarder des vidéos sans interruption.";

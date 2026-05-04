@@ -117,6 +117,7 @@
 
 /* Open in New Fire Tab action */
 "action.title.newFireTabForUrl" = "Åbn i en Fire-fane";
+
 /* Create New Tab action */
 "action.title.newTabAction" = "Ny fane";
 
@@ -1410,9 +1411,6 @@
 /* No comment provided by engineer. */
 "Debug" = "Fejlfinding";
 
-/* No comment provided by engineer. */
-"Delete" = "Slet";
-
 /* Default string used if users device is not iPhone or iPad */
 "device.type.default" = "enhed";
 
@@ -1524,11 +1522,11 @@
 /* AI features settings explanation */
 "duckai.preferences.text.markdown" = "DuckDuckGo AI-funktioner er private og valgfrie. Dine data bruges ikke til at træne AI.";
 
-/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
-"duckai.quick.action.attach" = "Vedhæft sideindhold";
-
 /* Title for the ask about page quick action chip in Duck.ai contextual sheet. Tapping attaches the current page content. */
 "duckai.quick.action.ask.about.page" = "Spørg om siden";
+
+/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
+"duckai.quick.action.attach" = "Vedhæft sideindhold";
 
 /* Title for the summarize quick action chip in Duck.ai contextual sheet */
 "duckai.quick.action.summarize" = "Sammenfat denne side";
@@ -1880,6 +1878,7 @@
 
 /* Title shown on the escape hatch card when the target is a fire tab */
 "escapeHatch.fireTab.title" = "Sidst brugte Fire-fane";
+
 /* Accessibility label for escape hatch card; %@ is the tab title */
 "escapeHatch.returnTo.accessibility.label" = "Gå tilbage til %@";
 
@@ -2230,6 +2229,7 @@
 
 /* Title shown on the Fire tab empty state screen */
 "fire.tab.empty.state.title" = "Fire-fane";
+
 /* No comment provided by engineer. */
 "fireButtonAnimation.airstream.name" = "Airstream";
 
@@ -3249,6 +3249,7 @@
 
 /* Title for scoped fire confirmation dialog in fire mode, asking user to delete all fire tabs and their data */
 "scoped.fire.confirmation.alert.fireMode.title" = "Slet Fire-faner og deres data?";
+
 /* Title for scoped fire confirmation dialog asking user to delete tabs and site data */
 "scoped.fire.confirmation.alert.title" = "Slet faner og webstedsdata?";
 
@@ -4322,6 +4323,7 @@
 
 /* Accessibility label on tab cell */
 "tab.close.closeNewTab" = "Luk fane";
+
 /* Accessibility label on remove button */
 "tab.close.home" = "Luk hjemmefanen";
 
@@ -4333,6 +4335,7 @@
 
 /* New tab title */
 "tab.new.title" = "Ny fane";
+
 /* Accessibility label on tab cell */
 "tab.open.home" = "Åben hjemmefanen";
 
@@ -4341,6 +4344,7 @@
 
 /* Accessibility label on tab cell */
 "tab.open.newFireTab" = "Åbn Fire-fane";
+
 /* Accesibility label: first string is website title, second is address */
 "tab.open.with.title.and.address" = "Åbn \"%1$@\" på %2$@";
 
@@ -4754,6 +4758,18 @@
 
 /* Title for the Windows browser download link page */
 "windows-waitlist.waitlist-download-screen.try-duckduckgo-for-windows" = "Få DuckDuckGo til Windows!";
+
+/* Cancel button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.cancel" = "Nej tak.";
+
+/* Confirm button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.confirm" = "Send anonyme rapporter";
+
+/* Description of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.message" = "Send automatisk anonyme rapporter om nedbrud til DuckDuckGo, når blokering af YouTube-annoncer er slået til.";
+
+/* Title of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.title" = "Hjælp med at gøre blokering af YouTube-annoncer bedre for alle";
 
 /* Explanation text for YouTube Ad Blocking feature */
 "youtube.ad.blocking.explanation" = "DuckDuckGo fjerner videoannoncer på YouTube, så du kan se videoer uden afbrydelser.";

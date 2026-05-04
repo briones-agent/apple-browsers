@@ -116,7 +116,8 @@
 "action.title.newFireTabAction" = "Νέα καρτέλα Fire";
 
 /* Open in New Fire Tab action */
-"action.title.newFireTabForUrl" = "Άνοιγμα σε καρτέλα Fire";
+"action.title.newFireTabForUrl" = "Άνοιγμα σε Καρτέλα Fire";
+
 /* Create New Tab action */
 "action.title.newTabAction" = "Νέα καρτέλα";
 
@@ -1410,9 +1411,6 @@
 /* No comment provided by engineer. */
 "Debug" = "Επανόρθωση σφαλμάτων";
 
-/* No comment provided by engineer. */
-"Delete" = "Διαγραφή";
-
 /* Default string used if users device is not iPhone or iPad */
 "device.type.default" = "συσκευή";
 
@@ -1524,11 +1522,11 @@
 /* AI features settings explanation */
 "duckai.preferences.text.markdown" = "Οι λειτουργίες τεχνητής νοημοσύνης του DuckDuckGo είναι ιδιωτικές και προαιρετικές. Τα δεδομένα σας δεν χρησιμοποιούνται για εκπαίδευση της τεχνητής νοημοσύνης.";
 
-/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
-"duckai.quick.action.attach" = "Επισύναψη περιεχομένου σελίδας";
-
 /* Title for the ask about page quick action chip in Duck.ai contextual sheet. Tapping attaches the current page content. */
 "duckai.quick.action.ask.about.page" = "Ρώτα για τη σελίδα";
+
+/* Title for the attach page content quick action chip in Duck.ai contextual sheet */
+"duckai.quick.action.attach" = "Επισύναψη περιεχομένου σελίδας";
 
 /* Title for the summarize quick action chip in Duck.ai contextual sheet */
 "duckai.quick.action.summarize" = "Συνοψίστε αυτήν τη σελίδα";
@@ -1880,6 +1878,7 @@
 
 /* Title shown on the escape hatch card when the target is a fire tab */
 "escapeHatch.fireTab.title" = "Τελευταία χρήση καρτέλας Fire";
+
 /* Accessibility label for escape hatch card; %@ is the tab title */
 "escapeHatch.returnTo.accessibility.label" = "Επιστροφή σε %@";
 
@@ -2230,6 +2229,7 @@
 
 /* Title shown on the Fire tab empty state screen */
 "fire.tab.empty.state.title" = "Καρτέλα Fire";
+
 /* No comment provided by engineer. */
 "fireButtonAnimation.airstream.name" = "Ρεύμα αέρα";
 
@@ -3249,6 +3249,7 @@
 
 /* Title for scoped fire confirmation dialog in fire mode, asking user to delete all fire tabs and their data */
 "scoped.fire.confirmation.alert.fireMode.title" = "Να διαγραφούν οι καρτέλες Fire και τα δεδομένα τους;";
+
 /* Title for scoped fire confirmation dialog asking user to delete tabs and site data */
 "scoped.fire.confirmation.alert.title" = "Διαγραφή καρτελών και δεδομένων ιστότοπου;";
 
@@ -4322,6 +4323,7 @@
 
 /* Accessibility label on tab cell */
 "tab.close.closeNewTab" = "Κλείσιμο καρτέλας";
+
 /* Accessibility label on remove button */
 "tab.close.home" = "Κλείσιμο αρχικής καρτέλας";
 
@@ -4333,6 +4335,7 @@
 
 /* New tab title */
 "tab.new.title" = "Νέα καρτέλα";
+
 /* Accessibility label on tab cell */
 "tab.open.home" = "Άνοιγμα αρχικής καρτέλας";
 
@@ -4341,6 +4344,7 @@
 
 /* Accessibility label on tab cell */
 "tab.open.newFireTab" = "Άνοιγμα καρτέλας Fire";
+
 /* Accesibility label: first string is website title, second is address */
 "tab.open.with.title.and.address" = "Άνοιγμα \"%1$@\" στο %2$@";
 
@@ -4754,6 +4758,18 @@
 
 /* Title for the Windows browser download link page */
 "windows-waitlist.waitlist-download-screen.try-duckduckgo-for-windows" = "Αποκτήστε το DuckDuckGo για Windows!";
+
+/* Cancel button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.cancel" = "Όχι, ευχαριστώ";
+
+/* Confirm button label of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.confirm" = "Αποστολή ανώνυμων αναφορών";
+
+/* Description of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.message" = "Αυτόματη αποστολή ανώνυμων αναφορών βλάβης στο DuckDuckGo όταν είναι ενεργός ο Αποκλεισμός διαφημίσεων YouTube.";
+
+/* Title of the alert shown when the user is enabling YouTube ad blocking */
+"youtube.ad.blocking.analytics-opt-in-alert.title" = "Βοήθησε να κάνουμε τον Αποκλεισμό διαφημίσεων YouTube καλύτερο για όλους";
 
 /* Explanation text for YouTube Ad Blocking feature */
 "youtube.ad.blocking.explanation" = "Το DuckDuckGo αφαιρεί τις διαφημίσεις βίντεο από το YouTube, ώστε να μπορείτε να παρακολουθείτε βίντεο χωρίς διακοπές.";
