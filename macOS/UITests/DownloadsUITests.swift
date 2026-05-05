@@ -948,7 +948,11 @@ class DownloadsUITests: UITestCase {
 
         let filename = "ui-large-\(UUID().uuidString).bin"
         let url = URL.testsDownload(size: "5GB", filename: filename).absoluteString
-        openSiteForDownloadingFile(url: url, in: fireWindow)
+        if let fireWindow {
+            openDownloadPageAndTriggerDownload(url: url, in: fireWindow)
+        } else {
+            openSiteForDownloadingFile(url: url)
+        }
 
         // Track both the final file and the temporary .duckload file
         let downloadsDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
@@ -958,6 +962,30 @@ class DownloadsUITests: UITestCase {
         trackForCleanup(tempPath)
 
         return filename
+    }
+
+    private func openDownloadPageAndTriggerDownload(url: String, in window: XCUIElement) {
+        let pageTitle = "Fire Download \(UUID().uuidString)"
+        let pageURL = UITests.simpleServedPage(
+            titled: pageTitle,
+            body: """
+            <a id="start-download" href="\(url.escapedJavaScriptString())">Start Download</a>
+            """
+        )
+
+        window.click()
+        let addressBar = app.addressBar
+        XCTAssertTrue(addressBar.waitForExistence(timeout: UITests.Timeouts.elementExistence))
+        addressBar.pasteURL(pageURL, pressingEnter: true)
+
+        let webView = window.webViews[pageTitle]
+        XCTAssertTrue(webView.waitForExistence(timeout: UITests.Timeouts.localTestServer),
+                      "Download launcher page should load in Fire window before triggering the download")
+
+        let downloadLink = webView.links["Start Download"].firstMatch
+        XCTAssertTrue(downloadLink.waitForExistence(timeout: UITests.Timeouts.elementExistence),
+                      "Download launcher link should exist in Fire window before starting the download")
+        downloadLink.click()
     }
 
     private func openSiteForDownloadingFile(url: String, in window: XCUIElement? = nil) {
