@@ -371,6 +371,59 @@ extension DuckAIFloatingOmnibarWindowController: AIChatOmnibarControllerDelegate
     }
 
     func aiChatOmnibarController(_ controller: AIChatOmnibarController, requestsGlobalSubmissionOf prompt: AIChatNativePrompt) {
-        // M5 stub — actual hand-off (focus main window, open Duck.ai tab) lands in M6.
+        // Pull the user's text out of the prompt payload — the simple `.query(...)` trigger needs
+        // a plain string; we re-set the full prompt afterwards so images/model/mode/reasoning
+        // carry over (M7 verifies the full payload survives).
+        let trimmedText: String
+        if case .query(let query) = prompt.tool {
+            trimmedText = query.prompt
+        } else {
+            trimmedText = ""
+        }
+        guard !trimmedText.isEmpty else { return }
+
+        let appDelegate = NSApp.delegateTyped
+        let manager = appDelegate.windowControllersManager
+
+        // Only target a browser window that's on the user's *current* desktop space. Otherwise
+        // `makeKeyAndOrderFront` would force-switch Mission Control spaces, which is jarring when
+        // the user just clicked the menu-bar entry point. If none qualifies, open a fresh window
+        // — that always appears on the current space.
+        let activeSpaceWindow = manager.lastKeyMainWindowController(where: {
+            $0.window?.isOnActiveSpace == true
+        })?.window
+
+        let target: NSWindow?
+        let behavior: LinkOpenBehavior
+        if let activeSpaceWindow {
+            target = activeSpaceWindow
+            // Existing window already has the user's tabs — open Duck.ai as a new selected tab
+            // alongside them.
+            behavior = .newTab(selected: true)
+        } else {
+            target = manager.openNewWindow()
+            // Newly-created window opens with a single home-page tab. Loading Duck.ai into the
+            // current tab replaces that placeholder rather than leaving it as a leftover second
+            // tab in the new window.
+            behavior = .currentTab
+        }
+
+        // Bring the target window forward and activate DDG. This is the *intentional* foreground
+        // hand-off — we want the browser tab the user just queried to be in front. Skip the
+        // re-activate-previous-app logic in `close()` by clearing the captured app first.
+        previouslyActiveApp = nil
+        target?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        appDelegate.aiChatTabOpener.openAIChatTab(
+            with: .query(trimmedText, shouldAutoSubmit: true),
+            behavior: behavior
+        )
+        // The simple `.query(...)` trigger above sets a text-only prompt; re-setting here with the
+        // full payload preserves attachments/model/mode/reasoning. Mirrors the address-bar submit
+        // path in `AIChatOmnibarController.submit()`.
+        AIChatPromptHandler.shared.setData(prompt)
+
+        close()
     }
 }
