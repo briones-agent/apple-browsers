@@ -31,9 +31,8 @@
                         "description": "Subscription product identifier from the payment provider, e.g. ddg.privacy.pro.monthly.renews.us"
                     },
                     "free_trial_eligible": {
-                        "type": "string",
-                        "description": "Whether a free trial was available",
-                        "enum": ["true", "false"]
+                        "type": "boolean",
+                        "description": "Whether a free trial was available"
                     },
                     "account_creation_latency_ms_bucketed": {
                         "type": "integer",

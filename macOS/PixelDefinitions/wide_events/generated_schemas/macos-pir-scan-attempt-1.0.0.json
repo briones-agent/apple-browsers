@@ -93,9 +93,8 @@
                                             "description": "Ordinal number for attempts within the current scan cycle"
                                         },
                                         "free_scan": {
-                                            "type": "string",
-                                            "description": "Whether this scan attempt belongs to a free (unauthenticated) user",
-                                            "enum": ["true", "false"]
+                                            "type": "boolean",
+                                            "description": "Whether this scan attempt belongs to a free (unauthenticated) user"
                                         },
                                         "latency_ms": {
                                             "type": "string",
