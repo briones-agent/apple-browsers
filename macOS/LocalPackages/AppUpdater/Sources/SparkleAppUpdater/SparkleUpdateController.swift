@@ -46,7 +46,7 @@ public final class SparkleUpdateController: NSObject, SparkleUpdateControlling {
     enum NotificationDelay {
         static let critical: TimeInterval = 0
         static let internalRegular: TimeInterval = .hours(2)
-        static let externalRegular: TimeInterval = .days(2)
+        static let externalRegular: TimeInterval = .days(1)
 
         static func delay(for updateType: Update.UpdateType, isInternalUser: Bool) -> TimeInterval {
             if updateType == .critical {
