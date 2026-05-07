@@ -176,7 +176,7 @@ private extension NewTabPageView {
                 onCardTap: { viewModel.onEscapeHatchTap?() },
                 onTabSwitcherTap: { viewModel.onTabSwitcherTap?() }
             )
-            .frame(maxWidth: horizontalSizeClass == .regular ? Metrics.messageMaximumWidthPad : Metrics.messageMaximumWidth)
+            .frame(maxWidth: horizontalSizeClass == .regular ? Metrics.escapeHatchMaximumWidthPad : Metrics.messageMaximumWidth)
             .padding(.top, Metrics.nonGridSectionTopPadding)
             .padding(.horizontal, Metrics.updatedNonGridSectionHorizontalPadding)
         }
@@ -247,6 +247,9 @@ private struct Metrics {
 
     static let messageMaximumWidth: CGFloat = 380
     static let messageMaximumWidthPad: CGFloat = 455
+    /// Matches the favorites grid's content width on iPad regular size class (5 cols × 96pt
+    /// max item width + 4 × 32pt spacing) so the escape hatch row aligns visually with the grid.
+    static let escapeHatchMaximumWidthPad: CGFloat = 608
 
     static let verySmallScreenWidth: CGFloat = 320
 }

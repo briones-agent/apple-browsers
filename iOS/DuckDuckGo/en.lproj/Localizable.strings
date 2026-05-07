@@ -3268,8 +3268,8 @@ Take back control of your personal information with the browser designed for dat
 /* Settings screen cell title for toggling tracker blocking animation in address bar */
 "settings.address.trackers.animation" = "Show in Address Bar";
 
-/* Section footer; %@ is the idle interval (e.g. 5 minutes) */
-"settings.afterInactivity.footer.format" = "Choose what you see when you return after %@ of inactivity.";
+/* Section footer for the Opening Screen picker */
+"settings.afterInactivity.footer" = "Choose what you see when you return to DuckDuckGo.";
 
 /* Idle interval 1 hour for settings footer */
 "settings.afterInactivity.idle.interval.hour" = "1 hour";
@@ -3289,8 +3289,8 @@ Take back control of your personal information with the browser designed for dat
 /* Idle interval in seconds for settings footer (plural) */
 "settings.afterInactivity.idle.interval.seconds" = "%d seconds";
 
-/* Settings picker label for what to show when returning after inactivity */
-"settings.afterInactivity.label" = "After Inactivity";
+/* Settings picker label for what to show when returning to the app */
+"settings.afterInactivity.label" = "Opening Screen";
 
 /* Option: show last used tab when returning after inactivity */
 "settings.afterInactivity.option.lastUsedTab" = "Last Used Tab";

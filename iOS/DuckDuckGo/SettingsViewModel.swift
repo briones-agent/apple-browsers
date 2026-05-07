@@ -377,10 +377,6 @@ final class SettingsViewModel: ObservableObject {
         featureFlagger.isFeatureOn(.showNTPAfterIdleReturn)
     }
 
-    var idleTimeInterval: String {
-        formattedIdleThreshold(from: idleReturnEligibilityManager.idleThresholdSeconds())
-    }
-
     var afterInactivityOptionBinding: Binding<AfterInactivityOption> {
         Binding<AfterInactivityOption>(
             get: {
@@ -1144,27 +1140,6 @@ extension SettingsViewModel {
         shouldShowImportPasswords = false
     }
 
-    private func formattedIdleThreshold(from seconds: Int) -> String {
-        let oneHour = 3600
-        if seconds >= oneHour {
-            let hours = seconds / oneHour
-            if hours == 1 {
-                return UserText.settingsAfterInactivityIdleIntervalHourSingular
-            }
-            return String(format: UserText.settingsAfterInactivityIdleIntervalHoursFormat, hours)
-        }
-        let minutes = seconds / 60
-        if minutes >= 1 {
-            if minutes == 1 {
-                return UserText.settingsAfterInactivityIdleIntervalMinuteSingular
-            }
-            return String(format: UserText.settingsAfterInactivityIdleIntervalMinutesFormat, minutes)
-        }
-        if seconds == 1 {
-            return UserText.settingsAfterInactivityIdleIntervalSecondSingular
-        }
-        return String(format: UserText.settingsAfterInactivityIdleIntervalSecondsFormat, seconds)
-    }
 }
 
 // MARK: Subscribers
