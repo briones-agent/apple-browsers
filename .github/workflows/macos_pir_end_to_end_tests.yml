@@ -86,21 +86,20 @@ jobs:
         ./setup-ci.sh
         cd ..
         nohup pnpm start:all > pir-fake-broker.log 2>&1 &
-
-        for attempt in {1..60}; do
-          if curl --silent --output /dev/null "http://localhost:3001/api/profiles"; then
-            echo "PIR fake broker is reachable on attempt ${attempt}"
-            break
-          fi
-
-          if [[ "${attempt}" == "60" ]]; then
+        curl \
+          --silent \
+          --show-error \
+          --fail \
+          --retry 60 \
+          --retry-delay 2 \
+          --retry-all-errors \
+          --retry-connrefused \
+          "http://localhost:3001/api/profiles" \
+          > /dev/null || {
             echo "PIR fake broker did not become reachable on localhost:3001"
             sed -n '1,200p' pir-fake-broker.log || true
             exit 1
-          fi
-
-          sleep 2
-        done
+          }
 
     - name: Setup Ruby and dependencies
       uses: ./.github/actions/setup-ruby
