@@ -956,7 +956,6 @@ final class SettingsViewModel: ObservableObject {
         self.mobileCustomization = mobileCustomization
         self.userScriptsDependencies = userScriptsDependencies
         self.onboardingSearchExperienceSettingsResolver = onboardingSearchExperienceSettingsResolver ?? OnboardingSearchExperienceSettingsResolver(
-            featureFlagger: AppDependencyProvider.shared.featureFlagger,
             onboardingProvider: OnboardingSearchExperience(),
             daxDialogsStatusProvider: legacyViewProvider.daxDialogsManager
         )
@@ -1386,7 +1385,13 @@ extension SettingsViewModel {
         case .autoconsent:
             pushViewController(legacyViewProvider.autoConsent)
         case .passwordsImport:
-            pushViewController(legacyViewProvider.importPasswords(delegate: self))
+            pushViewController(legacyViewProvider.importPasswords(importScreen: .completeSetup,
+                                                                  delegate: self,
+                                                                  onFinished: { [weak self] in
+                                                                      Task { @MainActor [weak self] in
+                                                                          self?.handleDataImportCompletion()
+                                                                      }
+                                                                  }))
         }
     }
  
@@ -1398,6 +1403,18 @@ extension SettingsViewModel {
     @MainActor
     private func presentViewController(_ view: UIViewController, modal: Bool) {
         onRequestPresentLegacyView?(view, modal)
+    }
+
+    @MainActor
+    private func handleDataImportCompletion() {
+        AppDependencyProvider.shared.autofillLoginSession.startSession()
+        pushViewController(legacyViewProvider.loginSettings(delegate: self,
+                                                            selectedAccount: nil,
+                                                            selectedCard: nil,
+                                                            showPasswordManagement: true,
+                                                            showCreditCardManagement: false,
+                                                            showSettingsScreen: nil,
+                                                            source: state.autofillSource))
     }
     
 }
@@ -1415,14 +1432,7 @@ extension SettingsViewModel: AutofillSettingsViewControllerDelegate {
 extension SettingsViewModel: DataImportViewControllerDelegate {
     @MainActor
     func dataImportViewControllerDidFinish(_ controller: DataImportViewController) {
-        AppDependencyProvider.shared.autofillLoginSession.startSession()
-        pushViewController(legacyViewProvider.loginSettings(delegate: self,
-                                                            selectedAccount: nil,
-                                                            selectedCard: nil,
-                                                            showPasswordManagement: true,
-                                                            showCreditCardManagement: false,
-                                                            showSettingsScreen: nil,
-                                                            source: state.autofillSource))
+        handleDataImportCompletion()
     }
 }
 

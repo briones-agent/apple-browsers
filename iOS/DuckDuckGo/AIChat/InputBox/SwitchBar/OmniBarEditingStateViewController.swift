@@ -197,7 +197,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        if aiChatHistoryManager == nil && featureFlagger.isFeatureOn(.aiChatSuggestions) && aiChatSettings.isChatSuggestionsEnabled {
+        if aiChatHistoryManager == nil {
             installChatHistoryList()
         }
 
@@ -303,6 +303,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         installSwitchBarVC()
         installSwipeContainer()
         installSuggestionsTray()
+        installChatHistoryList()
         installDaxLogoView()
         installNavigationActionBar()
 
@@ -362,12 +363,17 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         let manager = SuggestionTrayManager(switchBarHandler: switchBarHandler, dependencies: dependencies)
         manager.delegate = self
         let suggestionTrayEscapeHatch = switchBarHandler.isFireTab ? nil : escapeHatchModel
-        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatch: suggestionTrayEscapeHatch)
+        let openTabCount = dependencies.tabsModelProvider().count
+        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatch: suggestionTrayEscapeHatch, openTabCount: openTabCount)
         suggestionTrayManager = manager
     }
 
     private func installChatHistoryList() {
-        guard let swipeContainerManager else { return }
+        guard featureFlagger.isFeatureOn(.aiChatSuggestions),
+              aiChatSettings.isChatSuggestionsEnabled,
+              let swipeContainerManager else { return }
+        aiChatHistoryManager?.tearDown()
+        aiChatHistoryManager = nil
         let manager = makeAIChatHistoryManager()
         
         manager.delegate = self

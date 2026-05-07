@@ -22,69 +22,45 @@ import XCTest
 
 final class UnifiedInputContentContainerViewControllerTests: XCTestCase {
 
-    // MARK: - computeEscapeHatchInsets
+    // MARK: - computeSuggestionTrayEscapeHatchInset
     //
-    // The formula produces two CGFloat values used as `additionalTopInset` for the
-    // suggestion tray (Search) and the chat history list (Duck.ai). Each constant is
-    // gated by `hasEscapeHatch`, so the result naturally collapses to (0, 0) when no
-    // hatch is present.
-    //
+    // Returns the additionalTopInset for the suggestion tray (Search-side).
     // Reference constants (from `Metrics` enum in the VC):
-    //   escapeHatchBaseTopInset              = 44
-    //   escapeHatchTopBarTrayPullUp          = -10
-    //   chatHistoryBottomBarCompensation     = 1
-    //   landscapeDuckAiAlignmentPullUp       = -1
+    //   escapeHatchBaseTopInset      = 44   (bottom-bar dismiss-button clearance)
+    //   escapeHatchTopBarTrayPullUp  = -10  (top-bar tightening)
 
-    // MARK: - No hatch (natural collapse to zero)
-
-    func test_computeEscapeHatchInsets_whenNoHatch_returnsZeroForBothRegardlessOfOtherFlags() {
-        let insets = UnifiedInputContentContainerViewController.computeEscapeHatchInsets(
-            hasEscapeHatch: false,
-            isBottomBar: true,
-            isLandscape: true
+    func test_inset_whenNoHatch_returnsZero() {
+        XCTAssertEqual(
+            UnifiedInputContentContainerViewController.computeSuggestionTrayEscapeHatchInset(
+                hasEscapeHatch: false, isBottomBar: true
+            ),
+            0
         )
-        XCTAssertEqual(insets.tray, 0)
-        XCTAssertEqual(insets.chat, 0)
+        XCTAssertEqual(
+            UnifiedInputContentContainerViewController.computeSuggestionTrayEscapeHatchInset(
+                hasEscapeHatch: false, isBottomBar: false
+            ),
+            0
+        )
     }
 
-    // MARK: - Portrait top bar (isBottomBar: false, isLandscape: false)
-
-    func test_computeEscapeHatchInsets_whenPortraitTopBar_returnsTrayPullUpAndZeroChat() {
-        let insets = UnifiedInputContentContainerViewController.computeEscapeHatchInsets(
-            hasEscapeHatch: true,
-            isBottomBar: false,
-            isLandscape: false
+    func test_inset_whenBottomBarAndHatch_returnsDismissButtonClearance() {
+        // 44 (base) + 0 (no top-bar pull-up) = 44
+        XCTAssertEqual(
+            UnifiedInputContentContainerViewController.computeSuggestionTrayEscapeHatchInset(
+                hasEscapeHatch: true, isBottomBar: true
+            ),
+            44
         )
-        // Tray: 0 (base, no bottom bar) + (-10) (top bar pull-up) = -10
-        XCTAssertEqual(insets.tray, -10)
-        // Chat: 0 (base) - 0 (compensation) + 0 (no landscape) = 0 — hatch sits at natural top
-        XCTAssertEqual(insets.chat, 0)
     }
 
-    // MARK: - Portrait bottom bar (isBottomBar: true, isLandscape: false)
-
-    func test_computeEscapeHatchInsets_whenPortraitBottomBar_returnsDismissButtonInsetMinusCompensation() {
-        let insets = UnifiedInputContentContainerViewController.computeEscapeHatchInsets(
-            hasEscapeHatch: true,
-            isBottomBar: true,
-            isLandscape: false
+    func test_inset_whenTopBarAndHatch_returnsPullUp() {
+        // 0 (base) + (-10) (top-bar pull-up) = -10
+        XCTAssertEqual(
+            UnifiedInputContentContainerViewController.computeSuggestionTrayEscapeHatchInset(
+                hasEscapeHatch: true, isBottomBar: false
+            ),
+            -10
         )
-        // Tray: 44 (dismiss button clearance) + 0 (no pull-up in bottom bar) = 44
-        XCTAssertEqual(insets.tray, 44)
-        // Chat: 44 - 1 (compensation) + 0 (no landscape) = 43
-        XCTAssertEqual(insets.chat, 43)
-    }
-
-    // MARK: - Landscape (isLandscape: true, auto-switches to top bar)
-
-    func test_computeEscapeHatchInsets_whenLandscape_returnsTrayPullUpAndLandscapeAlignment() {
-        let insets = UnifiedInputContentContainerViewController.computeEscapeHatchInsets(
-            hasEscapeHatch: true,
-            isBottomBar: false,
-            isLandscape: true
-        )
-        XCTAssertEqual(insets.tray, -10)
-        // Chat: 0 - 0 + (-1) (landscape alignment) = -1
-        XCTAssertEqual(insets.chat, -1)
     }
 }
