@@ -26,7 +26,8 @@ import os.log
 
 protocol FaviconStoring {
 
-    func loadFavicons() async throws -> [Favicon]
+    func loadFaviconMetadata() async throws -> [FaviconMetadata]
+    func loadImage(for identifier: UUID) throws -> NSImage?
     func save(_ favicons: [Favicon]) async throws
     func removeFavicons(_ favicons: [Favicon]) async throws
 
@@ -55,23 +56,46 @@ final class FaviconStore: FaviconStoring {
         self.context = context
     }
 
-    func loadFavicons() async throws -> [Favicon] {
+    func loadFaviconMetadata() async throws -> [FaviconMetadata] {
         try await withCheckedThrowingContinuation { [context] continuation in
             context.perform {
                 let fetchRequest = FaviconManagedObject.fetchRequest() as NSFetchRequest<FaviconManagedObject>
                 fetchRequest.sortDescriptors = [NSSortDescriptor(key: #keyPath(FaviconManagedObject.dateCreated), ascending: true)]
-                fetchRequest.returnsObjectsAsFaults = false
+                // returnsObjectsAsFaults stays at the default (true). The image
+                // blob (`imageEncrypted`) is never accessed during the metadata
+                // mapping below, so CoreData never realizes it from SQLite —
+                // this is what avoids the ~310 MB launch-time spike.
                 do {
                     let faviconMOs = try context.fetch(fetchRequest)
-                    Logger.favicons.debug("\(faviconMOs.count) favicons loaded")
-                    let favicons = faviconMOs.compactMap { Favicon(faviconMO: $0) }
+                    Logger.favicons.debug("\(faviconMOs.count) favicon metadata entries loaded")
+                    let metadata = faviconMOs.compactMap { FaviconMetadata(faviconMO: $0) }
 
-                    continuation.resume(returning: favicons)
+                    continuation.resume(returning: metadata)
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+    }
+
+    func loadImage(for identifier: UUID) throws -> NSImage? {
+        var image: NSImage?
+        var caughtError: Error?
+        context.performAndWait {
+            let fetchRequest = FaviconManagedObject.fetchRequest() as NSFetchRequest<FaviconManagedObject>
+            fetchRequest.predicate = NSPredicate(format: "%K == %@", #keyPath(FaviconManagedObject.identifier), identifier as NSUUID)
+            fetchRequest.fetchLimit = 1
+            do {
+                let result = try context.fetch(fetchRequest)
+                image = result.first?.imageEncrypted as? NSImage
+            } catch {
+                caughtError = error
+            }
+        }
+        if let caughtError {
+            throw caughtError
+        }
+        return image
     }
 
     func removeFavicons(_ favicons: [Favicon]) async throws {
@@ -221,7 +245,7 @@ final class FaviconStore: FaviconStoring {
 
 }
 
-fileprivate extension Favicon {
+fileprivate extension FaviconMetadata {
 
     init?(faviconMO: FaviconManagedObject) {
         guard let identifier = faviconMO.identifier,
@@ -230,13 +254,11 @@ fileprivate extension Favicon {
               let dateCreated = faviconMO.dateCreated,
               let relation = Favicon.Relation(rawValue: Int(faviconMO.relation)) else {
             PixelKit.fire(DebugEvent(GeneralPixel.faviconDecryptionFailedUnique), frequency: .legacyDaily)
-            assertionFailure("Favicon: Failed to init Favicon from FaviconManagedObject")
+            assertionFailure("FaviconMetadata: Failed to init from FaviconManagedObject")
             return nil
         }
 
-        let image = faviconMO.imageEncrypted as? NSImage
-
-        self.init(identifier: identifier, url: url, image: image, relation: relation, documentUrl: documentUrl, dateCreated: dateCreated)
+        self.init(identifier: identifier, url: url, documentUrl: documentUrl, dateCreated: dateCreated, relation: relation)
     }
 
 }
