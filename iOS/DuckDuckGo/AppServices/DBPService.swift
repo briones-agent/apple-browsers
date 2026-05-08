@@ -32,19 +32,27 @@ final class DBPService: NSObject {
         return dbpIOSManager
     }
 
-    init(appDependencies: DependencyProvider, contentBlocking: ContentBlocking) {
-        guard appDependencies.featureFlagger.isFeatureOn(.personalInformationRemoval) else {
-            self.dbpIOSManager = nil
-            self.freemiumDBPUserStateManager = DisabledFreemiumDBPUserStateManager()
-            super.init()
-            return
-        }
-
+    init(appDependencies: DependencyProvider,
+         contentBlocking: ContentBlocking,
+         freemiumPIRDebugSettings: FreemiumPIRDebugSettings) {
         let dbpSubscriptionManager = DataBrokerProtectionSubscriptionManager(
             subscriptionManager: AppDependencyProvider.shared.subscriptionManager,
             runTypeProvider: appDependencies.dbpSettings)
         let authManager = DataBrokerProtectionAuthenticationManager(subscriptionManager: dbpSubscriptionManager)
-        let featureFlagger = DBPFeatureFlagger(appDependencies: appDependencies)
+        let featureFlagger = DBPFeatureFlagger(appDependencies: appDependencies,
+                                               freemiumPIRDebugSettings: freemiumPIRDebugSettings)
+        let freemiumDBPUserStateManager = DefaultFreemiumDBPUserStateManager(
+            userDefaults: .dbp,
+            isUserAuthenticated: { [authManager] in await authManager.isUserAuthenticated },
+            isFreemiumEnabled: { [featureFlagger] in featureFlagger.isFreemiumPIREnabled }
+        )
+        self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
+
+        guard appDependencies.featureFlagger.isFeatureOn(.personalInformationRemoval) else {
+            self.dbpIOSManager = nil
+            super.init()
+            return
+        }
 
         if let pixelKit = PixelKit.shared {
             let notificationPixelHandler = DataBrokerProtectionNotificationPixelHandler(pixelKit: pixelKit)
@@ -52,12 +60,6 @@ final class DBPService: NSObject {
                 authenticationManager: authManager,
                 pixelHandler: notificationPixelHandler
             )
-            let freemiumDBPUserStateManager = DefaultFreemiumDBPUserStateManager(
-                userDefaults: .dbp,
-                isUserAuthenticated: { [authManager] in await authManager.isUserAuthenticated },
-                isFreemiumEnabled: { [featureFlagger] in featureFlagger.isFreemiumPIREnabled }
-            )
-            self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
             let eventsHandler = BrokerProfileJobEventsHandler(
                 userNotificationService: notificationService,
                 freemiumUserStateManager: freemiumDBPUserStateManager
@@ -99,7 +101,6 @@ final class DBPService: NSObject {
         } else {
             assertionFailure("PixelKit not set up")
             self.dbpIOSManager = nil
-            self.freemiumDBPUserStateManager = DisabledFreemiumDBPUserStateManager()
         }
         super.init()
     }
@@ -118,6 +119,7 @@ final class DBPService: NSObject {
 final class DBPFeatureFlagger: DBPFeatureFlagging, FreemiumPIRFeatureFlagging {
     
     private let appDependencies: DependencyProvider
+    private let freemiumPIRDebugSettings: FreemiumPIRDebugSettings
 
     var isRemoteBrokerDeliveryFeatureOn: Bool {
         appDependencies.featureFlagger.isFeatureOn(.dbpRemoteBrokerDelivery)
@@ -144,10 +146,13 @@ final class DBPFeatureFlagger: DBPFeatureFlagging, FreemiumPIRFeatureFlagging {
     }
 
     var isFreemiumPIREnabled: Bool {
-        appDependencies.featureFlagger.isFeatureOn(.dbpFreemiumPIR)
+        freemiumPIRDebugSettings.isEligibilityForced
+            || appDependencies.featureFlagger.isFeatureOn(.dbpFreemiumPIR)
     }
 
-    init(appDependencies: DependencyProvider) {
+    init(appDependencies: DependencyProvider,
+         freemiumPIRDebugSettings: FreemiumPIRDebugSettings) {
         self.appDependencies = appDependencies
+        self.freemiumPIRDebugSettings = freemiumPIRDebugSettings
     }
 }

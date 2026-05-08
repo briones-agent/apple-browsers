@@ -29,6 +29,7 @@ import DataBrokerProtection_iOS
 import Combine
 import SubscriptionTestingUtilities
 import Common
+import PersistenceTestingUtils
 @testable import DuckDuckGo
 @testable import Core
 
@@ -52,6 +53,13 @@ final class OnboardingNavigationDelegateTests: XCTestCase {
             faviconStoring: MockFaviconStore(),
             tld: TLD()
         )
+        let freemiumPIRDebugSettings = FreemiumPIRDebugSettings(keyValueStore: try MockKeyValueFileStore())
+        let freemiumDBPUserDefaults = try XCTUnwrap(UserDefaults(suiteName: "OnboardingNavigationDelegateTests.\(UUID().uuidString)"))
+        let freemiumDBPUserStateManager = DefaultFreemiumDBPUserStateManager(
+            userDefaults: freemiumDBPUserDefaults,
+            isUserAuthenticated: { false },
+            isFreemiumEnabled: { false }
+        )
         
         let remoteMessagingClient = RemoteMessagingClient(
             bookmarksDatabase: db,
@@ -69,9 +77,10 @@ final class OnboardingNavigationDelegateTests: XCTestCase {
             freemiumPIREligibilityChecker: DefaultFreemiumPIREligibilityChecker(
                 featureFlagger: MockFeatureFlagger(),
                 runPrerequisitesDelegate: nil,
-                subscriptionAuthenticationStateProvider: SubscriptionManagerMock()
+                subscriptionAuthenticationStateProvider: SubscriptionManagerMock(),
+                freemiumPIRDebugSettings: freemiumPIRDebugSettings
             ),
-            freemiumDBPUserStateManager: DisabledFreemiumDBPUserStateManager()
+            freemiumDBPUserStateManager: freemiumDBPUserStateManager
         )
         let homePageConfiguration = HomePageConfiguration(remoteMessagingClient: remoteMessagingClient, privacyProDataReporter: MockPrivacyProDataReporter())
         let tabsModel = TabsModel(desktop: true)
