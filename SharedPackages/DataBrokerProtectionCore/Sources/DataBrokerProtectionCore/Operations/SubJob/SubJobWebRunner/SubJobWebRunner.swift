@@ -319,7 +319,7 @@ public extension SubJobWebRunning {
     }
 
     private func runEmailConfirmationAction(action: EmailConfirmationAction) async throws {
-        if let email = extractedProfile?.email {
+        if let email = extractedProfile?.email ?? fetchedEmail {
             recordDebugEvent(kind: .actionResponse,
                              actionType: action.actionType,
                              details: "Email confirmation started (polling interval \(action.pollingTime)s)")
