@@ -3876,6 +3876,27 @@ extension MainViewController: OmniBarDelegate {
         }
     }
 
+    func menuForOmniBarLongPress(in state: OmniBarState) -> UIMenu? {
+        guard isSupportedNonEditingOmniBarState(state) else { return nil }
+
+        return UIMenu(title: "", children: [
+            UIAction(title: "PoC Action 1") { _ in },
+            UIAction(title: "PoC Action 2") { _ in }
+        ])
+    }
+
+    private func isSupportedNonEditingOmniBarState(_ state: OmniBarState) -> Bool {
+        switch state {
+        case is SmallOmniBarState.HomeNonEditingState,
+             is SmallOmniBarState.BrowsingNonEditingState,
+             is LargeOmniBarState.HomeNonEditingState,
+             is LargeOmniBarState.BrowsingNonEditingState:
+            return true
+        default:
+            return false
+        }
+    }
+
     override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
         defer { super.motionEnded(motion, with: event) }
 

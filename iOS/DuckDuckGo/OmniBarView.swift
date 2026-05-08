@@ -100,6 +100,7 @@ protocol OmniBarView: UIView, OmniBarStatusUpdateable {
 
     /// Callback triggered when the omnibar branding area is tapped while in AI Chat mode
     var onAIChatBrandingPressed: (() -> Void)? { get set }
+    var longPressMenuProvider: (() -> UIMenu?)? { get set }
 
     // static function is needed to allow creation of DefaultOmniBarView from xib
     static func create() -> Self
@@ -108,6 +109,7 @@ protocol OmniBarView: UIView, OmniBarStatusUpdateable {
     func hideButtons()
     func revealButtons()
     func setBookmarksPosition(leading: Bool, hidden: Bool)
+    func refreshLongPressMenuAvailability()
 
     // Fire mode
     func refreshFireMode(fireMode: Bool)

@@ -309,6 +309,11 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     /// Callback fired when the omnibar branding area is tapped while in AI Chat mode
     var onAIChatBrandingPressed: (() -> Void)?
+    var longPressMenuProvider: (() -> UIMenu?)? {
+        didSet {
+            refreshLongPressMenuAvailability()
+        }
+    }
 
     // MARK: - Properties
 
@@ -399,6 +404,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     private let searchAreaView = DefaultOmniBarSearchView()
     private let searchAreaContainerView = CompositeShadowView.defaultShadowView()
+    private var omniBarLongPressInteraction: UIContextMenuInteraction?
 
     /// Spans to available width of the omni bar and allows the input field to center horizontally
     private let searchAreaAlignmentView = UIView()
@@ -817,6 +823,34 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         textAreaBottomPaddingConstraint?.constant = -(isUsingSmallTopSpacing ? Metrics.textAreaBottomPaddingAdjustedSpacing : Metrics.textAreaVerticalPaddingRegularSpacing)
     }
 
+    func refreshLongPressMenuAvailability() {
+        guard let longPressMenuProvider else {
+            removeOmniBarLongPressInteraction()
+            return
+        }
+
+        if longPressMenuProvider() == nil {
+            removeOmniBarLongPressInteraction()
+            return
+        }
+
+        addOmniBarLongPressInteractionIfNeeded()
+    }
+
+    private func addOmniBarLongPressInteractionIfNeeded() {
+        guard omniBarLongPressInteraction == nil else { return }
+
+        let interaction = UIContextMenuInteraction(delegate: self)
+        addInteraction(interaction)
+        omniBarLongPressInteraction = interaction
+    }
+
+    private func removeOmniBarLongPressInteraction() {
+        guard let omniBarLongPressInteraction else { return }
+        removeInteraction(omniBarLongPressInteraction)
+        self.omniBarLongPressInteraction = nil
+    }
+
     /// Returns the expanded-area subview (text view or send button) at the given point.
     /// When expanded, these views overflow beyond this view's bounds so we must claim them explicitly.
     private func overflowTarget(at point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -994,6 +1028,17 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     private struct Constant {
         static let accessibilityPrefix = "Browser.OmniBar"
+    }
+}
+
+extension DefaultOmniBarView: UIContextMenuInteractionDelegate {
+
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+        guard let menu = longPressMenuProvider?() else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            menu
+        }
     }
 }
 
