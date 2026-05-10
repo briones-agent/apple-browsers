@@ -30,10 +30,15 @@ import Foundation
 /// ❗ Use `task.value(cancellingTaskOnTimeout:)` to await the task's value with a timeout and automatic cancellation, or use `withTaskCancellationHandler` to cancel the task manually.
 public func withTimeout<T: Sendable>(_ timeout: TimeInterval,
                                      throwing error: @autoclosure @escaping @Sendable () -> Error,
-                                     do operation: @escaping @isolated(any) () async throws -> T) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group -> T in
+                                     do operation: sending @escaping @isolated(any) () async throws -> T) async throws -> T {
+    let operationTask = Task(operation: operation)
+    return try await withThrowingTaskGroup(of: T.self) { group -> T in
         group.addTask {
-            try await operation()
+            try await withTaskCancellationHandler {
+                try await operationTask.value
+            } onCancel: {
+                operationTask.cancel()
+            }
         }
 
         group.addTask {
@@ -65,7 +70,7 @@ public func withTimeout<T: Sendable>(_ timeout: TimeInterval,
 public func withTimeout<T: Sendable>(_ timeout: TimeInterval,
                                      file: StaticString = #file,
                                      line: UInt = #line,
-                                     do operation: @escaping @isolated(any) () async throws -> T) async throws -> T {
+                                     do operation: sending @escaping @isolated(any) () async throws -> T) async throws -> T {
     try await withTimeout(timeout, throwing: TimeoutError(interval: timeout, file: file, line: line), do: operation)
 }
 

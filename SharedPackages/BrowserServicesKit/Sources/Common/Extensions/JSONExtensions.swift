@@ -19,19 +19,19 @@
 import Foundation
 
 public extension JSONDecoder {
-    static var snakeCaseKeys: JSONDecoder {
+    static let snakeCaseKeys: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
         return decoder
-    }
+    }()
 }
 
 public extension JSONEncoder {
-    static var snakeCaseKeys: JSONEncoder {
+    static let snakeCaseKeys: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         encoder.dateEncodingStrategy = .iso8601
         return encoder
-    }
+    }()
 }
