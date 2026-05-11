@@ -25,13 +25,6 @@ import Foundation
 /// trick that the view controller uses to find its enclosing popover.
 final class BookmarksBarMenuCustomPopover: NSResponder, BookmarksBarMenuPopoverPresenting {
 
-    /// Mirrors the `NSPopover.Behavior` cases the bookmarks code toggles. Currently
-    /// vestigial — auto-close is handled inside `BookmarksBarMenuViewController`.
-    enum Behavior {
-        case transient
-        case applicationDefined
-    }
-
     static let popoverInsets = NSEdgeInsets(top: 13, left: 13, bottom: 13, right: 13)
 
     private let bookmarkManager: BookmarkManager
@@ -39,7 +32,7 @@ final class BookmarksBarMenuCustomPopover: NSResponder, BookmarksBarMenuPopoverP
     private(set) var rootFolder: BookmarkFolder?
 
     weak var bookmarksBarMenuDelegate: BookmarksBarMenuPopoverDelegate?
-    var behavior: Behavior = .transient
+    var behavior: NSPopover.Behavior = .transient
 
     private(set) var window: BookmarksBarMenuWindow?
     private(set) var preferredEdge: NSRectEdge?
@@ -203,10 +196,6 @@ final class BookmarksBarMenuCustomPopover: NSResponder, BookmarksBarMenuPopoverP
         guard let window, window.isVisible, let parentWindow = window.parent else { return }
         let frame = computeFrame(contentSize: viewController.preferredContentSize, in: parentWindow)
         window.setFrame(frame, display: true)
-    }
-
-    func setShouldPreventClosure(_ shouldPrevent: Bool) {
-        behavior = shouldPrevent ? .applicationDefined : .transient
     }
 
     // MARK: - Close

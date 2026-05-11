@@ -129,10 +129,6 @@ final class BookmarksBarMenuPopover: NSPopover, BookmarksBarMenuPopoverPresentin
 
     // MARK: - BookmarksBarMenuPopoverPresenting
 
-    func setShouldPreventClosure(_ shouldPrevent: Bool) {
-        behavior = shouldPrevent ? .applicationDefined : .transient
-    }
-
     /// No-op: NSPopover repositions itself via `adjustFrame(_:)`.
     func updatePresentedFrameIfNeeded() {}
 }

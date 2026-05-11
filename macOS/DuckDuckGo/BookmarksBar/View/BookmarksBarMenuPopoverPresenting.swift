@@ -48,17 +48,23 @@ protocol BookmarksBarMenuPopoverPresenting: AnyObject {
 
     var bookmarksBarMenuDelegate: BookmarksBarMenuPopoverDelegate? { get set }
 
+    var behavior: NSPopover.Behavior { get set }
+
     func reloadData(withRootFolder rootFolder: BookmarkFolder)
     func close()
 
     func show(positionedBelow view: NSView)
     func show(positionedAsSubmenuAgainst positioningView: NSView)
 
-    /// Toggles between auto-closing (transient) and sticky (application-defined) behavior.
-    func setShouldPreventClosure(_ shouldPrevent: Bool)
-
     /// Called by the view controller when its `preferredContentSize`/`preferredContentOffset`
     /// changes. Resizes the custom window if applicable; no-op for the NSPopover-backed
     /// legacy implementation (NSPopover updates its own frame).
     func updatePresentedFrameIfNeeded()
+}
+
+extension BookmarksBarMenuPopoverPresenting {
+    /// Toggles between auto-closing (transient) and sticky (application-defined) behavior.
+    func setShouldPreventClosure(_ shouldPrevent: Bool) {
+        behavior = shouldPrevent ? .applicationDefined : .transient
+    }
 }
