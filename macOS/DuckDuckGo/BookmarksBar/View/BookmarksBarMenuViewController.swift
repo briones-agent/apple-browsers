@@ -117,7 +117,7 @@ final class BookmarksBarMenuViewController: NSViewController {
         fatalError("\(type(of: self)): Bad initializer")
     }
 
-    private static let popoverCornerRadius: CGFloat = 8
+    private static let popoverCornerRadius: CGFloat = AppVersion.isLiquidGlassSupported ? 12 : 8
 
     // MARK: View Lifecycle
     override func loadView() {
