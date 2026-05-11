@@ -47,6 +47,7 @@ class MainViewCoordinator {
     var tabBarContainer: UIView!
     var aiChatTabChatHeaderContainer: UIView!
     var unifiedToggleInputContainer: UIView!
+    var aiTabCollapsedTopSeparator: UIView!
     var unifiedInputContentContainer: UIView!
 
     /// Owned so a subsequent show can cancel an in-flight dismiss and skip the stale completion.
@@ -263,6 +264,7 @@ class MainViewCoordinator {
 
     func hideUnifiedToggleInput() {
         unifiedToggleInputContainer.isHidden = true
+        setAITabCollapsedTopSeparatorVisible(false)
         unifiedToggleInputContainer.backgroundColor = .clear
         setNavBarContainerBottomToToolbar()
         if addressBarPosition == .top {
@@ -270,6 +272,14 @@ class MainViewCoordinator {
             setAddressBarTopActive(true)
         }
         constraints.navigationBarContainerHeight.constant = standardNavigationBarContainerHeight
+    }
+
+    func setAITabCollapsedTopSeparatorVisible(_ visible: Bool) {
+        guard aiTabCollapsedTopSeparator.isHidden == visible else { return }
+        aiTabCollapsedTopSeparator.isHidden = !visible
+        if visible {
+            superview.bringSubviewToFront(aiTabCollapsedTopSeparator)
+        }
     }
 
     // MARK: - Omnibar Editing Layout
@@ -363,6 +373,21 @@ class MainViewCoordinator {
         setNavigationChromeHidden(false)
     }
 
+    /// Hides the bottom `navigationBarContainer` (the flanked UTI on AI tabs) and re-anchors the
+    /// content container to the safe area, giving voice mode the full height between the AI
+    /// header and the home indicator. Idempotent.
+    func setAITabBottomChromeHidden(_ hidden: Bool) {
+        guard navigationBarContainer.isHidden != hidden else { return }
+        navigationBarContainer.isHidden = hidden
+        if hidden {
+            setContentContainerBottomAnchorMode(.safeArea)
+        } else if isNavigationChromeHidden {
+            setContentContainerBottomAnchorMode(.unifiedToggleInput)
+        } else {
+            setContentContainerBottomAnchorMode(.toolbar)
+        }
+    }
+
     func showAIChatTabChatHeader() {
         aiChatTabChatHeaderContainer.isHidden = false
         guard isNavigationChromeHidden else { return }
@@ -452,7 +477,9 @@ class MainViewCoordinator {
         case .omnibarEditing, .aiTabSearchChromeHidden:
             UIColor(designSystemColor: .panel)
         case .aiTabChatChromeHidden:
-            UIColor(singleUseColor: .duckAIContextualSheetBackground)
+            // Match the AI chat header's `.surfaceTertiary` background so the safe-area inset
+            // above it doesn't show as a different colour band.
+            UIColor(designSystemColor: .surfaceTertiary)
         }
     }
 
