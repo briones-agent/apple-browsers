@@ -146,23 +146,26 @@ struct AutofillViews {
         let action: () -> Void
 
         var body: some View {
-            Button {
-                action()
-            } label: {
-                Text(title)
-                    .daxButton()
-                    .padding()
-                    .frame(minWidth: 0, maxWidth: Const.Size.maxWidth)
-                    .foregroundColor(Color(designSystemColor: .accent))
-                    .cornerRadius(Const.Size.buttonCornerRadius)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Const.Size.buttonCornerRadius)
-                            .stroke(Color(designSystemColor: .accent),
-                                    lineWidth: Const.Size.buttonBorderWidth)
-                            .padding(1)
-                    )
-
+            switch DuckUIAppearance.current {
+            case .legacy:
+                Button(action: action) {
+                    Text(title)
+                        .daxButton()
+                        .padding()
+                        .frame(minWidth: 0, maxWidth: Const.Size.maxWidth)
+                        .foregroundColor(Color(designSystemColor: .accent))
+                        .cornerRadius(Const.Size.buttonCornerRadius)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Const.Size.buttonCornerRadius)
+                                .stroke(Color(designSystemColor: .accent),
+                                        lineWidth: Const.Size.buttonBorderWidth)
+                                .padding(1)
+                        )
+                }
+            case .refresh:
+                Button(title, action: action)
+                    .buttonStyle(SecondaryFillButtonStyle())
             }
         }
     }
@@ -172,16 +175,20 @@ struct AutofillViews {
         let action: () -> Void
 
         var body: some View {
-            Button {
-                action()
-            } label: {
-                Text(title)
-                    .daxButton()
-                    .padding()
-                    .frame(minWidth: 0, maxWidth: .infinity)
-                    .foregroundColor(Color(designSystemColor: .accent))
-                    .cornerRadius(Const.Size.buttonCornerRadius)
-                    .fixedSize(horizontal: false, vertical: true)
+            switch DuckUIAppearance.current {
+            case .legacy:
+                Button(action: action) {
+                    Text(title)
+                        .daxButton()
+                        .padding()
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .foregroundColor(Color(designSystemColor: .accent))
+                        .cornerRadius(Const.Size.buttonCornerRadius)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .refresh:
+                Button(title, action: action)
+                    .buttonStyle(GhostButtonStyle())
             }
         }
     }
