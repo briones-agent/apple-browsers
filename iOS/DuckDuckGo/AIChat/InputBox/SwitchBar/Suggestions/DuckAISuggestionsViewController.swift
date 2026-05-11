@@ -249,7 +249,7 @@ final class DuckAISuggestionsViewController: UIViewController {
 
     private func updateContentInset() {
         guard isViewLoaded else { return }
-        tableView.contentInset = UIEdgeInsets(top: additionalTopInset, left: 0, bottom: 0, right: 0)
+        tableView.contentInset = UIEdgeInsets(top: Constants.topContentInset + additionalTopInset, left: 0, bottom: 0, right: 0)
     }
 
     private func updateTableHeader() {
