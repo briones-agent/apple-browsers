@@ -467,7 +467,15 @@ final class BookmarksBarMenuViewController: NSViewController {
             }.asVoid()
         )
         .sink { [weak self] _ in
-            self?.delegate?.closeBookmarksPopovers(self!) // close
+            guard let self else { return }
+            // Honor an `.applicationDefined` popover behavior: a sticky popover
+            // (e.g. while a modal dialog is up) shouldn't be torn down by the
+            // click-outside / menu-tracking auto-close.
+            if let popover = nextResponder as? (any BookmarksBarMenuPopoverPresenting),
+               popover.behavior == .applicationDefined {
+                return
+            }
+            delegate?.closeBookmarksPopovers(self)
         }
         .store(in: &cancellables)
     }
