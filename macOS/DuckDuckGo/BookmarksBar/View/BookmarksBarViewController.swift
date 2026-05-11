@@ -503,6 +503,14 @@ private extension BookmarksBarViewController {
     }
 
     func showSubmenu(for folder: BookmarkFolder, from view: NSView) {
+        let useCustomWindow = Application.appDelegate.featureFlagger.isFeatureOn(.bookmarksBarMenusCustomWindow)
+        // Discard the cached popover if the feature flag was toggled since it was created.
+        if let popover = self.bookmarkMenuPopover,
+           (popover is BookmarksBarMenuCustomPopover) != useCustomWindow {
+            popover.close()
+            self.bookmarkMenuPopover = nil
+        }
+
         let bookmarkMenuPopover: any BookmarksBarMenuPopoverPresenting
         if let popover = self.bookmarkMenuPopover {
             bookmarkMenuPopover = popover
@@ -514,7 +522,7 @@ private extension BookmarksBarViewController {
             }
             bookmarkMenuPopover.reloadData(withRootFolder: folder)
         } else {
-            if Application.appDelegate.featureFlagger.isFeatureOn(.bookmarksBarMenusCustomWindow) {
+            if useCustomWindow {
                 bookmarkMenuPopover = BookmarksBarMenuCustomPopover(bookmarkManager: bookmarkManager, dragDropManager: dragDropManager, rootFolder: folder)
             } else {
                 bookmarkMenuPopover = BookmarksBarMenuPopover(bookmarkManager: bookmarkManager, dragDropManager: dragDropManager, rootFolder: folder)
