@@ -2873,7 +2873,7 @@ https://duckduckgo.com/mac";
 "onboarding.rebranding.first-search-done.title" = "That’s DuckDuckGo Search!";
 
 /* The message of the onboarding dialog popup */
-"onboarding.rebranding.intro.message" = "Ready for a faster browser that protects you and lets you decide when and how to use AI?";
+"onboarding.rebranding.intro.message" = "Ready for a faster browser that puts you in control?\n\nAI is always optional, and privacy protection is always on.";
 
 /* The title of the onboarding intro */
 "onboarding.rebranding.intro.title" = "Hi there.";
