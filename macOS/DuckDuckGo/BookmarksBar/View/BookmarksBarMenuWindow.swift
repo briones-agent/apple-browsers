@@ -45,8 +45,5 @@ final class BookmarksBarMenuWindow: NSPanel {
         hidesOnDeactivate = true
         becomesKeyOnlyIfNeeded = false
         collectionBehavior = [.transient, .ignoresCycle]
-        // Pin to the app's appearance so NSGlassEffectView doesn't tint based on
-        // whatever happens to be behind the submenu's child-window-of-child-window.
-        appearance = NSApp.effectiveAppearance
     }
 }

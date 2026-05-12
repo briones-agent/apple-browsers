@@ -151,10 +151,7 @@ final class BookmarksBarMenuCustomPopover: NSResponder, BookmarksBarMenuPopoverP
     }
 
     private func ensureWindow() -> BookmarksBarMenuWindow {
-        if let window {
-            window.appearance = NSApp.effectiveAppearance
-            return window
-        }
+        if let window { return window }
         let window = BookmarksBarMenuWindow()
         self.window = window
         return window
