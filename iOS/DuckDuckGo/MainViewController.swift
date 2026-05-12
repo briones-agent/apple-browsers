@@ -279,6 +279,7 @@ class MainViewController: UIViewController {
     let customConfigurationURLProvider: CustomConfigurationURLProviding
     let experimentalAIChatManager: ExperimentalAIChatManager
     let daxDialogsManager: DaxDialogsManaging
+    let onboardingSearchExperienceSettingsResolver: OnboardingSearchExperienceSettingsResolver
     let dbpIOSPublicInterface: DBPIOSInterface.PublicInterface?
     let freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking
     let freemiumPIRDebugSettings: FreemiumPIRDebugSettings
@@ -417,6 +418,7 @@ class MainViewController: UIViewController {
         customConfigurationURLProvider: CustomConfigurationURLProviding,
         systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging,
         daxDialogsManager: DaxDialogsManaging,
+        onboardingSearchExperienceSettingsResolver: OnboardingSearchExperienceSettingsResolver? = nil,
         daxEasterEggPresenter: DaxEasterEggPresenting? = nil,
         daxEasterEggLogoStore: DaxEasterEggLogoStoring = DaxEasterEggLogoStore(),
         dbpIOSPublicInterface: DBPIOSInterface.PublicInterface?,
@@ -493,6 +495,10 @@ class MainViewController: UIViewController {
         self.customConfigurationURLProvider = customConfigurationURLProvider
         self.systemSettingsPiPTutorialManager = systemSettingsPiPTutorialManager
         self.daxDialogsManager = daxDialogsManager
+        self.onboardingSearchExperienceSettingsResolver = onboardingSearchExperienceSettingsResolver ?? OnboardingSearchExperienceSettingsResolver(
+            onboardingProvider: OnboardingSearchExperience(),
+            daxDialogsStatusProvider: daxDialogsManager
+        )
         self.daxEasterEggLogoStore = daxEasterEggLogoStore
         self.daxEasterEggPresenter = daxEasterEggPresenter ?? DaxEasterEggPresenter(logoStore: daxEasterEggLogoStore, featureFlagger: featureFlagger)
         self.dbpIOSPublicInterface = dbpIOSPublicInterface
@@ -2003,6 +2009,7 @@ class MainViewController: UIViewController {
 
     private func resetUnifiedToggleInputForTabTransition(to tab: TabViewController) {
         guard let coordinator = unifiedToggleInputCoordinator else { return }
+        coordinator.setContentOverlaySuppressed(false)
         coordinator.deactivateToOmnibar()
         if !tab.isAITab {
             coordinator.hide()
@@ -3353,6 +3360,12 @@ extension MainViewController: BrowserChromeDelegate {
 
     var omniBar: any OmniBar {
         viewCoordinator.omniBar
+    }
+
+    func setUnifiedInputContentOverlaySuppressed(_ suppressed: Bool) {
+        guard let coordinator = unifiedToggleInputCoordinator else { return }
+        coordinator.setContentOverlaySuppressed(suppressed)
+        updateUnifiedInputContentVisibility(for: coordinator)
     }
 
     private func hideKeyboard() {
