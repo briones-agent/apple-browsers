@@ -180,7 +180,36 @@ final class BookmarksBarMenuCustomPopover: NSResponder, BookmarksBarMenuPopoverP
         if case .maxX = preferredEdge {
             let positioningRectInWindow = positioningView.convert(positioningRect, to: nil)
             let positioningRectInScreen = parentWindow.convertToScreen(positioningRectInWindow)
-            frame.origin.x = min(max(screenFrame.minX, positioningRectInScreen.maxX + Self.popoverInsets.left), screenFrame.maxX - frame.width)
+            let rightX = positioningRectInScreen.maxX + Self.popoverInsets.left
+            let leftX = positioningRectInScreen.minX - Self.popoverInsets.right - frame.width
+
+            // Inherit cascade direction from the parent menu so once we flip to the left
+            // we keep going left (and vice-versa). Only compare against another menu
+            // window — comparing against the browser window would mistakenly infer
+            // "going left" whenever the bookmarks-bar folder happens to sit on the
+            // left half of the browser window.
+            let prefersLeft: Bool = {
+                guard let parentParent = parentWindow.parent as? BookmarksBarMenuWindow else { return false }
+                return parentWindow.frame.midX < parentParent.frame.midX
+            }()
+
+            if prefersLeft {
+                if leftX >= screenFrame.minX {
+                    frame.origin.x = leftX
+                } else if rightX + frame.width <= screenFrame.maxX {
+                    frame.origin.x = rightX
+                } else {
+                    frame.origin.x = max(screenFrame.minX, screenFrame.maxX - frame.width)
+                }
+            } else {
+                if rightX + frame.width <= screenFrame.maxX {
+                    frame.origin.x = rightX
+                } else if leftX >= screenFrame.minX {
+                    frame.origin.x = leftX
+                } else {
+                    frame.origin.x = screenFrame.minX
+                }
+            }
             frame.origin.y = min(max(screenFrame.minY, screenPoint.y - frame.size.height + 36 - Self.popoverInsets.top), screenFrame.maxY)
         } else {
             frame.origin.x = min(max(screenFrame.minX, screenPoint.x), screenFrame.maxX - frame.width)
