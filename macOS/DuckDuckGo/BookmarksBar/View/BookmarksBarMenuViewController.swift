@@ -135,6 +135,10 @@ final class BookmarksBarMenuViewController: NSViewController {
 
                 let glass = NSGlassEffectView()
                 glass.cornerRadius = Self.popoverCornerRadius
+                // Setting any non-nil `tintColor` stops `.regular` glass from sampling the
+                // screen behind the panel and drifting dark over dark content (e.g. Terminal).
+                // The 1% tint is small enough to preserve the translucent glass look.
+                glass.tintColor = .blackWhite1
                 glass.translatesAutoresizingMaskIntoConstraints = false
                 host.addSubview(glass)
                 NSLayoutConstraint.activate([
