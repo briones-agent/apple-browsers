@@ -1699,6 +1699,12 @@ class MainViewController: UIViewController {
             },
             onTabSwitcherTapped: { [weak self] in
                 self?.requestTabSwitcher()
+            },
+            onCloseTab: { [weak self] in
+                self?.onCloseTab(targetTab)
+            },
+            onBurnTab: { [weak self] in
+                self?.onBurnTab(targetTab)
             }
         )
     }
