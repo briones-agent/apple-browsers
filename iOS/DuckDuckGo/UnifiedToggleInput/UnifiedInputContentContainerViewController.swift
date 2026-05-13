@@ -103,10 +103,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     private var needsVisibleRefresh = true
     private var requestedContentInset: (top: CGFloat, bottom: CGFloat) = (0, 0)
     private var escapeHatchModel: EscapeHatchModel?
-    private var escapeHatchTapHandler: (() -> Void)?
-    private var escapeHatchTabSwitcherTapHandler: (() -> Void)?
-    private var escapeHatchCloseTabHandler: (() -> Void)?
-    private var escapeHatchBurnTabHandler: (() -> Void)?
+    private var escapeHatchActions: EscapeHatchActions?
 
     private(set) var daxLogoManager: DaxLogoManager
     private var isDaxLogoForcedHidden = false
@@ -240,31 +237,15 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         )
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?,
-                        onTapped: (() -> Void)?,
-                        onTabSwitcherTapped: (() -> Void)?,
-                        onCloseTab: (() -> Void)?,
-                        onBurnTab: (() -> Void)?) {
+    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
         escapeHatchModel = model
-        escapeHatchTapHandler = onTapped
-        escapeHatchTabSwitcherTapHandler = onTabSwitcherTapped
-        escapeHatchCloseTabHandler = onCloseTab
-        escapeHatchBurnTabHandler = onBurnTab
+        escapeHatchActions = actions
         // The model self-updates `openTabCount` from `TabManaging.tabsModel(for:).tabsPublisher`, so SwiftUI consumers redraw reactively.
         suggestionTrayManager?.setEscapeHatch(model)
         // Fire tabs render their own empty state via DaxLogoManager — suppress the hatch to avoid stacking affordances.
         let duckAIHatchModel = switchBarHandler.isFireTab ? nil : model
-        let duckAIHatchHandler = switchBarHandler.isFireTab ? nil : onTapped
-        let duckAITabSwitcherHandler = switchBarHandler.isFireTab ? nil : onTabSwitcherTapped
-        let duckAICloseTabHandler = switchBarHandler.isFireTab ? nil : onCloseTab
-        let duckAIBurnTabHandler = switchBarHandler.isFireTab ? nil : onBurnTab
-        duckAISuggestionsCoordinator?.setEscapeHatch(
-            duckAIHatchModel,
-            onTapped: duckAIHatchHandler,
-            onTabSwitcherTapped: duckAITabSwitcherHandler,
-            onCloseTab: duckAICloseTabHandler,
-            onBurnTab: duckAIBurnTabHandler
-        )
+        let duckAIActions = switchBarHandler.isFireTab ? nil : actions
+        duckAISuggestionsCoordinator?.setEscapeHatch(duckAIHatchModel, actions: duckAIActions)
         updateEscapeHatchTopInset()
     }
 
@@ -534,14 +515,8 @@ final class UnifiedInputContentContainerViewController: UIViewController {
 
         swipeContainerManager.installDuckAISuggestions(using: coordinator, textPublisher: switchBarHandler.currentTextPublisher)
         coordinator.setAdditionalTopInset(duckAITopInset)
-        if let escapeHatchModel, !switchBarHandler.isFireTab {
-            coordinator.setEscapeHatch(
-                escapeHatchModel,
-                onTapped: escapeHatchTapHandler,
-                onTabSwitcherTapped: escapeHatchTabSwitcherTapHandler,
-                onCloseTab: escapeHatchCloseTabHandler,
-                onBurnTab: escapeHatchBurnTabHandler
-            )
+        if let escapeHatchModel, let escapeHatchActions, !switchBarHandler.isFireTab {
+            coordinator.setEscapeHatch(escapeHatchModel, actions: escapeHatchActions)
         }
         duckAISuggestionsCoordinator = coordinator
     }

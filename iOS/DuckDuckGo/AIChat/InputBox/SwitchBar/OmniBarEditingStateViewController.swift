@@ -396,12 +396,11 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         aiChatHistoryManager = manager
 
         if let escapeHatchModel {
-            manager.setEscapeHatch(
-                escapeHatchModel,
-                onTapped: { [weak self] in
+            let actions = EscapeHatchActions(
+                onCardTap: { [weak self] in
                     self?.delegate?.onSwitchToTab(escapeHatchModel.targetTab)
                 },
-                onTabSwitcherTapped: { [weak self] in
+                onTabSwitcherTap: { [weak self] in
                     self?.delegate?.onTabSwitcherRequested()
                 },
                 onCloseTab: { [weak self] in
@@ -411,6 +410,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
                     self?.delegate?.onBurnTab(escapeHatchModel.targetTab)
                 }
             )
+            manager.setEscapeHatch(escapeHatchModel, actions: actions)
         }
     }
     
@@ -439,15 +439,20 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
 
     private func installDaxLogoView() {
         if switchBarHandler.isFireTab {
-            let escapeHatchTap: (() -> Void)? = escapeHatchModel.map { model in
-                { [weak self] in self?.delegate?.onSwitchToTab(model.targetTab) }
+            let escapeHatchActions: EscapeHatchActions? = escapeHatchModel.map { model in
+                EscapeHatchActions(
+                    onCardTap: { [weak self] in self?.delegate?.onSwitchToTab(model.targetTab) },
+                    onTabSwitcherTap: {},
+                    onCloseTab: {},
+                    onBurnTab: {}
+                )
             }
             daxLogoManager.installInViewController(self,
                                                    asSubviewOf: contentContainerView,
                                                    anchorView: switchBarVC.view,
                                                    isTopBarPosition: isUsingTopBarPosition,
                                                    escapeHatch: escapeHatchModel,
-                                                   onEscapeHatchTap: escapeHatchTap)
+                                                   escapeHatchActions: escapeHatchActions)
         } else if let view = switchBarVC.segmentedPickerView {
             daxLogoManager.installInViewController(self,
                                                    asSubviewOf: contentContainerView,

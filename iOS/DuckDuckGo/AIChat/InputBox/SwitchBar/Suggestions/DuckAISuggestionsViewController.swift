@@ -120,10 +120,7 @@ final class DuckAISuggestionsViewController: UIViewController {
 
     private struct EscapeHatch: Equatable {
         let model: EscapeHatchModel
-        let onTapped: () -> Void
-        let onTabSwitcherTapped: () -> Void
-        let onCloseTab: () -> Void
-        let onBurnTab: () -> Void
+        let actions: EscapeHatchActions
         static func == (lhs: EscapeHatch, rhs: EscapeHatch) -> Bool {
             // Identity dedupe: SwiftUI `@ObservedObject` already redraws on the model's `openTabCount` changes,
             // so the hosting-controller rebuild only needs to fire when the hatch identity actually changes.
@@ -213,20 +210,10 @@ final class DuckAISuggestionsViewController: UIViewController {
     // MARK: - Escape hatch
 
     /// No-op on identical model — called repeatedly from container layout/refresh paths.
-    func setEscapeHatch(_ model: EscapeHatchModel?,
-                        onTapped: (() -> Void)?,
-                        onTabSwitcherTapped: (() -> Void)?,
-                        onCloseTab: (() -> Void)?,
-                        onBurnTab: (() -> Void)?) {
+    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
         let next: EscapeHatch?
-        if let model, let onTapped, let onTabSwitcherTapped, let onCloseTab, let onBurnTab {
-            next = EscapeHatch(
-                model: model,
-                onTapped: onTapped,
-                onTabSwitcherTapped: onTabSwitcherTapped,
-                onCloseTab: onCloseTab,
-                onBurnTab: onBurnTab
-            )
+        if let model, let actions {
+            next = EscapeHatch(model: model, actions: actions)
         } else {
             next = nil
         }
@@ -257,13 +244,7 @@ final class DuckAISuggestionsViewController: UIViewController {
             escapeHatchHostingController = nil
         }
         if let hatch = currentEscapeHatch, !isQueryActive {
-            let view = EscapeHatchView(
-                model: hatch.model,
-                onCardTap: hatch.onTapped,
-                onTabSwitcherTap: hatch.onTabSwitcherTapped,
-                onCloseTab: hatch.onCloseTab,
-                onBurnTab: hatch.onBurnTab
-            )
+            let view = EscapeHatchView(model: hatch.model, actions: hatch.actions)
             let hosting = UIHostingController(rootView: view)
             hosting.view.backgroundColor = .clear
             addChild(hosting)

@@ -26,9 +26,7 @@ struct ReturnToTabCard: View {
     @Environment(\.layoutDirection) private var layoutDirection
 
     let model: EscapeHatchModel
-    let onTap: () -> Void
-    let onCloseTab: () -> Void
-    let onBurnTab: () -> Void
+    let actions: EscapeHatchActions
 
     var body: some View {
         HStack(spacing: Metrics.innerSpacing) {
@@ -48,7 +46,7 @@ struct ReturnToTabCard: View {
     }
 
     private var mainView: some View {
-        Button(action: onTap) {
+        Button(action: actions.onCardTap) {
             HStack(spacing: Metrics.innerSpacing) {
                 iconView
                 VStack(alignment: .leading, spacing: Metrics.titleToSubtitleSpacing) {
@@ -90,7 +88,7 @@ struct ReturnToTabCard: View {
     @ViewBuilder
     private var menuContentView: some View {
         Section(header: Text(model.subtitle)) {
-            Button(action: onTap) {
+            Button(action: actions.onCardTap) {
                 Label {
                     Text(UserText.escapeHatchMenuReturnToTab)
                 } icon: {
@@ -98,14 +96,14 @@ struct ReturnToTabCard: View {
                         .foregroundColor(Color(designSystemColor: .icons))
                 }
             }
-            Button(role: .destructive, action: onCloseTab) {
+            Button(role: .destructive, action: actions.onCloseTab) {
                 Label {
                     Text(UserText.escapeHatchMenuCloseTab)
                 } icon: {
                     Image(uiImage: DesignSystemImages.Glyphs.Size24.close)
                 }
             }
-            Button(role: .destructive, action: onBurnTab) {
+            Button(role: .destructive, action: actions.onBurnTab) {
                 Label {
                     Text(UserText.escapeHatchMenuBurnTab)
                 } icon: {
@@ -215,9 +213,7 @@ private enum Metrics {
             domain: "en.wikipedia.org",
             targetTab: Tab(fireTab: false)
         ),
-        onTap: {},
-        onCloseTab: {},
-        onBurnTab: {}
+        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
     )
     .padding()
     .frame(width: 360)
@@ -232,9 +228,7 @@ private enum Metrics {
             domain: nil,
             targetTab: Tab(fireTab: false)
         ),
-        onTap: {},
-        onCloseTab: {},
-        onBurnTab: {}
+        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
     )
     .padding()
     .frame(width: 360)
@@ -249,9 +243,7 @@ private enum Metrics {
             domain: nil,
             targetTab: Tab(fireTab: true)
         ),
-        onTap: {},
-        onCloseTab: {},
-        onBurnTab: {}
+        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
     )
     .padding()
     .frame(width: 360)

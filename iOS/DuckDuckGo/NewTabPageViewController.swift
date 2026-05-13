@@ -122,27 +122,26 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
         newTabPageViewModel.escapeHatch = model
         if let model {
             let targetTab = model.targetTab
-            newTabPageViewModel.onEscapeHatchTap = { [weak self] in
-                guard let self else { return }
-                self.delegate?.newTabPageDidRequestSwitchToTab(self, tab: targetTab)
-            }
-            newTabPageViewModel.onTabSwitcherTap = { [weak self] in
-                guard let self else { return }
-                self.delegate?.newTabPageDidRequestTabSwitcher(self)
-            }
-            newTabPageViewModel.onCloseTab = { [weak self] in
-                guard let self else { return }
-                self.delegate?.newTabPageDidRequestCloseTab(self, tab: targetTab)
-            }
-            newTabPageViewModel.onBurnTab = { [weak self] in
-                guard let self else { return }
-                self.delegate?.newTabPageDidRequestBurnTab(self, tab: targetTab)
-            }
+            newTabPageViewModel.escapeHatchActions = EscapeHatchActions(
+                onCardTap: { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.newTabPageDidRequestSwitchToTab(self, tab: targetTab)
+                },
+                onTabSwitcherTap: { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.newTabPageDidRequestTabSwitcher(self)
+                },
+                onCloseTab: { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.newTabPageDidRequestCloseTab(self, tab: targetTab)
+                },
+                onBurnTab: { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.newTabPageDidRequestBurnTab(self, tab: targetTab)
+                }
+            )
         } else {
-            newTabPageViewModel.onEscapeHatchTap = nil
-            newTabPageViewModel.onTabSwitcherTap = nil
-            newTabPageViewModel.onCloseTab = nil
-            newTabPageViewModel.onBurnTab = nil
+            newTabPageViewModel.escapeHatchActions = nil
         }
         updateBorderView()
     }

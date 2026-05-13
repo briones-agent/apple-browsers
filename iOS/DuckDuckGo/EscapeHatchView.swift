@@ -22,19 +22,16 @@ import SwiftUI
 /// Bundles the "Return to tab" card and the tab switcher pill so callers render them as a single unit.
 struct EscapeHatchView: View {
     @ObservedObject var model: EscapeHatchModel
-    let onCardTap: () -> Void
-    let onTabSwitcherTap: () -> Void
-    let onCloseTab: () -> Void
-    let onBurnTab: () -> Void
+    let actions: EscapeHatchActions
 
     var body: some View {
         HStack(spacing: Metrics.spacing) {
-            ReturnToTabCard(model: model, onTap: onCardTap, onCloseTab: onCloseTab, onBurnTab: onBurnTab)
+            ReturnToTabCard(model: model, actions: actions)
                 .frame(maxWidth: model.isTargetTabPresent ? .infinity : 0)
                 .opacity(model.isTargetTabPresent ? 1 : 0)
                 .clipped()
 
-            TabSwitcherPill(count: model.openTabCount, onTap: onTabSwitcherTap)
+            TabSwitcherPill(count: model.openTabCount, onTap: actions.onTabSwitcherTap)
                 .frame(maxWidth: model.isTargetTabPresent ? TabSwitcherPill.compactSize : .infinity)
                 .frame(height: TabSwitcherPill.compactSize)
         }
@@ -58,10 +55,7 @@ struct EscapeHatchView: View {
             targetTab: target,
             tabsSource: .staticTabsSource(count: 9, includes: target)
         ),
-        onCardTap: {},
-        onTabSwitcherTap: {},
-        onCloseTab: {},
-        onBurnTab: {}
+        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
     )
     .padding()
 }
@@ -77,10 +71,7 @@ struct EscapeHatchView: View {
             targetTab: target,
             tabsSource: .staticTabsSource(count: 99, includes: target)
         ),
-        onCardTap: {},
-        onTabSwitcherTap: {},
-        onCloseTab: {},
-        onBurnTab: {}
+        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
     )
     .padding()
 }

@@ -27,10 +27,7 @@ final class NewTabPageViewModel: ObservableObject {
     @Published private(set) var isOnboarding: Bool
     @Published var escapeHatch: EscapeHatchModel?
     @Published var sectionTitle: String?
-    var onEscapeHatchTap: (() -> Void)?
-    var onTabSwitcherTap: (() -> Void)?
-    var onCloseTab: (() -> Void)?
-    var onBurnTab: (() -> Void)?
+    var escapeHatchActions: EscapeHatchActions?
     private(set) var fireTab: Bool
 
     private(set) var isDragging: Bool = false

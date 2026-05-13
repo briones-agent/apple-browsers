@@ -26,6 +26,15 @@ protocol EscapeHatchTabsSource {
     func tabsPublisher(for mode: BrowsingMode) -> AnyPublisher<[Tab], Never>
 }
 
+/// Bundles the four user-driven actions exposed by the escape-hatch UI so they thread through
+/// the editing-state / NTP / AI-chat stacks as a single value instead of four parallel closures.
+struct EscapeHatchActions {
+    let onCardTap: () -> Void
+    let onTabSwitcherTap: () -> Void
+    let onCloseTab: () -> Void
+    let onBurnTab: () -> Void
+}
+
 /// Model for the NTP "Return to..." escape hatch card that navigates to the most recently used tab.
 /// Owns the live open-tab count and target-tab presence for `targetTab.mode` — when initialised with an
 /// `EscapeHatchTabsSource`, it subscribes once and derives both fields in a single processing pass per emission.

@@ -1687,9 +1687,8 @@ class MainViewController: UIViewController {
             return
         }
         let targetTab = hatch.targetTab
-        unifiedToggleInputCoordinator?.setEscapeHatch(
-            hatch,
-            onTapped: { [weak self] in
+        let actions = EscapeHatchActions(
+            onCardTap: { [weak self] in
                 guard let self else { return }
                 guard tabManager.tabsModel(for: targetTab.mode).tabExists(tab: targetTab) else {
                     clearEscapeHatch()
@@ -1697,7 +1696,7 @@ class MainViewController: UIViewController {
                 }
                 onSwitchToTab(targetTab)
             },
-            onTabSwitcherTapped: { [weak self] in
+            onTabSwitcherTap: { [weak self] in
                 self?.requestTabSwitcher()
             },
             onCloseTab: { [weak self] in
@@ -1707,6 +1706,7 @@ class MainViewController: UIViewController {
                 self?.onBurnTab(targetTab)
             }
         )
+        unifiedToggleInputCoordinator?.setEscapeHatch(hatch, actions: actions)
     }
 
     private func fireNTPShownInstrumentation(openedAfterIdle: Bool) {
