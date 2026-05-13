@@ -197,16 +197,6 @@ final class UnifiedToggleInputView: UIView {
         set { toolsToolbar.reasoningPickerMenu = newValue }
     }
 
-    var longPressMenuProvider: (() -> UIMenu?)? {
-        didSet {
-            if longPressMenuProvider != nil {
-                addTextEntryLongPressInteractionIfNeeded()
-            } else {
-                removeTextEntryLongPressInteraction()
-            }
-        }
-    }
-
     var isModelChipHidden: Bool {
         get { toolsToolbar.isModelChipHidden }
         set { toolsToolbar.isModelChipHidden = newValue }
@@ -321,7 +311,6 @@ final class UnifiedToggleInputView: UIView {
     private let handler: UnifiedToggleInputHandler
     private let textEntryView: SwitchBarTextEntryView
     private var cancellables = Set<AnyCancellable>()
-    private var textEntryLongPressInteraction: UIContextMenuInteraction?
 
     // MARK: - UI
 
@@ -879,39 +868,9 @@ final class UnifiedToggleInputView: UIView {
         attachmentsStrip.alpha = showStrip ? 1 : 0
     }
 
-    private func addTextEntryLongPressInteractionIfNeeded() {
-        guard textEntryLongPressInteraction == nil else { return }
-        let interaction = UIContextMenuInteraction(delegate: self)
-        addInteraction(interaction)
-        textEntryLongPressInteraction = interaction
-    }
-
-    private func removeTextEntryLongPressInteraction() {
-        guard let textEntryLongPressInteraction else { return }
-        removeInteraction(textEntryLongPressInteraction)
-        self.textEntryLongPressInteraction = nil
-    }
 }
 
-extension UnifiedToggleInputView: UIContextMenuInteractionDelegate {
-    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
-        guard !textEntryView.isFirstResponder else { return nil }
-        guard let menu = longPressMenuProvider?() else { return nil }
-
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-            menu
-        }
-    }
-
-    func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
-                                previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
-        makeTextEntryMenuPreview()
-    }
-
-    func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
-                                previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
-        makeTextEntryMenuPreview()
-    }
+private extension UnifiedToggleInputView {
 
     private func updateSubmitButtonAvailability() {
         let state = UnifiedToggleInputFloatingSubmitState(
@@ -925,13 +884,6 @@ extension UnifiedToggleInputView: UIContextMenuInteractionDelegate {
         delegate?.unifiedToggleInputViewDidRequestSubmitCurrentInput(self)
     }
 
-    private func makeTextEntryMenuPreview() -> UITargetedPreview {
-        let previewParameters = UIPreviewParameters()
-        previewParameters.backgroundColor = UIColor(designSystemColor: .background)
-        let cornerRadius = min(textEntryView.bounds.height / 2, 22)
-        previewParameters.visiblePath = UIBezierPath(roundedRect: textEntryView.bounds, cornerRadius: cornerRadius)
-        return UITargetedPreview(view: textEntryView, parameters: previewParameters)
-    }
 }
 
 // MARK: - Inline Dismiss

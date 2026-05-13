@@ -68,11 +68,6 @@ final class LongPressBarMenuBuilder {
         let onCloseTab: () -> Void
     }
 
-    struct UnifiedToggleInputContext {
-        let isFeatureEnabled: Bool
-        let onCloseTab: () -> Void
-    }
-
     private let dailyPixelFiring: DailyPixelFiring.Type
 
     init(dailyPixelFiring: DailyPixelFiring.Type = DailyPixel.self) {
@@ -119,20 +114,6 @@ final class LongPressBarMenuBuilder {
 
         dailyPixelFiring.fireDailyAndCount(.longPressBarOpen, error: nil, withAdditionalParameters: [:])
         return UIMenu(title: "", children: sections)
-    }
-
-    func makeUnifiedToggleInputMenu(context: UnifiedToggleInputContext) -> UIMenu? {
-        guard context.isFeatureEnabled else { return nil }
-
-        dailyPixelFiring.fireDailyAndCount(.longPressBarOpen, error: nil, withAdditionalParameters: [:])
-        return UIMenu(title: "", children: [
-            UIMenu(title: "", options: .displayInline, children: [
-                UIAction(title: UserText.closeTabs(withCount: 1), image: DesignSystemImages.Glyphs.Size24.close, attributes: [.destructive]) { [weak self] _ in
-                    self?.dailyPixelFiring.fireDailyAndCount(.longPressBarActionCloseTab, error: nil, withAdditionalParameters: [:])
-                    context.onCloseTab()
-                },
-            ]),
-        ])
     }
 
     private func copyTitle(for url: URL, isPrivacyProtectionEnabled: Bool) -> String {

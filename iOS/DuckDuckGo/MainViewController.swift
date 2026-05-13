@@ -4019,16 +4019,6 @@ extension MainViewController: OmniBarDelegate {
         ))
     }
 
-    func menuForUnifiedToggleInputLongPress() -> UIMenu? {
-        longPressBarMenuBuilder.makeUnifiedToggleInputMenu(context: .init(
-            isFeatureEnabled: featureFlagger.isFeatureOn(.omniBarLongPressMenu),
-            onCloseTab: { [weak self] in
-                guard let tab = self?.currentTab else { return }
-                self?.tabDidRequestClose(tab.tabModel, behavior: .onlyClose, clearTabHistory: true)
-            }
-        ))
-    }
-
     private func toggleAddressBarLocation() {
         let current = appSettings.currentAddressBarPosition
         appSettings.currentAddressBarPosition = current == .top ? .bottom : .top

@@ -90,15 +90,6 @@ final class LongPressBarMenuBuilderTests: XCTestCase {
         XCTAssertEqual(PixelFiringMock.lastDailyPixelInfo?.pixelName, Pixel.Event.longPressBarOpen.name)
     }
 
-    func testWhenUnifiedToggleMenuBuiltThenOnlyCloseActionPresentAndOpenPixelFired() {
-        let menu = builder.makeUnifiedToggleInputMenu(context: .init(isFeatureEnabled: true, onCloseTab: {}))
-        let actions = flatActions(from: menu)
-
-        XCTAssertEqual(actions.count, 1)
-        XCTAssertEqual(actions.first?.title, UserText.closeTabs(withCount: 1))
-        XCTAssertEqual(PixelFiringMock.lastDailyPixelInfo?.pixelName, Pixel.Event.longPressBarOpen.name)
-    }
-
     private func makeOmniBarContext(
         state: OmniBarState? = nil,
         isFeatureEnabled: Bool = true,

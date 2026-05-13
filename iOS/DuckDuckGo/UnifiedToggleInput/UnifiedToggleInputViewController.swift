@@ -164,11 +164,6 @@ final class UnifiedToggleInputViewController: UIViewController {
         set { inputBarView.reasoningPickerMenu = newValue }
     }
 
-    var longPressMenuProvider: (() -> UIMenu?)? {
-        get { inputBarView.longPressMenuProvider }
-        set { inputBarView.longPressMenuProvider = newValue }
-    }
-
     var isModelChipHidden: Bool {
         get { inputBarView.isModelChipHidden }
         set { inputBarView.isModelChipHidden = newValue }

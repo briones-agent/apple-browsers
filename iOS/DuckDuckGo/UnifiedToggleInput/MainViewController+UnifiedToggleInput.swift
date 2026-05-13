@@ -70,12 +70,6 @@ extension MainViewController {
         coordinator.updateAIVoiceChatAvailability(voiceShortcutFeature.isAvailable)
         coordinator.updateAIChatShortcutAvailability(aiChatAddressBarExperience.shouldShowDuckAIAddressBarButton)
 
-        if featureFlagger.isFeatureOn(.omniBarLongPressMenu) {
-            coordinator.viewController.longPressMenuProvider = { [weak self] in
-                self?.menuForUnifiedToggleInputLongPress()
-            }
-        }
-        
         coordinator.onAnimatedDismissToOmnibar = { [weak self] in
             guard let self, let coordinator = self.unifiedToggleInputCoordinator else { return }
             self.dismissUnifiedToggleInputToOmnibar(coordinator: coordinator)
