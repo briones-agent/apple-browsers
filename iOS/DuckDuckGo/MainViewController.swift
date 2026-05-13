@@ -4026,7 +4026,6 @@ extension MainViewController: OmniBarDelegate {
     private func toggleAddressBarLocation() {
         let current = appSettings.currentAddressBarPosition
         appSettings.currentAddressBarPosition = current == .top ? .bottom : .top
-        self.onAddressBarPositionChanged()
     }
 
     override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
