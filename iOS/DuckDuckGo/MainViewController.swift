@@ -3877,7 +3877,6 @@ extension MainViewController: OmniBarDelegate {
     }
 
     func menuForOmniBarLongPress(in state: OmniBarState) -> UIMenu? {
-        guard featureFlagger.isFeatureOn(.omniBarLongPressMenu) else { return nil }
         guard isSupportedNonEditingOmniBarStateForLongPressMenu(state) else { return nil }
 
         var sections = [UIMenuElement]()
@@ -3899,12 +3898,23 @@ extension MainViewController: OmniBarDelegate {
         }
 
         sections.append(UIMenu(title: "", options: .displayInline, children: [
-            UIAction(title: UserText.closeTabs(withCount: 1), image:  DesignSystemImages.Glyphs.Size24.close, attributes: [.destructive]) { [weak self] _ in
+            UIAction(title: UserText.closeTabs(withCount: 1), image: DesignSystemImages.Glyphs.Size24.close, attributes: [.destructive]) { [weak self] _ in
                 guard let tab = self?.currentTab else { return }
                 self?.tabDidRequestClose(tab.tabModel, behavior: .onlyClose, clearTabHistory: true) },
         ]))
 
         return UIMenu(title: "", children: sections)
+    }
+
+    func menuForUnifiedToggleInputLongPress() -> UIMenu? {
+        return UIMenu(title: "", children: [
+            UIMenu(title: "", options: .displayInline, children: [
+                UIAction(title: UserText.closeTabs(withCount: 1), image: DesignSystemImages.Glyphs.Size24.close, attributes: [.destructive]) { [weak self] _ in
+                    guard let tab = self?.currentTab else { return }
+                    self?.tabDidRequestClose(tab.tabModel, behavior: .onlyClose, clearTabHistory: true)
+                },
+            ]),
+        ])
     }
 
     private func toggleAddressBarLocation() {

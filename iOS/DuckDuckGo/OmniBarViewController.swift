@@ -169,6 +169,7 @@ class OmniBarViewController: UIViewController, OmniBar {
     }
 
     private func configureLongPressMenuProvider() {
+        guard dependencies.featureFlagger.isFeatureOn(.omniBarLongPressMenu) else { return }
         barView.longPressMenuProvider = { [weak self] in
             guard let self else { return nil }
             return self.omniDelegate?.menuForOmniBarLongPress(in: self.state)
