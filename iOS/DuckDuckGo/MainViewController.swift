@@ -4602,6 +4602,14 @@ extension MainViewController: NewTabPageControllerDelegate {
         clearEscapeHatch()
     }
 
+    func newTabPageDidRequestCloseTab(_ controller: NewTabPageViewController, tab: Tab) {
+        onCloseTab(tab)
+    }
+
+    func newTabPageDidRequestBurnTab(_ controller: NewTabPageViewController, tab: Tab) {
+        onBurnTab(tab)
+    }
+
     func newTabPageDidRequestTabSwitcher(_ controller: NewTabPageViewController) {
         requestTabSwitcher()
     }
