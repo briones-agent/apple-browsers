@@ -101,6 +101,7 @@ protocol OmniBarView: UIView, OmniBarStatusUpdateable {
     /// Callback triggered when the omnibar branding area is tapped while in AI Chat mode
     var onAIChatBrandingPressed: (() -> Void)? { get set }
     var longPressMenuProvider: (() -> UIMenu?)? { get set }
+    var onLongPressMenuDisplayed: (() -> Void)? { get set }
 
     // static function is needed to allow creation of DefaultOmniBarView from xib
     static func create() -> Self

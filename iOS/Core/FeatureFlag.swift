@@ -687,7 +687,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatNativeDataAccess:
             Config(source: .remoteReleasable(.subfeature(AIChatSubfeature.nativeDataAccess)))
         case .omniBarLongPressMenu:
-            Config(defaultValue: .enabled, source: .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.omniBarLongPressMenu)))
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(.subfeature(iOSBrowserConfigSubfeature.omniBarLongPressMenu)))
         }
     }
 

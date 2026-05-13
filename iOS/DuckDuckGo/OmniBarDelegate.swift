@@ -51,6 +51,7 @@ protocol OmniBarDelegate: AnyObject {
     func onMenuLongPressed()
     
     func menuForOmniBarLongPress(in state: OmniBarState) -> UIMenu?
+    func onOmniBarLongPressMenuDisplayed()
 
     func onClearTextPressed()
 
@@ -178,6 +179,9 @@ extension OmniBarDelegate {
 
     func menuForOmniBarLongPress(in state: OmniBarState) -> UIMenu? {
         nil
+    }
+
+    func onOmniBarLongPressMenuDisplayed() {
     }
 
     func onCancelPressed() {

@@ -144,6 +144,7 @@ final class MockOmniBar: OmniBar {
         var onAIChatLeftButtonPressed: (() -> Void)?
         var onAIChatBrandingPressed: (() -> Void)?
         var longPressMenuProvider: (() -> UIMenu?)?
+        var onLongPressMenuDisplayed: (() -> Void)?
 
         static func create() -> Self {
             Self.init()

@@ -46,8 +46,13 @@ final class LongPressBarMenuBuilderTests: XCTestCase {
         XCTAssertNil(PixelFiringMock.lastDailyPixelInfo)
     }
 
-    func testWhenOmniBarMenuBuiltThenOpenPixelFired() {
+    func testWhenOmniBarMenuBuiltThenOpenPixelNotFired() {
         _ = builder.makeOmniBarMenu(context: makeOmniBarContext())
+        XCTAssertNil(PixelFiringMock.lastDailyPixelInfo)
+    }
+
+    func testWhenOmniBarMenuDisplayedThenOpenPixelFired() {
+        builder.fireOmniBarMenuOpenPixel()
         XCTAssertEqual(PixelFiringMock.lastDailyPixelInfo?.pixelName, Pixel.Event.longPressBarOpen.name)
     }
 
@@ -87,7 +92,7 @@ final class LongPressBarMenuBuilderTests: XCTestCase {
         let shareAction = flatActions(from: menu).first(where: { $0.title == UserText.actionShare })
         XCTAssertNotNil(shareAction)
         XCTAssertFalse(didShare)
-        XCTAssertEqual(PixelFiringMock.lastDailyPixelInfo?.pixelName, Pixel.Event.longPressBarOpen.name)
+        XCTAssertNil(PixelFiringMock.lastDailyPixelInfo)
     }
 
     private func makeOmniBarContext(

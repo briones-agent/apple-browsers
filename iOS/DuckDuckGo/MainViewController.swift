@@ -4019,6 +4019,10 @@ extension MainViewController: OmniBarDelegate {
         ))
     }
 
+    func onOmniBarLongPressMenuDisplayed() {
+        longPressBarMenuBuilder.fireOmniBarMenuOpenPixel()
+    }
+
     private func toggleAddressBarLocation() {
         let current = appSettings.currentAddressBarPosition
         appSettings.currentAddressBarPosition = current == .top ? .bottom : .top

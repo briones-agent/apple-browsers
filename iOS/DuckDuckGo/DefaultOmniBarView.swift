@@ -314,6 +314,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
             refreshLongPressMenuAvailability()
         }
     }
+    var onLongPressMenuDisplayed: (() -> Void)?
 
     // MARK: - Properties
 
@@ -1034,6 +1035,12 @@ extension DefaultOmniBarView: UIContextMenuInteractionDelegate {
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
             menu
         }
+    }
+
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
+                                willDisplayMenuFor configuration: UIContextMenuConfiguration,
+                                animator: UIContextMenuInteractionAnimating?) {
+        onLongPressMenuDisplayed?()
     }
 }
 

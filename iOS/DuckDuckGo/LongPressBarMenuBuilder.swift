@@ -81,8 +81,11 @@ final class LongPressBarMenuBuilder {
             },
         ]))
 
-        dailyPixelFiring.fireDailyAndCount(.longPressBarOpen, error: nil, withAdditionalParameters: [:])
         return UIMenu(title: "", children: sections)
+    }
+
+    func fireOmniBarMenuOpenPixel() {
+        dailyPixelFiring.fireDailyAndCount(.longPressBarOpen, error: nil, withAdditionalParameters: [:])
     }
 
     private func copyTitle(for url: URL, isPrivacyProtectionEnabled: Bool) -> String {

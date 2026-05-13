@@ -174,6 +174,9 @@ class OmniBarViewController: UIViewController, OmniBar {
             guard let self else { return nil }
             return self.omniDelegate?.menuForOmniBarLongPress(in: self.state)
         }
+        barView.onLongPressMenuDisplayed = { [weak self] in
+            self?.omniDelegate?.onOmniBarLongPressMenuDisplayed()
+        }
         barView.refreshLongPressMenuAvailability()
     }
 
