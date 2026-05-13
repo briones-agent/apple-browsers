@@ -198,7 +198,6 @@ private extension NewTabPageView {
         if let escapeHatch = viewModel.escapeHatch {
             EscapeHatchView(
                 model: escapeHatch,
-                openTabCount: viewModel.openTabCount,
                 onCardTap: { viewModel.onEscapeHatchTap?() },
                 onTabSwitcherTap: { viewModel.onTabSwitcherTap?() },
                 onCloseTab: { viewModel.onCloseTab?() },

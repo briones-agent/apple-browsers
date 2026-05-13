@@ -120,11 +120,12 @@ final class DuckAISuggestionsViewController: UIViewController {
 
     private struct EscapeHatch: Equatable {
         let model: EscapeHatchModel
-        let openTabCount: Int
         let onTapped: () -> Void
         let onTabSwitcherTapped: () -> Void
         static func == (lhs: EscapeHatch, rhs: EscapeHatch) -> Bool {
-            lhs.model == rhs.model && lhs.openTabCount == rhs.openTabCount
+            // Identity dedupe: SwiftUI `@ObservedObject` already redraws on the model's `openTabCount` changes,
+            // so the hosting-controller rebuild only needs to fire when the hatch identity actually changes.
+            lhs.model === rhs.model
         }
     }
 
@@ -211,14 +212,12 @@ final class DuckAISuggestionsViewController: UIViewController {
 
     /// No-op on identical model — called repeatedly from container layout/refresh paths.
     func setEscapeHatch(_ model: EscapeHatchModel?,
-                        openTabCount: Int,
                         onTapped: (() -> Void)?,
                         onTabSwitcherTapped: (() -> Void)?) {
         let next: EscapeHatch?
         if let model, let onTapped, let onTabSwitcherTapped {
             next = EscapeHatch(
                 model: model,
-                openTabCount: openTabCount,
                 onTapped: onTapped,
                 onTabSwitcherTapped: onTabSwitcherTapped
             )
@@ -254,7 +253,6 @@ final class DuckAISuggestionsViewController: UIViewController {
         if let hatch = currentEscapeHatch, !isQueryActive {
             let view = EscapeHatchView(
                 model: hatch.model,
-                openTabCount: hatch.openTabCount,
                 onCardTap: hatch.onTapped,
                 onTabSwitcherTap: hatch.onTabSwitcherTapped
             )

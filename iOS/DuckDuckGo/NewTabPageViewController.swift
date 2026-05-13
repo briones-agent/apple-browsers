@@ -147,10 +147,6 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
         updateBorderView()
     }
 
-    func setOpenTabCount(_ count: Int) {
-        newTabPageViewModel.openTabCount = count
-    }
-
     func setChromeLayoutContext(isBorderSuppressed: Bool) {
         isBorderSuppressedForChromeLayout = isBorderSuppressed
         updateBorderView()

@@ -368,8 +368,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         let manager = SuggestionTrayManager(switchBarHandler: switchBarHandler, dependencies: dependencies)
         manager.delegate = self
         let suggestionTrayEscapeHatch = switchBarHandler.isFireTab ? nil : escapeHatchModel
-        let openTabCount = dependencies.tabsModelProvider().count
-        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatch: suggestionTrayEscapeHatch, openTabCount: openTabCount)
+        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatch: suggestionTrayEscapeHatch)
         suggestionTrayManager = manager
     }
 
@@ -397,10 +396,8 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         aiChatHistoryManager = manager
 
         if let escapeHatchModel {
-            let count = suggestionTrayDependencies?.tabsModelProvider().count ?? 0
             manager.setEscapeHatch(
                 escapeHatchModel,
-                openTabCount: count,
                 onTapped: { [weak self] in
                     self?.delegate?.onSwitchToTab(escapeHatchModel.targetTab)
                 },

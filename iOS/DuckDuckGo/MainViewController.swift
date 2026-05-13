@@ -1523,7 +1523,8 @@ class MainViewController: UIViewController {
                     subtitle: "",
                     tabType: .fire,
                     domain: nil,
-                    targetTab: targetTab
+                    targetTab: targetTab,
+                    tabCountSource: tabManager
                 )
             }
             return nil
@@ -1534,7 +1535,8 @@ class MainViewController: UIViewController {
                 subtitle: UserText.omnibarFullAIChatModeDisplayTitle,
                 tabType: .aiChat,
                 domain: nil,
-                targetTab: targetTab
+                targetTab: targetTab,
+                tabCountSource: tabManager
             )
         }
         if let link = targetTab.link {
@@ -1544,7 +1546,8 @@ class MainViewController: UIViewController {
                 subtitle: subtitle,
                 tabType: .regular,
                 domain: link.url.host,
-                targetTab: targetTab
+                targetTab: targetTab,
+                tabCountSource: tabManager
             )
         }
         return nil
@@ -1642,7 +1645,6 @@ class MainViewController: UIViewController {
         newTabPageViewController = controller
 
         controller.setEscapeHatch(hatch)
-        controller.setOpenTabCount(tabManager.currentTabsModel.count)
         controller.setChromeLayoutContext(isBorderSuppressed: isInMinimalChromeLayout)
         currentNTPEscapeHatch = hatch
         
@@ -1687,7 +1689,6 @@ class MainViewController: UIViewController {
         let targetTab = hatch.targetTab
         unifiedToggleInputCoordinator?.setEscapeHatch(
             hatch,
-            openTabCount: tabManager.currentTabsModel.count,
             onTapped: { [weak self] in
                 guard let self else { return }
                 guard tabManager.tabsModel(for: targetTab.mode).tabExists(tab: targetTab) else {

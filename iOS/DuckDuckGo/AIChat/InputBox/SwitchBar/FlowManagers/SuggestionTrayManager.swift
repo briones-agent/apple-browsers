@@ -128,9 +128,8 @@ final class SuggestionTrayManager: NSObject {
         suggestionTrayViewController?.setFavoritesSectionTitle(title)
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, openTabCount: Int) {
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
         suggestionTrayViewController?.setEscapeHatch(model)
-        suggestionTrayViewController?.setOpenTabCount(openTabCount)
     }
 
     func setAdditionalTopInset(_ inset: CGFloat) {
@@ -138,7 +137,7 @@ final class SuggestionTrayManager: NSObject {
     }
 
     /// Installs the suggestion tray in the provided container view
-    func installInContainerView(_ containerView: UIView, parentViewController: UIViewController, escapeHatch: EscapeHatchModel? = nil, openTabCount: Int = 0) {
+    func installInContainerView(_ containerView: UIView, parentViewController: UIViewController, escapeHatch: EscapeHatchModel? = nil) {
         guard suggestionTrayViewController == nil else { return }
         
 
@@ -181,7 +180,6 @@ final class SuggestionTrayManager: NSObject {
         }
         controller.didMove(toParent: parentViewController)
         controller.setEscapeHatch(escapeHatch)
-        controller.setOpenTabCount(openTabCount)
 
         showInitialSuggestions()
         containerView.layoutIfNeeded()
