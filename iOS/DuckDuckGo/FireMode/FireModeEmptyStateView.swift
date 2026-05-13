@@ -56,6 +56,8 @@ struct FireModeEmptyStateView: View {
     private let type: ViewType
     private let escapeHatch: EscapeHatchModel?
     private let onEscapeHatchTap: (() -> Void)?
+    private let onCloseTab: (() -> Void)?
+    private let onBurnTab: (() -> Void)?
 
     private var onNewFireTab: NewFireTabBlock? {
         if case .tabSwitcher(let onNewFireTab) = type {
@@ -65,13 +67,17 @@ struct FireModeEmptyStateView: View {
     }
 
     // MARK: - Initializer
-    
+
     init(type: ViewType,
          escapeHatch: EscapeHatchModel? = nil,
-         onEscapeHatchTap: (() -> Void)? = nil) {
+         onEscapeHatchTap: (() -> Void)? = nil,
+         onCloseTab: (() -> Void)? = nil,
+         onBurnTab: (() -> Void)? = nil) {
         self.type = type
         self.escapeHatch = escapeHatch
         self.onEscapeHatchTap = onEscapeHatchTap
+        self.onCloseTab = onCloseTab
+        self.onBurnTab = onBurnTab
     }
     
     // MARK: - Body
@@ -95,7 +101,10 @@ struct FireModeEmptyStateView: View {
     @ViewBuilder
     private var escapeHatchSection: some View {
         if let escapeHatch, let onEscapeHatchTap {
-            ReturnToTabCard(model: escapeHatch, onTap: onEscapeHatchTap)
+            ReturnToTabCard(model: escapeHatch,
+                            onTap: onEscapeHatchTap,
+                            onCloseTab: { onCloseTab?() },
+                            onBurnTab: { onBurnTab?() })
         }
     }
 

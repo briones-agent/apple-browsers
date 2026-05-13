@@ -137,7 +137,9 @@ private extension NewTabPageView {
         if viewModel.fireTab {
             FireModeEmptyStateView(type: .tab,
                                    escapeHatch: viewModel.escapeHatch,
-                                   onEscapeHatchTap: viewModel.onEscapeHatchTap)
+                                   onEscapeHatchTap: viewModel.onEscapeHatchTap,
+                                   onCloseTab: viewModel.onCloseTab,
+                                   onBurnTab: viewModel.onBurnTab)
         } else {
             logoEmptyView
         }
