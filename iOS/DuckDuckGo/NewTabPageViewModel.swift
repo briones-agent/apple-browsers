@@ -31,6 +31,8 @@ final class NewTabPageViewModel: ObservableObject {
     @Published var openTabCount: Int = 0
     var onEscapeHatchTap: (() -> Void)?
     var onTabSwitcherTap: (() -> Void)?
+    var onCloseTab: (() -> Void)?
+    var onBurnTab: (() -> Void)?
     private(set) var fireTab: Bool
 
     private(set) var isDragging: Bool = false

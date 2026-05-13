@@ -130,9 +130,19 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
                 guard let self else { return }
                 self.delegate?.newTabPageDidRequestTabSwitcher(self)
             }
+            newTabPageViewModel.onCloseTab = { [weak self] in
+                guard let self else { return }
+                self.delegate?.newTabPageDidRequestCloseTab(self, tab: targetTab)
+            }
+            newTabPageViewModel.onBurnTab = { [weak self] in
+                guard let self else { return }
+                self.delegate?.newTabPageDidRequestBurnTab(self, tab: targetTab)
+            }
         } else {
             newTabPageViewModel.onEscapeHatchTap = nil
             newTabPageViewModel.onTabSwitcherTap = nil
+            newTabPageViewModel.onCloseTab = nil
+            newTabPageViewModel.onBurnTab = nil
         }
         updateBorderView()
     }

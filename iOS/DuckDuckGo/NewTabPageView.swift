@@ -200,7 +200,9 @@ private extension NewTabPageView {
                 model: escapeHatch,
                 openTabCount: viewModel.openTabCount,
                 onCardTap: { viewModel.onEscapeHatchTap?() },
-                onTabSwitcherTap: { viewModel.onTabSwitcherTap?() }
+                onTabSwitcherTap: { viewModel.onTabSwitcherTap?() },
+                onCloseTab: { viewModel.onCloseTab?() },
+                onBurnTab: { viewModel.onBurnTab?() }
             )
             .frame(maxWidth: escapeHatchMaxWidth)
             .padding(.top, Metrics.nonGridSectionTopPadding)
