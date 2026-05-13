@@ -4434,9 +4434,24 @@ extension MainViewController: OmniBarDelegate {
     }
 
     func onCloseTab(_ tab: Tab) {
+        let targetTabsModel = tabManager.tabsModel(for: tab.mode)
+        guard targetTabsModel.tabExists(tab: tab) else {
+            clearEscapeHatch()
+            return
+        }
+
+        tabManager.remove(tab: tab, in: targetTabsModel)
+        if targetTabsModel.hasActiveTabs {
+            return
+        }
+
+        /// # TODO: Sub-optimal. Invoking `clearEscapeHatch` causes side effects
+        dismissOmniBar()
     }
 
     func onBurnTab(_ tab: Tab) {
+        /// # TODO: Wire FireConfirmationPresenter
+        onCloseTab(tab)
     }
 
     func onTabSwitcherRequested() {
