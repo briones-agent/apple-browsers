@@ -882,13 +882,13 @@ final class UnifiedToggleInputView: UIView {
     private func addTextEntryLongPressInteractionIfNeeded() {
         guard textEntryLongPressInteraction == nil else { return }
         let interaction = UIContextMenuInteraction(delegate: self)
-        textEntryView.addInteraction(interaction)
+        addInteraction(interaction)
         textEntryLongPressInteraction = interaction
     }
 
     private func removeTextEntryLongPressInteraction() {
         guard let textEntryLongPressInteraction else { return }
-        textEntryView.removeInteraction(textEntryLongPressInteraction)
+        removeInteraction(textEntryLongPressInteraction)
         self.textEntryLongPressInteraction = nil
     }
 }
@@ -903,6 +903,16 @@ extension UnifiedToggleInputView: UIContextMenuInteractionDelegate {
         }
     }
 
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
+                                previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
+        makeTextEntryMenuPreview()
+    }
+
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
+                                previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
+        makeTextEntryMenuPreview()
+    }
+
     private func updateSubmitButtonAvailability() {
         let state = UnifiedToggleInputFloatingSubmitState(
             text: handler.currentText,
@@ -913,6 +923,14 @@ extension UnifiedToggleInputView: UIContextMenuInteractionDelegate {
 
     private func submitCurrentInput() {
         delegate?.unifiedToggleInputViewDidRequestSubmitCurrentInput(self)
+    }
+
+    private func makeTextEntryMenuPreview() -> UITargetedPreview {
+        let previewParameters = UIPreviewParameters()
+        previewParameters.backgroundColor = UIColor(designSystemColor: .background)
+        let cornerRadius = min(textEntryView.bounds.height / 2, 22)
+        previewParameters.visiblePath = UIBezierPath(roundedRect: textEntryView.bounds, cornerRadius: cornerRadius)
+        return UITargetedPreview(view: textEntryView, parameters: previewParameters)
     }
 }
 
