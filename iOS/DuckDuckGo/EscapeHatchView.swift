@@ -25,10 +25,14 @@ struct EscapeHatchView: View {
     let openTabCount: Int
     let onCardTap: () -> Void
     let onTabSwitcherTap: () -> Void
+    let onCloseTab: () -> Void
+    let onBurnTab: () -> Void
+
+    @State private var didCommit: Bool = false
 
     var body: some View {
         HStack(spacing: Metrics.spacing) {
-            ReturnToTabCard(model: model, onTap: onCardTap)
+            ReturnToTabCard(model: model, onTap: onCardTap, onCloseTab: onCloseTab, onBurnTab: onBurnTab)
             TabSwitcherPill(count: openTabCount, onTap: onTabSwitcherTap)
         }
     }
@@ -49,7 +53,9 @@ struct EscapeHatchView: View {
         ),
         openTabCount: 9,
         onCardTap: {},
-        onTabSwitcherTap: {}
+        onTabSwitcherTap: {},
+        onCloseTab: {},
+        onBurnTab: {}
     )
     .padding()
 }
@@ -65,7 +71,9 @@ struct EscapeHatchView: View {
         ),
         openTabCount: 99,
         onCardTap: {},
-        onTabSwitcherTap: {}
+        onTabSwitcherTap: {},
+        onCloseTab: {},
+        onBurnTab: {}
     )
     .padding()
 }
