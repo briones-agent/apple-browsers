@@ -82,9 +82,7 @@ final class DaxLogoManager {
         parentView.addSubview(logoContainerView)
 
         if isFireTab {
-            installFireTabContent(in: parentController,
-                                  escapeHatch: escapeHatch,
-                                  actions: escapeHatchActions)
+            installFireTabContent(in: parentController, escapeHatch: escapeHatch, actions: escapeHatchActions)
             installFireTabConstraints(parentView: parentView, anchorView: anchorView, isTopBarPosition: isTopBarPosition)
         } else {
             installDaxLogoContent()

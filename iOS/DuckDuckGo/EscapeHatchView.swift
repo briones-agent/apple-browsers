@@ -55,7 +55,7 @@ struct EscapeHatchView: View {
             targetTab: target,
             tabsSource: .staticTabsSource(count: 9, includes: target)
         ),
-        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
+        actions: .noop
     )
     .padding()
 }
@@ -71,7 +71,7 @@ struct EscapeHatchView: View {
             targetTab: target,
             tabsSource: .staticTabsSource(count: 99, includes: target)
         ),
-        actions: EscapeHatchActions(onCardTap: {}, onTabSwitcherTap: {}, onCloseTab: {}, onBurnTab: {})
+        actions: .noop
     )
     .padding()
 }
