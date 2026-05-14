@@ -46,4 +46,40 @@ enum JSFileCache {
             throw UserScriptError.failedToLoadJS(jsFile: file, error: error)
         }
     }
+
+    // Get file from local file
+    // Since these aren't necessarily static, one needs to be careful
+    // of the fact that they are cached
+    static func content(forFile file: String, in directoryURL: URL) throws -> String {
+        let fileURL = directoryURL.appendingPathComponent(file).appendingPathExtension("js")
+        let cacheKey = fileURL.path
+
+        lock.lock()
+        let cached = storage[cacheKey]
+        lock.unlock()
+
+        if let cached { return cached }
+
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            throw UserScriptError.failedToLoadJS(jsFile: file, error: CocoaError(.fileReadNoSuchFile))
+        }
+
+        do {
+            let content = try String(contentsOf: fileURL)
+            lock.lock()
+            storage[cacheKey] = content
+            lock.unlock()
+            return content
+        } catch {
+            throw UserScriptError.failedToLoadJS(jsFile: file, error: error)
+        }
+    }
+
+    static func clearCache(forFile file: String, in directoryURL: URL) {
+        let fileURL = directoryURL.appendingPathComponent(file).appendingPathExtension("js")
+        let cacheKey = fileURL.path
+        lock.lock()
+        storage.removeValue(forKey: cacheKey)
+        lock.unlock()
+    }
 }
