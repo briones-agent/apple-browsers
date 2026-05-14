@@ -20,28 +20,29 @@
 import Foundation
 import Combine
 
-/// Stub used by SwiftUI previews and tests
 extension EscapeHatchActions {
+
     static var preview: EscapeHatchActions {
         EscapeHatchActions(onCardTap: { }, onTabSwitcherTap: { }, onCloseTab: { }, onBurnTab: { })
     }
 }
 
-#if DEBUG
-/// Preview-only source — emits a fixed tabs array once. Include the target tab if presence should read `true`.
 struct StaticEscapeHatchTabsSource: EscapeHatchTabsSource {
     let tabs: [Tab]
+
     func tabsPublisher(for mode: BrowsingMode) -> AnyPublisher<[Tab], Never> {
-        Just(tabs).eraseToAnyPublisher()
+        Just(tabs)
+            .eraseToAnyPublisher()
     }
 }
 
 extension EscapeHatchTabsSource where Self == StaticEscapeHatchTabsSource {
-    /// Synthesises an array of `count` tabs that includes `targetTab`, so the model reads `isTargetTabPresent == true`.
+
     static func staticTabsSource(count: Int, includes targetTab: Tab) -> Self {
-        let padding = max(count - 1, 0)
-        let tabs = (0..<padding).map { _ in Tab(fireTab: false) } + [targetTab]
-        return StaticEscapeHatchTabsSource(tabs: tabs)
+        let tabs = (0..<count).map { _ in
+            Tab(fireTab: false)
+        }
+
+        return StaticEscapeHatchTabsSource(tabs: tabs + [targetTab])
     }
 }
-#endif

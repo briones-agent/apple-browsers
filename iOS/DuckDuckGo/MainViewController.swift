@@ -4561,7 +4561,6 @@ extension MainViewController {
 
 extension MainViewController: EscapeHatchActionRouter {
     func escapeHatchDidRequestSwitch(to tab: Tab) {
-        // Pre-existing unified-toggle guard, hoisted here so every router call site gets it for free.
         guard tabManager.tabsModel(for: tab.mode).tabExists(tab: tab) else {
             clearEscapeHatch()
             return
