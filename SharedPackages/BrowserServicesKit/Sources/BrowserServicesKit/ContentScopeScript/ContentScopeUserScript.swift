@@ -49,28 +49,29 @@ public enum ContentScopeScriptContext {
     case contentScopeIsolated
     case aiChatDataClearing
     case aiChatHistory
-    case pir
+    case pirBundled
+    case pirRemote
 
     public var isIsolated: Bool {
         switch self {
         case .contentScope, .aiChatDataClearing, .aiChatHistory:
             return false
-        case .contentScopeIsolated, .pir:
+        case .contentScopeIsolated, .pirBundled, .pirRemote:
             return true
         }
     }
 
-    var fileName: String {
+    public var fileName: String {
         switch self {
         case .contentScope:
             return "contentScope"
-        case .contentScopeIsolated:
+        case .contentScopeIsolated, .pirBundled:
             return "contentScopeIsolated"
         case .aiChatDataClearing:
             return "duckAiDataClearing"
         case .aiChatHistory:
             return "duckAiChatHistory"
-        case .pir:
+        case .pirRemote:
             return "contentScopePIR"
         }
     }
@@ -83,22 +84,22 @@ public enum ContentScopeScriptContext {
             return "duckAiDataClearing"
         case .aiChatHistory:
             return "duckAiChatHistory"
-        case .contentScopeIsolated:
+        case .contentScopeIsolated, .pirBundled:
             return "contentScopeScriptsIsolated"
-        case .pir:
+        case .pirRemote:
             return "contentScopePIR"
         }
     }
 
-    enum StorageType {
+    public enum StorageType {
         case bundle
-        case localContainer
+        case localContainer(containerName: String)
     }
 
-    var storageType: StorageType {
+    public var storageType: StorageType {
         switch self {
-        case .pir:
-            return .localContainer
+        case .pirRemote:
+            return .localContainer(containerName: "PIR")
         default:
             return .bundle
         }
@@ -314,10 +315,11 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
             "$WEBKIT_MESSAGING_CONFIG$": jsonConfigString
         ]
 
-        if scriptContext.storageType == .localContainer {
-            let url = URL.applicationSupportDirectory
-            return try loadJS(scriptContext.fileName, in: <#T##URL#>, withReplacements: replacements)
-        } else {
+        switch scriptContext.storageType {
+        case .localContainer(let containerName):
+            let url = FileManager.default.applicationSupportDirectoryForComponent(named: containerName)
+            return try loadJS(scriptContext.fileName, in: url, withReplacements: replacements)
+        case .bundle:
             return try loadJS(scriptContext.fileName, from: ContentScopeScripts.Bundle, withReplacements: replacements)
         }
     }
