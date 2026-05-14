@@ -72,6 +72,17 @@ extension UserScript {
         return js.applyingReplacements(replacements)
     }
 
+    /// Loads a JavaScript file from the local container and applies placeholder replacements.
+    ///
+    /// The raw file content is cached in memory for the process lifetime.
+    /// So the cache must be cleared manually when needed
+    /// Replacements are applied fresh on each call against the cached template.
+    public static func loadJS(_ jsFile: String, in directoryURL: URL, withReplacements replacements: [String: String] = [:]) throws -> String {
+        let js = try JSFileCache.content(forFile: jsFile, in: directoryURL)
+
+        return js.applyingReplacements(replacements)
+    }
+
     fileprivate nonisolated static func prepareScriptSource(from source: String) -> String {
         let hash = SHA256.hash(data: Data(source.utf8)).hashValue
 
