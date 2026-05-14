@@ -23,6 +23,8 @@ import DesignResourcesKitIcons
 
 final class LongPressBarMenuBuilder {
 
+    typealias Glyphs = DesignSystemImages.Glyphs.Size16
+
     struct OmniBarContext {
         let state: OmniBarState
         let isFeatureEnabled: Bool
@@ -52,11 +54,11 @@ final class LongPressBarMenuBuilder {
         if let url = context.currentURL, !context.isAITab {
             let copyTitle = copyTitle(for: url, isPrivacyProtectionEnabled: context.isPrivacyProtectionEnabled)
             sections.append(UIMenu(title: "", options: .displayInline, children: [
-                UIAction(title: UserText.actionShare, image: DesignSystemImages.Glyphs.Size24.shareApple) { [weak self] _ in
+                UIAction(title: UserText.actionShare, image: Glyphs.shareApple) { [weak self] _ in
                     self?.dailyPixelFiring.fireDailyAndCount(.longPressBarActionShare, error: nil, withAdditionalParameters: [:])
                     context.onShare()
                 },
-                UIAction(title: copyTitle, image: DesignSystemImages.Glyphs.Size24.link) { [weak self] _ in
+                UIAction(title: copyTitle, image: Glyphs.link) { [weak self] _ in
                     self?.dailyPixelFiring.fireDailyAndCount(.longPressBarActionCopy, error: nil, withAdditionalParameters: [:])
                     context.onCopy(url)
                 },
@@ -65,7 +67,7 @@ final class LongPressBarMenuBuilder {
 
         if !context.isPad {
             let moveLabel = context.addressBarPosition == .top ? UserText.omnibarLongPressMoveToBottom : UserText.omnibarLongPressMoveToTop
-            let moveImage = context.addressBarPosition == .top ? DesignSystemImages.Glyphs.Size24.addressBarBottom : DesignSystemImages.Glyphs.Size24.addressBarTop
+            let moveImage = context.addressBarPosition == .top ? Glyphs.addressBarBottom : Glyphs.addressBarTop
             sections.append(UIMenu(title: "", options: .displayInline, children: [
                 UIAction(title: moveLabel, image: moveImage) { [weak self] _ in
                     self?.dailyPixelFiring.fireDailyAndCount(.longPressBarActionMove, error: nil, withAdditionalParameters: [:])
@@ -75,7 +77,7 @@ final class LongPressBarMenuBuilder {
         }
 
         sections.append(UIMenu(title: "", options: .displayInline, children: [
-            UIAction(title: UserText.closeTabs(withCount: 1), image: DesignSystemImages.Glyphs.Size24.close, attributes: [.destructive]) { [weak self] _ in
+            UIAction(title: UserText.closeTabs(withCount: 1), image: Glyphs.close, attributes: [.destructive]) { [weak self] _ in
                 self?.dailyPixelFiring.fireDailyAndCount(.longPressBarActionCloseTab, error: nil, withAdditionalParameters: [:])
                 context.onCloseTab()
             },
