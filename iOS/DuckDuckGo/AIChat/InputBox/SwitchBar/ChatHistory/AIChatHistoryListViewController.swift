@@ -253,9 +253,9 @@ final class AIChatHistoryListViewController: UIViewController {
 
     /// Shows or hides the escape hatch (return-to-tab card + tab switcher pill) as the table header. Pass nil to hide.
     /// The pill's open-tab count is sourced from the model (it self-subscribes to the target mode's tabs publisher),
-    /// so this method only needs to swap when the model identity changes.
+    /// so this method only needs to swap when the model changes.
     func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
-        let modelChanged = model !== currentEscapeHatchModel
+        let modelChanged = model != currentEscapeHatchModel
         currentEscapeHatchModel = model
 
         if let model, let actions {

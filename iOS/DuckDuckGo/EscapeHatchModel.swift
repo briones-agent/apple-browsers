@@ -68,6 +68,16 @@ final class EscapeHatchModel: ObservableObject {
     }
 }
 
+extension EscapeHatchModel: Equatable {
+    static func == (lhs: EscapeHatchModel, rhs: EscapeHatchModel) -> Bool {
+        lhs.targetTab === rhs.targetTab &&
+        lhs.title == rhs.title &&
+        lhs.subtitle == rhs.subtitle &&
+        lhs.tabType == rhs.tabType &&
+        lhs.domain == rhs.domain
+    }
+}
+
 extension TabManager: EscapeHatchTabsSource {
     func tabsPublisher(for mode: BrowsingMode) -> AnyPublisher<[Tab], Never> {
         tabsModel(for: mode).tabsPublisher
