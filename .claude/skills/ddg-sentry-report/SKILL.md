@@ -12,7 +12,7 @@ Produces a structured Sentry crash triage report for a DuckDuckGo Apple release 
 ## Supporting files
 
 - [`references/constants.md`](references/constants.md) — Sentry/Asana GIDs, slugs, project filters, release-string conventions.
-- [`templates/main-report.html`](templates/main-report.html), [`templates/crash-free.html`](templates/crash-free.html), [`templates/per-issue-tracking.html`](templates/per-issue-tracking.html) — `html_notes` bodies.
+- [`templates/main-report.html`](templates/main-report.html), [`templates/crash-free.html`](templates/crash-free.html), [`templates/per-issue-tracking.html`](templates/per-issue-tracking.html) — `html_notes` bodies. **Mirrored verbatim in `ddg-sentry-report-no-asana/templates/`; keep in sync when editing.**
 - [`references/common-mistakes-extended.md`](references/common-mistakes-extended.md) — overflow learnings beyond the inline table.
 - [`examples.md`](examples.md) — two end-to-end walkthroughs (with URL, auto-resolve).
 
