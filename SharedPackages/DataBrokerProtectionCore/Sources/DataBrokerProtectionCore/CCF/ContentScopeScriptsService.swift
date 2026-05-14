@@ -65,7 +65,7 @@ public final class ContentScopeScriptsService: ContentScopeScriptsServiceProtoco
                 guard let code else { return [:] }
                 return [NSUnderlyingErrorKey: NSError(domain: "HTTPError", code: code)]
             case .invalidVersion(let version):
-                return [NSLocalizedDescriptionKey: "Invalid version string: \(version)"]  
+                return [NSLocalizedDescriptionKey: "Invalid version string: \(version)"]
             case .clientError, .noAccessToken, .invalidEncoding, .invalidManifest:
                 return [:]
             }
@@ -134,6 +134,7 @@ public final class ContentScopeScriptsService: ContentScopeScriptsServiceProtoco
 
     public var shouldUseRemoteContentScopeScript: Bool {
         //todo feature flagging and compile flagging
+        //TODO handle if not saved
         return true
     }
 
@@ -142,7 +143,7 @@ public final class ContentScopeScriptsService: ContentScopeScriptsServiceProtoco
     }
 
     public var cachedScript: String? {
-        guard let url = try? cachedScriptURL(),
+        guard let url = try? savedScriptURL(),
               fileManager.fileExists(atPath: url.path) else {
             return nil
         }
@@ -202,14 +203,14 @@ public final class ContentScopeScriptsService: ContentScopeScriptsServiceProtoco
             throw Error.invalidEncoding
         }
 
-        let destinationURL = try cachedScriptURL()
+        let destinationURL = try savedScriptURL()
         try data.write(to: destinationURL, options: .atomic)
         JSFileCache.clearCache(forFile: Self.cachedScriptFileName, in: destinationURL.deletingLastPathComponent())
     }
 
     // MARK: - File handling
 
-    func cachedScriptURL() throws -> URL {
+    func savedScriptURL() throws -> URL {
         let directory = fileManager.applicationSupportDirectoryForComponent(named: Self.cacheDirectoryName)
 
         if !fileManager.fileExists(atPath: directory.path) {
@@ -222,7 +223,7 @@ public final class ContentScopeScriptsService: ContentScopeScriptsServiceProtoco
 
 // MARK: - should update logic
 private extension ContentScopeScriptsService {
-    
+
     /// Returns true when `remoteVersion` and `currentVersion` share the same major and minor
     /// components and `remoteVersion`'s patch component is strictly higher, or when there is
     /// no `currentVersion` yet. A remote with a different major or minor is never auto-applied.
