@@ -1,6 +1,6 @@
 # External scripts for `ddg-sentry-report-no-asana`
 
-Three Python 3 scripts that handle every Asana interaction for the skill. Each can be invoked from the command line OR imported as a module from an orchestrator (e.g. a wrapper around Claude Agent SDK that runs the skill modes in between).
+Four Python 3 scripts that handle every Asana interaction for the skill. Each can be invoked from the command line OR imported as a module from an orchestrator (e.g. a wrapper around Claude Agent SDK that runs the skill modes in between).
 
 ## Install
 
@@ -21,6 +21,29 @@ export ASANA_ACCESS_TOKEN="2/..."
 If unset, the scripts exit with a clear error message. There is no fallback — the orchestrator must pass the env var explicitly.
 
 ## Scripts
+
+### `resolve_version` (script #0)
+
+Resolves the version to analyse from `(platform, release-type)` via Asana — the parent `ddg-sentry-report` skill did this lookup inline; the no-Asana variant pushes it out so the agent loop stays Sentry-only.
+
+```bash
+python3 -m scripts.resolve_version --platform macos --release-type public
+# → 1.186
+```
+
+Programmatic:
+
+```python
+from scripts.resolve_version import run
+version = run(platform="macos", release_type="public")  # → "1.186"
+```
+
+Branches by `--release-type`:
+
+- `public`: newest open `<platform> X.Y.Z is now public` task in Apple Deployments / Deployments (last 2 weeks), dropping tasks created within the last 12h (a brand-new release task may not have Sentry events yet).
+- `internal`: newest open `<platform> App Release X.Y.Z` task in Apple Releases / `<platform>` section, `is_subtask=false`. On Monday UTC, drops the newest and takes the next-newest (internal code freeze creates a fresh task at 01:00 UTC every Monday).
+
+Exits 2 with a stop-and-ask message when the filter is empty or Monday-UTC has only one candidate.
 
 ### `asana_lookup` (script #1)
 
@@ -77,12 +100,13 @@ Typical flow for a Python orchestrator driving Claude Agent SDK:
 
 ```python
 from claude_agent_sdk import run_skill  # hypothetical
-from scripts import asana_lookup, asana_write, asana_file_summary
+from scripts import asana_lookup, asana_write, asana_file_summary, resolve_version
 
-job_dir = "/tmp/ddg-sentry-report-no-asana/macos-1.186"
+version = resolve_version.run(platform="macos", release_type="public")  # e.g. "1.186"
+job_dir = f"/tmp/ddg-sentry-report-no-asana/macos-{version}"
 
 run_skill("ddg-sentry-report-no-asana", args=["analyze", "--platform", "macos",
-                                              "--version", "1.186",
+                                              "--version", version,
                                               "--output", f"{job_dir}/analyze.json"])
 
 asana_lookup.run(f"{job_dir}/analyze.json", f"{job_dir}/analyze.augmented.json")
