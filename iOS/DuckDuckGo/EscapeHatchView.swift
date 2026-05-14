@@ -55,7 +55,7 @@ struct EscapeHatchView: View {
             targetTab: target,
             tabsSource: .staticTabsSource(count: 9, includes: target)
         ),
-        actions: .noop
+        actions: .preview
     )
     .padding()
 }
@@ -71,7 +71,7 @@ struct EscapeHatchView: View {
             targetTab: target,
             tabsSource: .staticTabsSource(count: 99, includes: target)
         ),
-        actions: .noop
+        actions: .preview
     )
     .padding()
 }

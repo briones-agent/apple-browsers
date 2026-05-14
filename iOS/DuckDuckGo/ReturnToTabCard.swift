@@ -213,7 +213,7 @@ private enum Metrics {
             domain: "en.wikipedia.org",
             targetTab: Tab(fireTab: false)
         ),
-        actions: .noop
+        actions: .preview
     )
     .padding()
     .frame(width: 360)
@@ -228,7 +228,7 @@ private enum Metrics {
             domain: nil,
             targetTab: Tab(fireTab: false)
         ),
-        actions: .noop
+        actions: .preview
     )
     .padding()
     .frame(width: 360)
@@ -243,7 +243,7 @@ private enum Metrics {
             domain: nil,
             targetTab: Tab(fireTab: true)
         ),
-        actions: .noop
+        actions: .preview
     )
     .padding()
     .frame(width: 360)
