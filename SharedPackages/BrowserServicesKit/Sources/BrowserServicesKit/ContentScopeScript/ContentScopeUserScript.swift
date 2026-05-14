@@ -49,12 +49,13 @@ public enum ContentScopeScriptContext {
     case contentScopeIsolated
     case aiChatDataClearing
     case aiChatHistory
+    case pir
 
     public var isIsolated: Bool {
         switch self {
         case .contentScope, .aiChatDataClearing, .aiChatHistory:
             return false
-        case .contentScopeIsolated:
+        case .contentScopeIsolated, .pir:
             return true
         }
     }
@@ -69,6 +70,8 @@ public enum ContentScopeScriptContext {
             return "duckAiDataClearing"
         case .aiChatHistory:
             return "duckAiChatHistory"
+        case .pir:
+            return "contentScopePIR"
         }
     }
 
@@ -82,6 +85,22 @@ public enum ContentScopeScriptContext {
             return "duckAiChatHistory"
         case .contentScopeIsolated:
             return "contentScopeScriptsIsolated"
+        case .pir:
+            return "contentScopePIR"
+        }
+    }
+
+    enum StorageType {
+        case bundle
+        case localContainer
+    }
+
+    var storageType: StorageType {
+        switch self {
+        case .pir:
+            return .localContainer
+        default:
+            return .bundle
         }
     }
 }
@@ -288,12 +307,19 @@ public final class ContentScopeUserScript: NSObject, UserScript, UserScriptMessa
             return ""
         }
 
-        return try loadJS(scriptContext.fileName, from: ContentScopeScripts.Bundle, withReplacements: [
+        let replacements = [
             "$CONTENT_SCOPE$": privacyConfigJson,
             "$USER_UNPROTECTED_DOMAINS$": userUnprotectedDomainsString,
             "$USER_PREFERENCES$": jsonPropertiesString,
             "$WEBKIT_MESSAGING_CONFIG$": jsonConfigString
-        ])
+        ]
+
+        if scriptContext.storageType == .localContainer {
+            let url = URL.applicationSupportDirectory
+            return try loadJS(scriptContext.fileName, in: <#T##URL#>, withReplacements: replacements)
+        } else {
+            return try loadJS(scriptContext.fileName, from: ContentScopeScripts.Bundle, withReplacements: replacements)
+        }
     }
 
     private static func encodeProperties(_ properties: ContentScopeProperties, messagingContextName: String) throws -> String {
