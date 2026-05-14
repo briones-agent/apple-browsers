@@ -25,7 +25,7 @@ struct EscapeHatchView: View {
     let actions: EscapeHatchActions
 
     var body: some View {
-        HStack(spacing: Metrics.spacing) {
+        HStack(spacing: model.isTargetTabPresent ? Metrics.spacing : 0) {
             ReturnToTabCard(model: model, actions: actions)
                 .frame(maxWidth: model.isTargetTabPresent ? .infinity : 0)
                 .opacity(model.isTargetTabPresent ? 1 : 0)
