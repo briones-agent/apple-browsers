@@ -47,7 +47,7 @@ final class EscapeHatchModel: ObservableObject {
 
     private var tabsCancellable: AnyCancellable?
 
-    init(title: String, subtitle: String, tabType: TabType, domain: String?, targetTab: Tab, tabsSource: EscapeHatchTabsSource) {
+    init(title: String, subtitle: String, tabType: TabType, domain: String?, targetTab: Tab, tabsSource: some EscapeHatchTabsSource) {
         self.title = title
         self.subtitle = subtitle
         self.tabType = tabType
@@ -57,7 +57,7 @@ final class EscapeHatchModel: ObservableObject {
         subscribeToTabsSource(tabsSource)
     }
 
-    private func subscribeToTabsSource(_ tabsSource: EscapeHatchTabsSource) {
+    private func subscribeToTabsSource(_ tabsSource: some EscapeHatchTabsSource) {
         tabsCancellable = tabsSource.tabsPublisher(for: targetTab.mode)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] tabs in
