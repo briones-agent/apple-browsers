@@ -442,9 +442,9 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
             let escapeHatchActions: EscapeHatchActions? = escapeHatchModel.map { model in
                 EscapeHatchActions(
                     onCardTap: { [weak self] in self?.delegate?.onSwitchToTab(model.targetTab) },
-                    onTabSwitcherTap: {},
-                    onCloseTab: {},
-                    onBurnTab: {}
+                    onTabSwitcherTap: { [weak self] in self?.delegate?.onTabSwitcherRequested() },
+                    onCloseTab: { [weak self] in self?.delegate?.onCloseTab(model.targetTab) },
+                    onBurnTab: { [weak self] in self?.delegate?.onBurnTab(model.targetTab) }
                 )
             }
             daxLogoManager.installInViewController(self,
