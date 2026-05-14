@@ -29,99 +29,19 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from . import _common
 from ._asana import AsanaClient, AsanaError
+from ._dri import (
+    AmbiguousResolution,
+    pick_status_subtask,
+    resolve_dri_task,
+    today_weekday_keyword,
+)
 
 logger = logging.getLogger(__name__)
-
-
-class AmbiguousResolution(RuntimeError):
-    """Raised when DRI / status-subtask resolution cannot pick uniquely."""
-
-    def __init__(self, message: str, candidates: list[dict[str, Any]]):
-        super().__init__(message)
-        self.candidates = candidates
-
-
-def _resolve_dri_task(
-    client: AsanaClient,
-    *,
-    platform_project_gid: str,
-    dri_task_name: str,
-) -> dict[str, Any]:
-    """Resolve the platform's Weekly Release DRI task. Raises on ambiguity."""
-    results = client.search_tasks(
-        projects_any=platform_project_gid,
-        text=dri_task_name,
-        completed=False,
-        opt_fields="name,assignee,assignee.name,created_at,permalink_url",
-        limit=20,
-    )
-    # Asana's text filter is fuzzy — keep only exact-name matches.
-    exact = [t for t in results if t.get("name") == dri_task_name]
-    if not exact:
-        raise AmbiguousResolution(
-            f"No open task named exactly {dri_task_name!r} in project {platform_project_gid}",
-            results,
-        )
-
-    if len(exact) == 1:
-        return exact[0]
-
-    assigned = [t for t in exact if t.get("assignee") is not None]
-    if len(assigned) == 1:
-        return assigned[0]
-
-    pool = assigned if assigned else exact
-    pool_sorted = sorted(pool, key=lambda t: t.get("created_at") or "")
-    if not pool_sorted:
-        raise AmbiguousResolution("Empty DRI task pool after filtering", exact)
-    return pool_sorted[-1]
-
-
-def _today_weekday_keyword(fallback: str | None) -> str:
-    """Compute today's `<Weekday> status` keyword (e.g. 'Thursday status').
-
-    If a value was already supplied in the input JSON, prefer that one — the
-    skill's `analyze` mode used the system clock at run time, which is the
-    authoritative source. Otherwise compute it ourselves.
-    """
-    if fallback:
-        return fallback
-    weekday = datetime.now().strftime("%A")
-    return f"{weekday} status"
-
-
-def _pick_status_subtask(
-    dri_task: dict[str, Any],
-    weekday_keyword: str,
-) -> dict[str, Any]:
-    """Return the subtask whose name contains `weekday_keyword` (case-insensitive).
-
-    Preference: incomplete over complete; ties broken by most-recent `created_at`.
-    """
-    subtasks = dri_task.get("subtasks", []) or []
-    keyword_lc = weekday_keyword.lower()
-    matches = [
-        st
-        for st in subtasks
-        if keyword_lc in (st.get("name") or "").lower()
-    ]
-    if not matches:
-        raise AmbiguousResolution(
-            f"No subtask containing {weekday_keyword!r} (case-insensitive) "
-            f"under DRI task {dri_task.get('gid')}",
-            subtasks,
-        )
-
-    incomplete = [st for st in matches if not st.get("completed")]
-    pool = incomplete or matches
-    pool_sorted = sorted(pool, key=lambda st: st.get("created_at") or "")
-    return pool_sorted[-1]
 
 
 def _read_inputs(data: dict[str, Any]) -> dict[str, Any]:
@@ -187,7 +107,7 @@ def run(input_path: str, *, dry_run: bool = False) -> str | None:
 
     client = AsanaClient()
 
-    dri_task = _resolve_dri_task(
+    dri_task = resolve_dri_task(
         client,
         platform_project_gid=lookup["platform_project_gid"],
         dri_task_name=lookup["dri_task_name"],
@@ -207,8 +127,8 @@ def run(input_path: str, *, dry_run: bool = False) -> str | None:
             "subtasks.permalink_url,tags,tags.name"
         ),
     )
-    weekday_keyword = _today_weekday_keyword(lookup.get("weekday_status_keyword"))
-    status_subtask = _pick_status_subtask(dri_with_subtasks, weekday_keyword)
+    weekday_keyword = today_weekday_keyword(lookup.get("weekday_status_keyword"))
+    status_subtask = pick_status_subtask(dri_with_subtasks, weekday_keyword)
     logger.info(
         "Status subtask gid=%s name=%r (completed=%s)",
         status_subtask.get("gid"),

@@ -83,11 +83,11 @@ Pass values **unquoted**. `app_version:"1.186.*"` and `lastSeen:"-24h"` both bre
 
 ### a.4 Classify severity
 
-Use both user count and new-vs-pre-existing:
+Use both user count and new-vs-pre-existing. **First-party-frame count is authoritative** — count the DuckDuckGo / first-party frames in the stacktrace *before* applying any culprit-based rule. A cluster with ≥3 first-party frames is HIGH/MEDIUM regardless of where the leaf is (libobjc, UIKit, Swift runtime, SQLCipher, JavaScriptCore, etc). The LOW criteria below all carry an implicit "**with no first-party frames**" qualifier.
 
 - 🔴 **HIGH:** new-in-version AND a visible cluster (≥3 issues in same subsystem) OR new-in-version with ≥10 users
 - 🟡 **MEDIUM:** new-in-version, single Sentry issue (not a multi-issue cluster), <10 users, app-code culprit (regardless of event count — but see 1-event carve-out below)
-- 🟢 **LOW:** new-in-version but OS-level, Swift-runtime internals, Jetsam OOM on `main`, or symbol-less
+- 🟢 **LOW:** new-in-version, **stacktrace has zero first-party frames**, AND the trace is OS-level / Swift-runtime internals / Jetsam OOM on `main` / symbol-less. A Jetsam-OOM SIGKILL with a deep first-party launch path (e.g. `Launching.makeStorageHandler → DataStore.openDatabase → GRDB → SQLite`) is HIGH or MEDIUM by cluster size, NOT LOW.
 - ⚠️ **Pre-existing:** still firing but not new — record by user count, do not attribute blame
 
 **1-event carve-out for MEDIUM.** When a new-in-version cluster has exactly 1 event **total** (sum of Sentry's `count` across every short-ID in the cluster, all-time — NOT just within `<TIME_RANGE>`), set `is_one_event_carve_out: true` on that cluster. Mode `rca` reads this flag and omits the cluster from `rca.json.tasks`; mode `summary` renders the cluster as a terse main-report line (Sentry short-ID + link + minimal stats + culprit — no `Tracking` link, no PR attribution, no description). A cluster with 1 event in `<TIME_RANGE>` but multiple historical events is a recurring crash and does NOT qualify.
@@ -103,7 +103,11 @@ Group new issues by culprit symbol. Multiple short-IDs with the same culprit (e.
 Per cluster:
 
 - **`cluster_id`:** deterministic — `<severity>-<sha1(culprit + sorted_short_ids)[:8]>`. Lets the user re-run any mode without breaking references in already-emitted files.
-- **`rca_eligible`:** `true` iff the stacktrace contains ≥3 first-party (DuckDuckGo) frames AND severity is HIGH or MEDIUM (regardless of where the leaf is). Set `false` for LOW / Pre-existing / generic-culprit / no-first-party-frames / Jetsam OOM clusters; set `rca_skip_reason` accordingly (`"generic_culprit"` | `"no_first_party_frames"` | `"jetsam_oom"` | `"severity_below_medium"`).
+- **`rca_eligible`:** `true` iff the stacktrace contains ≥3 first-party (DuckDuckGo) frames AND severity is HIGH or MEDIUM. The first-party-frame count is the only structural gate — do not short-circuit it with culprit-type heuristics. Set `false` only when:
+  - `severity_below_medium`: severity is LOW or Pre-existing.
+  - `no_first_party_frames`: stacktrace has zero first-party frames (literally zero — not "leaf is in OS code"). When this fires, `severity` is also LOW per a.4.
+  - `generic_culprit`: culprit symbol is `value`, `NSBundle.module`, `__pthread_kill`, `objc_release`, `main` (when the rest of the trace is also OS-only), or similar uninformative symbols.
+  - `jetsam_oom`: culprit is `main` AND `first_party_frame_count == 0` (Jetsam kill before any app code ran). A Jetsam-OOM with first-party frames in the trace is NOT this case — it's HIGH/MEDIUM and runs RCA.
 - **`suspect.file` / `suspect.line` / `suspect.symbol`:** populated when culprit symbol is greppable to a single file/line. Used by `rca` mode's git blame. `null` for generic / OS-only culprits.
 - **`description_hint`:** one sentence for the main-report line in `summary` mode.
 
@@ -216,13 +220,25 @@ Use `templates/main-report.html` as the body shape. Sections:
 4. Legend (verbatim from template).
 5. 🔴 HIGH section.
 6. 🟡 MEDIUM section (main).
-7. 🟡 MEDIUM "Fix already shipped in vX.Y.Z" subsection — clusters with `existing_asana_task.fix_version_compare: "gt"`.
+7. 🟡 MEDIUM "Fix already shipped in vX.Y.Z" subsection — see promotion rule below.
 8. 🟢 LOW section.
 9. ⚠️ Pre-existing section.
 10. Recommended next step.
 11. Initials legend.
 
-**Lead with tracking.** Each HIGH/MEDIUM line leads with the tracking-task link from the permalink map, then Sentry short-ID(s), then stats (users + events), then `description_hint`. LOW, Pre-existing, and 1-event-carve-out MEDIUM entries lead with the Sentry short-ID (no tracking link). 1-event MEDIUM entries are intentionally terse — short-ID + link + minimal stats (`1 user, 1 event`) + `<code>culprit</code>`, no PR attribution and no description.
+**Fix-shipped bucket promotion.** A cluster is promoted into "🟡 MEDIUM — Fix already shipped in vX.Y.Z" when EITHER:
+- `existing_asana_task.fix_version_compare: "gt"` (custom-field match found a closed task with a future fix-version tag), OR
+- Any entry in `related_asana_tasks` has `status: "completed"` AND `fix_version_compare: "gt"` (culprit-name match found a closed task with a future fix-version tag).
+
+The promotion overrides the cluster's original severity, including LOW. The line in this bucket leads with a `✓` followed by a hyperlink to the closed task and the cluster's culprit (`✓ <a href="...">SIGKILL sqlcipher_cc_kdf</a>`), then the short-IDs, then stats, then the description. Wording: "Tracking task tagged `<platform>-app-release-<later-version>`; users on `<analysed-version>` will continue to see this until they update. No further action needed for this release."
+
+**Lead with tracking.** Each HIGH/MEDIUM line that is *not* in the Fix-shipped bucket leads with the tracking-task link from the permalink map (Asana task created or matched in this run), then Sentry short-ID(s), then stats (users + events), then `description_hint`. 1-event-carve-out MEDIUM entries lead with the Sentry short-ID (no tracking link); they're intentionally terse — short-ID + link + minimal stats (`1 user, 1 event`) + `<code>culprit</code>`, no PR attribution and no description.
+
+**LOW / Pre-existing tracking links.** Even outside the Fix-shipped bucket, render an inline tracking link whenever `existing_asana_task` is non-null. A LOW cluster with an open existing Asana task leads with that task's link (parenthetical, after the Sentry short-ID), so the reader can jump to the existing triage doc rather than re-investigate. A LOW cluster with no existing task leads with the Sentry short-ID alone, as before.
+
+**Cross-references from `related_asana_tasks`.** When a cluster has any `related_asana_tasks` entries that are NOT already surfaced by the Fix-shipped promotion (open tasks, or closed-without-future-fix-version), append them as `(related: <a href="...">task name</a>, <a href="...">task name</a>)` after the description.
+
+**Cross-references from `recent_dri_status_notes`.** When the agent recognises an earlier note in `recent_dri_status_notes` that mentions the same culprit symbol (case-insensitive match in `text_excerpt`), append `Likely related to <a href="<permalink>">{Weekday} status</a> note about <culprit>` to the cluster's description.
 
 The "Recommended next step" block is governed by the **Reporting tone** section above — anchor every claim to `<TIME_RANGE>`; no release-readiness verdicts. Link each action item to its tracking-task permalink. If `rca.created.json` reports any per-cluster `error`, surface them inline ("Tracking-task create failed for `<short_id>` — investigate the script #2 error before re-running.").
 

@@ -73,57 +73,9 @@ class ReadInputsTests(unittest.TestCase):
             asana_file_summary._read_inputs(data)
 
 
-class PickStatusSubtaskTests(unittest.TestCase):
-    def _dri_task(self, subtasks: list[dict]) -> dict:
-        return {"gid": "dri-1", "subtasks": subtasks}
-
-    def test_picks_exact_keyword_match(self) -> None:
-        dri = self._dri_task(
-            [
-                {"gid": "1", "name": "Monday status", "completed": False, "created_at": "2026-05-12T00:00:00Z"},
-                {"gid": "2", "name": "Thursday status (May 14)", "completed": False, "created_at": "2026-05-14T00:00:00Z"},
-            ]
-        )
-        result = asana_file_summary._pick_status_subtask(dri, "Thursday status")
-        self.assertEqual(result["gid"], "2")
-
-    def test_prefers_incomplete(self) -> None:
-        dri = self._dri_task(
-            [
-                {"gid": "1", "name": "Thursday status (May 7)", "completed": True, "created_at": "2026-05-07T00:00:00Z"},
-                {"gid": "2", "name": "Thursday status (May 14)", "completed": False, "created_at": "2026-05-14T00:00:00Z"},
-            ]
-        )
-        result = asana_file_summary._pick_status_subtask(dri, "Thursday status")
-        self.assertEqual(result["gid"], "2")
-
-    def test_falls_back_to_completed_when_no_incomplete(self) -> None:
-        dri = self._dri_task(
-            [
-                {"gid": "1", "name": "Thursday status (May 7)", "completed": True, "created_at": "2026-05-07T00:00:00Z"},
-                {"gid": "2", "name": "Thursday status (May 14)", "completed": True, "created_at": "2026-05-14T00:00:00Z"},
-            ]
-        )
-        result = asana_file_summary._pick_status_subtask(dri, "Thursday status")
-        self.assertEqual(result["gid"], "2")
-
-    def test_case_insensitive(self) -> None:
-        dri = self._dri_task(
-            [
-                {"gid": "1", "name": "THURSDAY STATUS", "completed": False, "created_at": "2026-05-14T00:00:00Z"},
-            ]
-        )
-        result = asana_file_summary._pick_status_subtask(dri, "Thursday status")
-        self.assertEqual(result["gid"], "1")
-
-    def test_no_match_raises(self) -> None:
-        dri = self._dri_task(
-            [
-                {"gid": "1", "name": "Monday status", "completed": False, "created_at": "2026-05-12T00:00:00Z"},
-            ]
-        )
-        with self.assertRaises(asana_file_summary.AmbiguousResolution):
-            asana_file_summary._pick_status_subtask(dri, "Thursday status")
+# Status-subtask picker coverage lives in test_dri.PickStatusSubtaskTests
+# (the function moved to _dri after refactoring). Keep this file focused on
+# the _read_inputs normalisation logic that is unique to asana_file_summary.
 
 
 if __name__ == "__main__":

@@ -118,7 +118,7 @@ All five files carry `schema_version: 1` at the top level. Scripts must reject u
 
 ## `analyze.augmented.json` — script #1 writes back
 
-Same shape as `analyze.json`. For each cluster, `existing_asana_task` is filled (or stays `null`):
+Same shape as `analyze.json`. For each cluster, `existing_asana_task` is filled (or stays `null`). Script #1 also adds two **optional** cross-reference fields per run so the agent in `summary` mode can render semantic links (closed-but-related tasks, recent DRI notes) without needing live Asana access — these fields are absent in older `analyze.augmented.json` files; consumers must treat missing as empty.
 
 ```jsonc
 "existing_asana_task": {
@@ -133,6 +133,44 @@ Same shape as `analyze.json`. For each cluster, `existing_asana_task` is filled 
 }
 ```
 
+### Per-cluster: `related_asana_tasks` (optional, may be omitted on older files)
+
+Script #1 also searches `Sentry Crash Reports` by the cluster's culprit *symbol* (separate from the short-ID custom-field match) and surfaces tasks whose name contains the culprit. The set excludes the task already returned in `existing_asana_task` (no duplicates). Empty array when no name-match is found.
+
+```jsonc
+"related_asana_tasks": [
+  {
+    "gid": "1207009998887776",
+    "url": "https://app.asana.com/0/1214294661819890/1207009998887776",
+    "name": "SIGKILL sqlcipher_cc_kdf",
+    "status": "completed",                         // "open" | "completed"
+    "fix_version_tag": "ios-app-release-7.218.0",  // highest matching <platform>-app-release-X.Y.Z tag; null when none
+    "fix_version_compare": "gt"                    // "gt" | "lte" | "none"  — vs analysed version
+  }
+]
+```
+
+Mode `summary` uses these to render cross-references: a closed task whose `fix_version_compare: "gt"` is surfaced with a `✓` prefix and a link, even when it isn't in the cluster's custom field. Promotes the cluster's render into the "🟡 Fix already shipped in vX.Y.Z" bucket.
+
+### Top-level: `recent_dri_status_notes` (optional, may be omitted on older files)
+
+Script #1 fetches the platform's Weekly Release DRI task once per run and pulls the most recent **completed and incomplete** `<Weekday> status` subtasks (up to 4: today + 3 prior). Each entry includes the subtask's name + permalink + a short text excerpt of any `Sentry summary` mentions. Mode `summary` reads these to cross-reference earlier-in-the-week observations the DRI already filed.
+
+```jsonc
+"recent_dri_status_notes": [
+  {
+    "gid": "1208001112223334",
+    "name": "Thursday status (May 14)",
+    "permalink_url": "https://app.asana.com/0/0/1208001112223334",
+    "completed": false,
+    "created_at": "2026-05-14T00:00:00Z",
+    "text_excerpt": "Sentry summary filed; SIGKILL DuckAiNativeDataStore.runMigrations is the dominant theme..."
+  }
+]
+```
+
+Empty when the DRI task or its subtasks cannot be resolved (script #1 logs a warning and continues). The cross-reference is best-effort — `summary` mode does not require these to be present.
+
 **Decision matrix used by Mode `rca`** (mirrors the parent skill's step-5 gate):
 
 | `existing_asana_task` | `status` | `fix_version_compare` | `needs_short_id_extension` | `rca.json` mode |
@@ -143,6 +181,8 @@ Same shape as `analyze.json`. For each cluster, `existing_asana_task` is filled 
 | present | `completed` | `gt` | — | (cluster omitted; "Fix already shipped" bucket in main report) |
 | present | `completed` | `lte` or `none` | — | `reopen_append` |
 | present (parent of `[Duplicate]`) | — | — | — | apply same matrix to the parent task |
+
+`related_asana_tasks` does NOT participate in this matrix — those are cross-reference hints for `summary` rendering only. `rca.json.mode` is governed entirely by `existing_asana_task` (the custom-field match). A new short-ID cluster that happens to share a culprit with a closed task still gets a fresh tracking task (`mode: create`); the closed task simply also appears as a reference link in the main report.
 
 ## `rca.json` — emitted by Mode `rca`
 

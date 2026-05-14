@@ -18,12 +18,18 @@ Or programmatically:
 from __future__ import annotations
 
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 from . import _common
 from ._asana import AsanaClient, AsanaError
+from ._dri import (
+    AmbiguousResolution,
+    pick_recent_status_subtasks,
+    resolve_dri_task,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +43,14 @@ _TASK_OPT_FIELDS = (
     "tags,tags.name,completed"
 )
 _GET_OPT_FIELDS = "tags,tags.name,completed,permalink_url,custom_fields,name"
+
+# How many of the most recent <Weekday> status subtasks to pull (today + 3 prior).
+_DRI_STATUS_LIMIT = 4
+
+# Strip HTML tags for plaintext excerpts of DRI notes.
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_WHITESPACE_RE = re.compile(r"\s+")
+_TEXT_EXCERPT_LEN = 240
 
 
 def _lookup_one_short_id(
@@ -214,6 +228,155 @@ def _augment_cluster(
     )
 
 
+def _html_to_excerpt(html: str | None) -> str:
+    """Strip HTML tags and collapse whitespace; truncate to _TEXT_EXCERPT_LEN chars."""
+    if not html:
+        return ""
+    text = _HTML_TAG_RE.sub(" ", html)
+    text = _WHITESPACE_RE.sub(" ", text).strip()
+    if len(text) > _TEXT_EXCERPT_LEN:
+        text = text[: _TEXT_EXCERPT_LEN - 1] + "…"
+    return text
+
+
+def _existing_task_gid(cluster: dict[str, Any]) -> str | None:
+    et = cluster.get("existing_asana_task")
+    if isinstance(et, dict):
+        return et.get("gid")
+    return None
+
+
+def _build_related_asana_tasks(
+    client: AsanaClient,
+    *,
+    culprit: str,
+    platform: str,
+    version_display: str,
+    sentry_crash_reports_project_gid: str,
+    platform_section_gid: str,
+    exclude_gids: set[str],
+) -> list[dict[str, Any]]:
+    """Search Sentry Crash Reports for tasks whose name contains `culprit`.
+
+    Returns up to 5 entries with `gid`, `url`, `name`, `status`,
+    `fix_version_tag`, `fix_version_compare`. Excludes any GID in
+    `exclude_gids` (typically the cluster's existing_asana_task).
+    Empty list when culprit is too generic to be useful (single-token symbols
+    like `main`, `value`, `NSBundle.module`) — we skip the search in those
+    cases to avoid false positives.
+    """
+    if not culprit or culprit in {"main", "value", "NSBundle.module"}:
+        return []
+    # Skip very short culprits — likely to over-match.
+    if len(culprit) < 6:
+        return []
+
+    related: list[dict[str, Any]] = []
+    seen: set[str] = set(exclude_gids)
+    for sections_gid in (platform_section_gid, FALLBACK_SECTION_GID):
+        results = client.search_tasks(
+            projects_any=sentry_crash_reports_project_gid,
+            sections_any=sections_gid,
+            text=culprit,
+            opt_fields="name,permalink_url,tags,tags.name,completed",
+            limit=20,
+        )
+        for task in results:
+            gid = task.get("gid")
+            if not gid or gid in seen:
+                continue
+            name = task.get("name", "")
+            # The search is fuzzy — keep only tasks whose name actually
+            # contains the culprit (case-sensitive substring).
+            if culprit not in name:
+                continue
+            seen.add(gid)
+            highest = _common.highest_fix_version(task.get("tags", []) or [], platform)
+            fix_version_tag = highest[0] if highest else None
+            fix_version_tuple = highest[1] if highest else None
+            related.append(
+                {
+                    "gid": gid,
+                    "url": task.get("permalink_url") or f"https://app.asana.com/0/0/{gid}",
+                    "name": name,
+                    "status": "completed" if task.get("completed") else "open",
+                    "fix_version_tag": fix_version_tag,
+                    "fix_version_compare": _common.compare_fix_version(
+                        fix_version_tuple, version_display
+                    ),
+                }
+            )
+    # Cap to 5; prioritise closed-with-future-fix-version first, then open, then others.
+    def sort_key(t: dict[str, Any]) -> tuple[int, str]:
+        if t["status"] == "completed" and t["fix_version_compare"] == "gt":
+            rank = 0
+        elif t["status"] == "open":
+            rank = 1
+        else:
+            rank = 2
+        return (rank, t.get("name", ""))
+    related.sort(key=sort_key)
+    return related[:5]
+
+
+def _fetch_recent_dri_status_notes(
+    client: AsanaClient,
+    *,
+    platform_project_gid: str,
+    dri_task_name: str,
+) -> list[dict[str, Any]]:
+    """Fetch the platform's DRI task and its recent weekday status subtasks.
+
+    Returns up to _DRI_STATUS_LIMIT entries with `gid`, `name`,
+    `permalink_url`, `completed`, `created_at`, `text_excerpt`. Returns []
+    when the DRI cannot be resolved (logged as warning; cross-references are
+    best-effort).
+    """
+    try:
+        dri_task = resolve_dri_task(
+            client,
+            platform_project_gid=platform_project_gid,
+            dri_task_name=dri_task_name,
+        )
+    except AmbiguousResolution as e:
+        logger.warning("DRI resolution skipped: %s", e)
+        return []
+
+    dri_with_subtasks = client.get_task(
+        dri_task["gid"],
+        opt_fields=(
+            "subtasks,subtasks.name,subtasks.completed,subtasks.created_at,"
+            "subtasks.permalink_url,tags,tags.name"
+        ),
+    )
+    recent = pick_recent_status_subtasks(dri_with_subtasks, limit=_DRI_STATUS_LIMIT)
+    if not recent:
+        logger.info("DRI task has no recent <Weekday> status subtasks")
+        return []
+
+    notes: list[dict[str, Any]] = []
+    for st in recent:
+        gid = st.get("gid")
+        if not gid:
+            continue
+        try:
+            detail = client.get_task(gid, opt_fields="html_notes,tags,tags.name")
+        except AsanaError as e:
+            logger.warning("Skipping status subtask %s: %s", gid, e)
+            continue
+        notes.append(
+            {
+                "gid": gid,
+                "name": st.get("name"),
+                "permalink_url": st.get("permalink_url") or f"https://app.asana.com/0/0/{gid}",
+                "completed": bool(st.get("completed")),
+                "created_at": st.get("created_at"),
+                "text_excerpt": _html_to_excerpt(detail.get("html_notes")),
+            }
+        )
+    return notes
+
+
 def run(input_path: str, output_path: str | None = None, *, dry_run: bool = False) -> str:
     """Read analyze.json from `input_path`, write augmented JSON to `output_path`.
 
@@ -258,6 +421,43 @@ def run(input_path: str, output_path: str | None = None, *, dry_run: bool = Fals
             platform_section_gid=section_gid,
             custom_field_gid=custom_field_gid,
             dry_run=dry_run,
+        )
+        # related_asana_tasks: culprit-name search; runs in addition to custom-field lookup.
+        if dry_run:
+            cluster["related_asana_tasks"] = []
+        else:
+            cluster["related_asana_tasks"] = _build_related_asana_tasks(
+                client,  # type: ignore[arg-type]
+                culprit=cluster.get("culprit", "") or "",
+                platform=platform,
+                version_display=version_display,
+                sentry_crash_reports_project_gid=project_gid,
+                platform_section_gid=section_gid,
+                exclude_gids={
+                    gid for gid in (_existing_task_gid(cluster),) if gid is not None
+                },
+            )
+            if cluster["related_asana_tasks"]:
+                logger.info(
+                    "cluster=%s: %d related tasks (culprit=%s)",
+                    cluster.get("cluster_id"),
+                    len(cluster["related_asana_tasks"]),
+                    cluster.get("culprit"),
+                )
+
+    # recent_dri_status_notes: once per run.
+    lookup = data.get("weekly_release_dri_lookup") or {}
+    if dry_run or not lookup.get("platform_project_gid") or not lookup.get("dri_task_name"):
+        data["recent_dri_status_notes"] = []
+    else:
+        data["recent_dri_status_notes"] = _fetch_recent_dri_status_notes(
+            client,  # type: ignore[arg-type]
+            platform_project_gid=lookup["platform_project_gid"],
+            dri_task_name=lookup["dri_task_name"],
+        )
+        logger.info(
+            "recent_dri_status_notes: %d entries",
+            len(data["recent_dri_status_notes"]),
         )
 
     data["generated_at"] = _common.now_iso_utc()
