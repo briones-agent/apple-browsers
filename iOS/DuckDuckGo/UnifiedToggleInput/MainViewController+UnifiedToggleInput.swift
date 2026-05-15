@@ -74,10 +74,9 @@ extension MainViewController {
         coordinator.updateVoiceSearchAvailability(voiceSearchHelper.isVoiceSearchEnabled)
         coordinator.updateAIVoiceChatAvailability(voiceShortcutFeature.isAvailable)
         coordinator.updateAIChatShortcutAvailability(aiChatAddressBarExperience.shouldShowDuckAIAddressBarButton)
-
-        coordinator.onAnimatedDismissToOmnibar = { [weak self] in
+        coordinator.onAnimatedDismissToOmnibar = { [weak self] completion in
             guard let self, let coordinator = self.unifiedToggleInputCoordinator else { return }
-            self.dismissUnifiedToggleInputToOmnibar(coordinator: coordinator)
+            self.dismissUnifiedToggleInputToOmnibar(coordinator: coordinator, completion: completion)
         }
         self.unifiedToggleInputCoordinator = coordinator
 
@@ -199,6 +198,7 @@ extension MainViewController {
         let rootBackgroundColor: UIColor
         let navigationBarContainerColor: UIColor?
         let inputContentContainerColor: UIColor
+        let unifiedToggleInputContainerColor: UIColor
         let webViewBackgroundColor: UIColor?
 
         switch state {
@@ -207,6 +207,7 @@ extension MainViewController {
             rootBackgroundColor = ThemeManager.shared.currentTheme.mainViewBackgroundColor
             navigationBarContainerColor = nil
             inputContentContainerColor = .clear
+            unifiedToggleInputContainerColor = .clear
             webViewBackgroundColor = nil
         case .aiTabSearchChromeHidden:
             // Match the top status background so the area around the input card — and the area
@@ -218,6 +219,7 @@ extension MainViewController {
             rootBackgroundColor = UIColor(designSystemColor: .panel)
             navigationBarContainerColor = rootBackgroundColor
             inputContentContainerColor = .clear
+            unifiedToggleInputContainerColor = .clear
             webViewBackgroundColor = rootBackgroundColor
         case .aiTabChatChromeHidden:
             statusBackgroundPresentation = .aiTabChatChromeHidden
@@ -228,10 +230,14 @@ extension MainViewController {
             if unifiedToggleInputCoordinator?.isInputEditing == true {
                 rootBackgroundColor = UIColor(singleUseColor: .duckAIContextualSheetBackground)
                 navigationBarContainerColor = rootBackgroundColor
+                unifiedToggleInputContainerColor = .clear
                 webViewBackgroundColor = rootBackgroundColor
             } else {
-                rootBackgroundColor = ThemeManager.shared.currentTheme.mainViewBackgroundColor
+                // Match Figma's `--ds-surface-tertiary` (#3D3D3D dark / white light) so the chrome
+                // is the same tone as the card. The card defines itself via its halo rim shadow.
+                rootBackgroundColor = UIColor(designSystemColor: .backgroundTertiary)
                 navigationBarContainerColor = .clear
+                unifiedToggleInputContainerColor = .clear
                 webViewBackgroundColor = .clear
             }
         }
@@ -244,7 +250,7 @@ extension MainViewController {
         view.backgroundColor = rootBackgroundColor
         viewCoordinator.navigationBarContainer.backgroundColor = navigationBarContainerColor
         viewCoordinator.unifiedInputContentContainer?.backgroundColor = inputContentContainerColor
-        viewCoordinator.unifiedToggleInputContainer.backgroundColor = .clear
+        viewCoordinator.unifiedToggleInputContainer.backgroundColor = unifiedToggleInputContainerColor
         unifiedToggleInputCoordinator?.viewController.view.backgroundColor = .clear
 
         guard updateWebView else { return }
@@ -784,7 +790,8 @@ extension MainViewController {
 
 private extension MainViewController {
 
-    func dismissUnifiedToggleInputToOmnibar(coordinator: UnifiedToggleInputCoordinator) {
+    func dismissUnifiedToggleInputToOmnibar(coordinator: UnifiedToggleInputCoordinator,
+                                            completion: (() -> Void)? = nil) {
         applyUnifiedInputChromeBackground(.standardChrome)
         // Resign up-front so the keyboard descent runs concurrent with the bar collapse.
         coordinator.viewController.deactivateInput()
@@ -792,6 +799,7 @@ private extension MainViewController {
         let omnibarPlaceholderColor = currentOmnibarPlaceholderColor()
         let utiPlaceholderColor = coordinator.viewController.defaultPlaceholderColor
         let duration = Constants.omnibarTransitionDuration(isBottom: coordinator.cardPosition.isBottom)
+        let shouldCrossfadeOmnibar = !viewCoordinator.isNavigationChromeHidden
         UIView.animate(
             withDuration: duration,
             delay: 0,
@@ -801,6 +809,10 @@ private extension MainViewController {
                 coordinator.viewController.applyOmnibarEditingDismissPose()
                 self.viewCoordinator.animateUnifiedToggleInputOmnibarDismissLayout()
                 self.viewCoordinator.unifiedInputContentContainer.alpha = 0
+                if shouldCrossfadeOmnibar {
+                    self.viewCoordinator.navigationBarCollectionView.alpha = 1
+                    self.viewCoordinator.unifiedToggleInputContainer.alpha = 0
+                }
                 if let omnibarPlaceholderWindowX {
                     coordinator.viewController.alignPlaceholderHorizontally(toWindowX: omnibarPlaceholderWindowX)
                 }
@@ -817,6 +829,7 @@ private extension MainViewController {
                 // Reconcile against the *current* tab — idempotent and AI-tab paths re-hide
                 // the toolbar on their own.
                 self.reconcileToolbarVisibilityForCurrentTab()
+                completion?()
             }
         )
 
@@ -905,6 +918,17 @@ extension MainViewController: UnifiedToggleInputDelegate {
 
     func unifiedToggleInputDidRequestDuckAIVoiceMode() {
         onDuckAIVoiceModeRequested()
+    }
+
+    func unifiedToggleInputDismissSnapshot() -> UTIDismissSnapshot {
+        let preferredMode = preferredTextEntryModeForCurrentTab() ?? .search
+        let tab = tabManager.currentTabsModel.currentTab
+        // AI tab reuses the same textView for the flanked input — text here bleeds past the
+        // collapse. AI-mode tabs likewise show a placeholder rather than the URL.
+        let isAIDestination = tab?.isAITab == true || preferredMode == .aiChat
+        let placeholderMode: TextEntryMode = isAIDestination ? .aiChat : preferredMode
+        let text = isAIDestination ? "" : AddressDisplayHelper.plainDisplayString(for: tab?.link?.url)
+        return UTIDismissSnapshot(text: text, placeholderMode: placeholderMode)
     }
 }
 
