@@ -20,6 +20,8 @@
 import Foundation
 import Combine
 
+#if DEBUG
+
 extension EscapeHatchActions {
 
     static var preview: EscapeHatchActions {
@@ -46,3 +48,5 @@ extension EscapeHatchTabsSource where Self == StaticEscapeHatchTabsSource {
         return StaticEscapeHatchTabsSource(tabs: tabs + [targetTab])
     }
 }
+
+#endif
