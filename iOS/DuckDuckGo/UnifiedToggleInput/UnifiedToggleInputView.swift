@@ -969,11 +969,7 @@ final class UnifiedToggleInputView: UIView {
         attachmentsStripHeightConstraint.constant = showStrip ? UnifiedToggleInputAttachmentsStripView.Constants.stripHeight : 0
         attachmentsStrip.alpha = showStrip ? 1 : 0
     }
-
-}
-
-private extension UnifiedToggleInputView {
-
+    
     private func updateSubmitButtonAvailability() {
         let isAIChatMode = handler.currentToggleState == .aiChat
         let hasText = !handler.currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -991,7 +987,6 @@ private extension UnifiedToggleInputView {
     private func submitCurrentInput() {
         delegate?.unifiedToggleInputViewDidRequestSubmitCurrentInput(self)
     }
-
 }
 
 // MARK: - Inline Dismiss
