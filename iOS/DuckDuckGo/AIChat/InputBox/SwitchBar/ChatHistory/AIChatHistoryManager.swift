@@ -129,8 +129,8 @@ final class AIChatHistoryManager {
         }
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
-        historyViewController?.setEscapeHatch(model, actions: actions)
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
+        historyViewController?.setEscapeHatch(model)
     }
 
     func setAdditionalTopInset(_ inset: CGFloat) {

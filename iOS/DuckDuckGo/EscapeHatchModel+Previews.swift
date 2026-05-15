@@ -22,13 +22,6 @@ import Combine
 
 #if DEBUG
 
-extension EscapeHatchActions {
-
-    static var preview: EscapeHatchActions {
-        EscapeHatchActions(isActionsEnabled: true, onCardTap: { }, onTabSwitcherTap: { }, onCloseTab: { }, onBurnTab: { })
-    }
-}
-
 struct StaticEscapeHatchTabsSource: EscapeHatchTabsSource {
     let tabs: [Tab]
 

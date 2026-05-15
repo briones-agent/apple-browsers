@@ -67,7 +67,7 @@ final class DuckAISuggestionsViewControllerTests: XCTestCase {
         let table = try tableView(in: vc)
         XCTAssertNil(table.tableHeaderView)
 
-        vc.setEscapeHatch(.testFixture, actions: .preview)
+        vc.setEscapeHatch(.testFixture)
 
         XCTAssertNotNil(table.tableHeaderView)
         XCTAssertGreaterThan(table.tableHeaderView?.bounds.height ?? 0, 0)
@@ -91,7 +91,7 @@ final class DuckAISuggestionsViewControllerTests: XCTestCase {
         vc.view.layoutIfNeeded()
 
         let table = try tableView(in: vc)
-        vc.setEscapeHatch(.testFixture, actions: .preview)
+        vc.setEscapeHatch(.testFixture)
         vc.view.layoutIfNeeded()
 
         let header = try XCTUnwrap(table.tableHeaderView)
@@ -109,10 +109,10 @@ final class DuckAISuggestionsViewControllerTests: XCTestCase {
 
     func test_setEscapeHatch_withNil_removesTableHeaderView() throws {
         let vc = makeViewController()
-        vc.setEscapeHatch(.testFixture, actions: .preview)
+        vc.setEscapeHatch(.testFixture)
         XCTAssertNotNil(try tableView(in: vc).tableHeaderView)
 
-        vc.setEscapeHatch(nil, actions: nil)
+        vc.setEscapeHatch(nil)
 
         XCTAssertNil(try tableView(in: vc).tableHeaderView)
         XCTAssertTrue(vc.children.isEmpty, "hatch hosting controller should be removed from children")
@@ -121,10 +121,10 @@ final class DuckAISuggestionsViewControllerTests: XCTestCase {
     func test_setEscapeHatch_calledTwiceWithDifferentModels_replacesExistingHostingController() {
         // `EscapeHatchModel` is a reference type — each `.testFixture` is a distinct instance.
         let vc = makeViewController()
-        vc.setEscapeHatch(.testFixture, actions: .preview)
+        vc.setEscapeHatch(.testFixture)
         let firstChild = vc.children.first
 
-        vc.setEscapeHatch(.testFixture, actions: .preview)
+        vc.setEscapeHatch(.testFixture)
 
         XCTAssertEqual(vc.children.count, 1)
         XCTAssertFalse(vc.children.first === firstChild, "different model → hosting controller is replaced")
@@ -133,10 +133,10 @@ final class DuckAISuggestionsViewControllerTests: XCTestCase {
     func test_setEscapeHatch_calledTwiceWithIdenticalModel_isNoOp() {
         let vc = makeViewController()
         let model: EscapeHatchModel = .testFixture
-        vc.setEscapeHatch(model, actions: .preview)
+        vc.setEscapeHatch(model)
         let firstChild = vc.children.first
 
-        vc.setEscapeHatch(model, actions: .preview)
+        vc.setEscapeHatch(model)
 
         XCTAssertEqual(vc.children.count, 1)
         XCTAssertTrue(vc.children.first === firstChild, "identical model → short-circuit; existing hosting controller is preserved")

@@ -76,7 +76,6 @@ class SuggestionTrayViewController: UIViewController {
     private var newTabPage: NewTabPageViewController?
     private var willRemoveAutocomplete = false
     private var pendingEscapeHatchModel: EscapeHatchModel?
-    private var pendingEscapeHatchActions: EscapeHatchActions?
     private var pendingSuggestionsSectionTitle: String?
     private var pendingFavoritesSectionTitle: String?
     private let bookmarksDatabase: CoreDataDatabase
@@ -341,10 +340,9 @@ class SuggestionTrayViewController: UIViewController {
         return !newTabPageDependencies.homePageMessagesConfiguration.homeMessages.isEmpty
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
         pendingEscapeHatchModel = model
-        pendingEscapeHatchActions = actions
-        newTabPage?.setEscapeHatch(model, actions: actions)
+        newTabPage?.setEscapeHatch(model)
     }
 
     func setSuggestionsSectionTitle(_ title: String?) {
@@ -392,7 +390,7 @@ class SuggestionTrayViewController: UIViewController {
         if hideBorder {
             controller.hideBorderView()
         }
-        controller.setEscapeHatch(pendingEscapeHatchModel, actions: pendingEscapeHatchActions)
+        controller.setEscapeHatch(pendingEscapeHatchModel)
         if let pendingFavoritesSectionTitle {
             controller.setSectionTitle(pendingFavoritesSectionTitle)
         }

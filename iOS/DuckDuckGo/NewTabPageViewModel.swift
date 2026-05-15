@@ -28,7 +28,6 @@ final class NewTabPageViewModel: ObservableObject {
     @Published private(set) var isOnboarding: Bool
     @Published var escapeHatch: EscapeHatchModel?
     @Published var sectionTitle: String?
-    var escapeHatchActions: EscapeHatchActions?
     private(set) var fireTab: Bool
 
     private(set) var isDragging: Bool = false

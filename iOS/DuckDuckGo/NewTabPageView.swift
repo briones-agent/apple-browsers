@@ -136,8 +136,7 @@ private extension NewTabPageView {
     private var emptyStateView: some View {
         if viewModel.fireTab {
             FireModeEmptyStateView(type: .tab,
-                                   escapeHatch: viewModel.escapeHatch,
-                                   actions: viewModel.escapeHatchActions)
+                                   escapeHatch: viewModel.escapeHatch)
         } else {
             logoEmptyView
         }
@@ -195,14 +194,11 @@ private extension NewTabPageView {
 
     @ViewBuilder
     private var escapeHatchSectionView: some View {
-        if let escapeHatch = viewModel.escapeHatch, let actions = viewModel.escapeHatchActions {
-            EscapeHatchView(
-                model: escapeHatch,
-                actions: actions
-            )
-            .frame(maxWidth: escapeHatchMaxWidth)
-            .padding(.top, Metrics.nonGridSectionTopPadding)
-            .padding(.horizontal, layoutConfiguration.escapeHatchHorizontalPadding)
+        if let escapeHatch = viewModel.escapeHatch {
+            EscapeHatchView(model: escapeHatch)
+                .frame(maxWidth: escapeHatchMaxWidth)
+                .padding(.top, Metrics.nonGridSectionTopPadding)
+                .padding(.horizontal, layoutConfiguration.escapeHatchHorizontalPadding)
         }
     }
 

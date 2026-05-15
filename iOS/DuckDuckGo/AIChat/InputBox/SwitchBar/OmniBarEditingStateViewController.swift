@@ -144,7 +144,6 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
 
     // MARK: - Escape Hatch
     private var escapeHatchModel: EscapeHatchModel?
-    private var escapeHatchActions: EscapeHatchActions?
 
     private weak var contentAnimator: UIViewPropertyAnimator?
 
@@ -158,8 +157,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
                   aiChatSettings: AIChatSettingsProvider = AIChatSettings(),
                   voiceShortcutFeature: DuckAIVoiceShortcutFeatureProviding = DuckAIVoiceShortcutFeature(),
                   duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil,
-                  escapeHatchModel: EscapeHatchModel? = nil,
-                  escapeHatchActions: EscapeHatchActions? = nil) {
+                  escapeHatchModel: EscapeHatchModel? = nil) {
         self.switchBarHandler = switchBarHandler
         self.switchBarSubmissionMetrics = switchBarSubmissionMetrics
         self.daxLogoManager = DaxLogoManager(isFireTab: switchBarHandler.isFireTab)
@@ -170,7 +168,6 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         self.voiceShortcutFeature = voiceShortcutFeature
         self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
         self.escapeHatchModel = escapeHatchModel
-        self.escapeHatchActions = escapeHatchActions
         self.isUsingTopBarPosition = appSettings.currentAddressBarPosition == .top || isLandscapeOrientation
         self.isAdjustedForTopBar = self.isUsingTopBarPosition
 
@@ -369,8 +366,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
         let manager = SuggestionTrayManager(switchBarHandler: switchBarHandler, dependencies: dependencies)
         manager.delegate = self
         let suggestionTrayEscapeHatch = switchBarHandler.isFireTab ? nil : escapeHatchModel
-        let suggestionTrayActions = switchBarHandler.isFireTab ? nil : escapeHatchActions
-        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatchModel: suggestionTrayEscapeHatch, escapeHatchActions: suggestionTrayActions)
+        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatchModel: suggestionTrayEscapeHatch)
         suggestionTrayManager = manager
     }
 
@@ -397,8 +393,8 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
             }
         aiChatHistoryManager = manager
 
-        if let escapeHatchModel, let escapeHatchActions {
-            manager.setEscapeHatch(escapeHatchModel, actions: escapeHatchActions)
+        if let escapeHatchModel {
+            manager.setEscapeHatch(escapeHatchModel)
         }
     }
     
@@ -431,8 +427,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
                                                    asSubviewOf: contentContainerView,
                                                    anchorView: switchBarVC.view,
                                                    isTopBarPosition: isUsingTopBarPosition,
-                                                   escapeHatch: escapeHatchModel,
-                                                   escapeHatchActions: escapeHatchActions)
+                                                   escapeHatch: escapeHatchModel)
         } else if let view = switchBarVC.segmentedPickerView {
             daxLogoManager.installInViewController(self,
                                                    asSubviewOf: contentContainerView,

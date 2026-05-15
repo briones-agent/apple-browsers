@@ -132,8 +132,8 @@ final class DuckAISuggestionsCoordinator {
         viewController = vc
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
-        viewController?.setEscapeHatch(model, actions: actions)
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
+        viewController?.setEscapeHatch(model)
     }
 
     func setAdditionalTopInset(_ inset: CGFloat) {

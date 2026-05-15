@@ -126,8 +126,8 @@ final class SuggestionTrayManager: NSObject {
         suggestionTrayViewController?.setFavoritesSectionTitle(title)
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
-        suggestionTrayViewController?.setEscapeHatch(model, actions: actions)
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
+        suggestionTrayViewController?.setEscapeHatch(model)
     }
 
     func setAdditionalTopInset(_ inset: CGFloat) {
@@ -135,7 +135,7 @@ final class SuggestionTrayManager: NSObject {
     }
 
     /// Installs the suggestion tray in the provided container view
-    func installInContainerView(_ containerView: UIView, parentViewController: UIViewController, escapeHatchModel: EscapeHatchModel? = nil, escapeHatchActions: EscapeHatchActions? = nil) {
+    func installInContainerView(_ containerView: UIView, parentViewController: UIViewController, escapeHatchModel: EscapeHatchModel? = nil) {
         guard suggestionTrayViewController == nil else { return }
         
 
@@ -177,7 +177,7 @@ final class SuggestionTrayManager: NSObject {
             self.delegate?.suggestionTrayManagerDidUpdateVisibility(self)
         }
         controller.didMove(toParent: parentViewController)
-        controller.setEscapeHatch(escapeHatchModel, actions: escapeHatchActions)
+        controller.setEscapeHatch(escapeHatchModel)
 
         showInitialSuggestions()
         containerView.layoutIfNeeded()

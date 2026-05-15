@@ -118,9 +118,8 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
         }
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, actions: EscapeHatchActions?) {
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
         newTabPageViewModel.escapeHatch = model
-        newTabPageViewModel.escapeHatchActions = (model != nil) ? actions : nil
         updateBorderView()
     }
 

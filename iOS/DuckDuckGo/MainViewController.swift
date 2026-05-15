@@ -1526,7 +1526,9 @@ class MainViewController: UIViewController {
                     tabType: .fire,
                     domain: nil,
                     targetTab: targetTab,
-                    tabsSource: tabManager
+                    tabsSource: tabManager,
+                    router: self,
+                    featureFlagger: featureFlagger
                 )
             }
             return nil
@@ -1538,7 +1540,9 @@ class MainViewController: UIViewController {
                 tabType: .aiChat,
                 domain: nil,
                 targetTab: targetTab,
-                tabsSource: tabManager
+                tabsSource: tabManager,
+                router: self,
+                featureFlagger: featureFlagger
             )
         }
         if let link = targetTab.link {
@@ -1549,7 +1553,9 @@ class MainViewController: UIViewController {
                 tabType: .regular,
                 domain: link.url.host,
                 targetTab: targetTab,
-                tabsSource: tabManager
+                tabsSource: tabManager,
+                router: self,
+                featureFlagger: featureFlagger
             )
         }
         return nil
@@ -1646,8 +1652,7 @@ class MainViewController: UIViewController {
 
         newTabPageViewController = controller
 
-        let hatchActions = hatch.map { EscapeHatchActions(router: self, targetTab: $0.targetTab, featureFlagger: featureFlagger) }
-        controller.setEscapeHatch(hatch, actions: hatchActions)
+        controller.setEscapeHatch(hatch)
         controller.setChromeLayoutContext(isBorderSuppressed: isInMinimalChromeLayout)
         currentNTPEscapeHatch = hatch
         
@@ -1689,8 +1694,7 @@ class MainViewController: UIViewController {
             clearEscapeHatch()
             return
         }
-        let actions = EscapeHatchActions(router: self, targetTab: hatch.targetTab, featureFlagger: featureFlagger)
-        unifiedToggleInputCoordinator?.setEscapeHatch(hatch, actions: actions)
+        unifiedToggleInputCoordinator?.setEscapeHatch(hatch)
     }
 
     private func fireNTPShownInstrumentation(openedAfterIdle: Bool) {
@@ -4380,17 +4384,17 @@ extension MainViewController: OmniBarDelegate {
         viewCoordinator.omniBar.beginEditing(animated: true, forTextEntryMode: .aiChat)
     }
 
-    func escapeHatchForEditingState() -> (model: EscapeHatchModel, actions: EscapeHatchActions)? {
+    func escapeHatchForEditingState() -> EscapeHatchModel? {
         guard idleReturnEligibilityManager.isEligibleForNTPAfterIdle(),
               tabManager.currentTabsModel.currentTab?.link == nil,
               let model = currentNTPEscapeHatch else {
             return nil
         }
-        return (model, EscapeHatchActions(router: self, targetTab: model.targetTab, featureFlagger: featureFlagger))
+        return model
     }
 
     private func clearEscapeHatch() {
-        newTabPageViewController?.setEscapeHatch(nil, actions: nil)
+        newTabPageViewController?.setEscapeHatch(nil)
         currentNTPEscapeHatch = nil
         unifiedToggleInputCoordinator?.clearEscapeHatch()
     }

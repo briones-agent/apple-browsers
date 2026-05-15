@@ -26,12 +26,11 @@ struct ReturnToTabCard: View {
     @Environment(\.layoutDirection) private var layoutDirection
 
     let model: EscapeHatchModel
-    let actions: EscapeHatchActions
 
     var body: some View {
         HStack(spacing: Metrics.innerSpacing) {
             mainView
-            if actions.isActionsEnabled {
+            if model.isActionsEnabled {
                 menuView
             }
         }
@@ -42,13 +41,13 @@ struct ReturnToTabCard: View {
             Capsule()
                 .fill(Color(designSystemColor: .controlsFillSecondary))
         )
-        .if(actions.isActionsEnabled) {
+        .if(model.isActionsEnabled) {
             $0.contextMenu { menuContentView }
         }
     }
 
     private var mainView: some View {
-        Button(action: actions.onCardTap) {
+        Button(action: model.onCardTap) {
             HStack(spacing: Metrics.innerSpacing) {
                 iconView
                 VStack(alignment: .leading, spacing: Metrics.titleToSubtitleSpacing) {
@@ -90,7 +89,7 @@ struct ReturnToTabCard: View {
     @ViewBuilder
     private var menuContentView: some View {
         Section(header: Text(model.subtitle)) {
-            Button(action: actions.onCardTap) {
+            Button(action: model.onCardTap) {
                 Label {
                     Text(UserText.escapeHatchMenuReturnToTab)
                 } icon: {
@@ -98,14 +97,14 @@ struct ReturnToTabCard: View {
                         .foregroundColor(Color(designSystemColor: .icons))
                 }
             }
-            Button(role: .destructive, action: actions.onCloseTab) {
+            Button(role: .destructive, action: model.onCloseTab) {
                 Label {
                     Text(UserText.escapeHatchMenuCloseTab)
                 } icon: {
                     Image(uiImage: DesignSystemImages.Glyphs.Size24.close)
                 }
             }
-            Button(role: .destructive, action: actions.onBurnTab) {
+            Button(role: .destructive, action: model.onBurnTab) {
                 Label {
                     Text(UserText.escapeHatchMenuBurnTab)
                 } icon: {
@@ -215,9 +214,9 @@ private enum Metrics {
             tabType: .regular,
             domain: "en.wikipedia.org",
             targetTab: target,
-            tabsSource: .staticTabsSource(count: 9, includes: target)
-        ),
-        actions: .preview
+            tabsSource: .staticTabsSource(count: 9, includes: target),
+            isActionsEnabled: true
+        )
     )
     .padding()
     .frame(width: 360)
@@ -232,9 +231,9 @@ private enum Metrics {
             tabType: .aiChat,
             domain: nil,
             targetTab: target,
-            tabsSource: .staticTabsSource(count: 9, includes: target)
-        ),
-        actions: .preview
+            tabsSource: .staticTabsSource(count: 9, includes: target),
+            isActionsEnabled: true
+        )
     )
     .padding()
     .frame(width: 360)
@@ -249,9 +248,9 @@ private enum Metrics {
             tabType: .fire,
             domain: nil,
             targetTab: target,
-            tabsSource: .staticTabsSource(count: 1, includes: target)
-        ),
-        actions: .preview
+            tabsSource: .staticTabsSource(count: 1, includes: target),
+            isActionsEnabled: true
+        )
     )
     .padding()
     .frame(width: 360)

@@ -22,16 +22,15 @@ import SwiftUI
 /// Bundles the "Return to tab" card and the tab switcher pill so callers render them as a single unit.
 struct EscapeHatchView: View {
     @ObservedObject var model: EscapeHatchModel
-    let actions: EscapeHatchActions
 
     var body: some View {
         HStack(spacing: model.isTargetTabPresent ? Metrics.spacing : 0) {
-            ReturnToTabCard(model: model, actions: actions)
+            ReturnToTabCard(model: model)
                 .frame(maxWidth: model.isTargetTabPresent ? .infinity : 0)
                 .opacity(model.isTargetTabPresent ? 1 : 0)
                 .clipped()
 
-            TabSwitcherPill(count: model.openTabCount, onTap: actions.onTabSwitcherTap)
+            TabSwitcherPill(count: model.openTabCount, onTap: model.onTabSwitcherTap)
                 .frame(maxWidth: model.isTargetTabPresent ? TabSwitcherPill.compactSize : .infinity)
                 .frame(height: TabSwitcherPill.compactSize)
         }
@@ -53,9 +52,9 @@ struct EscapeHatchView: View {
             tabType: .regular,
             domain: "en.wikipedia.org",
             targetTab: target,
-            tabsSource: .staticTabsSource(count: 9, includes: target)
-        ),
-        actions: .preview
+            tabsSource: .staticTabsSource(count: 9, includes: target),
+            isActionsEnabled: true
+        )
     )
     .padding()
 }
@@ -69,9 +68,9 @@ struct EscapeHatchView: View {
             tabType: .aiChat,
             domain: nil,
             targetTab: target,
-            tabsSource: .staticTabsSource(count: 99, includes: target)
-        ),
-        actions: .preview
+            tabsSource: .staticTabsSource(count: 99, includes: target),
+            isActionsEnabled: true
+        )
     )
     .padding()
 }
