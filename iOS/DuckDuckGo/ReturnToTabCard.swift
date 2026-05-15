@@ -205,6 +205,8 @@ private enum Metrics {
 
 // MARK: - Previews
 
+#if DEBUG
+
 #Preview("Return to tab card") {
     let target = Tab(fireTab: false)
     ReturnToTabCard(model: .preview(title: "Tokamak - Wikipedia",
@@ -240,3 +242,5 @@ private enum Metrics {
         .padding()
         .frame(width: 360)
 }
+
+#endif

@@ -29,6 +29,7 @@ struct EscapeHatchView: View {
                 .frame(maxWidth: model.isTargetTabPresent ? .infinity : 0)
                 .opacity(model.isTargetTabPresent ? 1 : 0)
                 .clipped()
+                .allowsHitTesting(model.isTargetTabPresent)
 
             TabSwitcherPill(count: model.openTabCount, onTap: model.onTabSwitcherTap)
                 .frame(maxWidth: model.isTargetTabPresent ? TabSwitcherPill.compactSize : .infinity)
@@ -42,6 +43,8 @@ struct EscapeHatchView: View {
         static let collapseDuration: Double = 0.25
     }
 }
+
+#if DEBUG
 
 #Preview("Escape hatch — regular tab") {
     let target = Tab(fireTab: false)
@@ -64,3 +67,5 @@ struct EscapeHatchView: View {
                                     tabCount: 99))
         .padding()
 }
+
+#endif
