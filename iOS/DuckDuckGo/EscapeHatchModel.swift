@@ -78,11 +78,11 @@ final class EscapeHatchModel: ObservableObject {
          domain: String?,
          targetTab: Tab,
          tabsSource: some EscapeHatchTabsSource,
-         isActionsEnabled: Bool = false,
-         onCardTap: @escaping () -> Void = {},
-         onTabSwitcherTap: @escaping () -> Void = {},
-         onCloseTab: @escaping () -> Void = {},
-         onBurnTab: @escaping () -> Void = {}) {
+         isActionsEnabled: Bool,
+         onCardTap: @escaping () -> Void,
+         onTabSwitcherTap: @escaping () -> Void,
+         onCloseTab: @escaping () -> Void,
+         onBurnTab: @escaping () -> Void) {
         self.title = title
         self.subtitle = subtitle
         self.tabType = tabType

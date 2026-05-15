@@ -505,9 +505,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
 
         swipeContainerManager.installDuckAISuggestions(using: coordinator, textPublisher: switchBarHandler.currentTextPublisher)
         coordinator.setAdditionalTopInset(duckAITopInset)
-        if let escapeHatchModel, !switchBarHandler.isFireTab {
-            coordinator.setEscapeHatch(escapeHatchModel)
-        }
+        coordinator.setEscapeHatch(switchBarHandler.isFireTab ? nil : escapeHatchModel)
         duckAISuggestionsCoordinator = coordinator
     }
 

@@ -42,4 +42,23 @@ extension EscapeHatchTabsSource where Self == StaticEscapeHatchTabsSource {
     }
 }
 
+extension EscapeHatchModel {
+    /// Factory for #Preview / test code: stubs action closures as no-ops so call sites stay readable.
+    static func preview(title: String, subtitle: String, tabType: TabType, domain: String?, targetTab: Tab, tabCount: Int, isActionsEnabled: Bool = true) -> EscapeHatchModel {
+        EscapeHatchModel(
+            title: title,
+            subtitle: subtitle,
+            tabType: tabType,
+            domain: domain,
+            targetTab: targetTab,
+            tabsSource: .staticTabsSource(count: tabCount, includes: targetTab),
+            isActionsEnabled: isActionsEnabled,
+            onCardTap: {},
+            onTabSwitcherTap: {},
+            onCloseTab: {},
+            onBurnTab: {}
+        )
+    }
+}
+
 #endif

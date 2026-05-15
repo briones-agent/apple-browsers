@@ -393,9 +393,7 @@ final class OmniBarEditingStateViewController: UIViewController, OmniBarEditingS
             }
         aiChatHistoryManager = manager
 
-        if let escapeHatchModel {
-            manager.setEscapeHatch(escapeHatchModel)
-        }
+        manager.setEscapeHatch(escapeHatchModel)
     }
     
     /// Creates ad configured for the current tab.

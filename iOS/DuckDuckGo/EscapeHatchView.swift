@@ -45,32 +45,22 @@ struct EscapeHatchView: View {
 
 #Preview("Escape hatch — regular tab") {
     let target = Tab(fireTab: false)
-    EscapeHatchView(
-        model: EscapeHatchModel(
-            title: "Tokamak - Wikipedia",
-            subtitle: "en.wikipedia.org/wiki/Tokamak",
-            tabType: .regular,
-            domain: "en.wikipedia.org",
-            targetTab: target,
-            tabsSource: .staticTabsSource(count: 9, includes: target),
-            isActionsEnabled: true
-        )
-    )
-    .padding()
+    EscapeHatchView(model: .preview(title: "Tokamak - Wikipedia",
+                                    subtitle: "en.wikipedia.org/wiki/Tokamak",
+                                    tabType: .regular,
+                                    domain: "en.wikipedia.org",
+                                    targetTab: target,
+                                    tabCount: 9))
+        .padding()
 }
 
 #Preview("Escape hatch — duck.ai") {
     let target = Tab(fireTab: false)
-    EscapeHatchView(
-        model: EscapeHatchModel(
-            title: "Good Dog Name Ideas",
-            subtitle: "Duck.ai",
-            tabType: .aiChat,
-            domain: nil,
-            targetTab: target,
-            tabsSource: .staticTabsSource(count: 99, includes: target),
-            isActionsEnabled: true
-        )
-    )
-    .padding()
+    EscapeHatchView(model: .preview(title: "Good Dog Name Ideas",
+                                    subtitle: "Duck.ai",
+                                    tabType: .aiChat,
+                                    domain: nil,
+                                    targetTab: target,
+                                    tabCount: 99))
+        .padding()
 }

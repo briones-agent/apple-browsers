@@ -207,51 +207,36 @@ private enum Metrics {
 
 #Preview("Return to tab card") {
     let target = Tab(fireTab: false)
-    ReturnToTabCard(
-        model: EscapeHatchModel(
-            title: "Tokamak - Wikipedia",
-            subtitle: "en.wikipedia.org/wiki/Tokamak",
-            tabType: .regular,
-            domain: "en.wikipedia.org",
-            targetTab: target,
-            tabsSource: .staticTabsSource(count: 9, includes: target),
-            isActionsEnabled: true
-        )
-    )
-    .padding()
-    .frame(width: 360)
+    ReturnToTabCard(model: .preview(title: "Tokamak - Wikipedia",
+                                    subtitle: "en.wikipedia.org/wiki/Tokamak",
+                                    tabType: .regular,
+                                    domain: "en.wikipedia.org",
+                                    targetTab: target,
+                                    tabCount: 9))
+        .padding()
+        .frame(width: 360)
 }
 
 #Preview("Return to Duck.ai") {
     let target = Tab(fireTab: false)
-    ReturnToTabCard(
-        model: EscapeHatchModel(
-            title: "Good Dog Name Ideas",
-            subtitle: "Duck.ai",
-            tabType: .aiChat,
-            domain: nil,
-            targetTab: target,
-            tabsSource: .staticTabsSource(count: 9, includes: target),
-            isActionsEnabled: true
-        )
-    )
-    .padding()
-    .frame(width: 360)
+    ReturnToTabCard(model: .preview(title: "Good Dog Name Ideas",
+                                    subtitle: "Duck.ai",
+                                    tabType: .aiChat,
+                                    domain: nil,
+                                    targetTab: target,
+                                    tabCount: 9))
+        .padding()
+        .frame(width: 360)
 }
 
 #Preview("Return to Fire Tab") {
     let target = Tab(fireTab: true)
-    ReturnToTabCard(
-        model: EscapeHatchModel(
-            title: "Last Used Fire Tab",
-            subtitle: "",
-            tabType: .fire,
-            domain: nil,
-            targetTab: target,
-            tabsSource: .staticTabsSource(count: 1, includes: target),
-            isActionsEnabled: true
-        )
-    )
-    .padding()
-    .frame(width: 360)
+    ReturnToTabCard(model: .preview(title: "Last Used Fire Tab",
+                                    subtitle: "",
+                                    tabType: .fire,
+                                    domain: nil,
+                                    targetTab: target,
+                                    tabCount: 1))
+        .padding()
+        .frame(width: 360)
 }
