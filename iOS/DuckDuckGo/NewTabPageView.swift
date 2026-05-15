@@ -145,9 +145,9 @@ private extension NewTabPageView {
     private var logoEmptyView: some View {
         GeometryReader { proxy in
             ZStack {
-                if shouldShowLogoInEmptyState {
-                    NewTabPageDaxLogoView()
-                }
+                NewTabPageDaxLogoView()
+                    .opacity(shouldShowLogoInEmptyState ? 1 : 0)
+                    .allowsHitTesting(false)
 
                 ScrollView {
                     VStack(spacing: Metrics.sectionSpacing) {
@@ -172,6 +172,7 @@ private extension NewTabPageView {
     }
 
     private var shouldShowLogoInEmptyState: Bool {
+        guard !viewModel.isLogoHidden else { return false }
         guard messagesModel.homeMessageViewModels.isEmpty && !messagesModel.isFirePromotionVisible else { return false }
         if viewModel.escapeHatch?.tabType == .aiChat { return false }
         if viewModel.escapeHatch != nil && isLandscapeOrientation { return false }
