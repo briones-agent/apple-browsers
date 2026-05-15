@@ -258,6 +258,30 @@ final class ContentScopeUserScriptTests: XCTestCase {
         XCTAssertTrue(context.isIsolated)
     }
 
+    func testWhenBrokerProtectionContextThenFileNameIsBrokerProtection() {
+        // GIVEN
+        let context = ContentScopeScriptContext.brokerProtection
+
+        // THEN
+        XCTAssertEqual(context.fileName, "brokerProtection")
+    }
+
+    func testWhenBrokerProtectionContextThenMessagingContextNameMatchesIsolatedContentScope() {
+        // GIVEN
+        let context = ContentScopeScriptContext.brokerProtection
+
+        // THEN
+        XCTAssertEqual(context.messagingContextName, "contentScopeScriptsIsolated")
+    }
+
+    func testWhenBrokerProtectionContextThenIsIsolatedReturnsTrue() {
+        // GIVEN
+        let context = ContentScopeScriptContext.brokerProtection
+
+        // THEN
+        XCTAssertTrue(context.isIsolated)
+    }
+
     // MARK: - Surrogate tracker data encoding
 
     func testWhenContentScopeContextHasSurrogateTrackerDataThenItIsEncodedAsTrackerData() throws {
@@ -310,6 +334,20 @@ final class ContentScopeUserScriptTests: XCTestCase {
         )
 
         XCTAssertFalse(source.contains("\"trackerData\""), "trackerData key should never leak into non-contentScope contexts")
+    }
+
+    func testWhenBrokerProtectionContextThenMessageNamesUseIsolatedMessagingContext() throws {
+        // GIVEN
+        let contentScopeScript = try ContentScopeUserScript(
+            mockPrivacyConfigurationManager,
+            properties: properties,
+            scriptContext: .brokerProtection,
+            privacyConfigurationJSONGenerator: configGenerator
+        )
+
+        // THEN
+        XCTAssertEqual(contentScopeScript.messageNames, ["contentScopeScriptsIsolated"])
+        XCTAssertFalse(contentScopeScript.requiresRunInPageContentWorld)
     }
 
     // MARK: - ContentScopeUserScript Integration Tests with aiChatDataClearing Context

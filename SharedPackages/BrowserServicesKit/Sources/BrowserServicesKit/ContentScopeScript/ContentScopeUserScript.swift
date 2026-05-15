@@ -51,6 +51,7 @@ public enum ContentScopeScriptContext: Equatable {
     /// as `trackerData` in the user-preferences payload for C-S-S surrogate injection.
     case contentScope(surrogateTrackerData: TrackerData? = nil)
     case contentScopeIsolated
+    case brokerProtection
     case aiChatDataClearing
     case aiChatHistory
 
@@ -58,7 +59,7 @@ public enum ContentScopeScriptContext: Equatable {
         switch self {
         case .contentScope, .aiChatDataClearing, .aiChatHistory:
             return false
-        case .contentScopeIsolated:
+        case .contentScopeIsolated, .brokerProtection:
             return true
         }
     }
@@ -69,6 +70,8 @@ public enum ContentScopeScriptContext: Equatable {
             return "contentScope"
         case .contentScopeIsolated:
             return "contentScopeIsolated"
+        case .brokerProtection:
+            return "brokerProtection"
         case .aiChatDataClearing:
             return "duckAiDataClearing"
         case .aiChatHistory:
@@ -84,7 +87,7 @@ public enum ContentScopeScriptContext: Equatable {
             return "duckAiDataClearing"
         case .aiChatHistory:
             return "duckAiChatHistory"
-        case .contentScopeIsolated:
+        case .contentScopeIsolated, .brokerProtection:
             return "contentScopeScriptsIsolated"
         }
     }

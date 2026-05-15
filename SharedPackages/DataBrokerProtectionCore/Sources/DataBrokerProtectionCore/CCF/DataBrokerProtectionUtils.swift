@@ -67,19 +67,19 @@ final class DataBrokerUserContentController: WKUserContentController {
 
 @MainActor
 final class DataBrokerUserScript: UserScriptsProvider {
-    lazy var userScripts: [UserScript] = [contentScopeUserScriptIsolated]
+    lazy var userScripts: [UserScript] = [brokerProtectionUserScript]
 
-    let contentScopeUserScriptIsolated: ContentScopeUserScript
+    let brokerProtectionUserScript: ContentScopeUserScript
     var dataBrokerFeature: DataBrokerProtectionFeature
 
     init(privacyConfig: PrivacyConfigurationManaging, prefs: ContentScopeProperties, delegate: CCFCommunicationDelegate, executionConfig: BrokerJobExecutionConfig, shouldContinueActionHandler: @escaping () -> Bool) throws {
-        contentScopeUserScriptIsolated = try ContentScopeUserScript(privacyConfig.withDataBrokerProtectionFeatureOverride,
-                                                                    properties: prefs,
-                                                                    scriptContext: .contentScopeIsolated,
-                                                                    privacyConfigurationJSONGenerator: nil)
+        brokerProtectionUserScript = try ContentScopeUserScript(privacyConfig.withDataBrokerProtectionFeatureOverride,
+                                                                properties: prefs,
+                                                                scriptContext: .brokerProtection,
+                                                                privacyConfigurationJSONGenerator: nil)
         dataBrokerFeature = DataBrokerProtectionFeature(delegate: delegate, executionConfig: executionConfig, shouldContinueActionHandler: shouldContinueActionHandler)
-        dataBrokerFeature.broker = contentScopeUserScriptIsolated.broker
-        contentScopeUserScriptIsolated.registerSubfeature(delegate: dataBrokerFeature)
+        dataBrokerFeature.broker = brokerProtectionUserScript.broker
+        brokerProtectionUserScript.registerSubfeature(delegate: dataBrokerFeature)
     }
 
     @MainActor
