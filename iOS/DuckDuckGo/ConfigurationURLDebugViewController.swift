@@ -58,6 +58,15 @@ final class ConfigurationURLDebugViewController: UITableViewController {
         }
     }
 
+    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+        switch Sections(rawValue: section) {
+        case .customURLs:
+            return "Note: Release builds require an RMF config URL that returns ETag headers."
+        case nil:
+            return nil
+        }
+    }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let item = configurationItems[indexPath.row]
         guard let cell = tableView.dequeueReusableCell(withIdentifier: ConfigurationURLTableViewCell.reuseIdentifier) as? ConfigurationURLTableViewCell else {

@@ -62,6 +62,8 @@ struct RemoteMessagingDebugRootView: View {
                 Button("Refresh Config", action: model.refreshConfig)
             } header: {
                 Text("Configuration")
+            } footer: {
+                Text("Set custom RMF config URLs in the Configuration URLs debug screen.")
             }
 
             Section {
