@@ -349,5 +349,5 @@ public enum RemotePlaceholder: String, Codable, CaseIterable {
     case veryCriticalUpdate = "RemoteMessageVeryCriticalUpdate"
     case newTabOptions = "RemoteMessageNewTabOptions"
     case splitBarMobile = "RemoteMessageSplitBarMobile"
-    case youtubeNew = "RemoteMessageYoutubeNew"
+    case youtubeNew = "RemoteMessageYoutubeNew" // macOS only
 }
