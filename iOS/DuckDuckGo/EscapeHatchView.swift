@@ -30,6 +30,7 @@ struct EscapeHatchView: View {
 
             HStack(spacing: model.isTargetTabPresent ? Metrics.spacing : 0) {
                 ReturnToTabCard(model: model)
+                    // Inner frame fixes the card's layout width; outer frame animates the visible reveal width.
                     .frame(width: cardFullWidth)
                     .frame(width: cardWidth, alignment: .leading)
                     .clipped()
