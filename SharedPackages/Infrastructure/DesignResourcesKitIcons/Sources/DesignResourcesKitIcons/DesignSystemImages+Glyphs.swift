@@ -465,6 +465,7 @@ public extension DesignSystemImages {
             public static var fontLarger: DesignSystemImage { .init(resource: .fontLarger24) }
             public static var gift: DesignSystemImage { .init(resource: .gift24) }
             public static var globe: DesignSystemImage { .init(resource: .globe24) }
+            public static var goBackCircle: DesignSystemImage { .init(resource: .goBackCircle24) }
             public static var goTo: DesignSystemImage { .init(resource: .goTo24) }
             public static var help: DesignSystemImage { .init(resource: .help24) }
             public static var history: DesignSystemImage { .init(resource: .history24) }
