@@ -135,7 +135,7 @@ private extension SwipeActionView {
     }
 
     func isPastCommit(in availableWidth: CGFloat) -> Bool {
-        progress(in: availableWidth) >= configuration.threshold
+        progress(in: availableWidth) >= 1
     }
 
     func actionsWidth(in availableWidth: CGFloat) -> CGFloat {
@@ -153,6 +153,7 @@ private extension SwipeActionView {
         }
 
         haptics.impactOccurred()
+        haptics.prepare()
         swipeThresholdExceeded = pastCommit
     }
 
