@@ -25,13 +25,17 @@ private final class SwipeActionViewState: ObservableObject {
     let enclosingTouchHandle = ExclusiveTouchHandle()
 }
 
+private enum SwipeState {
+    case idle
+    case dragging(thresholdCrossed: Bool)
+    case pendingCommit
+}
+
 struct SwipeActionView<Content: View, Actions: View>: View {
     @StateObject private var state = SwipeActionViewState()
 
     @State private var contentOffset: CGFloat = 0
-    @State private var swipeThresholdExceeded: Bool = false
-    @State private var swipePendingCommit: Bool = false
-    @State private var swipeCancelledEnclosingRecognizers = false
+    @State private var swipeState: SwipeState = .idle
 
     let content: Content
     let actions: Actions
@@ -87,23 +91,29 @@ private extension SwipeActionView {
     func dragGesture(in availableWidth: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: configuration.minimumDragDistance)
             .onChanged { recognizer in
-                cancelEnclosingGestureRecognizerIfNeeded()
+                beginDraggingIfNeeded()
 
-                if swipePendingCommit {
+                guard case .dragging = swipeState else {
                     return
                 }
 
                 processDragChanged(in: availableWidth, dragOffset: recognizer.translation.width)
             }
             .onEnded { _ in
-                resetEnclosingTouchHandler()
-
-                if swipePendingCommit {
+                guard case .dragging = swipeState else {
                     return
                 }
 
                 processDragEnded(in: availableWidth)
             }
+    }
+
+    func beginDraggingIfNeeded() {
+        guard case .idle = swipeState else {
+            return
+        }
+        state.enclosingTouchHandle.cancel()
+        swipeState = .dragging(thresholdCrossed: false)
     }
 
     func processDragChanged(in availableWidth: CGFloat, dragOffset: CGFloat) {
@@ -112,9 +122,14 @@ private extension SwipeActionView {
     }
 
     func processDragEnded(in availableWidth: CGFloat) {
-        contentOffset = isPastCommit(in: availableWidth) ? -availableWidth : .zero
-        swipeThresholdExceeded = false
-        performActionIfNeeded(in: availableWidth)
+        guard isPastCommit(in: availableWidth) else {
+            contentOffset = .zero
+            swipeState = .idle
+            return
+        }
+
+        contentOffset = -availableWidth
+        commit()
     }
 }
 
@@ -124,7 +139,7 @@ private extension SwipeActionView {
     /// Starts counting after `spacing` so the alpha ramp aligns with the width ramp (which is also offset by `spacing`).
     ///
     func progress(in availableWidth: CGFloat) -> CGFloat {
-        if swipePendingCommit {
+        if case .pendingCommit = swipeState {
             return 1
         }
 
@@ -134,7 +149,6 @@ private extension SwipeActionView {
         }
 
         let progress = actionsWidth(in: availableWidth) / commitDistance
-
         return progress.clamped(to: 0...1)
     }
 
@@ -151,39 +165,26 @@ private extension SwipeActionView {
 private extension SwipeActionView {
 
     func performHapticsIfNeeded(in availableWidth: CGFloat) {
+        guard case .dragging(let thresholdCrossed) = swipeState else {
+            return
+        }
+
         let pastCommit = isPastCommit(in: availableWidth)
-        guard pastCommit != swipeThresholdExceeded else {
+        guard pastCommit != thresholdCrossed else {
             return
         }
 
         state.haptics.impactOccurred()
         state.haptics.prepare()
-        swipeThresholdExceeded = pastCommit
+        swipeState = .dragging(thresholdCrossed: pastCommit)
     }
 
-    func performActionIfNeeded(in availableWidth: CGFloat) {
-        guard isPastCommit(in: availableWidth) else {
-            return
-        }
-
-        swipePendingCommit = true
+    func commit() {
+        swipeState = .pendingCommit
 
         DispatchQueue.main.asyncAfter(deadline: .now() + configuration.commitDelay) {
             onCommit()
         }
-    }
-
-    func cancelEnclosingGestureRecognizerIfNeeded() {
-        if swipeCancelledEnclosingRecognizers {
-            return
-        }
-
-        state.enclosingTouchHandle.cancel()
-        swipeCancelledEnclosingRecognizers = true
-    }
-
-    func resetEnclosingTouchHandler() {
-        swipeCancelledEnclosingRecognizers = false
     }
 }
 
