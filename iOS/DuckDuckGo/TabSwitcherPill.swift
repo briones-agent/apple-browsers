@@ -82,13 +82,13 @@ struct TabSwitcherPill: View {
             .daxSubheadSemibold()
             .foregroundColor(Color(designSystemColor: .textPrimary))
             .lineLimit(1)
-            .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+            .transition(.move(edge: .trailing).combined(with: .opacity))
 
         Spacer(minLength: 0)
 
         Image(uiImage: DesignSystemImages.Glyphs.Size24.arrowRight)
             .foregroundColor(Color(designSystemColor: .icons))
-            .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .trailing)))
+            .transition(.move(edge: .trailing).combined(with: .opacity))
     }
 
     private enum Metrics {
