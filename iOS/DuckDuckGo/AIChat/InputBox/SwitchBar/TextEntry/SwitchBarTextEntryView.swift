@@ -33,6 +33,29 @@ class SwitchBarTextEntryView: UIView {
         case hidden
     }
 
+    private enum TextEntryPose: Equatable {
+        case compact
+        case tallTopAlignedAIChat
+
+        var minHeight: CGFloat {
+            switch self {
+            case .compact:
+                return Constants.minHeight
+            case .tallTopAlignedAIChat:
+                return Constants.minHeightAIChat
+            }
+        }
+
+        var usesTopAlignedPlaceholder: Bool {
+            switch self {
+            case .compact:
+                return false
+            case .tallTopAlignedAIChat:
+                return true
+            }
+        }
+    }
+
     private enum Constants {
         static let maxHeight: CGFloat = 120
         static let maxHeightWhenUsingFadeOutAnimation: CGFloat = 132
@@ -83,7 +106,19 @@ class SwitchBarTextEntryView: UIView {
         handler.currentToggleState
     }
 
+    private var currentPose: TextEntryPose {
+        if isExpandable && currentMode == .aiChat && handler.isTopBarPosition && handler.usesExpandedAIChatTextEntryLayout {
+            return .tallTopAlignedAIChat
+        }
+
+        return .compact
+    }
+
     private var currentMinHeight: CGFloat {
+        if currentPose == .tallTopAlignedAIChat {
+            return currentPose.minHeight
+        }
+
         guard handler.isUsingFadeOutAnimation else {
             return Constants.minHeight
         }
@@ -107,10 +142,16 @@ class SwitchBarTextEntryView: UIView {
         handler.isUsingExpandedBottomBarHeight
     }
 
+    private var usesTopAlignedPlaceholder: Bool {
+        currentPose.usesTopAlignedPlaceholder
+    }
+
     private var cancellables = Set<AnyCancellable>()
 
     private var heightConstraint: NSLayoutConstraint?
     private var buttonsTrailingConstraint: NSLayoutConstraint?
+    private var placeholderTopConstraint: NSLayoutConstraint?
+    private var placeholderCenterYConstraint: NSLayoutConstraint?
 
     private var wasTextEmptyForAutocorrection: Bool = true
 
@@ -131,8 +172,13 @@ class SwitchBarTextEntryView: UIView {
 
     var isExpandable: Bool = false {
         didSet {
-            updateTextViewHeight()
+            updatePoseForCurrentState()
         }
+    }
+
+    func updatePoseForCurrentState() {
+        updatePlaceholderVerticalAlignment()
+        updateTextViewHeight()
     }
 
     /// A visible trailing button (e.g. stop-generating) forces `.natural` regardless of this
@@ -272,6 +318,11 @@ class SwitchBarTextEntryView: UIView {
 
         buttonsTrailingConstraint = buttonsView.trailingAnchor.constraint(equalTo: trailingAnchor)
         buttonsTrailingConstraint?.isActive = true
+        let placeholderTopConstraint = placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: Constants.placeholderTopOffset)
+        let placeholderCenterYConstraint = placeholderLabel.centerYAnchor.constraint(equalTo: textView.centerYAnchor)
+        self.placeholderTopConstraint = placeholderTopConstraint
+        self.placeholderCenterYConstraint = placeholderCenterYConstraint
+        placeholderTopConstraint.isActive = false
 
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: topAnchor),
@@ -279,7 +330,7 @@ class SwitchBarTextEntryView: UIView {
             textView.bottomAnchor.constraint(equalTo: bottomAnchor),
             textView.trailingAnchor.constraint(equalTo: trailingAnchor),
 
-            placeholderLabel.centerYAnchor.constraint(equalTo: textView.centerYAnchor),
+            placeholderCenterYConstraint,
             placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: Constants.placeholderHorizontalOffset),
             // Trail to the buttons so a visible stop / search-go-to / voice button truncates the
             // placeholder. When `.noButtons`, buttonsView has zero width so this is a no-op.
@@ -345,9 +396,9 @@ class SwitchBarTextEntryView: UIView {
             }
         }
         updateKeyboardConfiguration()
+        updatePoseForCurrentState()
         updatePlaceholderVisibility()
         updateButtonState()
-        updateTextViewHeight()
     }
 
     private func updateKeyboardConfiguration() {
@@ -401,6 +452,18 @@ class SwitchBarTextEntryView: UIView {
 
     private func updatePlaceholderAlignment() {
         placeholderLabel.textAlignment = currentButtonState.showsAnyButton ? .natural : placeholderTextAlignment
+    }
+
+    private func updatePlaceholderVerticalAlignment() {
+        guard placeholderTopConstraint?.isActive != usesTopAlignedPlaceholder else { return }
+
+        if usesTopAlignedPlaceholder {
+            placeholderCenterYConstraint?.isActive = false
+            placeholderTopConstraint?.isActive = true
+        } else {
+            placeholderTopConstraint?.isActive = false
+            placeholderCenterYConstraint?.isActive = true
+        }
     }
 
     private func updateVoiceButtonStyle() {

@@ -254,7 +254,11 @@ final class UnifiedToggleInputView: UIView {
 
     var handlerIsTopBarPosition: Bool {
         get { handler.isTopBarPosition }
-        set { handler.isTopBarPosition = newValue }
+        set {
+            guard handler.isTopBarPosition != newValue else { return }
+            handler.updateBarPosition(isTop: newValue)
+            textEntryView.updatePoseForCurrentState()
+        }
     }
 
     // MARK: - Attachment Callbacks
@@ -1343,7 +1347,6 @@ private extension UnifiedToggleInputView {
             .store(in: &cancellables)
 
         textEntryView.textHeightChangeSubject
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 self?.onNeedsHierarchyLayout?()
             }
