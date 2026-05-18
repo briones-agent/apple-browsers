@@ -18,6 +18,7 @@
 //
 
 import SwiftUI
+import Common
 
 struct SwipeActionView<Content: View, Actions: View>: View {
     @State private var haptics = UIImpactFeedbackGenerator(style: .light)
