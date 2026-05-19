@@ -104,10 +104,6 @@ private extension SwipeActionView {
     var isRTL: Bool {
         layoutDirection == .rightToLeft
     }
-
-    var directionalMultiplier: CGFloat {
-        isRTL ? 1 : -1
-    }
 }
 
 // MARK: - Recognizer
