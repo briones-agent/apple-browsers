@@ -24,27 +24,20 @@ struct EscapeHatchView: View {
     @ObservedObject var model: EscapeHatchModel
 
     var body: some View {
-        GeometryReader { proxy in
-            let cardFullWidth = max(0, proxy.size.width - TabSwitcherPill.compactSize - Metrics.spacing)
-            let cardWidth = model.isTargetTabPresent ? cardFullWidth : 0
+        HStack(spacing: model.isTargetTabPresent ? Metrics.spacing : 0) {
+            ReturnToTabCard(model: model)
+                .frame(maxWidth: model.isTargetTabPresent ? .infinity : 0)
+                .clipped()
+                .opacity(model.isTargetTabPresent ? 1 : 0)
+                .allowsHitTesting(model.isTargetTabPresent)
 
-            HStack(spacing: model.isTargetTabPresent ? Metrics.spacing : 0) {
-                ReturnToTabCard(model: model)
-                    // Inner frame fixes the card's layout width; outer frame animates the visible reveal width.
-                    .frame(width: cardFullWidth)
-                    .frame(width: cardWidth, alignment: .leading)
-                    .clipped()
-                    .opacity(model.isTargetTabPresent ? 1 : 0)
-                    .allowsHitTesting(model.isTargetTabPresent)
-
-                TabSwitcherPill(count: model.openTabCount,
-                                isExpanded: !model.isTargetTabPresent,
-                                onTap: model.onTabSwitcherTap)
-                    .frame(maxWidth: model.isTargetTabPresent ? TabSwitcherPill.compactSize : .infinity)
-                    .frame(height: TabSwitcherPill.compactSize)
-            }
-            .animation(.easeInOut(duration: Metrics.collapseDuration), value: model.isTargetTabPresent)
+            TabSwitcherPill(count: model.openTabCount,
+                            isExpanded: !model.isTargetTabPresent,
+                            onTap: model.onTabSwitcherTap)
+                .frame(maxWidth: model.isTargetTabPresent ? TabSwitcherPill.compactSize : .infinity)
+                .frame(height: TabSwitcherPill.compactSize)
         }
+        .animation(.easeInOut(duration: Metrics.collapseDuration), value: model.isTargetTabPresent)
         .frame(height: TabSwitcherPill.compactSize)
     }
 
