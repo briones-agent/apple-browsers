@@ -111,7 +111,7 @@ final class VPNUpsellPopoverViewModelTests: XCTestCase {
         XCTAssertEqual(firedPixels.first?.name, SubscriptionPixel.subscriptionToolbarButtonPopoverDismissButtonClicked.name)
     }
 
-    func testWhenPrimaryCTAIsClicked_ThenProceedPixelIsFired() throws {
+    func testWhenPrimaryCTAIsClicked_ThenProceedAndOfferScreenImpressionPixelsAreFired() throws {
         // Given
         let baseURL = URL(string: "https://duckduckgo.com/pro/purchase")!
         mockSubscriptionManager.resultURL = baseURL
@@ -121,8 +121,11 @@ final class VPNUpsellPopoverViewModelTests: XCTestCase {
         sut.showSubscriptionLandingPage()
 
         // Then
-        XCTAssertEqual(firedPixels.count, 1)
-        XCTAssertEqual(firedPixels.first?.name, SubscriptionPixel.subscriptionToolbarButtonPopoverProceedButtonClicked.name)
+        XCTAssertEqual(firedPixels.count, 2)
+        XCTAssertEqual(firedPixels[0].name, SubscriptionPixel.subscriptionToolbarButtonPopoverProceedButtonClicked.name)
+        XCTAssertEqual(firedPixels[1].name, SubscriptionPixel.subscriptionOfferScreenImpression(origin: nil).name)
+        XCTAssertEqual(firedPixels[1].parameters?[AttributionParameter.origin], SubscriptionFunnelOrigin.vpnToolbarUpsell.rawValue)
+        XCTAssertEqual(lastReceivedURL?.getParameter(named: AttributionParameter.origin), SubscriptionFunnelOrigin.vpnToolbarUpsell.rawValue)
     }
 
     func testWhenUserIsEligibleForFreeTrial_ThenMainCTATitleIsTryForFree() throws {

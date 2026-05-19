@@ -146,8 +146,10 @@ final class VPNUpsellPopoverViewModel: ObservableObject {
         pixelHandler(.subscriptionToolbarButtonPopoverProceedButtonClicked)
         onDismiss()
 
-        let url = subscriptionManager.url(for: .purchase)
+        let origin = SubscriptionFunnelOrigin.vpnToolbarUpsell.rawValue
+        let url = subscriptionManager.url(for: .purchase).appendingOriginParameterIfPresent(origin)
         urlOpener(url)
+        pixelHandler(.subscriptionOfferScreenImpression(origin: origin))
     }
 
     func dismiss() {
