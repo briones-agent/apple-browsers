@@ -22,6 +22,7 @@ import Foundation
 import VPN
 import NetworkProtectionIPC
 import NetworkProtectionUI
+import PixelKit
 
 /// Model for managing the NetP button in the Nav Bar.
 ///
@@ -109,6 +110,19 @@ final class NetworkProtectionNavBarButtonModel: NSObject, ObservableObject {
         setupStatusSubscription()
         setupInterruptionSubscription()
         setupUpsellSubscription()
+        setupSubscribedButtonShownSubscription()
+    }
+
+    private func setupSubscribedButtonShownSubscription() {
+        $showVPNButton
+            .removeDuplicates()
+            .filter { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, !self.shouldShowUpsell else { return }
+                PixelKit.fire(SubscriptionPixel.subscriptionToolbarButtonShown(subscribed: true))
+            }
+            .store(in: &cancellables)
     }
 
     private func setupIconSubscription() {

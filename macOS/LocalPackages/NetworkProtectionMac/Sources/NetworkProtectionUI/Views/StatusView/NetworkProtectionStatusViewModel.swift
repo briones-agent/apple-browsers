@@ -69,6 +69,10 @@ extension NetworkProtectionStatusView {
 
         public typealias UninstallHandler = (UninstallReason) async -> Void
 
+        /// Closure invoked when the subscription-expired view appears inside the popover.
+        /// Set by the consumer to fire an impression pixel.
+        public var subscriptionExpiredViewAppearHandler: (() -> Void)?
+
         /// The NetP service.
         ///
         private let tunnelController: TunnelController

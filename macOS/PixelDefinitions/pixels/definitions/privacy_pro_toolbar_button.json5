@@ -3,29 +3,50 @@
     // These pixels track the toolbar button and popover interactions for Privacy Pro subscription promotion
 
     "m_mac_privacy-pro_toolbar_button_shown": {
-        "description": "Fired when the Privacy Pro toolbar button is displayed to a new, non-subscriber user",
+        "description": "Fired when the Privacy Pro toolbar button is displayed. `subscribed=false` is the upsell context (user is not subscribed), `subscribed=true` covers both subscription-revoked users and users with an active subscription.",
         "owners": ["jozsef-vesza"],
+        "triggers": ["other"],
+        "parameters": ["appVersion", "pixelSource", "subscribed"]
+    },
+
+    "m_mac_privacy-pro_toolbar_button_upsell_popover_shown": {
+        "description": "Fired when the Privacy Pro toolbar upsell popover is displayed to a non-subscriber user",
+        "owners": ["htang-ddg"],
         "triggers": ["other"],
         "parameters": ["appVersion", "pixelSource"]
     },
 
     "m_mac_privacy-pro_toolbar_button_popover_shown": {
-        "description": "Fired when the Privacy Pro toolbar button popover is displayed to a user",
+        "description": "Fired when the Privacy Pro toolbar button popover is displayed to a subscribed user (either active or revoked). Use the expired-view-shown pixel to distinguish the revoked sub-case.",
         "owners": ["jozsef-vesza"],
         "triggers": ["other"],
         "parameters": ["appVersion", "pixelSource"]
     },
 
     "m_mac_privacy-pro_toolbar_button_popover_dismiss_button_clicked": {
-        "description": "Fired when the dismiss button is clicked in the Privacy Pro toolbar button popover",
+        "description": "Fired when the dismiss button is clicked in the Privacy Pro toolbar button upsell popover",
         "owners": ["jozsef-vesza"],
         "triggers": ["user_submitted"],
         "parameters": ["appVersion", "pixelSource"]
     },
 
     "m_mac_privacy-pro_toolbar_button_popover_proceed_button_clicked": {
-        "description": "Fired when the proceed button is clicked in the Privacy Pro toolbar button popover",
+        "description": "Fired when the proceed button is clicked in the Privacy Pro toolbar button upsell popover",
         "owners": ["jozsef-vesza"],
+        "triggers": ["user_submitted"],
+        "parameters": ["appVersion", "pixelSource"]
+    },
+
+    "m_mac_privacy-pro_toolbar_button_popover_expired_view_shown": {
+        "description": "Fired when the subscription-expired view is displayed inside the Privacy Pro toolbar button popover (revoked subscription case)",
+        "owners": ["htang-ddg"],
+        "triggers": ["other"],
+        "parameters": ["appVersion", "pixelSource"]
+    },
+
+    "m_mac_privacy-pro_toolbar_button_popover_expired_view_subscribe_button_clicked": {
+        "description": "Fired when the subscribe button is clicked in the subscription-expired view inside the Privacy Pro toolbar button popover",
+        "owners": ["htang-ddg"],
         "triggers": ["user_submitted"],
         "parameters": ["appVersion", "pixelSource"]
     }

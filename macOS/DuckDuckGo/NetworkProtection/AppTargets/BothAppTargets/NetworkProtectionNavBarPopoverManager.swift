@@ -29,6 +29,7 @@ import NetworkProtectionIPC
 import NetworkProtectionProxy
 import NetworkProtectionUI
 import os.log
+import PixelKit
 import Subscription
 import SwiftUI
 import VPNAppState
@@ -166,6 +167,8 @@ final class NetworkProtectionNavBarPopoverManager: NetPPopoverManager {
             try? await ipcClient.refreshSystemState()
         }
 
+        PixelKit.fire(SubscriptionPixel.subscriptionToolbarButtonPopoverShown)
+
         let popover: NSPopover = {
             let vpnAppState = VPNAppState(defaults: .netP)
             let vpnSettings = VPNSettings(defaults: .netP)
@@ -242,6 +245,9 @@ final class NetworkProtectionNavBarPopoverManager: NetPPopoverManager {
                         removeSystemExtension: true,
                         showNotification: showNotification)
                 })
+            statusViewModel.subscriptionExpiredViewAppearHandler = {
+                PixelKit.fire(SubscriptionPixel.subscriptionToolbarButtonPopoverExpiredViewShown)
+            }
 
             let tipsModel = VPNTipsModel(statusObserver: statusReporter.statusObserver,
                                          activeSitePublisher: activeSitePublisher,

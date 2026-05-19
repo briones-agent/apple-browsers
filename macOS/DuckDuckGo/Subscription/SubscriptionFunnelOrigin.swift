@@ -51,6 +51,9 @@ enum SubscriptionFunnelOrigin: String {
 
     /// User entered the funnel via the VPN toolbar button upsell popover.
     case vpnToolbarUpsell = "funnel_toolbar_macos__vpnupsell"
+
+    /// User entered the funnel via the VPN toolbar button popover when their subscription was revoked.
+    case vpnToolbarRevoked = "funnel_toolbar_macos__vpnrevoked"
 }
 
 /// Represents the origin point from which the user enters the subscription restore funnel in the macOS app.

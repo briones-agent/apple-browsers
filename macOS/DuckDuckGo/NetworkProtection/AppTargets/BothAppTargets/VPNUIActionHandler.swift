@@ -22,6 +22,7 @@ import Foundation
 import NetworkProtectionIPC
 import NetworkProtectionProxy
 import NetworkProtectionUI
+import PixelKit
 import Subscription
 import SwiftUI
 import VPN
@@ -94,7 +95,8 @@ extension VPNUIActionHandler: VPNUIActionHandling {
     }
 
     func showSubscription() async {
-        await vpnURLEventHandler.showSubscription()
+        PixelKit.fire(SubscriptionPixel.subscriptionToolbarButtonPopoverExpiredViewSubscribeButtonClicked)
+        await vpnURLEventHandler.showSubscription(origin: SubscriptionFunnelOrigin.vpnToolbarRevoked.rawValue)
     }
 
     @MainActor

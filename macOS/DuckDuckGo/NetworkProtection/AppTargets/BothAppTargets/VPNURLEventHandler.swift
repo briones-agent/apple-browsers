@@ -82,11 +82,11 @@ final class VPNURLEventHandler {
         windowControllersManager.showLocationPickerSheet()
     }
 
-    func showSubscription() {
-        let url = Application.appDelegate.subscriptionManager.url(for: .purchase)
+    func showSubscription(origin: String? = nil) {
+        let url = Application.appDelegate.subscriptionManager.url(for: .purchase).appendingOriginParameterIfPresent(origin)
         windowControllersManager.showTab(with: .subscription(url))
 
-        PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression(origin: nil))
+        PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression(origin: origin))
     }
 
     func showVPNAppExclusions() {
