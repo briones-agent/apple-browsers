@@ -4675,6 +4675,7 @@ extension MainViewController: EscapeHatchActionRouter {
             browsingMode: tab.mode,
             onConfirm: { [weak self] fireRequest in
                 self?.forgetAllWithAnimation(request: fireRequest) {}
+                self?.clearEscapeHatch()
             },
             onCancel: { }
         )
