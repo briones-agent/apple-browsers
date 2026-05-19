@@ -64,6 +64,7 @@ struct FireRequest {
     
     enum Source: String {
         case browsing
+        case escapeHatch
         case tabSwitcher
         case settings
         case quickFire
