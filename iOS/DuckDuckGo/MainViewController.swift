@@ -4643,6 +4643,7 @@ extension MainViewController: EscapeHatchActionRouter {
     func escapeHatchDidRequestClose(_ tab: Tab) {
         let targetTabsModel = tabManager.tabsModel(for: tab.mode)
         guard targetTabsModel.tabExists(tab: tab) else {
+            clearEscapeHatch()
             return
         }
 
