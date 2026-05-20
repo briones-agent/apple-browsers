@@ -57,6 +57,9 @@ public struct NetworkProtectionStatusView: View {
                     model.uninstallVPN()
                 }
                 .padding(5)
+                .onAppear {
+                    model.subscriptionExpiredViewDidAppear()
+                }
             } else if let promptActionViewModel = model.promptActionViewModel {
                 PromptActionView(model: promptActionViewModel)
                     .padding(.horizontal, 5)

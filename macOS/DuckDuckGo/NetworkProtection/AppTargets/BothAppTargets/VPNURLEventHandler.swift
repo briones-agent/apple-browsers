@@ -19,6 +19,7 @@
 import Foundation
 import LetsMove
 import PixelKit
+import Subscription
 import VPNAppLauncher
 
 @MainActor
@@ -82,12 +83,14 @@ final class VPNURLEventHandler {
         windowControllersManager.showLocationPickerSheet()
     }
 
-    func showSubscription() {
-        let url = Application.appDelegate.subscriptionManager.url(for: .purchase)
-        windowControllersManager.showTab(with: .subscription(url))
+    func showSubscription(origin: String? = nil) {
+        let fallback = Application.appDelegate.subscriptionManager.url(for: .purchase)
+        let url = origin
+            .flatMap { SubscriptionURL.purchaseURLComponentsWithOrigin($0)?.url }
+            ?? fallback
 
-        // Origin attribution for this VPN-triggered flow is handled in https://github.com/duckduckgo/apple-browsers/pull/4980
-        PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression(origin: nil))
+        windowControllersManager.showTab(with: .subscription(url))
+        PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression(origin: origin))
     }
 
     func showVPNAppExclusions() {

@@ -96,11 +96,16 @@ enum SubscriptionPixel: PixelKitEvent {
     case subscriptionKeychainManagerDeallocatedWithBacklog(SubscriptionPixelHandler.Source)
     case subscriptionKeychainManagerDataWroteFromBacklog(SubscriptionPixelHandler.Source)
     case subscriptionKeychainManagerFailedToWriteDataFromBacklog(SubscriptionPixelHandler.Source)
-    // Toolbar Button Upsell
+    // Toolbar Button - Upsell
     case subscriptionToolbarButtonShown
     case subscriptionToolbarButtonPopoverShown
     case subscriptionToolbarButtonPopoverDismissButtonClicked
     case subscriptionToolbarButtonPopoverProceedButtonClicked
+    // Toolbar Button - Subscribed VPN
+    case subscriptionToolbarVPNButtonShown
+    case subscriptionToolbarVPNPopoverShown
+    case subscriptionToolbarVPNPopoverExpiredViewShown
+    case subscriptionToolbarVPNPopoverExpiredViewSubscribeButtonClicked
     // Win-back Offer
     case subscriptionWinBackOfferLaunchPromptShown
     case subscriptionWinBackOfferLaunchPromptCTAClicked
@@ -200,11 +205,16 @@ enum SubscriptionPixel: PixelKitEvent {
         case .subscriptionKeychainManagerDeallocatedWithBacklog: return "m_mac_privacy-pro_keychain_manager_deallocated_with_backlog"
         case .subscriptionKeychainManagerDataWroteFromBacklog: return "m_mac_privacy-pro_keychain_manager_data_wrote_from_backlog"
         case .subscriptionKeychainManagerFailedToWriteDataFromBacklog: return "m_mac_privacy-pro_keychain_manager_failed_to_write_data_from_backlog"
-            // Toolbar Button Upsell
+            // Toolbar Button - Upsell
         case .subscriptionToolbarButtonShown: return "m_mac_privacy-pro_toolbar_button_shown"
         case .subscriptionToolbarButtonPopoverShown: return "m_mac_privacy-pro_toolbar_button_popover_shown"
         case .subscriptionToolbarButtonPopoverDismissButtonClicked: return "m_mac_privacy-pro_toolbar_button_popover_dismiss_button_clicked"
         case .subscriptionToolbarButtonPopoverProceedButtonClicked: return "m_mac_privacy-pro_toolbar_button_popover_proceed_button_clicked"
+            // Toolbar Button - Subscribed VPN
+        case .subscriptionToolbarVPNButtonShown: return "m_mac_subscription_toolbar_vpn_button_shown"
+        case .subscriptionToolbarVPNPopoverShown: return "m_mac_subscription_toolbar_vpn_popover_shown"
+        case .subscriptionToolbarVPNPopoverExpiredViewShown: return "m_mac_subscription_toolbar_vpn_popover_expired_view_shown"
+        case .subscriptionToolbarVPNPopoverExpiredViewSubscribeButtonClicked: return "m_mac_subscription_toolbar_vpn_popover_expired_view_subscribe_button_clicked"
             // Win-back Offer
         case .subscriptionWinBackOfferLaunchPromptShown: return "m_mac_\(appDistribution)_privacy-pro_winback_launch_prompt_shown"
         case .subscriptionWinBackOfferLaunchPromptCTAClicked: return "m_mac_\(appDistribution)_privacy-pro_winback_launch_prompt_cta_clicked"
@@ -334,9 +344,13 @@ enum SubscriptionPixel: PixelKitEvent {
                 .subscriptionKeychainManagerDataWroteFromBacklog,
                 .subscriptionKeychainManagerFailedToWriteDataFromBacklog,
                 .subscriptionToolbarButtonShown,
+                .subscriptionToolbarVPNButtonShown,
                 .subscriptionToolbarButtonPopoverShown,
+                .subscriptionToolbarVPNPopoverShown,
                 .subscriptionToolbarButtonPopoverDismissButtonClicked,
                 .subscriptionToolbarButtonPopoverProceedButtonClicked,
+                .subscriptionToolbarVPNPopoverExpiredViewShown,
+                .subscriptionToolbarVPNPopoverExpiredViewSubscribeButtonClicked,
                 .subscriptionWinBackOfferLaunchPromptShown,
                 .subscriptionWinBackOfferLaunchPromptCTAClicked,
                 .subscriptionWinBackOfferLaunchPromptDismissed,
