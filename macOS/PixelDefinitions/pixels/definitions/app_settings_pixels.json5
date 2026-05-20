@@ -4,7 +4,7 @@
         "description": "Fires when the user opens the Email Protection settings pane.",
         "owners": ["hanyutang-sandra"],
         "triggers": ["other"],
-        "suffixes": ["daily"],
+        "suffixes": ["daily_standard"],
         "parameters": ["appVersion", "pixelSource", "subscribed"]
     },
     "browser_menu_email_protection": {

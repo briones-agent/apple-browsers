@@ -86,6 +86,7 @@ final class VPNURLEventHandler {
         let url = Application.appDelegate.subscriptionManager.url(for: .purchase)
         windowControllersManager.showTab(with: .subscription(url))
 
+        // Origin attribution for this VPN-triggered flow is handled in https://github.com/duckduckgo/apple-browsers/pull/4980
         PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression(origin: nil))
     }
 
