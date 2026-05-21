@@ -4669,6 +4669,7 @@ extension MainViewController: EscapeHatchActionRouter {
     func escapeHatchDidRequestClose(_ tab: Tab) {
         let targetTabsModel = tabManager.tabsModel(for: tab.mode)
         guard targetTabsModel.tabExists(tab: tab) else {
+            clearEscapeHatch()
             return
         }
 
@@ -4684,9 +4685,28 @@ extension MainViewController: EscapeHatchActionRouter {
         dismissOmniBar()
     }
 
-    func escapeHatchDidRequestBurn(_ tab: Tab) {
-        // TODO: Wire FireConfirmationPresenter — currently falls back to a plain close.
-        escapeHatchDidRequestClose(tab)
+    func escapeHatchDidRequestBurn(_ tab: Tab, sourceRect: CGRect) {
+        let targetTabsModel = tabManager.tabsModel(for: tab.mode)
+        guard targetTabsModel.tabExists(tab: tab) else {
+            clearEscapeHatch()
+            return
+        }
+
+        let tabViewModel = tabManager.viewModel(for: tab)
+        let presenter = FireConfirmationPresenter()
+        presenter.presentFireConfirmation(
+            on: topPresentedViewController,
+            sourceRect: sourceRect,
+            tabViewModel: tabViewModel,
+            pixelSource: .escapeHatch,
+            fireContext: .singleTab,
+            browsingMode: tab.mode,
+            onConfirm: { [weak self] fireRequest in
+                self?.forgetAllWithAnimation(request: fireRequest) {}
+                self?.clearEscapeHatch()
+            },
+            onCancel: { }
+        )
     }
 
     func escapeHatchDidRequestTabSwitcher() {
