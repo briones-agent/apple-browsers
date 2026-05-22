@@ -1998,8 +1998,23 @@ extension TabViewController: WKNavigationDelegate {
         }
         
         tabInteractionStateSource?.saveState(webView.interactionState, for: tabModel)
+
+        showDuckPlayerToastIfNeeded()
     }
-    
+
+    private func showDuckPlayerToastIfNeeded() {
+        guard let url = webView.url,
+              url.isYoutube,
+              let youTubeAppLink = url.replacing(scheme: "youtube"),
+              UIApplication.shared.canOpenURL(youTubeAppLink),
+              webView?.canGoBack == false else { return }
+
+        ActionMessageView.present(message: "Open in YouTube app", actionTitle: "OPEN", onAction: {
+            UIApplication.shared.open(url)
+        })
+
+    }
+
     /// Check cache for DaxEasterEgg logo on commit (instant display for back navigation)
     private func checkDaxEasterEggCacheIfDuckDuckGoSearch(_ webView: WKWebView) {
         guard featureFlagger.isFeatureOn(.daxEasterEggLogos) else { return }

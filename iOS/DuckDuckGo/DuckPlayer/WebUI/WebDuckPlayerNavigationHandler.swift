@@ -240,7 +240,7 @@ final class WebDuckPlayerNavigationHandler: NSObject {
     }
 
     /// Checks if the YouTube app is installed on the device.
-    private var isYouTubeAppInstalled: Bool {
+    var isYouTubeAppInstalled: Bool {
         if let youtubeURL = URL(string: Constants.youtubeScheme) {
             return UIApplication.shared.canOpenURL(youtubeURL)
         }
@@ -614,21 +614,15 @@ final class WebDuckPlayerNavigationHandler: NSObject {
     private func handleOpenInYoutubeLink(url: URL, webView: WKWebView) {
 
         // Handle "open in YouTube" links (duck://player/openInYoutube)
-        guard let (videoID, _) = url.youtubeVideoParams else {
+        guard url.youtubeVideoParams != nil else {
             return
         }
 
         // Fire a Pixel for Open in YouTube
         self.fireOpenInYoutubePixel()
 
-        // Attempt to open in YouTube app or load in webView
-        if appSettings.allowUniversalLinks, isYouTubeAppInstalled,
-        let youtubeAppURL = URL(string: "\(Constants.youtubeScheme)\(videoID)") {
-            UIApplication.shared.open(youtubeAppURL)
-        } else {
-            // Watch in YT videos always open in new tab
-            redirectToYouTubeVideo(url: url, webView: webView, forceNewTab: true)
-        }
+        // Watch in YT videos always open in new tab
+        redirectToYouTubeVideo(url: url, webView: webView, forceNewTab: true)
     }
 
     /// Checks if a URL contains a hash
