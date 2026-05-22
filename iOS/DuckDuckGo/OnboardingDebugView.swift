@@ -53,7 +53,12 @@ struct OnboardingDebugView: View {
                     viewModel.resetAllOnboarding()
                     isShowingResetOnboardingAlert = true
                 }, label: {
-                    Text(verbatim: "Reset All Onboarding")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Reset All Onboarding")
+                        Text(verbatim: "The app will be restarted to apply the reset.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 })
                 .alert(isPresented: $isShowingResetOnboardingAlert, content: {
                     Alert(title: Text(verbatim: "All onboarding reset"),
@@ -202,6 +207,18 @@ final class OnboardingDebugViewModel: ObservableObject {
         // Clear the debug override that forces the restore prompt to be eligible.
         forceRestorePromptEligible = false
         resetDaxDialogs()
+        restartApp()
+    }
+
+    /// Flushes the UserDefaults stores we just wrote to, then terminates the
+    /// process after a short delay so the triggering SwiftUI animation can
+    /// settle and the OS can commit pending defaults writes.
+    private func restartApp() {
+        userDefaults.synchronize()
+        UserDefaults.standard.synchronize()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            exit(0)
+        }
     }
 
     func resetDaxDialogs() {
