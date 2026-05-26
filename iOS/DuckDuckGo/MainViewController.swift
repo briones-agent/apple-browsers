@@ -937,6 +937,7 @@ class MainViewController: UIViewController {
         controller.historyManager = historyManager
         controller.fireproofing = fireproofing
         controller.aiChatSettings = aiChatSettings
+        controller.featureFlagger = featureFlagger
         controller.keyValueStore = keyValueStore
         controller.tabManager = tabManager
         controller.daxDialogsManager = daxDialogsManager
