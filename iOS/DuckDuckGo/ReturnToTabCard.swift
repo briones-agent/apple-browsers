@@ -133,7 +133,7 @@ struct ReturnToTabCard: View {
             )
             if model.isFireTab {
                 MenuActionButton(
-                    text: UserText.escapeHatchMenuBurnTab,
+                    text: UserText.escapeHatchMenDeleteTab,
                     icon: DesignSystemImages.Glyphs.Size16.fire,
                     role: .destructive,
                     action: model.onBurnTabImmediately
@@ -146,7 +146,7 @@ struct ReturnToTabCard: View {
                     action: model.onCloseTab
                 )
                 MenuActionButton(
-                    text: UserText.escapeHatchMenuBurnTab,
+                    text: UserText.escapeHatchMenDeleteTab,
                     icon: DesignSystemImages.Glyphs.Size16.fire,
                     role: .destructive,
                     action: { model.onBurnTabWithConfirmation(menuFrameInWindow) }
