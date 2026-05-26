@@ -36,12 +36,11 @@ struct ReturnToTabCard: View {
         GeometryReader { proxy in
             if model.isActionsEnabled {
                 bodyWithActions(width: proxy.size.width)
-                    .frame(height: Metrics.height)
             } else {
                 contentView
-                    .frame(height: Metrics.height)
             }
         }
+        .frame(height: Metrics.height)
     }
 
     @ViewBuilder
