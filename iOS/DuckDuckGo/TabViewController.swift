@@ -2009,7 +2009,7 @@ extension TabViewController: WKNavigationDelegate {
               UIApplication.shared.canOpenURL(youTubeAppLink),
               webView?.canGoBack == false else { return }
 
-        ActionMessageView.present(message: UserText.duckPlayerAskLabel, actionTitle: UserText.actionOpen, onAction: {
+        ActionMessageView.present(message: UserText.duckPlayerOpenInYouTubeApp, actionTitle: UserText.actionOpen, onAction: {
             UIApplication.shared.open(url)
         })
 
