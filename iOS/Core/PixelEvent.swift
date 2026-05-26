@@ -1486,6 +1486,7 @@ extension Pixel {
         case duckPlayerSettingsNeverOverlaySERP
         case duckPlayerSettingsNeverOverlayYoutube
         case duckPlayerWatchOnYoutube
+        case duckPlayerOpenInYoutubeApp
         case duckPlayerSettingAlwaysOverlayYoutube
         case duckPlayerSettingNeverOverlayYoutube
         case duckPlayerContingencySettingsDisplayed
@@ -3239,6 +3240,7 @@ extension Pixel.Event {
         case .duckPlayerSettingNeverSettings: return "duckplayer_setting_never_settings"
         case .duckPlayerSettingBackToDefault: return "duckplayer_setting_back-to-default"
         case .duckPlayerWatchOnYoutube: return "duckplayer_watch_on_youtube"
+        case .duckPlayerOpenInYoutubeApp: return "duckplayer_open_in_youtube_app"
         case .duckPlayerSettingAlwaysOverlayYoutube: return "duckplayer_setting_always_overlay_youtube"
         case .duckPlayerSettingNeverOverlayYoutube: return "duckplayer_setting_never_overlay_youtube"
         case .duckPlayerContingencySettingsDisplayed: return "duckplayer_ios_contingency_settings-displayed"

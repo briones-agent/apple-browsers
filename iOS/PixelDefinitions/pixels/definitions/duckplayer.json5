@@ -1,0 +1,9 @@
+{
+    "duckplayer_open_in_youtube_app": {
+        "description": "Fires when the user taps the toast action to open the video in the YouTube app from a YouTube page in DuckDuckGo, including daily/count variants for reach tracking",
+        "owners": ["brindy"],
+        "triggers": ["other"],
+        "suffixes": ["first_daily_count", "platform", "form_factor"],
+        "parameters": ["appVersion"]
+    }
+}
