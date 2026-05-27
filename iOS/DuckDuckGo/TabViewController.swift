@@ -2020,7 +2020,6 @@ extension TabViewController: WKNavigationDelegate {
               webView?.canGoBack == false else { return }
 
         ActionMessageView.present(message: UserText.duckPlayerOpenInYouTubeApp, actionTitle: UserText.actionOpen, onAction: {
-            DailyPixel.fireDailyAndCount(pixel: .duckPlayerOpenInYoutubeApp)
             UIApplication.shared.open(url)
         })
 
