@@ -1180,7 +1180,9 @@ extension DefaultOmniBarView {
             savedBarViewBackgroundColor = nil
         }
         searchAreaContainerView.applyShadowOpacityMultiplier(1)
-        textField.alpha = 1
+        if !isSearchAreaExpanded {
+            textField.alpha = 1
+        }
     }
 
     /// Configures the omnibar UI for AI Chat mode. Shows AI Chat buttons, hides search elements.
@@ -1357,6 +1359,7 @@ extension DefaultOmniBarView {
             let currentText = textField.text ?? ""
             textField.text = ""
             textField.alpha = currentText.isEmpty ? 1 : 0
+            privacyInfoContainer.alpha = 0
 
             aiChatTextView.text = currentText
             aiChatTextView.isHidden = false
@@ -1373,6 +1376,7 @@ extension DefaultOmniBarView {
 
             textField.text = currentText
             textField.alpha = 1
+            privacyInfoContainer.alpha = 1
         }
     }
 

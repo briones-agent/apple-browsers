@@ -132,7 +132,11 @@ final class DefaultOmniBarViewController: OmniBarViewController {
             return true
         }
 
-        return super.textFieldShouldBeginEditing(textField)
+        let result = super.textFieldShouldBeginEditing(textField)
+        if result, state.showAIChatModeToggle {
+            omniBarView.isPrivacyInfoContainerHidden = true
+        }
+        return result
     }
 
     override func textFieldDidBeginEditing(_ textField: UITextField) {

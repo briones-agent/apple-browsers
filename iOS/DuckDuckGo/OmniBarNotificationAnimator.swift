@@ -94,8 +94,15 @@ final class OmniBarNotificationAnimator: NSObject {
         // Reset visual state
         omniBar.notificationContainer.removePreviousNotification()
         omniBar.notificationContainer.alpha = 0
-        omniBar.textField.alpha = 1
-        omniBar.privacyInfoContainer.alpha = 1
+
+        /// Don't restore alpha when the iPad duck.ai search area is expanded — the textField
+        /// and favicon are intentionally hidden behind the aiChatTextView there, so unconditionally
+        /// setting alpha = 1 would bleed them through the active aiChat input.
+        /// https://app.asana.com/1/137249556945/project/1201011656765697/task/1215084286493408?focus=true
+        if (omniBar as? ExpandableOmniBarView)?.isSearchAreaExpanded != true {
+            omniBar.textField.alpha = 1
+            omniBar.privacyInfoContainer.alpha = 1
+        }
     }
 }
 
