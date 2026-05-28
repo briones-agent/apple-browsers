@@ -107,6 +107,10 @@ enum PairingV2Event: Equatable {
     case nativeCredentialAlreadyPresent
     case recoveryCodePrepared(String)
     case recoveryCodeSent
+    case receivedRecoveryCodeAwaitingConfirmation
+    case receivedRecoveryCodeConfirmed
+    case receivedRecoveryCodeDenied
+    case receivedRecoveryCodeUnavailable
     case receivedRecoveryCode(String)
     case loginSucceeded
     case failed(PairingV2Error)
@@ -212,6 +216,18 @@ struct PairingV2StateMachine {
 
         case .recoveryCodeSent:
             return handleRecoveryCodeSent()
+
+        case .receivedRecoveryCodeAwaitingConfirmation:
+            return handleRecoveryCodeProgress(messageType: PairingV2ApplicationMessage.MessageType.recoveryCodeAwaitingConfirmation)
+
+        case .receivedRecoveryCodeConfirmed:
+            return handleRecoveryCodeProgress(messageType: PairingV2ApplicationMessage.MessageType.recoveryCodeConfirmed)
+
+        case .receivedRecoveryCodeDenied:
+            return handleRecoveryCodeTerminalAbort(messageType: PairingV2ApplicationMessage.MessageType.recoveryCodeDenied, error: .recoveryCodeDenied)
+
+        case .receivedRecoveryCodeUnavailable:
+            return handleRecoveryCodeTerminalAbort(messageType: PairingV2ApplicationMessage.MessageType.recoveryCodeUnavailable, error: .recoveryCodeUnavailable)
 
         case .receivedRecoveryCode(let recoveryCode):
             return handleReceivedRecoveryCode(recoveryCode)
@@ -327,6 +343,20 @@ struct PairingV2StateMachine {
             return [.upgradeThirdPartyAccountWithRecoveryCode(recoveryCode)]
         }
         return [.loginWithRecoveryCode(recoveryCode)]
+    }
+
+    private mutating func handleRecoveryCodeProgress(messageType: String) -> [PairingV2Command] {
+        guard case .joinerWaitingForRecoveryCode = state else {
+            return fail(with: .unexpectedEvent("\(messageType) received while not joining"))
+        }
+        return []
+    }
+
+    private mutating func handleRecoveryCodeTerminalAbort(messageType: String, error: PairingV2Error) -> [PairingV2Command] {
+        guard case .joinerWaitingForRecoveryCode = state else {
+            return fail(with: .unexpectedEvent("\(messageType) received while not joining"))
+        }
+        return fail(with: error)
     }
 
     private mutating func handleRecoveryCodeSent() -> [PairingV2Command] {

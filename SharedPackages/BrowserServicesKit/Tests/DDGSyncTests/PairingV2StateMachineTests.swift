@@ -261,6 +261,69 @@ final class PairingV2StateMachineTests: XCTestCase {
         )
     }
 
+    func testWhenNativeJoinerReceivesHostConfirmationProgressThenItKeepsWaiting() {
+        var stateMachine = PairingV2StateMachine()
+        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)
+
+        _ = stateMachine.handle(
+            .scannedCode(.v2Linking(channelID: "channel-1"), localClient: localClient, flags: enabledFlags)
+        )
+        _ = stateMachine.handle(.receivedPeerStatus(.recoveryCodeAvailable(kind: .thirdParty)))
+        let awaitingConfirmationCommands = stateMachine.handle(.receivedRecoveryCodeAwaitingConfirmation)
+        let confirmedCommands = stateMachine.handle(.receivedRecoveryCodeConfirmed)
+
+        XCTAssertEqual(awaitingConfirmationCommands, [])
+        XCTAssertEqual(confirmedCommands, [])
+        XCTAssertEqual(
+            stateMachine.state,
+            .joinerWaitingForRecoveryCode(
+                .init(localClient: localClient, channelID: "channel-1", peerStatus: .recoveryCodeAvailable(kind: .thirdParty))
+            )
+        )
+    }
+
+    func testWhenConfirmationProgressArrivesBeforeJoinerIsWaitingThenFlowAborts() {
+        var stateMachine = PairingV2StateMachine()
+        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)
+
+        _ = stateMachine.handle(
+            .scannedCode(.v2Linking(channelID: "channel-1"), localClient: localClient, flags: enabledFlags)
+        )
+        let error = PairingV2Error.unexpectedEvent("recovery_code_confirmed received while not joining")
+        let commands = stateMachine.handle(.receivedRecoveryCodeConfirmed)
+
+        XCTAssertEqual(commands, [.abort(error)])
+        XCTAssertEqual(stateMachine.state, .failed(error))
+    }
+
+    func testWhenNativeJoinerReceivesRecoveryCodeDeniedThenFlowAborts() {
+        var stateMachine = PairingV2StateMachine()
+        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)
+
+        _ = stateMachine.handle(
+            .scannedCode(.v2Linking(channelID: "channel-1"), localClient: localClient, flags: enabledFlags)
+        )
+        _ = stateMachine.handle(.receivedPeerStatus(.recoveryCodeAvailable(kind: .thirdParty)))
+        let commands = stateMachine.handle(.receivedRecoveryCodeDenied)
+
+        XCTAssertEqual(commands, [.abort(.recoveryCodeDenied)])
+        XCTAssertEqual(stateMachine.state, .failed(.recoveryCodeDenied))
+    }
+
+    func testWhenRecoveryCodeDeniedArrivesBeforeJoinerIsWaitingThenFlowAbortsAsUnexpected() {
+        var stateMachine = PairingV2StateMachine()
+        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)
+
+        _ = stateMachine.handle(
+            .scannedCode(.v2Linking(channelID: "channel-1"), localClient: localClient, flags: enabledFlags)
+        )
+        let error = PairingV2Error.unexpectedEvent("recovery_code_denied received while not joining")
+        let commands = stateMachine.handle(.receivedRecoveryCodeDenied)
+
+        XCTAssertEqual(commands, [.abort(error)])
+        XCTAssertEqual(stateMachine.state, .failed(error))
+    }
+
     func testWhenNativeJoinerReceivesThirdPartyRecoveryCodeThenUpgradesThirdPartyAccount() {
         var stateMachine = PairingV2StateMachine()
         let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)

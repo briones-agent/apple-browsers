@@ -22,13 +22,15 @@ enum PairingV2ApplicationMessage: Equatable {
     case hello(PairingV2HelloMessage)
     case recoveryCodeAvailable(PairingV2RecoveryCodeStatusMessage)
     case recoveryCodeRequest(PairingV2RecoveryCodeStatusMessage)
+    case recoveryCodeAwaitingConfirmation(PairingV2RecoveryCodeTerminalMessage)
+    case recoveryCodeConfirmed(PairingV2RecoveryCodeTerminalMessage)
     case recoveryCodeDenied(PairingV2RecoveryCodeTerminalMessage)
     case recoveryCodeUnavailable(PairingV2RecoveryCodeTerminalMessage)
     case recoveryCodeResponse(PairingV2RecoveryCodeResponseMessage)
 }
 
 enum PairingV2ProtocolVersion {
-    static let current = "2.0"
+    static let current = "2"
 }
 
 struct PairingV2QRCodePayload: Codable, Equatable {
@@ -160,6 +162,8 @@ extension PairingV2ApplicationMessage {
     enum MessageType {
         static let recoveryCodeAvailable = "recovery_code_available"
         static let recoveryCodeRequest = "recovery_code_request"
+        static let recoveryCodeAwaitingConfirmation = "recovery_code_awaiting_confirmation"
+        static let recoveryCodeConfirmed = "recovery_code_confirmed"
         static let recoveryCodeDenied = "recovery_code_denied"
         static let recoveryCodeUnavailable = "recovery_code_unavailable"
     }
@@ -170,6 +174,9 @@ extension PairingV2ApplicationMessage {
             return message.type
         case .recoveryCodeAvailable(let message),
                 .recoveryCodeRequest(let message):
+            return message.type
+        case .recoveryCodeAwaitingConfirmation(let message),
+                .recoveryCodeConfirmed(let message):
             return message.type
         case .recoveryCodeDenied(let message),
                 .recoveryCodeUnavailable(let message):

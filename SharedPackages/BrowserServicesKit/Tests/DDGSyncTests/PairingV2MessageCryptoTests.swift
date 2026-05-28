@@ -33,7 +33,7 @@ final class PairingV2MessageCryptoTests: XCTestCase {
         let parts = encryptedMessage.payload.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
         let decryptedMessage = try crypto.decrypt(encryptedMessage, privateKey: keyPair.privateKey)
 
-        XCTAssertEqual(encryptedMessage.version, "2.0")
+        XCTAssertEqual(encryptedMessage.version, "2")
         XCTAssertEqual(parts.count, 5)
         XCTAssertEqual(parts[0], JWECompactCodec.encodedRSAOAEP256ProtectedHeader(kid: "sender-channel"))
         XCTAssertFalse(parts[1].isEmpty)
@@ -49,8 +49,21 @@ final class PairingV2MessageCryptoTests: XCTestCase {
             "type": "hello",
             "channel_id": "channel-1",
             "public_key": "public-key",
-            "version": "2.0"
+            "version": "2"
         ])
+    }
+
+    func testWhenDecodingPythonReferencePairingURLThenReturnsQRCodePayload() throws {
+        let encodedPayload = Base64URL.encode(try JSONEncoder.snakeCaseKeys.encode(PairingV2QRCodePayload(version: "2",
+                                                                                                           channelId: "channel-1",
+                                                                                                           publicKey: "public-key")))
+        let url = try XCTUnwrap(URL(string: "https://duckduckgo.com/sync/pairing/#&code2=\(encodedPayload)"))
+
+        let payload = try XCTUnwrap(PairingV2QRCodePayload(url: url))
+
+        XCTAssertEqual(payload.version, "2")
+        XCTAssertEqual(payload.channelId, "channel-1")
+        XCTAssertEqual(payload.publicKey, "public-key")
     }
 
     func testWhenEncodingRecoveryCodeAvailableThenUsesCanonicalShape() throws {
@@ -94,6 +107,14 @@ final class PairingV2MessageCryptoTests: XCTestCase {
         let message = try JSONDecoder.snakeCaseKeys.decode(PairingV2RecoveryCodeTerminalMessage.self, from: data)
 
         XCTAssertEqual(message, .init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeUnavailable))
+    }
+
+    func testWhenDecodingPythonReferenceConfirmationStatusesThenSucceeds() throws {
+        let awaitingConfirmation = try decodeApplicationMessage(#"{"type":"recovery_code_awaiting_confirmation"}"#)
+        let confirmed = try decodeApplicationMessage(#"{"type":"recovery_code_confirmed"}"#)
+
+        XCTAssertEqual(awaitingConfirmation, .recoveryCodeAwaitingConfirmation(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeAwaitingConfirmation)))
+        XCTAssertEqual(confirmed, .recoveryCodeConfirmed(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeConfirmed)))
     }
 
     func testWhenDecryptingUnsupportedVersionThenThrowsUnsupportedVersion() throws {
@@ -167,5 +188,18 @@ final class PairingV2MessageCryptoTests: XCTestCase {
         XCTAssertThrowsError(try crypto.decrypt(message, privateKey: keyPair.privateKey, expectedSenderChannelID: "other-sender")) { error in
             XCTAssertEqual(error as? PairingV2MessageCryptoError, .unsupportedProtectedHeader)
         }
+    }
+
+    private func decodeApplicationMessage(_ json: String) throws -> PairingV2ApplicationMessage? {
+        let keyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "channel-1")
+        let crypto = PairingV2MessageCrypto()
+        let data = try XCTUnwrap(json.data(using: .utf8))
+        let encryptedMessage = PairingV2EncryptedMessage(
+            payload: try JWECompactCodec().encryptRSAOAEP256(payload: data,
+                                                             recipientPublicKey: keyPair.publicKey,
+                                                             kid: "sender-channel")
+        )
+
+        return try crypto.decrypt(encryptedMessage, privateKey: keyPair.privateKey, expectedSenderChannelID: "sender-channel")
     }
 }

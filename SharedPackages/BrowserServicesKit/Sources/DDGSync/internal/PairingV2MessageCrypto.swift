@@ -105,6 +105,9 @@ final class PairingV2MessageCrypto {
         case .recoveryCodeAvailable(let message),
                 .recoveryCodeRequest(let message):
             return try JSONEncoder.snakeCaseKeys.encode(message)
+        case .recoveryCodeAwaitingConfirmation(let message),
+                .recoveryCodeConfirmed(let message):
+            return try JSONEncoder.snakeCaseKeys.encode(message)
         case .recoveryCodeDenied(let message),
                 .recoveryCodeUnavailable(let message):
             return try JSONEncoder.snakeCaseKeys.encode(message)
@@ -122,6 +125,10 @@ final class PairingV2MessageCrypto {
             return .recoveryCodeAvailable(try JSONDecoder.snakeCaseKeys.decode(PairingV2RecoveryCodeStatusMessage.self, from: payload))
         case PairingV2ApplicationMessage.MessageType.recoveryCodeRequest:
             return .recoveryCodeRequest(try JSONDecoder.snakeCaseKeys.decode(PairingV2RecoveryCodeStatusMessage.self, from: payload))
+        case PairingV2ApplicationMessage.MessageType.recoveryCodeAwaitingConfirmation:
+            return .recoveryCodeAwaitingConfirmation(try JSONDecoder.snakeCaseKeys.decode(PairingV2RecoveryCodeTerminalMessage.self, from: payload))
+        case PairingV2ApplicationMessage.MessageType.recoveryCodeConfirmed:
+            return .recoveryCodeConfirmed(try JSONDecoder.snakeCaseKeys.decode(PairingV2RecoveryCodeTerminalMessage.self, from: payload))
         case PairingV2ApplicationMessage.MessageType.recoveryCodeDenied:
             return .recoveryCodeDenied(try JSONDecoder.snakeCaseKeys.decode(PairingV2RecoveryCodeTerminalMessage.self, from: payload))
         case PairingV2ApplicationMessage.MessageType.recoveryCodeUnavailable:

@@ -142,15 +142,21 @@ final class PairingV2Coordinator {
         case .recoveryCodeRequest(let message):
             commands = stateMachine.handle(.receivedPeerStatus(.recoveryCodeRequest(name: message.name, kind: message.kind)))
 
+        case .recoveryCodeAwaitingConfirmation:
+            commands = stateMachine.handle(.receivedRecoveryCodeAwaitingConfirmation)
+
+        case .recoveryCodeConfirmed:
+            commands = stateMachine.handle(.receivedRecoveryCodeConfirmed)
+
         case .recoveryCodeResponse(let message):
             let recoveryCode = recoveryCode(from: message)
             commands = stateMachine.handle(.receivedRecoveryCode(recoveryCode))
 
         case .recoveryCodeDenied:
-            commands = stateMachine.handle(.failed(.recoveryCodeDenied))
+            commands = stateMachine.handle(.receivedRecoveryCodeDenied)
 
         case .recoveryCodeUnavailable:
-            commands = stateMachine.handle(.failed(.recoveryCodeUnavailable))
+            commands = stateMachine.handle(.receivedRecoveryCodeUnavailable)
         }
 
         try await execute(commands)
