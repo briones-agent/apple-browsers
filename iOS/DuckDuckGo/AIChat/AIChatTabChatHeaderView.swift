@@ -60,6 +60,8 @@ final class AIChatTabChatHeaderView: UIView {
         var canGoForward: Bool = false
         /// Renders the back arrow even when there's no web history, so the user always has an exit.
         var forceBackButtonVisible: Bool = false
+        /// Hides navigation pills and the free/upgrade title during the Duck.ai fire onboarding step.
+        var isOnboardingLocked: Bool = false
 
         var effectiveCanGoBack: Bool { canGoBack || forceBackButtonVisible }
         var showsNavPair: Bool { effectiveCanGoBack && canGoForward }
@@ -337,8 +339,8 @@ final class AIChatTabChatHeaderView: UIView {
     }
 
     /// Locks or unlocks the header controls during the Duck.ai onboarding experiment path.
-    /// When locked, the settings, new-chat, upgrade, chats-list, and tab-switcher buttons are
-    /// disabled until the fire step passes.
+    /// When locked, the back navigation pills, free/upgrade title, settings, new-chat, chats-list,
+    /// and tab-switcher buttons are hidden or disabled until the fire step passes.
     func setOnboardingLocked(_ locked: Bool) {
         appMenuButton.isEnabled = !locked
         newChatButton.isEnabled = !locked
@@ -347,21 +349,25 @@ final class AIChatTabChatHeaderView: UIView {
         tabSwitcherButton.isEnabled = !locked
         // TabSwitcherStaticButton doesn't auto-dim when disabled; set alpha explicitly.
         tabSwitcherButton.alpha = locked ? 0.5 : 1
-        titleContainer.isUserInteractionEnabled = !locked
-        titleContainer.alpha = locked ? 0.5 : 1
+        state.isOnboardingLocked = locked
     }
 
     private func applyState() {
-        titleContainer.isHidden = state.isSubscriptionActive != false
+        // During fire onboarding, hide the free/upgrade title to avoid distraction.
+        titleContainer.isHidden = state.isOnboardingLocked || state.isSubscriptionActive != false
         paidTitleStack.isHidden = state.isSubscriptionActive != true
         // Voice session locks the user in — hide every left-side pill so they can only exit via
         // the in-page mic dismiss (which triggers FE → voiceSessionEnded → chrome restores).
         let hideLeft = state.isVoiceSessionActive
+        // During fire onboarding, hide navigation pills so the user must interact with the fire button.
+        // When onboarding suppresses nav, treat the pair as not showing so the title slot stays visible.
+        let hideNavDueToOnboarding = state.isOnboardingLocked
+        let effectiveShowsNavPair = state.showsNavPair && !hideNavDueToOnboarding
         // Both arrows crowd the row — drop the title slot. Hidden wrapper hides both children.
-        titleHolder.isHidden = state.showsNavPair || hideLeft
-        backPill.isHidden = hideLeft || !state.showsStandaloneBack
-        forwardPill.isHidden = hideLeft || !state.showsStandaloneForward
-        navPairPill.isHidden = hideLeft || !state.showsNavPair
+        titleHolder.isHidden = effectiveShowsNavPair || hideLeft
+        backPill.isHidden = hideLeft || hideNavDueToOnboarding || !state.showsStandaloneBack
+        forwardPill.isHidden = hideLeft || hideNavDueToOnboarding || !state.showsStandaloneForward
+        navPairPill.isHidden = hideLeft || hideNavDueToOnboarding || !state.showsNavPair
         leftPairPill.isHidden = hideLeft
         // Compose suppressed when nav arrows are visible — the row gets cluttered.
         newChatButton.isHidden = state.isNavigationVisible
