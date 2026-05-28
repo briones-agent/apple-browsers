@@ -56,6 +56,11 @@ class TabViewController: UIViewController {
         static let trackerNetworksAnimationDelay: TimeInterval = 0.7
         static let secGPCHeader = "Sec-GPC"
         static let navigationExpectationInterval = 3.0
+        static let duckPlayerExternalRoutingParametersToStrip: Set<String> = [
+            "dp_isNewTab",
+            "dp_referrer",
+            "dp_allowFirstVideo"
+        ]
     }
 
     /// Set by `loadVoiceMode()` so that `refreshUnifiedToggleInput` can suppress
@@ -1532,9 +1537,10 @@ class TabViewController: UIViewController {
     }
 
     private func openExternally(url: URL) {
+        let sanitizedURL = url.removingParameters(named: Constants.duckPlayerExternalRoutingParametersToStrip)
         self.url = webView.url
         delegate?.tabLoadingStateDidChange(tab: self)
-        UIApplication.shared.open(url) { opened in
+        UIApplication.shared.open(sanitizedURL) { opened in
             if !opened {
                 let addressBarBottom = self.appSettings.currentAddressBarPosition.isBottom
                 ActionMessageView.present(message: UserText.failedToOpenExternally,
