@@ -251,19 +251,19 @@ final class OnboardingPixelReporterMock: OnboardingIntroPixelReporting, Onboardi
         didCallMeasureChooseSearchOnly = true
     }
 
-    func measureDuckAIQueryExperimentSelectionImpression() {
+    func measureDuckAIQuerySelectionImpression() {
         didCallMeasureDuckAIQueryExperimentSelectionImpression = true
     }
 
-    func measureDuckAIQueryExperimentChooseSearchOnly() {
+    func measureDuckAIQueryChooseSearchOnly() {
         didCallMeasureDuckAIQueryExperimentChooseSearchOnly = true
     }
 
-    func measureDuckAIQueryExperimentChooseAIChat() {
+    func measureDuckAIQueryChooseAIChat() {
         didCallMeasureDuckAIQueryExperimentChooseAIChat = true
     }
 
-    func measureDuckAIQueryExperimentQuerySubmission(selection: DuckAIQueryExperimentMode, promptSource: DuckAIQueryExperimentPromptSource) {
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryExperimentMode, promptSource: DuckAIQueryExperimentPromptSource) {
         didCallMeasureDuckAIQueryExperimentQuerySubmission = true
         didCaptureDuckAIQueryExperimentPromptSourceValue = promptSource.rawValue
         didCaptureDuckAIQueryExperimentSelection = selection
@@ -301,15 +301,15 @@ final class OnboardingPixelReporterMock: OnboardingIntroPixelReporting, Onboardi
         didCallMeasureFireDialogDismissButtonTapped = true
     }
 
-    func measureDuckAIExperimentFireButtonCTAAction() {
+    func measureDuckAIFireButtonCTAAction() {
         didCallMeasureDuckAIExperimentFireButtonCTAAction = true
     }
 
-    func measureDuckAIExperimentFinalDialogImpression() {
+    func measureDuckAIFinalDialogImpression() {
         didCallMeasureDuckAIExperimentFinalDialogImpression = true
     }
 
-    func measureDuckAIExperimentFinalDialogCTAAction() {
+    func measureDuckAIFinalDialogCTAAction() {
         didCallMeasureDuckAIExperimentFinalDialogCTAAction = true
     }
 

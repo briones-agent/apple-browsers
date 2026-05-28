@@ -101,7 +101,7 @@ extension RebrandedNewTabDaxDialogFactory {
 
     func createExperimentCompletionDialog(message: String, onDismiss: @escaping () -> Void) -> AnyView {
         let onDismiss = { [weak self] in
-            self?.onboardingPixelReporter.measureDuckAIExperimentFinalDialogCTAAction()
+            self?.onboardingPixelReporter.measureDuckAIFinalDialogCTAAction()
             onDismiss()
         }
 
@@ -123,7 +123,7 @@ extension RebrandedNewTabDaxDialogFactory {
             .applyNewTabOnboardingBackground(backgroundType: .endOfJourneyNTPChat)
             .onFirstAppear { [weak self] in
                 self?.daxDialogsFlowCoordinator.setFinalOnboardingDialogSeen()
-                self?.onboardingPixelReporter.measureDuckAIExperimentFinalDialogImpression()
+                self?.onboardingPixelReporter.measureDuckAIFinalDialogImpression()
             }
         )
     }

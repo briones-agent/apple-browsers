@@ -23,16 +23,11 @@ import Combine
 
 final class MockFeatureFlagger: FeatureFlagger {
 
-    private(set) var didCallResolveCohort: Bool = false
-
     var internalUserDecider: InternalUserDecider
     var localOverrides: FeatureFlagLocalOverriding?
 
-    var mockActiveExperiments: [String: ExperimentData] = [:]
-
     var enabledFeatureFlags: [FeatureFlag] = []
 
-    var cohortToReturn: (any FeatureFlagCohortDescribing)?
     var updatesPublisher: AnyPublisher<Void, Never> {
         PassthroughSubject().eraseToAnyPublisher()
     }
@@ -58,12 +53,9 @@ final class MockFeatureFlagger: FeatureFlagger {
     }
 
     func resolveCohort<Flag>(for featureFlag: Flag, allowOverride: Bool) -> (any FeatureFlagCohortDescribing)? where Flag: FeatureFlagDescribing {
-        didCallResolveCohort = true
-        return cohortToReturn
+        return nil
     }
 
-    var allActiveExperiments: Experiments {
-        mockActiveExperiments
-    }
+    var allActiveExperiments: Experiments { [:] }
 
 }

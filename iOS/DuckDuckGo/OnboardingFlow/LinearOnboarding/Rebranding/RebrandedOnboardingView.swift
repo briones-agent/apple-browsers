@@ -651,10 +651,10 @@ extension OnboardingRebranding {
                 content: content,
                 defaultMode: defaultMode,
                 visualStyle: .rebranded,
-                onModeConfirmed: model.selectDuckAIQueryExperimentAction(selection:),
+                onModeConfirmed: model.selectDuckAIQueryAction(selection:),
                 openAIChatAction: model.openAIChatFromOnboarding,
                 openSearchAction: model.searchFromOnboarding,
-                measureQuerySubmissionAction: model.measureDuckAIQueryExperimentQuerySubmission,
+                measureQuerySubmissionAction: model.measureDuckAIQuerySubmission,
                 startExitTransitionAction: {
                     beginExperimentExitTransition()
                 }

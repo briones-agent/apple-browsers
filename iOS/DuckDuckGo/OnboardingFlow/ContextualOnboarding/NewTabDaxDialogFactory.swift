@@ -189,7 +189,7 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
 
     func createExperimentCompletionDialog(message: String, onDismiss: @escaping () -> Void) -> AnyView {
         let onDismiss = { [weak self] in
-            self?.onboardingPixelReporter.measureDuckAIExperimentFinalDialogCTAAction()
+            self?.onboardingPixelReporter.measureDuckAIFinalDialogCTAAction()
             onDismiss()
         }
 
@@ -204,7 +204,7 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
             .onboardingContextualBackgroundStyle(background: .illustratedGradient)
             .onFirstAppear { [weak self] in
                 self?.daxDialogsFlowCoordinator.setFinalOnboardingDialogSeen()
-                self?.onboardingPixelReporter.measureDuckAIExperimentFinalDialogImpression()
+                self?.onboardingPixelReporter.measureDuckAIFinalDialogImpression()
             }
         )
     }
