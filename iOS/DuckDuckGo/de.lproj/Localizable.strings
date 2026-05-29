@@ -287,7 +287,7 @@
 "aichat.reasoning.reasoning.title" = "Begründung";
 
 /* Body of the intro bottom sheet shown when the user taps the sync promo CTA from Duck.ai. ** markers indicate bold text and should be preserved around the translated equivalents of the menu options Settings, Sync & Backup, and Sync With Another Device. */
-"aiChat.syncIntroSheet.body" = "Finde den QR-Code in der DuckDuckGo-App auf deinem anderen Gerät unter **Einstellungen** › **Sync & Backup** › **Mit anderem Gerät synchronisieren**.";
+"aiChat.syncIntroSheet.body" = "Finde den QR-Code in der DuckDuckGo-App auf deinem anderen Gerät unter Einstellungen** › **Sync & Backup** › **Mit anderem Gerät synchronisieren**.";
 
 /* Secondary button on the intro bottom sheet shown when the user taps the sync promo CTA from Duck.ai. */
 "aiChat.syncIntroSheet.notNow" = "Jetzt nicht";
