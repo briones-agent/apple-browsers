@@ -103,6 +103,8 @@ def marker_issues(source_value: str, loc_value: str) -> List[str]:
             category = "UNPAIRED"
         elif en == 0 and loc > 0:
             category = "ADDED"
+        elif loc > en:
+            category = "EXTRA"
         else:
             category = "DROPPED"
         issues.append(f"{loc} marker(s) vs {en} in source [{category}]")
@@ -250,10 +252,10 @@ def report(findings: List[Finding], mode_label: str) -> int:
         print()
     print("Each translation's ** bold markers must match the English source. "
           "Fix the affected translations at the Smartling source.")
-    print("Legend: UNPAIRED = odd marker count; DROPPED = markers missing/changed "
-          "vs source; ADDED = source has none but translation does (often wrong "
-          "content); WHITESPACE = a space sits next to a ** delimiter so it won't "
-          "render as bold.")
+    print("Legend: UNPAIRED = odd marker count; DROPPED = fewer markers than "
+          "source (missing); EXTRA = more markers than source; ADDED = source has "
+          "none but translation does (often wrong content); WHITESPACE = a space "
+          "sits next to a ** delimiter so it won't render as bold.")
     return 1
 
 
