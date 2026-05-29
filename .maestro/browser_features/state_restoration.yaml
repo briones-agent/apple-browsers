@@ -63,4 +63,6 @@ tags:
 # Check if state from previous session was restored
 - assertVisible: "DuckDuckGo.*"
 - tapOn: "Browse Forward"
+- doubleTapOn:
+    point: 50%, 1%
 - assertVisible: "DuckDuckGo Terms of Service"
