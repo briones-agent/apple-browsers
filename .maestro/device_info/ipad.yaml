@@ -13,9 +13,9 @@ tags:
 
 # First, verify we're running on iPad by checking browser info
 - assertVisible:
-    id: searchEntry
+    id: "searchEntry"
 - tapOn: 
-    id: searchEntry
+    id: "searchEntry"
     
 # Get user Agent
 - inputText: "https://useragentstring.com/"
@@ -26,7 +26,7 @@ tags:
 
 # Navigate back to search
 - tapOn:
-    id: searchEntry
+    id: "searchEntry"
 
 - pressKey: Backspace
     
