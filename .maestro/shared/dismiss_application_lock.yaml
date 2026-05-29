@@ -1,0 +1,26 @@
+# dismiss_application_lock.yaml
+#
+# Dismisses the iOS system passcode sheet shown by the app lock (LAContext).
+# The sheet is presented out-of-process, so its contents (title, passcode
+# field, buttons) are not in the app's accessibility tree and cannot be
+# asserted on directly. Instead we anchor on SpringBoard's window/card, which
+# Maestro can see, then tap into the passcode field and submit.
+appId: com.duckduckgo.mobile.ios
+
+---
+
+# Confirm SpringBoard's app-switcher window is present — proxy for "the system
+# lock UI is overlaid on top of the app".
+- assertVisible:
+    id: "SBSwitcherWindow:Main"
+
+# Confirm the DuckDuckGo scene card is the one being shown behind the sheet.
+- assertVisible:
+    id: "card:com.duckduckgo.mobile.ios:sceneID:com.duckduckgo.mobile.ios-default"
+
+# Tap some random letter on the keyboard , then submit. 
+# Coordinates are used because the field itself isn't queryable.
+- tapOn:
+    point: 50%,75%
+
+- pressKey: Enter

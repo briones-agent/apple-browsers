@@ -27,10 +27,8 @@ tags:
     arguments:
         isRunningUITests: true
 
-- inputRandomText:
-    length: 22
-
-- pressKey: Enter
+- runFlow:
+    file: ../shared/dismiss_application_lock.yaml
 
 - assertVisible:
     id: "searchEntry"
