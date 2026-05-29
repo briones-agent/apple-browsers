@@ -21,19 +21,19 @@ tags:
 # Create navigation stack
 - assertVisible: 'DuckDuckGo.*'
 - scrollUntilVisible:
-    element: "Terms of Service"
+    element: "Help"
     timeout: 50000
     speed: 100
 - tapOn: 
-    text: 'Terms of Service'
-- assertVisible: "DuckDuckGo Terms of Service"
-- scrollUntilVisible:
-    element: "Privacy Policy"
-    timeout: 50000
-    speed: 100
-# Tap status bar to make sure bottom bar is visible
-- tapOn:
-    point: 90%, 1%
+    text: 'Help'
+- assertVisible: "DuckDuckGo Help Pages"
+# - scrollUntilVisible:
+#     element: "Privacy Policy"
+#     timeout: 50000
+#     speed: 100
+# # Tap status bar to make sure bottom bar is visible
+# - tapOn:
+#     point: 90%, 1%
 - tapOn: "Browse Back"
 - assertVisible: "DuckDuckGo.*"
 
@@ -65,4 +65,4 @@ tags:
 - tapOn: "Browse Forward"
 - doubleTapOn:
     point: 50%, 1%
-- assertVisible: "DuckDuckGo Terms of Service"
+- assertVisible: "DuckDuckGo Help Pages"
