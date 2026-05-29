@@ -3,8 +3,10 @@ appId: com.duckduckgo.mobile.ios
 
 - assertVisible: Begin Syncing
 - tapOn: Sync With Another Device
-- inputText: "0000"
-- pressKey: Enter
+
+- runFlow:
+    file: ../shared/dismiss_application_lock.yaml
+
 - runFlow:
     when:
       visible: Allows you to upload photographs and videos

@@ -6,8 +6,10 @@ appId: com.duckduckgo.mobile.ios
 - assertVisible: Begin Syncing
 - assertVisible: Recover Synced Data
 - tapOn: Recover Synced Data
-- inputText: "0000"
-- pressKey: Enter
+
+- runFlow:
+    file: ../shared/dismiss_application_lock.yaml
+
 - tapOn: Recover Synced Data
 - runFlow:
     when:

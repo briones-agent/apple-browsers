@@ -5,9 +5,9 @@ appId: com.duckduckgo.mobile.ios
       element: Passwords & Autofill
 - tapOn: Passwords & Autofill
 - tapOn: Passwords
-- tapOn: Passcode field
-- inputText: "0000"
-- pressKey: Enter
+
+- runFlow:
+    file: ../shared/dismiss_application_lock.yaml
 
 - tapOn:
     id: Button_DismissImportPromo
