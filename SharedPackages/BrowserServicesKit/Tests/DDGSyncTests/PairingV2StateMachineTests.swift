@@ -256,6 +256,47 @@ final class PairingV2StateMachineTests: XCTestCase {
         )
     }
 
+    func testWhenNativePresenterWithoutAccountReceivesNativeRequestThenItRequestsHostConfirmation() {
+        var stateMachine = PairingV2StateMachine()
+        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: true)
+
+        _ = stateMachine.handle(.presentCodeRequested(localClient: localClient, flags: enabledFlags))
+        _ = stateMachine.handle(.receivedHello(.init(channelId: "peer-channel", publicKey: "public-key")))
+        let peerStatus = PairingV2PeerStatus.recoveryCodeRequest(kind: .ddg)
+        let commands = stateMachine.handle(.receivedPeerStatus(peerStatus))
+
+        XCTAssertEqual(commands, [
+            .sendRecoveryCodeAwaitingConfirmation,
+            .requestHostConfirmation(peerName: nil)
+        ])
+        XCTAssertEqual(
+            stateMachine.state,
+            .hostWaitingForConfirmation(
+                .init(localClient: localClient, channelID: nil, peerStatus: peerStatus),
+                credentialKind: .ddg
+            )
+        )
+    }
+
+    func testWhenNativeScannerWithoutAccountReceivesNativeRequestThenItRequestsJoinerConfirmation() {
+        var stateMachine = PairingV2StateMachine()
+        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)
+
+        _ = stateMachine.handle(
+            .scannedCode(.v2Linking(channelID: "channel-1"), localClient: localClient, flags: enabledFlags)
+        )
+        let peerStatus = PairingV2PeerStatus.recoveryCodeRequest(kind: .ddg)
+        let commands = stateMachine.handle(.receivedPeerStatus(peerStatus))
+
+        XCTAssertEqual(commands, [.requestJoinerConfirmation(peerName: nil)])
+        XCTAssertEqual(
+            stateMachine.state,
+            .joinerWaitingForConfirmation(
+                .init(localClient: localClient, channelID: "channel-1", peerStatus: peerStatus)
+            )
+        )
+    }
+
     func testWhenHostConfirmationIsAcceptedThenItPreparesRecoveryCode() {
         var stateMachine = PairingV2StateMachine()
         let localClient = makeLocalClient(kind: .ddg, hasAccount: true, isPresenter: false)

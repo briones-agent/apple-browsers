@@ -337,6 +337,21 @@ final class SyncConnectionControllerTests: XCTestCase {
         XCTAssertEqual(pairingInfo.deviceName, Self.deviceName)
     }
 
+    func test_startConnectMode_whenPairingV2CodeEnabled_returnsV2PairingInfo() async throws {
+        dependencies.isPairingV2CodeEnabled = { true }
+        let messageExchanger = PairingV2MessageExchangingMock()
+        messageExchanger.fetchMessagesError = PairingV2Error.cancelled
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+
+        let pairingInfo = try await controller.startConnectMode()
+        let url = try XCTUnwrap(URL(string: pairingInfo.base64Code))
+        let payload = try XCTUnwrap(PairingV2QRCodePayload(url: url))
+
+        XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 1)
+        XCTAssertEqual(messageExchanger.openChannelCalls, [payload.channelId])
+        XCTAssertEqual(pairingInfo.toURL(baseURL: URL(string: "https://example.com")!), url)
+    }
+
     @MainActor
     func test_startConnectMode_pollSucceeds_informsDelegate() async throws {
         let remoteConnector = MockRemoteConnecting()
@@ -615,15 +630,19 @@ final class SyncConnectionControllerTests: XCTestCase {
     }
 
     @MainActor
-    func test_syncCodeEntered_withV2UrlAndUrlScanningDisabled_doesNotStartPairingV2() async throws {
-        let payload = PairingV2QRCodePayload(channelId: "channel-1", publicKey: "public-key")
+    func test_syncCodeEntered_withV2UrlAndUrlScanningDisabled_startsPairingV2() async throws {
+        let messageExchanger = PairingV2MessageExchangingMock()
+        messageExchanger.fetchMessagesError = PairingV2Error.cancelled
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
         let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: false, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
-        XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 0)
-        XCTAssertEqual(delegate.didErrorErrors?.error, .unableToRecognizeCode)
+        XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 1)
+        XCTAssertNil(delegate.didErrorErrors)
     }
 
     @MainActor

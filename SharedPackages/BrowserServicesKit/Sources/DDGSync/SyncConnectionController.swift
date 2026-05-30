@@ -167,6 +167,10 @@ public class SyncConnectionController: SyncConnectionControlling {
     }
 
     public func startConnectMode() async throws -> PairingInfo {
+        guard !isPairingV2PresentationEnabled else {
+            return try await startPairingV2PresenterMode()
+        }
+
         let connector = try remoteConnect()
         await state.setConnector(connector)
         self.startConnectPolling()
@@ -231,10 +235,11 @@ public class SyncConnectionController: SyncConnectionControlling {
 
         let syncCode: SyncCode
         do {
+            if let url = URL(string: code), let pairingV2Payload = PairingV2QRCodePayload(url: url) {
+                return await handlePairingV2(qrPayload: pairingV2Payload, codeSource: codeSource)
+            }
+
             if canScanURLBarcodes, let url = URL(string: code) {
-                if let pairingV2Payload = PairingV2QRCodePayload(url: url) {
-                    return await handlePairingV2(qrPayload: pairingV2Payload, codeSource: codeSource)
-                }
                 if let pairingInfo = PairingInfo(url: url) {
                     return await startPairingMode(pairingInfo, codeSource: codeSource)
                 }
@@ -646,5 +651,9 @@ extension SyncConnectionController: PairingV2ConfirmationDelegate {
 
     func pairingV2CoordinatorShouldJoinPeer(peerName: String?) async -> Bool {
         await delegate?.controllerShouldJoinPairingV2Peer(peerName: peerName) ?? true
+    }
+
+    func pairingV2CoordinatorDidCreateSyncAccount() async {
+        await delegate?.controllerDidCreateSyncAccount()
     }
 }

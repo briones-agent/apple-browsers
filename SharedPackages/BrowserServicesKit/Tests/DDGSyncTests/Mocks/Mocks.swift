@@ -68,8 +68,10 @@ extension LoginResult {
 }
 
 class AccountManagingMock: AccountManaging {
+    var createAccountCalls: [(deviceName: String, deviceType: String)] = []
     var createAccountError: Error?
     func createAccount(deviceName: String, deviceType: String) async throws -> SyncAccount {
+        createAccountCalls.append((deviceName: deviceName, deviceType: deviceType))
         if let error = createAccountError {
             throw error
         }

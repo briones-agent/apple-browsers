@@ -22,6 +22,7 @@ import os.log
 protocol PairingV2ConfirmationDelegate: AnyObject {
     func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?) async -> Bool
     func pairingV2CoordinatorShouldJoinPeer(peerName: String?) async -> Bool
+    func pairingV2CoordinatorDidCreateSyncAccount() async
 }
 
 final class PairingV2Coordinator {
@@ -295,6 +296,8 @@ final class PairingV2Coordinator {
     }
 
     private func prepareRecoveryCode(credentialKind: PairingV2DeviceKind, purpose: String) async throws -> String {
+        try await ensureSyncAccountExists()
+
         switch credentialKind {
         case .thirdParty:
             return try await syncService.prepareThirdPartyRecoveryCode(purpose: purpose)
@@ -304,6 +307,15 @@ final class PairingV2Coordinator {
             }
             return recoveryCode
         }
+    }
+
+    private func ensureSyncAccountExists() async throws {
+        guard syncService.account == nil else {
+            return
+        }
+
+        try await syncService.createAccount(deviceName: deviceName, deviceType: deviceType)
+        await confirmationDelegate?.pairingV2CoordinatorDidCreateSyncAccount()
     }
 
     private func sendRecoveryCode(_ recoveryCode: String) async throws {

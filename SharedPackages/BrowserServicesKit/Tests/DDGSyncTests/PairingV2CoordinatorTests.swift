@@ -26,6 +26,7 @@ private final class PairingV2ConfirmationDelegateMock: PairingV2ConfirmationDele
     var shouldJoinPeer = true
     var allowPeerToJoinCalls: [String?] = []
     var joinPeerCalls: [String?] = []
+    var didCreateSyncAccountCallCount = 0
 
     func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?) async -> Bool {
         allowPeerToJoinCalls.append(peerName)
@@ -35,6 +36,10 @@ private final class PairingV2ConfirmationDelegateMock: PairingV2ConfirmationDele
     func pairingV2CoordinatorShouldJoinPeer(peerName: String?) async -> Bool {
         joinPeerCalls.append(peerName)
         return shouldJoinPeer
+    }
+
+    func pairingV2CoordinatorDidCreateSyncAccount() async {
+        didCreateSyncAccountCallCount += 1
     }
 }
 
@@ -133,6 +138,58 @@ final class PairingV2CoordinatorTests: XCTestCase {
                                          name: "Mac",
                                          kind: .ddg,
                                          userId: SyncAccount.mock.userId))
+        )
+        XCTAssertEqual(
+            try decryptSentMessage(at: 1, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
+            .recoveryCodeAwaitingConfirmation(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeAwaitingConfirmation))
+        )
+        XCTAssertEqual(
+            try decryptSentMessage(at: 2, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
+            .recoveryCodeConfirmed(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeConfirmed))
+        )
+        XCTAssertEqual(
+            try decryptSentMessage(at: 3, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
+            .recoveryCodeResponse(.init(recoveryCode: recoveryCode))
+        )
+        XCTAssertEqual(coordinator.state, .completed(.recoveryCodeSent))
+    }
+
+    func testWhenNoAccountPresenterHostsNativePeerThenCreatesAccountBeforeSendingRecoveryCodeResponse() async throws {
+        let dependencies = MockSyncDependencies()
+        let accountManager = AccountManagingMock()
+        dependencies.account = accountManager
+        let syncService = DDGSync(dataProvidersSource: MockDataProvidersSource(), dependencies: dependencies)
+        let messageExchanger = PairingV2MessageExchangingMock()
+        let messageCrypto = PairingV2MessageCrypto()
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let confirmationDelegate = PairingV2ConfirmationDelegateMock()
+        let coordinator = makeCoordinator(syncService: syncService,
+                                          messageExchanger: messageExchanger,
+                                          messageCrypto: messageCrypto,
+                                          confirmationDelegate: confirmationDelegate)
+
+        let payload = try await coordinator.startPresenting()
+        messageExchanger.fetchMessagesStub = try encryptedPeerMessages(
+            [
+                .hello(.init(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)),
+                .recoveryCodeRequest(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeRequest,
+                                           name: "Peer",
+                                           kind: .ddg))
+            ],
+            recipientPublicKey: payload.publicKey,
+            peerKeyPair: peerKeyPair,
+            messageCrypto: messageCrypto
+        )
+
+        try await coordinator.pollOnce()
+
+        let recoveryCode = try XCTUnwrap(syncService.account?.recoveryCode)
+        XCTAssertEqual(accountManager.createAccountCalls.map(\.deviceName), ["Mac"])
+        XCTAssertEqual(accountManager.createAccountCalls.map(\.deviceType), ["desktop"])
+        XCTAssertEqual(confirmationDelegate.didCreateSyncAccountCallCount, 1)
+        XCTAssertEqual(
+            try decryptSentMessage(at: 0, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
+            .recoveryCodeRequest(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeRequest, name: "Mac", kind: .ddg))
         )
         XCTAssertEqual(
             try decryptSentMessage(at: 1, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
