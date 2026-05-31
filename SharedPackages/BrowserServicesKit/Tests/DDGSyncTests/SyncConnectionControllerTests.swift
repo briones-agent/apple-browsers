@@ -59,6 +59,8 @@ final class MockSyncConnectionControllerDelegate: SyncConnectionControllerDelega
     var didErrorCalled = { }
     var didErrorErrors: (error: SyncConnectionError, underlyingError: Error?)?
     var shouldContinueServerSyncOperation = true
+    var shouldAllowPairingV2PeerToJoin = true
+    var shouldJoinPairingV2Peer = true
     var willPerformServerSyncOperationCallCount = 0
 
     func controllerWillBeginTransmittingRecoveryKey() async {
@@ -81,6 +83,14 @@ final class MockSyncConnectionControllerDelegate: SyncConnectionControllerDelega
         willPerformServerSyncOperationCallCount += 1
         willPerformServerSyncOperationCalled()
         return shouldContinueServerSyncOperation
+    }
+
+    func controllerShouldAllowPairingV2PeerToJoin(peerName _: String?) async -> Bool {
+        shouldAllowPairingV2PeerToJoin
+    }
+
+    func controllerShouldJoinPairingV2Peer(peerName _: String?) async -> Bool {
+        shouldJoinPairingV2Peer
     }
 
     func controllerDidCreateSyncAccount() {
@@ -665,15 +675,15 @@ final class SyncConnectionControllerTests: XCTestCase {
 
     func test_syncCodeEntered_whenAlreadyInFlight_returnsFalse() async {
         // Simulate in-flight operation
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
-        let result = await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
         XCTAssertEqual(result, false)
     }
 
     @MainActor
     func test_syncCodeEntered_withInvalidCode_returnsFailure() async throws {
-        let result = await controller.syncCodeEntered(code: "invalid_base64", canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: "invalid_base64", canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
         let error = delegate.didErrorErrors?.error
 
         XCTAssertEqual(result, false)
@@ -689,7 +699,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: false, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: false, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 1)
@@ -705,7 +715,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 1)
@@ -718,7 +728,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: "channel-1", publicKey: "public-key")
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 0)
@@ -732,7 +742,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: "channel-1", publicKey: "public-key")
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(dependencies.createPairingV2MessageExchangerCallCount, 0)
@@ -750,7 +760,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertNil(delegate.didErrorErrors)
@@ -779,7 +789,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertTrue(result)
         guard case .receiver(.exchange, .pastedCode) = delegate.didCompletePairingWithAlreadyConnectedAccountSetupRole else {
@@ -802,7 +812,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(delegate.didErrorErrors?.error, .unableToRecognizeCode)
@@ -834,7 +844,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(delegate.didErrorErrors?.error, .failedToTransmitExchangeRecoveryKey)
@@ -869,7 +879,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(delegate.didErrorErrors?.error, .failedToTransmitExchangeRecoveryKey)
@@ -900,7 +910,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
         let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
 
-        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(delegate.didErrorErrors?.error, .failedToLogIn)
@@ -914,7 +924,7 @@ final class SyncConnectionControllerTests: XCTestCase {
             expectation.fulfill()
         }
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         await fulfillment(of: [expectation], timeout: 5)
     }
@@ -927,7 +937,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         }
 
         let url = "https://duckduckgo.com/sync/pairing/#&code=\(Self.validExchangeCode)&deviceName=TestDevice"
-        await controller.syncCodeEntered(code: url, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: url, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         await fulfillment(of: [expectation], timeout: 5)
     }
@@ -938,7 +948,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let mockExchangePublicKeyTransmitter = MockExchangePublicKeyTransmitting()
         dependencies.createExchangePublicKeyTransmitterStub = mockExchangePublicKeyTransmitter
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertEqual(mockExchangePublicKeyTransmitter.sendGeneratedExchangeInfoCalled, 1)
     }
@@ -949,7 +959,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         mockExchangePublicKeyTransmitter.sendGeneratedExchangeInfoError = SyncError.unableToDecodeResponse("")
         dependencies.createExchangePublicKeyTransmitterStub = mockExchangePublicKeyTransmitter
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let error = delegate.didErrorErrors?.error
         XCTAssertEqual(error, .failedToTransmitExchangeKey)
@@ -964,7 +974,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let mockExchangeRecoverer = MockRemoteExchangeRecovering()
         dependencies.createRemoteExchangeRecoverer = mockExchangeRecoverer
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertEqual(mockExchangeRecoverer.pollForRecoveryKeyCalled, 1)
     }
@@ -980,7 +990,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         mockExchangeRecoverer.pollForRecoveryKeyResult = recoveryKey
         dependencies.createRemoteExchangeRecoverer = mockExchangeRecoverer
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let devices = await delegate.didCompleteLoginDevices
         XCTAssertNotNil(devices)
@@ -997,7 +1007,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         mockExchangeRecoverer.pollForRecoveryKeyError = SyncError.unableToDecodeResponse("")
         dependencies.createRemoteExchangeRecoverer = mockExchangeRecoverer
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let error = delegate.didErrorErrors?.error
 
@@ -1020,7 +1030,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         mockAccountManager.loginError = SyncError.failedToDecryptValue("")
         dependencies.account = mockAccountManager
 
-        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let error = delegate.didErrorErrors?.error
 
@@ -1033,7 +1043,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let mockAccountManager = AccountManagingMock()
         dependencies.account = mockAccountManager
 
-        await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertTrue(mockAccountManager.loginCalled)
     }
@@ -1044,7 +1054,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         dependencies.account = mockAccountManager
         delegate.shouldContinueServerSyncOperation = false
 
-        let result = await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertEqual(delegate.willPerformServerSyncOperationCallCount, 1)
@@ -1057,7 +1067,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         mockAccountManager.loginError = SyncError.failedToDecryptValue("")
         dependencies.account = mockAccountManager
 
-        await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let error = delegate.didErrorErrors?.error
 
@@ -1070,7 +1080,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         dependencies.account = mockAccountManager
         try? dependencies.secureStore.persistAccount(SyncAccount.mock)
 
-        await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let twoAccountsKey = await delegate.didFindTwoAccountsDuringRecoveryCalled
         XCTAssertNotNil(twoAccountsKey)
@@ -1082,7 +1092,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         dependencies.account = mockAccountManager
 
         let recoveryCode = try Self.makeRecoveryCodeV2(credentialId: SyncCode.RecoveryKeyV2.thirdPartyCredentialId)
-        let result = await controller.syncCodeEntered(code: recoveryCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        let result = await controller.syncCodeEntered(code: recoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertFalse(result)
         XCTAssertFalse(mockAccountManager.loginCalled)
@@ -1101,7 +1111,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let mockAccountManager = AccountManagingMock()
         dependencies.account = mockAccountManager
 
-        await controller.syncCodeEntered(code: Self.validConnectCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validConnectCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         await fulfillment(of: [expectation], timeout: 5)
     }
@@ -1113,7 +1123,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         dependencies.account = mockAccountManager
 
         let error = try await waitForError {
-            await self.controller.syncCodeEntered(code: Self.validConnectCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+            await self.controller.syncCodeEntered(code: Self.validConnectCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
         }
         XCTAssertEqual(error, .failedToCreateAccount)
     }
@@ -1122,7 +1132,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let mockRecoveryKeyTransmitter = MockRecoveryKeyTransmitting()
         dependencies.createRecoveryTransmitterStub = mockRecoveryKeyTransmitter
 
-        await controller.syncCodeEntered(code: Self.validConnectCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validConnectCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertEqual(mockRecoveryKeyTransmitter.sendCalled, 1)
     }
@@ -1133,7 +1143,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         mockRecoveryKeyTransmitter.sendError = SyncError.unableToDecodeResponse("")
         dependencies.createRecoveryTransmitterStub = mockRecoveryKeyTransmitter
 
-        await controller.syncCodeEntered(code: Self.validConnectCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validConnectCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let error = delegate.didErrorErrors?.error
         XCTAssertEqual(error, .failedToTransmitConnectRecoveryKey)
@@ -1144,7 +1154,7 @@ final class SyncConnectionControllerTests: XCTestCase {
         let mockRecoveryKeyTransmitter = MockRecoveryKeyTransmitting()
         dependencies.createRecoveryTransmitterStub = mockRecoveryKeyTransmitter
 
-        await controller.syncCodeEntered(code: Self.validConnectCode, canScanURLBarcodes: true, codeSource: .pastedCode)
+        await controller.syncCodeEntered(code: Self.validConnectCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let didComplete = delegate.didCompleteAccountConnectionValue
         XCTAssertNotNil(didComplete)

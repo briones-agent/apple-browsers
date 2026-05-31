@@ -89,7 +89,7 @@ final class PairingV2Coordinator {
         lastProcessedSequence = 0
 
         let commands = stateMachine.handle(
-            .scannedCode(.v2Linking(channelID: qrPayload.channelId), localClient: localClient(isPresenter: false), flags: flags)
+            .scannedCode(.v2Linking(peerChannelID: qrPayload.channelId), localClient: localClient(isPresenter: false), flags: flags)
         )
         try await execute(commands)
     }
@@ -109,7 +109,7 @@ final class PairingV2Coordinator {
         }
     }
 
-    func pollUntilFinished(timeout: TimeInterval = 60, pollInterval: UInt64 = 1_000_000_000) async throws -> PairingV2State.Completion {
+    func pollUntilFinished(timeout: TimeInterval = 300, pollInterval: UInt64 = 1_000_000_000) async throws -> PairingV2State.Completion {
         let timeoutDate = Date().addingTimeInterval(timeout)
 
         while true {
@@ -231,12 +231,20 @@ final class PairingV2Coordinator {
             try await send(.recoveryCodeDenied(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeDenied)))
 
         case .requestHostConfirmation(let peerName):
-            let isConfirmed = await confirmationDelegate?.pairingV2CoordinatorShouldAllowPeerToJoin(peerName: peerName) ?? true
+            guard let confirmationDelegate else {
+                try await execute(stateMachine.handle(.hostConfirmationDenied))
+                return
+            }
+            let isConfirmed = await confirmationDelegate.pairingV2CoordinatorShouldAllowPeerToJoin(peerName: peerName)
             let event: PairingV2Event = isConfirmed ? .hostConfirmationAccepted : .hostConfirmationDenied
             try await execute(stateMachine.handle(event))
 
         case .requestJoinerConfirmation(let peerName):
-            let isConfirmed = await confirmationDelegate?.pairingV2CoordinatorShouldJoinPeer(peerName: peerName) ?? true
+            guard let confirmationDelegate else {
+                try await execute(stateMachine.handle(.joinerConfirmationDenied))
+                return
+            }
+            let isConfirmed = await confirmationDelegate.pairingV2CoordinatorShouldJoinPeer(peerName: peerName)
             let event: PairingV2Event = isConfirmed ? .joinerConfirmationAccepted : .joinerConfirmationDenied
             try await execute(stateMachine.handle(event))
 

@@ -59,7 +59,7 @@ final class PairingV2CoordinatorTests: XCTestCase {
         XCTAssertEqual(messageExchanger.openChannelCalls, [payload.channelId])
         XCTAssertEqual(
             coordinator.state,
-            .waitingForPeerHello(.init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: true), channelID: nil))
+            .waitingForPeerHello(.init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: true), peerChannelID: nil))
         )
     }
 
@@ -91,7 +91,7 @@ final class PairingV2CoordinatorTests: XCTestCase {
         )
         XCTAssertEqual(
             coordinator.state,
-            .waitingForPeerStatus(.init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: true), channelID: nil))
+            .waitingForPeerStatus(.init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: true), peerChannelID: nil))
         )
     }
 
@@ -120,7 +120,7 @@ final class PairingV2CoordinatorTests: XCTestCase {
             coordinator.state,
             .waitingForPeerStatus(
                 .init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: false),
-                      channelID: peerKeyPair.channelID,
+                      peerChannelID: peerKeyPair.channelID,
                       hasReceivedHello: true)
             )
         )
@@ -341,7 +341,7 @@ final class PairingV2CoordinatorTests: XCTestCase {
             coordinator.state,
             .joinerWaitingForRecoveryCode(
                 .init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: false),
-                      channelID: peerKeyPair.channelID,
+                      peerChannelID: peerKeyPair.channelID,
                       peerStatus: .recoveryCodeAvailable(name: "Peer", kind: .thirdParty, userId: "third-party-user"))
             )
         )

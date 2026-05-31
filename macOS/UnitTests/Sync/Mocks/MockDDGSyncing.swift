@@ -256,14 +256,14 @@ final class MockSyncConnectionControlling: SyncConnectionControlling {
 
     var syncCodeEnteredCalled: (String, Bool, SyncCodeSource) -> Void = { _, _, _ in }
     var spySyncCodeEnteredCode: String?
-    var spySyncCodeEnteredCanScanURLBarcodes: Bool?
+    var spySyncCodeEnteredCanScanLegacyURLBarcodes: Bool?
     var spySyncCodeEnteredCodeSource: SyncCodeSource?
     var stubSyncCodeEntered: Bool = true
-    func syncCodeEntered(code: String, canScanURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool {
+    func syncCodeEntered(code: String, canScanLegacyURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool {
         spySyncCodeEnteredCode = code
-        spySyncCodeEnteredCanScanURLBarcodes = canScanURLBarcodes
+        spySyncCodeEnteredCanScanLegacyURLBarcodes = canScanLegacyURLBarcodes
         spySyncCodeEnteredCodeSource = codeSource
-        syncCodeEnteredCalled(code, canScanURLBarcodes, codeSource)
+        syncCodeEnteredCalled(code, canScanLegacyURLBarcodes, codeSource)
         return stubSyncCodeEntered
     }
 

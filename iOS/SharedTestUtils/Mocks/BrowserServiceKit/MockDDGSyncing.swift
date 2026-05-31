@@ -201,7 +201,7 @@ final class MockSyncConnectionControlling: SyncConnectionControlling {
         true
     }
 
-    func syncCodeEntered(code: String, canScanURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool {
+    func syncCodeEntered(code: String, canScanLegacyURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool {
         true
     }
 

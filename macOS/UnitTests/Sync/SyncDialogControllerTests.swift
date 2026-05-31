@@ -145,7 +145,7 @@ final class SyncDialogControllerTests: XCTestCase {
         await fulfillment(of: [expectation], timeout: 5)
 
         XCTAssertEqual(connectionController.spySyncCodeEnteredCode, testRecoveryCode)
-        XCTAssertEqual(connectionController.spySyncCodeEnteredCanScanURLBarcodes, true)
+        XCTAssertEqual(connectionController.spySyncCodeEnteredCanScanLegacyURLBarcodes, true)
         XCTAssertEqual(connectionController.spySyncCodeEnteredCodeSource, .pastedCode)
     }
 

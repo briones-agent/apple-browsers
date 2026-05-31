@@ -202,7 +202,7 @@ final class SyncDialogController {
 
     private func recoverDevice(recoveryCode: String, fromRecoveryScreen: Bool, codeSource: SyncCodeSource) {
         Task {
-            await connectionController.syncCodeEntered(code: recoveryCode, canScanURLBarcodes: featureFlagger.isFeatureOn(.canScanUrlBasedSyncSetupBarcodes), codeSource: codeSource)
+            await connectionController.syncCodeEntered(code: recoveryCode, canScanLegacyURLBarcodes: featureFlagger.isFeatureOn(.canScanUrlBasedSyncSetupBarcodes), codeSource: codeSource)
         }
     }
 
@@ -614,13 +614,13 @@ extension SyncDialogController: SyncConnectionControllerDelegate {
     }
 
     func controllerShouldAllowPairingV2PeerToJoin(peerName: String?) async -> Bool {
-        let peerName = peerName ?? "the other device"
-        return await showPairingV2Confirmation(message: "Allow \"\(peerName)\" to sync with this device?")
+        let peerName = peerName ?? UserText.syncPairingV2UnknownPeerName
+        return await showPairingV2Confirmation(message: UserText.syncPairingV2AllowPeerMessage(peerName))
     }
 
     func controllerShouldJoinPairingV2Peer(peerName: String?) async -> Bool {
-        let peerName = peerName ?? "the other device"
-        return await showPairingV2Confirmation(message: "Sync your data with \"\(peerName)\"?")
+        let peerName = peerName ?? UserText.syncPairingV2UnknownPeerName
+        return await showPairingV2Confirmation(message: UserText.syncPairingV2JoinPeerMessage(peerName))
     }
 
     func controllerDidCreateSyncAccount() {
@@ -717,11 +717,11 @@ extension SyncDialogController: SyncConnectionControllerDelegate {
     private func showPairingV2Confirmation(message: String) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
-            alert.messageText = "Sync your data?"
+            alert.messageText = UserText.syncPairingV2ConfirmationTitle
             alert.informativeText = message
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "Cancel")
-            alert.addButton(withTitle: "Sync")
+            alert.addButton(withTitle: UserText.cancel)
+            alert.addButton(withTitle: UserText.syncPairingV2ConfirmationAction)
 
             guard let window = NSApplication.shared.keyWindow else {
                 continuation.resume(returning: alert.runModal() == .alertSecondButtonReturn)

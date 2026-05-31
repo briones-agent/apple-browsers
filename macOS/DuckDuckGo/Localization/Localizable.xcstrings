@@ -103886,6 +103886,66 @@
         }
       }
     },
+    "sync.pairing-v2.confirmation.action" : {
+      "comment" : "Button title to confirm Pairing V2 sync setup with another device",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync"
+          }
+        }
+      }
+    },
+    "sync.pairing-v2.confirmation.allow-peer.message" : {
+      "comment" : "Message asking whether another device should be allowed to sync with this device. The placeholder is the other device name.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Allow \"%@\" to sync with this device?"
+          }
+        }
+      }
+    },
+    "sync.pairing-v2.confirmation.join-peer.message" : {
+      "comment" : "Message asking whether this device should sync with another device. The placeholder is the other device name.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync your data with \"%@\"?"
+          }
+        }
+      }
+    },
+    "sync.pairing-v2.confirmation.title" : {
+      "comment" : "Title of the dialog to confirm Pairing V2 sync setup with another device",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sync your data?"
+          }
+        }
+      }
+    },
+    "sync.pairing-v2.unknown-peer-name" : {
+      "comment" : "Fallback device name for Pairing V2 confirmation dialogs",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "the other device"
+          }
+        }
+      }
+    },
     "sync.promo.autofill.title" : {
       "comment" : "Title for the Sync Promotion banner",
       "extractionState" : "extracted_with_value",

@@ -82,7 +82,7 @@ public protocol SyncConnectionControlling {
      Handles a scanned or pasted key and starts excange, recovery or connect flow
      */
     @discardableResult
-    func syncCodeEntered(code: String, canScanURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool
+    func syncCodeEntered(code: String, canScanLegacyURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool
 }
 
 private actor SyncConnectionState {
@@ -223,7 +223,7 @@ public class SyncConnectionController: SyncConnectionControlling {
     }
 
     @discardableResult
-    public func syncCodeEntered(code: String, canScanURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool {
+    public func syncCodeEntered(code: String, canScanLegacyURLBarcodes: Bool, codeSource: SyncCodeSource) async -> Bool {
         guard !(await state.isCodeHandlingInFlight()) else {
             return false
         }
@@ -240,7 +240,7 @@ public class SyncConnectionController: SyncConnectionControlling {
                 return await handlePairingV2(qrPayload: pairingV2Payload, codeSource: codeSource)
             }
 
-            if canScanURLBarcodes, let url = URL(string: code) {
+            if canScanLegacyURLBarcodes, let url = URL(string: code) {
                 if let pairingInfo = PairingInfo(url: url) {
                     return await startPairingMode(pairingInfo, codeSource: codeSource)
                 }
@@ -412,7 +412,7 @@ public class SyncConnectionController: SyncConnectionControlling {
     }
 
     private func pollPairingV2PresenterUntilFinished(_ coordinator: PairingV2Coordinator,
-                                                     timeout: TimeInterval = 60,
+                                                     timeout: TimeInterval = 300,
                                                      pollInterval: UInt64 = 1_000_000_000) async throws -> PairingV2State.Completion {
         let timeoutDate = Date().addingTimeInterval(timeout)
         var didNotifyPeerConnected = false
@@ -639,11 +639,11 @@ public extension SyncConnectionControllerDelegate {
     }
 
     func controllerShouldAllowPairingV2PeerToJoin(peerName _: String?) async -> Bool {
-        true
+        false
     }
 
     func controllerShouldJoinPairingV2Peer(peerName _: String?) async -> Bool {
-        true
+        false
     }
 
     func controllerDidCompletePairingWithAlreadyConnectedAccount(setupRole _: SyncSetupRole) {
@@ -653,11 +653,11 @@ public extension SyncConnectionControllerDelegate {
 extension SyncConnectionController: PairingV2ConfirmationDelegate {
 
     func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?) async -> Bool {
-        await delegate?.controllerShouldAllowPairingV2PeerToJoin(peerName: peerName) ?? true
+        await delegate?.controllerShouldAllowPairingV2PeerToJoin(peerName: peerName) ?? false
     }
 
     func pairingV2CoordinatorShouldJoinPeer(peerName: String?) async -> Bool {
-        await delegate?.controllerShouldJoinPairingV2Peer(peerName: peerName) ?? true
+        await delegate?.controllerShouldJoinPairingV2Peer(peerName: peerName) ?? false
     }
 
     func pairingV2CoordinatorDidCreateSyncAccount() async {

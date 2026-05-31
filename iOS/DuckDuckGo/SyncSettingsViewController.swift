@@ -516,7 +516,7 @@ extension SyncSettingsViewController: ScanOrPasteCodeViewModelDelegate {
             codeSource = .qrCode
         }
 
-        return await connectionController.syncCodeEntered(code: code, canScanURLBarcodes: featureFlagger.isFeatureOn(.canScanUrlBasedSyncSetupBarcodes), codeSource: codeSource)
+        return await connectionController.syncCodeEntered(code: code, canScanLegacyURLBarcodes: featureFlagger.isFeatureOn(.canScanUrlBasedSyncSetupBarcodes), codeSource: codeSource)
     }
 
     func dismissVCAndShowRecoveryPDF() {

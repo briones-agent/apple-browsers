@@ -54,7 +54,7 @@ struct PairingV2PeerStatus: Equatable {
 
 enum PairingV2ScannedCode: Equatable {
     case v1Linking
-    case v2Linking(channelID: String)
+    case v2Linking(peerChannelID: String)
     case recoveryCode(kind: PairingV2DeviceKind, code: String)
     case unknown
 }
@@ -66,18 +66,18 @@ struct PairingV2RolloutFlags: Equatable {
 
 struct PairingV2Session: Equatable {
     let localClient: PairingV2LocalClient
-    let channelID: String?
+    let peerChannelID: String?
     let peerStatus: PairingV2PeerStatus?
     let purpose: String
     let hasReceivedHello: Bool
 
     init(localClient: PairingV2LocalClient,
-         channelID: String?,
+         peerChannelID: String?,
          peerStatus: PairingV2PeerStatus? = nil,
          purpose: String = "ai_chats",
          hasReceivedHello: Bool = false) {
         self.localClient = localClient
-        self.channelID = channelID
+        self.peerChannelID = peerChannelID
         self.peerStatus = peerStatus
         self.purpose = purpose
         self.hasReceivedHello = hasReceivedHello
@@ -85,7 +85,7 @@ struct PairingV2Session: Equatable {
 
     func withPeerStatus(_ peerStatus: PairingV2PeerStatus) -> PairingV2Session {
         PairingV2Session(localClient: localClient,
-                         channelID: channelID,
+                         peerChannelID: peerChannelID,
                          peerStatus: peerStatus,
                          purpose: purpose,
                          hasReceivedHello: hasReceivedHello)
@@ -93,7 +93,7 @@ struct PairingV2Session: Equatable {
 
     func withReceivedHello() -> PairingV2Session {
         PairingV2Session(localClient: localClient,
-                         channelID: channelID,
+                         peerChannelID: peerChannelID,
                          peerStatus: peerStatus,
                          purpose: purpose,
                          hasReceivedHello: true)
@@ -290,7 +290,7 @@ struct PairingV2StateMachine {
             return fail(with: .unsupportedFlow("Pairing V2 code presentation requires a native client"))
         }
 
-        let session = PairingV2Session(localClient: localClient, channelID: nil)
+        let session = PairingV2Session(localClient: localClient, peerChannelID: nil)
         state = .waitingForPeerHello(session)
         return [.openV2Channel(channelID: nil)]
     }
@@ -302,7 +302,7 @@ struct PairingV2StateMachine {
         case .v1Linking:
             return fail(with: .unsupportedFlow("V1 fallback is handled outside Pairing V2"))
 
-        case .v2Linking(let channelID):
+        case .v2Linking(let peerChannelID):
             guard flags.isV2ScanningEnabled else {
                 return fail(with: .v2ScanningDisabled)
             }
@@ -311,7 +311,7 @@ struct PairingV2StateMachine {
                 return fail(with: .unsupportedFlow("Pairing V2 scanning requires a native client"))
             }
 
-            let session = PairingV2Session(localClient: localClient, channelID: channelID)
+            let session = PairingV2Session(localClient: localClient, peerChannelID: peerChannelID)
             state = .waitingForPeerStatus(session)
 
             let commands: [PairingV2Command] = [
