@@ -4483,6 +4483,10 @@
 		FEE12B412E520E4D00AD9807 /* PromoHistoryRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */; };
 		FEE12B412E520E4D00AD9809 /* PromoHistoryRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */; };
 		FFF6627FC03B410786EF2635 /* RebrandedContextualOnboardingDialogs+SearchCompleted.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E776DE170ED47F4B3E992DF /* RebrandedContextualOnboardingDialogs+SearchCompleted.swift */; };
+		1D5A3D872DFAEBDD007FFA91 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 1D5A3D862DFAEBDD007FFA91 /* HotKey */; };
+		1D5A3DA72DFAEBDD007FFA91 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 1D5A3DA62DFAEBDD007FFA91 /* HotKey */; };
+		D0DA01D0A1FFFFFFFFFFFF0E /* DuckAIGlobalShortcutMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA01D0A1FFFFFFFFFFFF0D /* DuckAIGlobalShortcutMonitor.swift */; };
+		D0DA01D0A1FFFFFFFFFFFF0F /* DuckAIGlobalShortcutMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA01D0A1FFFFFFFFFFFF0D /* DuckAIGlobalShortcutMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -6889,6 +6893,7 @@
 		FD23FD2A28816606007F6985 /* AutoconsentMessageProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AutoconsentMessageProtocolTests.swift; path = UnitTests/Autoconsent/AutoconsentMessageProtocolTests.swift; sourceTree = SOURCE_ROOT; };
 		FD23FD2C2886A81D007F6985 /* AutoconsentManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoconsentManagement.swift; sourceTree = "<group>"; };
 		FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoHistoryRecordTests.swift; sourceTree = "<group>"; };
+		D0DA01D0A1FFFFFFFFFFFF0D /* DuckAIGlobalShortcutMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuckAIGlobalShortcutMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -6970,6 +6975,7 @@
 				84C1763B2DF02567001DEEC7 /* CommonObjCExtensions in Frameworks */,
 				84C176522DF0462F001DEEC7 /* LetsMove in Frameworks */,
 				DDBB9E343D3A8AA3C0A9FBF7 /* AIChatDebugServer in Frameworks */,
+				1D5A3DA72DFAEBDD007FFA91 /* HotKey in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -7342,6 +7348,7 @@
 				D65D0F9F2E7239680075A784 /* NetworkQualityMonitor in Frameworks */,
 				D65D0FA32E7239750075A784 /* PerformanceTest in Frameworks */,
 				08355A13D28C7D20D863D8DE /* AIChatDebugServer in Frameworks */,
+				1D5A3D872DFAEBDD007FFA91 /* HotKey in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -8434,6 +8441,7 @@
 				D0DA01D0A1FFFFFFFFFFFF01 /* DuckAIStatusBarController.swift */,
 				D0DA01D0A1FFFFFFFFFFFF07 /* DuckAIFloatingOmnibarWindow.swift */,
 				D0DA01D0A1FFFFFFFFFFFF08 /* DuckAIFloatingOmnibarWindowController.swift */,
+				D0DA01D0A1FFFFFFFFFFFF0D /* DuckAIGlobalShortcutMonitor.swift */,
 			);
 			path = GlobalEntryPoint;
 			sourceTree = "<group>";
@@ -13152,6 +13160,7 @@
 				A1A1A1A12F50000800A0A0A0 /* CrashReportingShared */,
 				8518F1312F74318B00B53C75 /* ScreenTimeDataCleaner */,
 				30EF23C27554D957E2FCC6EE /* AIChatDebugServer */,
+				1D5A3DA62DFAEBDD007FFA91 /* HotKey */,
 			);
 			productName = DuckDuckGo;
 			productReference = 3706FD05293F65D500E42796 /* DuckDuckGo App Store.app */;
@@ -13742,6 +13751,7 @@
 				859401D12F72D2D200DE46F3 /* ScreenTimeDataCleaner */,
 				315E395E2F86A37000D2289D /* DebugServer */,
 				052E3BE94C5927500125A19C /* AIChatDebugServer */,
+				1D5A3D862DFAEBDD007FFA91 /* HotKey */,
 			);
 			productName = DuckDuckGo;
 			productReference = AA585D7E248FD31100E9A3E2 /* DuckDuckGo.app */;
@@ -13938,6 +13948,7 @@
 				CCF78AD42F34996900263097 /* XCRemoteSwiftPackageReference "combine-schedulers" */,
 				A1A1A1A12F50000600A0A0A0 /* XCLocalSwiftPackageReference "LocalPackages/CrashReporting" */,
 				315E395D2F86A36200D2289D /* XCLocalSwiftPackageReference "../SharedPackages/DebugServer" */,
+				1D710F252DFAE99E00B412A7 /* XCRemoteSwiftPackageReference "HotKey" */,
 			);
 			productRefGroup = AA585D7F248FD31100E9A3E2 /* Products */;
 			projectDirPath = "";
@@ -15246,6 +15257,7 @@
 				D0DA01D0A1FFFFFFFFFFFF05 /* GlobalDuckAIController.swift in Sources */,
 				D0DA01D0A1FFFFFFFFFFFF09 /* DuckAIFloatingOmnibarWindow.swift in Sources */,
 				D0DA01D0A1FFFFFFFFFFFF0B /* DuckAIFloatingOmnibarWindowController.swift in Sources */,
+				D0DA01D0A1FFFFFFFFFFFF0E /* DuckAIGlobalShortcutMonitor.swift in Sources */,
 				3706FB72293F65D500E42796 /* RecentlyClosedCoordinator.swift in Sources */,
 				ED1B618D2ED8B256008E0935 /* PasswordEntryRetryPromptView.swift in Sources */,
 				3706FB74293F65D500E42796 /* FaviconHostReference.swift in Sources */,
@@ -17338,6 +17350,7 @@
 				D0DA01D0A1FFFFFFFFFFFF06 /* GlobalDuckAIController.swift in Sources */,
 				D0DA01D0A1FFFFFFFFFFFF0A /* DuckAIFloatingOmnibarWindow.swift in Sources */,
 				D0DA01D0A1FFFFFFFFFFFF0C /* DuckAIFloatingOmnibarWindowController.swift in Sources */,
+				D0DA01D0A1FFFFFFFFFFFF0F /* DuckAIGlobalShortcutMonitor.swift in Sources */,
 				B59AB6452EFB179F00C2F87A /* SearchField.swift in Sources */,
 				EEC4A66D2B2C894F00F7C0AA /* VPNLocationPreferenceItemModel.swift in Sources */,
 				3776582F27F82E62009A6B35 /* AutofillPreferences.swift in Sources */,
@@ -20146,6 +20159,14 @@
 				revision = a968dd3d8d5ff95b6eae65889c1a365174a53a69;
 			};
 		};
+		1D710F252DFAE99E00B412A7 /* XCRemoteSwiftPackageReference "HotKey" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/soffes/HotKey";
+			requirement = {
+				kind = exactVersion;
+				version = 0.2.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -21601,6 +21622,16 @@
 		F1E720B42E9D586700654B4E /* AttributedMetric */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AttributedMetric;
+		};
+		1D5A3D862DFAEBDD007FFA91 /* HotKey */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D710F252DFAE99E00B412A7 /* XCRemoteSwiftPackageReference "HotKey" */;
+			productName = HotKey;
+		};
+		1D5A3DA62DFAEBDD007FFA91 /* HotKey */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D710F252DFAE99E00B412A7 /* XCRemoteSwiftPackageReference "HotKey" */;
+			productName = HotKey;
 		};
 /* End XCSwiftPackageProductDependency section */
 

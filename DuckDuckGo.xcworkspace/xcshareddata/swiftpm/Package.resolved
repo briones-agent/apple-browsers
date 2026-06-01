@@ -1,5 +1,5 @@
 {
-  "originHash" : "95fb5a94675710148596a938c5bf32ed8e030c544d72edbb7e3ce82176c07cf7",
+  "originHash" : "ff144366e32c1313a58f7c5a68411602e4f2d50326bc18da8338798186136c2b",
   "pins" : [
     {
       "identity" : "apple-toolbox",
@@ -53,6 +53,15 @@
       "state" : {
         "revision" : "731037f6cc2be2ec01562f6597c1d0aa3fe6fd05",
         "version" : "6.0.1"
+      }
+    },
+    {
+      "identity" : "hotkey",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/soffes/HotKey",
+      "state" : {
+        "revision" : "a3cf605d7a96f6ff50e04fcb6dea6e2613cfcbe4",
+        "version" : "0.2.1"
       }
     },
     {

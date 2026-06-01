@@ -29,12 +29,17 @@ final class GlobalDuckAIController {
     private let preferences: AIChatPreferences
     private let statusBar = DuckAIStatusBarController()
     private let floatingOmnibar = DuckAIFloatingOmnibarWindowController()
+    private let shortcutMonitor = DuckAIGlobalShortcutMonitor()
     private var cancellables = Set<AnyCancellable>()
 
     init(preferences: AIChatPreferences) {
         self.preferences = preferences
 
         statusBar.onOpenRequested = { [weak self] in
+            self?.handleOpenRequested()
+        }
+
+        shortcutMonitor.onTriggered = { [weak self] in
             self?.handleOpenRequested()
         }
 
@@ -50,8 +55,10 @@ final class GlobalDuckAIController {
     private func apply(enabled: Bool) {
         if enabled {
             statusBar.install()
+            shortcutMonitor.start()
         } else {
             statusBar.uninstall()
+            shortcutMonitor.stop()
         }
     }
 
