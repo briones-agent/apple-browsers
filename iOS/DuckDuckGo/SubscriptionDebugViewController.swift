@@ -658,63 +658,57 @@ final class SubscriptionDebugViewController: UITableViewController {
 
     // MARK: - Expiration reminder (debug)
 
-    /// Prompts for a delay in seconds, then schedules a local notification using the same identifier
-    /// and content as the production reminder so the NotificationServiceManager tap-routing path can be exercised.
-    /// Note: shares the production identifier, so this will overwrite any real pending reminder.
+    /// Prompts for a delay relative to now, then runs the production scheduler with a `timeBeforeCancel`
+    /// derived from the current subscription's expiry so the notification fires N seconds from now.
     private func triggerMockExpirationReminder() {
-        let alert = UIAlertController(title: "Trigger Mock Reminder",
-                                      message: "Fire after how many seconds?",
+        let alert = UIAlertController(title: "Trigger Expiration Reminder",
+                                      message: "Fire how many seconds from now?",
                                       preferredStyle: .alert)
         weak var secondsTextField: UITextField?
         alert.addTextField { field in
             field.keyboardType = .numberPad
-            field.placeholder = "Seconds"
+            field.placeholder = "Seconds from now"
             field.text = "5"
             secondsTextField = field
         }
         alert.addAction(UIAlertAction(title: "Schedule", style: .default) { [weak self] _ in
-            guard let raw = secondsTextField?.text,
-                  let seconds = TimeInterval(raw), seconds > 0 else {
+            guard let raw = secondsTextField?.text, let secondsFromNow = TimeInterval(raw), secondsFromNow > 0 else {
                 self?.showAlert(title: "Invalid value", message: "Enter a positive number of seconds.")
                 return
             }
-            self?.scheduleMockExpirationReminder(afterSeconds: seconds)
+            Task { @MainActor in
+                guard let self else { return }
+                let subscription: DuckDuckGoSubscription?
+                do {
+                    subscription = try await self.subscriptionManager.getSubscription(forceRefresh: true)
+                } catch {
+                    self.showAlert(title: "Failed to load subscription", message: error.localizedDescription)
+                    return
+                }
+                guard let subscription else {
+                    self.showAlert(title: "No active subscription", message: "Sign in with an active subscription before triggering the reminder.")
+                    return
+                }
+                let remaining = subscription.expiresOrRenewsAt.timeIntervalSinceNow
+                guard remaining > 0 else {
+                    self.showAlert(title: "Subscription already expired",
+                                   message: "expiresOrRenewsAt is in the past.")
+                    return
+                }
+                let timeBeforeCancel = remaining - secondsFromNow
+                guard timeBeforeCancel > 0 else {
+                    self.showAlert(title: "Cannot schedule",
+                                   message: "Subscription expires in \(Int(remaining))s — pick a smaller delay.")
+                    return
+                }
+                await AppDependencyProvider.shared.subscriptionExpirationReminderScheduler
+                    .scheduleReminder(timeBeforeCancel: timeBeforeCancel)
+                self.showAlert(title: "Scheduler invoked",
+                               message: "Reminder will fire in ~\(Int(secondsFromNow))s if all production guards pass.")
+            }
         })
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         present(alert, animated: true)
-    }
-
-    private func scheduleMockExpirationReminder(afterSeconds seconds: TimeInterval) {
-        let center = UNUserNotificationCenter.current()
-        Task { @MainActor in
-            let status = await center.authorizationStatus()
-            if status == .notDetermined {
-                _ = try? await center.requestAuthorization(options: [.alert, .sound])
-            }
-            let refreshedStatus = await center.authorizationStatus()
-            guard refreshedStatus == .authorized || refreshedStatus == .provisional || refreshedStatus == .ephemeral else {
-                showAlert(title: "Notifications not authorized", message: "Enable notifications in Settings to test the reminder.")
-                return
-            }
-
-            let identifier = DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier
-            center.removePendingNotificationRequests(withIdentifiers: [identifier])
-
-            let content = UNMutableNotificationContent()
-            content.title = "Your Privacy Pro subscription is ending soon"
-            content.body = "Tap to review your subscription and stay protected."
-            content.categoryIdentifier = identifier
-
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
-            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-
-            do {
-                try await center.add(request)
-                showAlert(title: "Mock reminder scheduled", message: "Will fire in \(Int(seconds)) seconds.")
-            } catch {
-                showAlert(title: "Failed to schedule", message: error.localizedDescription)
-            }
-        }
     }
 
     /// Builds a two-line attributed string with each label in `.footnote` + secondary color
@@ -741,10 +735,11 @@ final class SubscriptionDebugViewController: UITableViewController {
             let authStatus = await UNUserNotificationCenter.current().authorizationStatus()
             notificationAuthStatusText = authStatus.stringValue
 
-            if let subscription = try? await subscriptionManager.getSubscription(forceRefresh: false) {
-                subscriptionStatusText = subscription.status.rawValue
-            } else {
-                subscriptionStatusText = "No subscription"
+            do {
+                let subscription = try await subscriptionManager.getSubscription(forceRefresh: true)
+                subscriptionStatusText = subscription?.status.rawValue ?? "No subscription"
+            } catch {
+                subscriptionStatusText = "Error: \(error.localizedDescription)"
             }
             tableView.reloadSections(IndexSet(integer: Sections.expirationReminder.rawValue), with: .none)
         }

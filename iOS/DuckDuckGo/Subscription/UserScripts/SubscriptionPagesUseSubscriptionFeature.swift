@@ -295,6 +295,7 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
 
     /// If the FE never redirects after we push Stripe redirect (e.g. mobile), the back button stays hidden. Reset to idle after this delay so the user can go back.
     private static let stripeRedirectSafetyTimeoutSeconds: UInt64 = 8
+    private static let secondsPerDay: TimeInterval = 24 * 60 * 60
 
     private enum StripeRedirectSafetyTimeoutError: Error {
         case couldNotRedirect
@@ -590,7 +591,8 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
             }
 
             if let preference = pendingScheduleNotification, let scheduler = expirationReminderScheduler {
-                await scheduler.scheduleReminder(daysBeforeCancel: preference.daysBeforeCancel)
+                let seconds = TimeInterval(preference.daysBeforeCancel) * Self.secondsPerDay
+                await scheduler.scheduleReminder(timeBeforeCancel: seconds)
             }
 
         case .failure(let error):
@@ -921,8 +923,6 @@ extension DefaultSubscriptionPagesUseSubscriptionFeature {
         case .authorized, .provisional, .ephemeral:
             return NotificationsPermissionResponse(granted: true)
         case .denied:
-            // The OS will not display the prompt in this state; report the cached state immediately
-            // so FE can direct the user to Settings.
             return NotificationsPermissionResponse(granted: false)
         case .notDetermined:
             let granted = (try? await userNotificationCenter.requestAuthorization(options: [.alert, .sound])) ?? false

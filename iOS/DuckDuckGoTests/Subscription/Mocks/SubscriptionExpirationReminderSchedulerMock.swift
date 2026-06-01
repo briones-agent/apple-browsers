@@ -22,9 +22,9 @@ import Foundation
 
 final class SubscriptionExpirationReminderSchedulerMock: SubscriptionExpirationReminderScheduling {
 
-    private(set) var scheduledDaysBeforeCancel: [Int] = []
+    private(set) var scheduledTimeBeforeCancel: [TimeInterval] = []
 
-    func scheduleReminder(daysBeforeCancel: Int) async {
-        scheduledDaysBeforeCancel.append(daysBeforeCancel)
+    func scheduleReminder(timeBeforeCancel: TimeInterval) async {
+        scheduledTimeBeforeCancel.append(timeBeforeCancel)
     }
 }

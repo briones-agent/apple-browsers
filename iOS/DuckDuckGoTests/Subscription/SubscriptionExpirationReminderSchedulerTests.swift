@@ -63,29 +63,33 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         subscriptionManager.resultSubscription = .success(SubscriptionMockFactory.subscription(status: status))
     }
 
+    private func days(_ count: Int) -> TimeInterval {
+        TimeInterval(count) * 24 * 60 * 60
+    }
+
     // MARK: - scheduleReminder skip paths
 
     func test_scheduleReminder_whenFeatureFlagOff_doesNotAddRequest() async {
         featureFlagEnabled = false
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
 
-    func test_scheduleReminder_whenDaysBeforeCancelIsZero_doesNotAddRequest() async {
+    func test_scheduleReminder_whenTimeBeforeCancelIsZero_doesNotAddRequest() async {
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 0)
+        await sut.scheduleReminder(timeBeforeCancel: 0)
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
 
-    func test_scheduleReminder_whenDaysBeforeCancelIsNegative_doesNotAddRequest() async {
+    func test_scheduleReminder_whenTimeBeforeCancelIsNegative_doesNotAddRequest() async {
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: -3)
+        await sut.scheduleReminder(timeBeforeCancel: -days(3))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
@@ -94,7 +98,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         notificationCenter.authorizationStatus = .denied
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
@@ -103,7 +107,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         notificationCenter.authorizationStatus = .provisional
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty,
                       "Provisional notifications deliver silently — the user would not see the reminder")
@@ -113,7 +117,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         notificationCenter.authorizationStatus = .notDetermined
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
@@ -121,7 +125,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
     func test_scheduleReminder_whenNoSubscription_doesNotAddRequest() async {
         subscriptionManager.resultSubscription = nil
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
@@ -129,17 +133,17 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
     func test_scheduleReminder_whenSubscriptionStatusIsExpired_doesNotAddRequest() async {
         setSubscription(status: .expired)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
 
     func test_scheduleReminder_whenFireDateInThePast_doesNotAddRequest() async {
         // Depends on SubscriptionMockFactory.subscription(status:) hardcoding a +30-day expiry.
-        // daysBeforeCancel = 365 puts the computed fire date ~335 days in the past.
+        // 365 days puts the computed fire date ~335 days in the past.
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 365)
+        await sut.scheduleReminder(timeBeforeCancel: days(365))
 
         XCTAssertTrue(notificationCenter.addedRequests.isEmpty)
     }
@@ -149,7 +153,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
     func test_scheduleReminder_withValidInputs_addsRequestWithCorrectIdentifierAndTrigger() async throws {
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertEqual(notificationCenter.addedRequests.count, 1)
         let request = try XCTUnwrap(notificationCenter.addedRequests.first)
@@ -162,7 +166,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
     func test_scheduleReminder_removesPreviouslyScheduledReminderBeforeAdding() async {
         setSubscription(status: .autoRenewable)
 
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
 
         XCTAssertEqual(notificationCenter.removedIdentifiers.count, 1)
         XCTAssertEqual(notificationCenter.removedIdentifiers.first, [identifier])
@@ -172,7 +176,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
 
     func test_subscriptionDidChange_whenStatusBecomesExpired_cancelsPendingReminder() async {
         setSubscription(status: .autoRenewable)
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
         let priorRemovalCount = notificationCenter.removedIdentifiers.count
 
         setSubscription(status: .expired)
@@ -186,7 +190,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
 
     func test_subscriptionDidChange_whenStatusStillActive_doesNotCancel() async {
         setSubscription(status: .autoRenewable)
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
         let priorRemovalCount = notificationCenter.removedIdentifiers.count
 
         observerNotificationCenter.post(name: .subscriptionDidChange, object: nil)
@@ -211,7 +215,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
 
     func test_didBecomeActive_whenPendingAndStatusInactive_cancelsReminder() async {
         setSubscription(status: .autoRenewable)
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
         let priorRemovalCount = notificationCenter.removedIdentifiers.count
 
         setSubscription(status: .inactive)
@@ -225,7 +229,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
 
     func test_didBecomeActive_whenPendingAndStatusActive_doesNotCancel() async {
         setSubscription(status: .autoRenewable)
-        await sut.scheduleReminder(daysBeforeCancel: 7)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
         let priorRemovalCount = notificationCenter.removedIdentifiers.count
 
         observerNotificationCenter.post(name: UIApplication.didBecomeActiveNotification, object: nil)

@@ -25,10 +25,10 @@ import os.log
 import Subscription
 
 protocol SubscriptionExpirationReminderScheduling: AnyObject {
-    /// Schedules a single local reminder firing `daysBeforeCancel` days before the active subscription's expiry/renewal date.
-    /// Silently skips when the feature flag is off, permission is unavailable, `daysBeforeCancel <= 0`, the subscription has no expiry, or the computed fire date is in the past.
+    /// Schedules a single local reminder firing `timeBeforeCancel` seconds before the active subscription's expiry/renewal date.
+    /// Silently skips when the feature flag is off, permission is unavailable, `timeBeforeCancel <= 0`, the subscription has no expiry, or the computed fire date is in the past.
     /// Cancels any previously scheduled reminder with the same identifier before scheduling the new one.
-    func scheduleReminder(daysBeforeCancel: Int) async
+    func scheduleReminder(timeBeforeCancel: TimeInterval) async
 }
 
 final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirationReminderScheduling {
@@ -51,8 +51,7 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         self.notificationCenter = notificationCenter
         self.dateProvider = dateProvider
 
-        // In-app subscription operations post .subscriptionDidChange after updating the cache;
-        // we can trust the cache and skip the network call.
+        // In-app subscription operations post .subscriptionDidChange after updating the cache.
         notificationCenterObserver.publisher(for: .subscriptionDidChange)
             .sink { [weak self] _ in
                 Task { [weak self] in await self?.cancelReminderIfInactive(forceRefresh: false) }
@@ -68,20 +67,10 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
             .store(in: &cancellables)
     }
 
-    func scheduleReminder(daysBeforeCancel: Int) async {
-        guard isFeatureEnabled() else {
-            Logger.subscription.log("Expiration reminder skipped: feature flag off")
-            return
-        }
+    func scheduleReminder(timeBeforeCancel: TimeInterval) async {
+        guard isFeatureEnabled() else { return }
+        guard timeBeforeCancel > 0 else { return }
 
-        guard daysBeforeCancel > 0 else {
-            Logger.subscription.log("Expiration reminder skipped: non-positive daysBeforeCancel \(daysBeforeCancel, privacy: .public)")
-            return
-        }
-
-        // Only schedule when the user has explicitly tapped Allow. .provisional silently routes to
-        // Notification Center with no banner, and .ephemeral is an App Clip state — neither would
-        // produce the visible reminder the user opted in for.
         guard await notificationCenter.authorizationStatus() == .authorized else {
             Logger.subscription.log("Expiration reminder skipped: notifications not explicitly authorized")
             return
@@ -93,9 +82,9 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
             return
         }
 
-        guard let fireDate = Calendar.current.date(byAdding: .day, value: -daysBeforeCancel, to: subscription.expiresOrRenewsAt),
-              fireDate > dateProvider() else {
-            Logger.subscription.log("Expiration reminder skipped: invalid or past fire date")
+        let fireDate = subscription.expiresOrRenewsAt.addingTimeInterval(-timeBeforeCancel)
+        guard fireDate > dateProvider() else {
+            Logger.subscription.log("Expiration reminder skipped: past fire date")
             return
         }
 

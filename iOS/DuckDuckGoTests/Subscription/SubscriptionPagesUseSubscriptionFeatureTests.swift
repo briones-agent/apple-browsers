@@ -1363,8 +1363,8 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
         ]
         _ = await sut.subscriptionSelected(params: params, original: message)
 
-        XCTAssertEqual(scheduler.scheduledDaysBeforeCancel, [7],
-                       "Scheduler must be invoked once with the value parsed from scheduleNotification.daysBeforeCancel")
+        XCTAssertEqual(scheduler.scheduledTimeBeforeCancel, [7 * 24 * 60 * 60],
+                       "Scheduler must be invoked once with the daysBeforeCancel value converted to seconds")
     }
 
     @MainActor
@@ -1386,7 +1386,7 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
 
         _ = await sut.subscriptionSelected(params: ["id": "yearly"], original: message)
 
-        XCTAssertTrue(scheduler.scheduledDaysBeforeCancel.isEmpty,
+        XCTAssertTrue(scheduler.scheduledTimeBeforeCancel.isEmpty,
                       "Scheduler must not be invoked when scheduleNotification is absent from the payload")
     }
 
@@ -1412,7 +1412,7 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
         ]
         _ = await sut.subscriptionSelected(params: params, original: message)
 
-        XCTAssertTrue(scheduler.scheduledDaysBeforeCancel.isEmpty,
+        XCTAssertTrue(scheduler.scheduledTimeBeforeCancel.isEmpty,
                       "Scheduler must not be invoked when the purchase did not complete successfully")
     }
 }
