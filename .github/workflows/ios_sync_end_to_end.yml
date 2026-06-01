@@ -185,7 +185,7 @@ jobs:
           ONBOARDING_COMPLETED=true
           CODE=${{ steps.sync-recovery-code.outputs.recovery-code }}
         device-os: iOS-26-2
-        device-model: iPhone-16
+        device-model: iPhone-17
 
     - name: Reset config
       run: |

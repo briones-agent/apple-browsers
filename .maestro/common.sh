@@ -10,7 +10,7 @@ app_location="$derived_data_path/Build/Products/Debug-iphonesimulator/DuckDuckGo
 device_uuid_path="$derived_data_path/device_uuid.txt"
 
 # The simulator command requires the hyphens
-target_device="${TARGET_DEVICE:-iPhone-16}"
+target_device="${TARGET_DEVICE:-iPhone-17}"
 target_os="${TARGET_OS:-iOS-26-2}"
 
 # Convert the target_device and target_os to the format required by the -destination flag

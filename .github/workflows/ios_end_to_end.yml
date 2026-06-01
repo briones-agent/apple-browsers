@@ -149,40 +149,40 @@ jobs:
           # iPhone tests - exclude iPad tagged tests
           - test-tag: release
             exclude-tags: ipad
-            device-model: iPhone-16
+            device-model: iPhone-17
             device-name: iPhone
             device: iphone
           - test-tag: privacy
             exclude-tags: ipad
-            device-model: iPhone-16
+            device-model: iPhone-17
             device-name: iPhone
             device: iphone
           - test-tag: securityTest
             exclude-tags: ipad
-            device-model: iPhone-16
+            device-model: iPhone-17
             device-name: iPhone
             device: iphone
           - test-tag: adClick
             exclude-tags: ipad
-            device-model: iPhone-16
+            device-model: iPhone-17
             device-name: iPhone
             device: iphone
           - test-tag: duckplayer_native
             exclude-tags: ipad
-            device-model: iPhone-16
+            device-model: iPhone-17
             device: iphone
           - test-tag: device_info
             exclude-tags: ipad
-            device-model: iPhone-16
+            device-model: iPhone-17
             device: iphone
           # iPad tests - only tests tagged with 'ipad', exclude iPhone specific tests
           - test-tag: device_info
             exclude-tags: iphone
-            device-model: iPad-10th-generation
+            device-model: iPad-Air-11-inch-M3
             device: ipad
           - test-tag: duckplayer_classic
             exclude-tags: iphone
-            device-model: iPad-10th-generation
+            device-model: iPad-Air-11-inch-M3
             device: ipad
       max-parallel: 1 # Uncomment this line to run tests sequentially.
       fail-fast: false
