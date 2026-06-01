@@ -27,6 +27,7 @@ import VPN
 import StoreKit
 import PrivacyConfig
 import Networking
+import UserNotifications
 
 final class SubscriptionDebugViewController: UITableViewController {
 
@@ -62,6 +63,7 @@ final class SubscriptionDebugViewController: UITableViewController {
         Sections.pixels: "Promo Pixel Parameters",
         Sections.metadata: "StoreKit Metadata",
         Sections.regionOverride: "Region override for App Store Sandbox",
+        Sections.expirationReminder: "Expiration Reminder Notification",
     ]
 
     enum Sections: Int, CaseIterable {
@@ -73,6 +75,7 @@ final class SubscriptionDebugViewController: UITableViewController {
         case pixels
         case metadata
         case regionOverride
+        case expirationReminder
     }
 
     enum AuthorizationRows: Int, CaseIterable {
@@ -113,6 +116,11 @@ final class SubscriptionDebugViewController: UITableViewController {
 
     enum RegionOverrideRows: Int, CaseIterable {
         case currentRegionOverride
+    }
+
+    enum ExpirationReminderRows: Int, CaseIterable {
+        case triggerMockNotification
+        case cancelPendingReminder
     }
     
 
@@ -237,6 +245,16 @@ final class SubscriptionDebugViewController: UITableViewController {
                 break
             }
 
+        case .expirationReminder:
+            switch ExpirationReminderRows(rawValue: indexPath.row) {
+            case .triggerMockNotification:
+                cell.textLabel?.text = "Trigger Mock Notification (5s)"
+            case .cancelPendingReminder:
+                cell.textLabel?.text = "Cancel Pending Reminder"
+            case .none:
+                break
+            }
+
         case .regionOverride:
             switch RegionOverrideRows(rawValue: indexPath.row) {
             case .currentRegionOverride:
@@ -293,6 +311,7 @@ final class SubscriptionDebugViewController: UITableViewController {
         case .pixels: return PixelsRows.allCases.count
         case .metadata: return MetadataRows.allCases.count
         case .regionOverride: return RegionOverrideRows.allCases.count
+        case .expirationReminder: return ExpirationReminderRows.allCases.count
         case .none: return 0
         }
     }
@@ -336,6 +355,12 @@ final class SubscriptionDebugViewController: UITableViewController {
             break
         case .regionOverride:
             break
+        case .expirationReminder:
+            switch ExpirationReminderRows(rawValue: indexPath.row) {
+            case .triggerMockNotification: triggerMockExpirationReminder()
+            case .cancelPendingReminder: cancelPendingExpirationReminder()
+            default: break
+            }
         case .none:
             break
         }
@@ -616,6 +641,50 @@ final class SubscriptionDebugViewController: UITableViewController {
             self.storefrontCountryCode = storefront?.countryCode ?? "nil"
             self.tableView.reloadData()
         }
+    }
+
+    // MARK: - Expiration reminder (debug)
+
+    /// Schedules a local notification 5 seconds out using the same identifier and content as the production reminder.
+    /// Exercises the NotificationServiceManager tap-routing path without waiting for an active subscription's expiry.
+    private func triggerMockExpirationReminder() {
+        let center = UNUserNotificationCenter.current()
+        Task { @MainActor in
+            let status = await center.authorizationStatus()
+            if status == .notDetermined {
+                _ = try? await center.requestAuthorization(options: [.alert, .sound])
+            }
+            let refreshedStatus = await center.authorizationStatus()
+            guard refreshedStatus == .authorized || refreshedStatus == .provisional || refreshedStatus == .ephemeral else {
+                showAlert(title: "Notifications not authorized", message: "Enable notifications in Settings to test the reminder.")
+                return
+            }
+
+            let identifier = DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier
+            center.removePendingNotificationRequests(withIdentifiers: [identifier])
+
+            let content = UNMutableNotificationContent()
+            content.title = "Your Privacy Pro subscription is ending soon"
+            content.body = "Tap to review your subscription and stay protected."
+            content.categoryIdentifier = identifier
+
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+            do {
+                try await center.add(request)
+                showAlert(title: "Mock reminder scheduled", message: "Will fire in 5 seconds. Background the app or wait to see it.")
+            } catch {
+                showAlert(title: "Failed to schedule", message: error.localizedDescription)
+            }
+        }
+    }
+
+    private func cancelPendingExpirationReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier]
+        )
+        showAlert(title: "Pending reminder cancelled")
     }
 
     private func showBuyProductionSubscriptions() {
