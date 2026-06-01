@@ -21,6 +21,7 @@ import XCTest
 import WebKit
 import PixelKit
 import PrivacyConfig
+import UserNotifications
 @testable import DuckDuckGo
 @testable import Common
 @testable import UserScript
@@ -1212,6 +1213,193 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
         XCTAssertFalse(mockAppStorePurchaseFlow.changeTierCalled, "Unknown platform must not call performTierChange")
         XCTAssertEqual(sut.transactionStatus, .idle)
         XCTAssertEqual(sut.transactionError, .otherRestoreError)
+    }
+
+    // MARK: - Notification permission & expiration reminder
+
+    private func makeFeature(notificationCenter: MockUNUserNotificationCenter,
+                             scheduler: SubscriptionExpirationReminderSchedulerMock? = nil,
+                             appStorePurchaseFlow: AppStorePurchaseFlowMock? = nil) -> DefaultSubscriptionPagesUseSubscriptionFeature {
+        let purchaseFlow = appStorePurchaseFlow ?? mockAppStorePurchaseFlow!
+        let executer = DefaultSubscriptionFlowsExecuter(
+            subscriptionManager: mockSubscriptionManager,
+            appStorePurchaseFlow: purchaseFlow,
+            wideEvent: mockWideEvent,
+            pendingTransactionHandler: MockPendingTransactionHandler()
+        )
+        return DefaultSubscriptionPagesUseSubscriptionFeature(
+            subscriptionManager: mockSubscriptionManager,
+            subscriptionFeatureAvailability: mockSubscriptionFeatureAvailability,
+            subscriptionAttributionOrigin: "",
+            appStorePurchaseFlow: purchaseFlow,
+            appStoreRestoreFlow: AppStoreRestoreFlowMock(),
+            subscriptionDataReporter: nil,
+            internalUserDecider: mockInternalUserDecider,
+            wideEvent: mockWideEvent,
+            tierEventReporter: mockTierEventReporter,
+            pendingTransactionHandler: MockPendingTransactionHandler(),
+            subscriptionFlowsExecuter: executer,
+            requestValidator: mockRequestValidator,
+            userNotificationCenter: notificationCenter,
+            expirationReminderScheduler: scheduler
+        )
+    }
+
+    func testGetUserSettings_WhenAuthorized_ReturnsGranted() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .authorized
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.getUserSettings(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.UserSettingsResponse)
+
+        XCTAssertEqual(result.notificationsPermission, .granted)
+    }
+
+    func testGetUserSettings_WhenProvisional_ReturnsGranted() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .provisional
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.getUserSettings(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.UserSettingsResponse)
+
+        XCTAssertEqual(result.notificationsPermission, .granted)
+    }
+
+    func testGetUserSettings_WhenDenied_ReturnsDenied() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .denied
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.getUserSettings(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.UserSettingsResponse)
+
+        XCTAssertEqual(result.notificationsPermission, .denied)
+    }
+
+    func testGetUserSettings_WhenNotDetermined_ReturnsNotDetermined() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .notDetermined
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.getUserSettings(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.UserSettingsResponse)
+
+        XCTAssertEqual(result.notificationsPermission, .notDetermined)
+    }
+
+    func testRequestNotificationsPermission_WhenPreviouslyDenied_ReturnsFalseWithoutPrompting() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .denied
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.requestNotificationsPermission(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.NotificationsPermissionResponse)
+
+        XCTAssertFalse(result.granted)
+        XCTAssertFalse(center.didRequestAuthorization,
+                       "iOS must not invoke requestAuthorization when status is .denied — the OS would not surface a prompt")
+    }
+
+    func testRequestNotificationsPermission_WhenAuthorized_ReturnsTrueWithoutPrompting() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .authorized
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.requestNotificationsPermission(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.NotificationsPermissionResponse)
+
+        XCTAssertTrue(result.granted)
+        XCTAssertFalse(center.didRequestAuthorization)
+    }
+
+    func testRequestNotificationsPermission_WhenNotDetermined_PromptsUserAndReturnsResult() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .notDetermined
+        let sut = makeFeature(notificationCenter: center)
+
+        let response = await sut.requestNotificationsPermission(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.NotificationsPermissionResponse)
+
+        XCTAssertTrue(result.granted)
+        XCTAssertTrue(center.didRequestAuthorization)
+    }
+
+    @MainActor
+    func testSubscriptionSelected_WhenScheduleNotificationProvidedAndPurchaseSucceeds_CallsSchedulerWithDays() async throws {
+        let center = MockUNUserNotificationCenter()
+        let scheduler = SubscriptionExpirationReminderSchedulerMock()
+
+        let storeManager = StorePurchaseManagerMock()
+        mockSubscriptionManager.resultStorePurchaseManager = storeManager
+        let purchaseFlow = AppStorePurchaseFlowMock()
+        purchaseFlow.purchaseSubscriptionResult = .success((transactionJWS: "jws", accountCreationDuration: nil))
+        purchaseFlow.completeSubscriptionPurchaseResult = .success(.completed)
+
+        let sut = makeFeature(notificationCenter: center, scheduler: scheduler, appStorePurchaseFlow: purchaseFlow)
+
+        let originURL = URL(string: "https://duckduckgo.com/subscriptions")!
+        let webView = MockURLWebView(url: originURL)
+        let message = WKScriptMessage.mock(name: "subscriptionSelected", body: "", webView: webView)
+
+        let params: [String: Any] = [
+            "id": "yearly",
+            "scheduleNotification": ["daysBeforeCancel": 7]
+        ]
+        _ = await sut.subscriptionSelected(params: params, original: message)
+
+        XCTAssertEqual(scheduler.scheduledDaysBeforeCancel, [7],
+                       "Scheduler must be invoked once with the value parsed from scheduleNotification.daysBeforeCancel")
+    }
+
+    @MainActor
+    func testSubscriptionSelected_WhenScheduleNotificationOmitted_DoesNotCallScheduler() async throws {
+        let center = MockUNUserNotificationCenter()
+        let scheduler = SubscriptionExpirationReminderSchedulerMock()
+
+        let storeManager = StorePurchaseManagerMock()
+        mockSubscriptionManager.resultStorePurchaseManager = storeManager
+        let purchaseFlow = AppStorePurchaseFlowMock()
+        purchaseFlow.purchaseSubscriptionResult = .success((transactionJWS: "jws", accountCreationDuration: nil))
+        purchaseFlow.completeSubscriptionPurchaseResult = .success(.completed)
+
+        let sut = makeFeature(notificationCenter: center, scheduler: scheduler, appStorePurchaseFlow: purchaseFlow)
+
+        let originURL = URL(string: "https://duckduckgo.com/subscriptions")!
+        let webView = MockURLWebView(url: originURL)
+        let message = WKScriptMessage.mock(name: "subscriptionSelected", body: "", webView: webView)
+
+        _ = await sut.subscriptionSelected(params: ["id": "yearly"], original: message)
+
+        XCTAssertTrue(scheduler.scheduledDaysBeforeCancel.isEmpty,
+                      "Scheduler must not be invoked when scheduleNotification is absent from the payload")
+    }
+
+    @MainActor
+    func testSubscriptionSelected_WhenScheduleNotificationProvidedButPurchaseFails_DoesNotCallScheduler() async throws {
+        let center = MockUNUserNotificationCenter()
+        let scheduler = SubscriptionExpirationReminderSchedulerMock()
+
+        let storeManager = StorePurchaseManagerMock()
+        mockSubscriptionManager.resultStorePurchaseManager = storeManager
+        let purchaseFlow = AppStorePurchaseFlowMock()
+        purchaseFlow.purchaseSubscriptionResult = .failure(.cancelledByUser)
+
+        let sut = makeFeature(notificationCenter: center, scheduler: scheduler, appStorePurchaseFlow: purchaseFlow)
+
+        let originURL = URL(string: "https://duckduckgo.com/subscriptions")!
+        let webView = MockURLWebView(url: originURL)
+        let message = WKScriptMessage.mock(name: "subscriptionSelected", body: "", webView: webView)
+
+        let params: [String: Any] = [
+            "id": "yearly",
+            "scheduleNotification": ["daysBeforeCancel": 7]
+        ]
+        _ = await sut.subscriptionSelected(params: params, original: message)
+
+        XCTAssertTrue(scheduler.scheduledDaysBeforeCancel.isEmpty,
+                      "Scheduler must not be invoked when the purchase did not complete successfully")
     }
 }
 

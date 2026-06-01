@@ -32,6 +32,7 @@ import PixelKit
 import PrivacyConfig
 import DataBrokerProtectionCore
 import DataBrokerProtection_iOS
+import UserNotifications
 
 struct SubscriptionPagesUseSubscriptionFeatureConstants {
     static let featureName = "useSubscription"
@@ -60,6 +61,9 @@ private struct Handlers {
     static let subscriptionChangeSelected = "subscriptionChangeSelected"
     static let activateSubscription = "activateSubscription"
     static let featureSelected = "featureSelected"
+    // Notification permission & scheduling (expiration reminder experiment)
+    static let getUserSettings = "getUserSettings"
+    static let requestNotificationsPermission = "requestNotificationsPermission"
     // Pixels related events
     static let subscriptionsMonthlyPriceClicked = "subscriptionsMonthlyPriceClicked"
     static let subscriptionsYearlyPriceClicked = "subscriptionsYearlyPriceClicked"
@@ -137,6 +141,9 @@ protocol SubscriptionPagesUseSubscriptionFeature: Subfeature, ObservableObject {
     func subscriptionsWelcomeAddEmailClicked(params: Any, original: WKScriptMessage) async -> Encodable?
     func subscriptionsWelcomeFaqClicked(params: Any, original: WKScriptMessage) async -> Encodable?
 
+    func getUserSettings(params: Any, original: WKScriptMessage) async -> Encodable?
+    func requestNotificationsPermission(params: Any, original: WKScriptMessage) async -> Encodable?
+
     func pushPurchaseUpdate(originalMessage: WKScriptMessage, purchaseUpdate: PurchaseUpdate) async
     func restoreAccountFromAppStorePurchase() async throws
     func cleanup()
@@ -161,6 +168,9 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
     private var planChangeWideEventData: SubscriptionPlanChangeWideEventData?
     private var subscriptionPlatform: SubscriptionEnvironment.PurchasePlatform { subscriptionManager.currentEnvironment.purchasePlatform }
     private let requestValidator: any ScriptRequestValidator
+    private let userNotificationCenter: UNUserNotificationCenterRepresentable
+    private let expirationReminderScheduler: SubscriptionExpirationReminderScheduling?
+    private var pendingScheduleNotification: ScheduleNotificationPreference?
 
     init(subscriptionManager: SubscriptionManager,
          subscriptionFeatureAvailability: SubscriptionFeatureAvailability,
@@ -178,7 +188,9 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
             userDefaults: .dbp,
             isUserAuthenticated: { false },
             isFreemiumEnabled: { true }
-         )) {
+         ),
+         userNotificationCenter: UNUserNotificationCenterRepresentable = UNUserNotificationCenter.current(),
+         expirationReminderScheduler: SubscriptionExpirationReminderScheduling? = nil) {
         self.subscriptionManager = subscriptionManager
         self.subscriptionFeatureAvailability = subscriptionFeatureAvailability
         self.appStorePurchaseFlow = appStorePurchaseFlow
@@ -192,6 +204,8 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
         self.subscriptionFlowsExecuter = subscriptionFlowsExecuter
         self.requestValidator = requestValidator
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
+        self.userNotificationCenter = userNotificationCenter
+        self.expirationReminderScheduler = expirationReminderScheduler
     }
 
     // Transaction Status and errors are observed from ViewModels to handle errors in the UI
@@ -247,6 +261,8 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
         case Handlers.subscriptionsWelcomeAddEmailClicked: return subscriptionsWelcomeAddEmailClicked
         case Handlers.subscriptionsWelcomeFaqClicked: return subscriptionsWelcomeFaqClicked
         case Handlers.getAccessToken: return getAccessToken
+        case Handlers.getUserSettings: return getUserSettings
+        case Handlers.requestNotificationsPermission: return requestNotificationsPermission
         default:
             Logger.subscription.error("Unhandled web message: \(methodName)")
             return nil
@@ -415,6 +431,10 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
         setTransactionStatus(.purchasing)
         resetSubscriptionFlow()
 
+        // The reminder preference only lives for the duration of one purchase attempt.
+        // Clearing on exit covers cancellation, failure, and post-success paths uniformly.
+        defer { pendingScheduleNotification = nil }
+
         struct SubscriptionSelection: Decodable {
             struct Experiment: Codable {
                 let name: String
@@ -430,6 +450,7 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
 
             let id: String
             let experiment: Experiment?
+            let scheduleNotification: ScheduleNotificationPreference?
         }
 
         // 1: Parse subscription selection from message object
@@ -440,6 +461,9 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
             setTransactionStatus(.idle)
             return nil
         }
+
+        // Hold the reminder preference for the duration of the purchase flow. Discarded if the purchase doesn't succeed.
+        pendingScheduleNotification = subscriptionSelection.scheduleNotification
 
         // 2: Check for active subscriptions
         if await subscriptionManager.storePurchaseManager().hasActiveSubscription() {
@@ -569,6 +593,10 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
                 purchaseWideEventData.activateAccountDuration?.complete()
                 wideEvent.updateFlow(purchaseWideEventData)
                 wideEvent.completeFlow(purchaseWideEventData, status: .success(reason: nil), onComplete: { _, _ in })
+            }
+
+            if let preference = pendingScheduleNotification, let scheduler = expirationReminderScheduler {
+                await scheduler.scheduleReminder(daysBeforeCancel: preference.daysBeforeCancel)
             }
 
         case .failure(let error):
@@ -865,6 +893,58 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
     private func fireFreemiumUpsellPixel() {
         guard freemiumDBPUserStateManager.didActivate, let pixelKit = PixelKit.shared else { return }
         DataBrokerProtectionSharedPixelsHandler(pixelKit: pixelKit, platform: .iOS).fire(.freemiumUpsell)
+    }
+}
+
+// MARK: - Notification permission (expiration reminder experiment)
+
+extension DefaultSubscriptionPagesUseSubscriptionFeature {
+
+    enum NotificationsPermissionStatus: String, Encodable {
+        case granted, denied, notDetermined
+    }
+
+    struct UserSettingsResponse: Encodable {
+        let notificationsPermission: NotificationsPermissionStatus
+    }
+
+    struct NotificationsPermissionResponse: Encodable {
+        let granted: Bool
+    }
+
+    struct ScheduleNotificationPreference: Decodable, Equatable {
+        let daysBeforeCancel: Int
+    }
+
+    func getUserSettings(params: Any, original: WKScriptMessage) async -> Encodable? {
+        let status = await userNotificationCenter.authorizationStatus()
+        return UserSettingsResponse(notificationsPermission: Self.permissionStatus(from: status))
+    }
+
+    func requestNotificationsPermission(params: Any, original: WKScriptMessage) async -> Encodable? {
+        let status = await userNotificationCenter.authorizationStatus()
+        switch status {
+        case .authorized, .provisional, .ephemeral:
+            return NotificationsPermissionResponse(granted: true)
+        case .denied:
+            // The OS will not display the prompt in this state; report the cached state immediately
+            // so FE can direct the user to Settings.
+            return NotificationsPermissionResponse(granted: false)
+        case .notDetermined:
+            let granted = (try? await userNotificationCenter.requestAuthorization(options: [.alert, .sound])) ?? false
+            return NotificationsPermissionResponse(granted: granted)
+        @unknown default:
+            return NotificationsPermissionResponse(granted: false)
+        }
+    }
+
+    private static func permissionStatus(from status: UNAuthorizationStatus) -> NotificationsPermissionStatus {
+        switch status {
+        case .authorized, .provisional, .ephemeral: return .granted
+        case .notDetermined: return .notDetermined
+        case .denied: return .denied
+        @unknown default: return .denied
+        }
     }
 }
 

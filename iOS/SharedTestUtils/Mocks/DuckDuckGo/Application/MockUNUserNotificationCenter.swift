@@ -59,6 +59,10 @@ final class MockUNUserNotificationCenter: UNUserNotificationCenterRepresentable 
         addedRequests.append(request)
     }
 
+    func pendingNotificationRequests() async -> [UNNotificationRequest] {
+        addedRequests
+    }
+
     func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
         removedIdentifiers.append(identifiers)
         let set = Set(identifiers)

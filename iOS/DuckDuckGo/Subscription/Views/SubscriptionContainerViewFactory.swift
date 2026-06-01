@@ -27,7 +27,7 @@ import DataBrokerProtection_iOS
 import PixelKit
 
 enum SubscriptionContainerViewFactory {
-    
+
     private static var subscriptionUserDefaults: UserDefaults {
         let subscriptionAppGroup = Bundle.main.appGroup(bundle: .subs)
         return UserDefaults(suiteName: subscriptionAppGroup)!
@@ -104,7 +104,8 @@ enum SubscriptionContainerViewFactory {
                                                                        wideEvent: wideEvent,
                                                                        pendingTransactionHandler: pendingTransactionHandler,
                                                                        subscriptionFlowsExecuter: subscriptionFlowsExecuter,
-                                                                       requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)),
+                                                                       requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
+                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler),
             dataBrokerProtectionViewControllerProvider: dataBrokerProtectionViewControllerProvider
         )
         viewModel.email.setEmailFlowMode(.restoreFlow)
@@ -146,7 +147,8 @@ enum SubscriptionContainerViewFactory {
                                                                                                      wideEvent: wideEvent,
                                                                                                      pendingTransactionHandler: pendingTransactionHandler,
                                                                                                      subscriptionFlowsExecuter: subscriptionFlowsExecuter,
-                                                                                                     requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager))
+                                                                                                     requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
+                                                                                                     expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler)
 
         let viewModel = SubscriptionContainerViewModel(subscriptionManager: subscriptionManager,
                                                        isInternalUser: internalUserDecider.isInternalUser,
@@ -214,7 +216,8 @@ enum SubscriptionContainerViewFactory {
                                                                        wideEvent: wideEvent,
                                                                        pendingTransactionHandler: pendingTransactionHandler,
                                                                        subscriptionFlowsExecuter: subscriptionFlowsExecuter,
-                                                                       requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)),
+                                                                       requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
+                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler),
             dataBrokerProtectionViewControllerProvider: dataBrokerProtectionViewControllerProvider
         )
         return SubscriptionContainerView(currentView: .subscribe, viewModel: viewModel, featureFlagger: featureFlagger)
@@ -260,7 +263,8 @@ enum SubscriptionContainerViewFactory {
                                                                        wideEvent: wideEvent,
                                                                        pendingTransactionHandler: pendingTransactionHandler,
                                                                        subscriptionFlowsExecuter: subscriptionFlowsExecuter,
-                                                                       requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)),
+                                                                       requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
+                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler),
             dataBrokerProtectionViewControllerProvider: dataBrokerProtectionViewControllerProvider
         )
 

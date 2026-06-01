@@ -27,14 +27,14 @@ import DataBrokerProtection_iOS
 protocol NotificationServiceManaging: UNUserNotificationCenterDelegate {}
 
 final class NotificationServiceManager: NSObject, NotificationServiceManaging {
-    
+
     private let mainCoordinator: MainCoordinator
-    
+
     init(mainCoordinator: MainCoordinator) {
         self.mainCoordinator = mainCoordinator
         super.init()
     }
-    
+
     /// https://stackoverflow.com/questions/73750724/how-can-usernotificationcenter-didreceive-cause-a-crash-even-with-nothing-in
     /// TL;DR: The async UNUserNotificationCenterDelegate methods (`willPresent`, `didReceive`) can be invoked off the main thread, leading to occasional crashes during app activation.
     /// Marking this delegate @MainActor ensures they always run on the main thread. This appears to be an iOS bug.
@@ -43,17 +43,19 @@ final class NotificationServiceManager: NSObject, NotificationServiceManaging {
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         return [.banner, .list]
     }
-    
+
     @MainActor
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
-        
+
         guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
-        
+
         let id = response.notification.request.identifier
         switch id {
         case InactivityNotificationSchedulerService.Constants.notificationIdentifier:
             handleInactivityNotification(for: response)
+        case DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier:
+            handleSubscriptionExpirationReminder()
         case let raw where NetworkProtectionNotificationIdentifier(rawValue: raw) != nil:
             handleVPNNotification()
         case let raw where DataBrokerProtectionNotificationIdentifier(rawValue: raw) != nil:
@@ -80,6 +82,11 @@ private extension NotificationServiceManager {
     @MainActor
     func handleVPNNotification() {
         mainCoordinator.presentNetworkProtectionStatusSettingsModal()
+    }
+
+    @MainActor
+    func handleSubscriptionExpirationReminder() {
+        mainCoordinator.segueToDuckDuckGoSubscription()
     }
 
     @MainActor
