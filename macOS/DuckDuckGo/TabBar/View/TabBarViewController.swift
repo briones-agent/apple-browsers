@@ -448,13 +448,13 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
             }
     }
 
-    private func updateSplitViewIndicators(_ splitTabIds: Set<ObjectIdentifier>) {
+    private func updateSplitViewIndicators(_ splitTabIds: Set<TabIdentifier>) {
         guard let collectionView else { return }
         let tabs = tabCollectionViewModel.tabCollection.tabs
         for index in 0..<tabs.count {
             let indexPath = IndexPath(item: index, section: 0)
             guard let item = collectionView.item(at: indexPath) as? TabBarViewItem else { continue }
-            item.isInSplitView = splitTabIds.contains(ObjectIdentifier(tabs[index]))
+            item.isInSplitView = splitTabIds.contains(tabs[index].uuid)
         }
     }
 
@@ -2616,11 +2616,15 @@ extension TabBarViewController: TabBarViewItemDelegate {
     func tabBarViewItemOpenInSplitView(_ tabBarViewItem: TabBarViewItem) {
         let isPinned = tabBarViewItem.tabViewModel?.isPinned == true
         let collectionView = isPinned ? pinnedTabsCollectionView : self.collectionView
-        let tabCollection = isPinned ? tabCollectionViewModel.pinnedTabsCollection : tabCollectionViewModel.tabCollection
 
-        guard let indexPath = collectionView?.indexPath(for: tabBarViewItem),
-              let tab = tabCollection?.tabs[safe: indexPath.item]
-        else {
+        guard let indexPath = collectionView?.indexPath(for: tabBarViewItem) else {
+            assertionFailure("TabBarViewController: Failed to get tab from tab bar view item")
+            return
+        }
+
+        // A split pane needs a loaded web view, so materialize the tab if it's currently unloaded.
+        let tabIndex: TabIndex = isPinned ? .pinned(indexPath.item) : .unpinned(indexPath.item)
+        guard let tab = tabCollectionViewModel.materialize(at: tabIndex) else {
             assertionFailure("TabBarViewController: Failed to get tab from tab bar view item")
             return
         }

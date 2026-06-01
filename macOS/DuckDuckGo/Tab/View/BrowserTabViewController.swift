@@ -98,7 +98,10 @@ final class BrowserTabViewController: NSViewController {
 
     /// The set of tabs currently in ANY split view group.
     /// Used by the tab bar to visually mark split-group tabs.
-    @Published private(set) var splitViewTabs: Set<ObjectIdentifier> = []
+    ///
+    /// Keyed by stable `TabIdentifier` (uuid) rather than object identity so it survives
+    /// tab suspend/restore, where `TabCollection` stores `[AnyTab]` and may swap the backing object.
+    @Published private(set) var splitViewTabs: Set<TabIdentifier> = []
 
     // MARK: - Peek View
 
@@ -2178,14 +2181,14 @@ extension BrowserTabViewController {
     }
 
     /// When a tab is closed, check all groups and remove the corresponding pane.
-    private func handleSplitViewTabRemoval(currentTabs: [Tab]) {
+    private func handleSplitViewTabRemoval(currentTabs: [AnyTab]) {
         guard !splitViewGroups.isEmpty else { return }
 
-        let currentTabSet = Set(currentTabs.map { ObjectIdentifier($0) })
+        let currentTabIds = Set(currentTabs.map { $0.uuid })
 
         // Iterate over a copy since tearDownGroup mutates the array
         for group in Array(splitViewGroups) {
-            let removedPanes = group.state.panes.filter { !currentTabSet.contains(ObjectIdentifier($0.tab)) }
+            let removedPanes = group.state.panes.filter { !currentTabIds.contains($0.tab.uuid) }
             guard !removedPanes.isEmpty else { continue }
 
             for removedPane in removedPanes {
@@ -2214,10 +2217,10 @@ extension BrowserTabViewController {
     }
 
     private func updateSplitViewTabs() {
-        var allTabs = Set<ObjectIdentifier>()
+        var allTabs = Set<TabIdentifier>()
         for group in splitViewGroups {
             for pane in group.state.panes {
-                allTabs.insert(ObjectIdentifier(pane.tab))
+                allTabs.insert(pane.tab.uuid)
             }
         }
         splitViewTabs = allTabs

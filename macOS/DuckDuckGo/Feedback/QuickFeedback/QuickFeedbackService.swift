@@ -229,6 +229,19 @@ extension QuickFeedbackService: TabDelegate {
             } else {
                 WindowsManager.openNewWindow(with: childTab, showWindow: true)
             }
+        case .splitPane:
+            if let parentWindowController = Application.appDelegate.windowControllersManager.lastKeyMainWindowController {
+                parentWindowController.mainViewController.tabCollectionViewModel.insertOrAppend(tab: childTab, selected: false)
+                parentWindowController.mainViewController.browserTabViewController.enterSplitView(with: childTab)
+            } else {
+                WindowsManager.openNewWindow(with: childTab, showWindow: true)
+            }
+        case .peek:
+            if let parentWindowController = Application.appDelegate.windowControllersManager.lastKeyMainWindowController {
+                parentWindowController.mainViewController.tabCollectionViewModel.insertOrAppend(tab: childTab, selected: true)
+            } else {
+                WindowsManager.openNewWindow(with: childTab, showWindow: true)
+            }
         }
     }
 
