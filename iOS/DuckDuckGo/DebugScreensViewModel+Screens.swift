@@ -240,7 +240,7 @@ extension DebugScreensViewModel {
                     SubscriptionDebugViewController(coder: coder, subscriptionDataReporter: dependencies.subscriptionDataReporter)
                 }
             }),
-            .controller(title: "JS Bridge Playground", { _ in
+            .controller(title: "JS Bridge: Subscription Expiration Notification", { _ in
                 return JSBridgePlaygroundViewController(feature: SubscriptionBridgePlaygroundFeature())
             }),
             .controller(title: "Configuration URLs", { _ in

@@ -19,6 +19,7 @@
 
 import Foundation
 import UIKit
+import UserNotifications
 import UserScript
 import WebKit
 
@@ -86,6 +87,8 @@ final class JSBridgePlaygroundViewController: UIViewController {
             contentController.addUserScript(userScript.makeWKUserScriptSync())
             contentController.addHandler(userScript)
         }
+        contentController.addScriptMessageHandler(self, contentWorld: .page, name: "__playgroundNotifications")
+        contentController.addScriptMessageHandler(self, contentWorld: .page, name: "__playgroundSchedulerDiagnostics")
 
         let configuration = WKWebViewConfiguration()
         configuration.userContentController = contentController
@@ -113,6 +116,94 @@ final class JSBridgePlaygroundViewController: UIViewController {
         let html = JSBridgePlaygroundHTML.render(for: feature)
         webView.loadHTMLString(html, baseURL: feature.baseURL)
     }
+}
+
+extension JSBridgePlaygroundViewController: WKScriptMessageHandlerWithReply {
+
+    func userContentController(_ userContentController: WKUserContentController,
+                               didReceive message: WKScriptMessage,
+                               replyHandler: @escaping (Any?, String?) -> Void) {
+        switch message.name {
+        case "__playgroundNotifications":
+            Task { @MainActor in
+                let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()
+                let payload = requests.map { request -> [String: Any] in
+                    [
+                        "identifier": request.identifier,
+                        "title": request.content.title,
+                        "body": request.content.body,
+                        "categoryIdentifier": request.content.categoryIdentifier,
+                        "trigger": Self.describe(trigger: request.trigger)
+                    ]
+                }
+                replyHandler(payload, nil)
+            }
+        case "__playgroundSchedulerDiagnostics":
+            Task { @MainActor in
+                let featureFlagEnabled = AppDependencyProvider.shared.featureFlagger.isFeatureOn(.subscriptionExpirationReminderNotification)
+                let authStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+
+                var subscriptionDescription: String
+                var subscriptionWarrantsReminder: Bool = false
+                do {
+                    if let sub = try await AppDependencyProvider.shared.subscriptionManager.getSubscription(forceRefresh: false) {
+                        subscriptionDescription = "\(sub.status) (expires \(Self.dateFormatter.string(from: sub.expiresOrRenewsAt)))"
+                        switch sub.status {
+                        case .autoRenewable, .notAutoRenewable, .gracePeriod:
+                            subscriptionWarrantsReminder = true
+                        default:
+                            subscriptionWarrantsReminder = false
+                        }
+                    } else {
+                        subscriptionDescription = "(no subscription)"
+                    }
+                } catch {
+                    subscriptionDescription = "(error: \(error.localizedDescription))"
+                }
+
+                replyHandler([
+                    "featureFlagEnabled": featureFlagEnabled,
+                    "authorizationStatus": Self.describe(authStatus: authStatus),
+                    "subscription": subscriptionDescription,
+                    "subscriptionWarrantsReminder": subscriptionWarrantsReminder
+                ], nil)
+            }
+        default:
+            replyHandler(nil, "Unknown handler: \(message.name)")
+        }
+    }
+
+    private static func describe(authStatus: UNAuthorizationStatus) -> String {
+        switch authStatus {
+        case .notDetermined: return "notDetermined"
+        case .denied: return "denied"
+        case .authorized: return "authorized"
+        case .provisional: return "provisional"
+        case .ephemeral: return "ephemeral"
+        @unknown default: return "unknown(\(authStatus.rawValue))"
+        }
+    }
+
+    private static func describe(trigger: UNNotificationTrigger?) -> String {
+        switch trigger {
+        case let trigger as UNTimeIntervalNotificationTrigger:
+            let fires = Date().addingTimeInterval(trigger.timeInterval)
+            return "TimeInterval(\(Int(trigger.timeInterval))s -> ~\(Self.dateFormatter.string(from: fires)), repeats: \(trigger.repeats))"
+        case let trigger as UNCalendarNotificationTrigger:
+            return "Calendar(\(trigger.dateComponents), repeats: \(trigger.repeats))"
+        case let trigger?:
+            return "\(type(of: trigger))"
+        case nil:
+            return "(no trigger — delivers immediately)"
+        }
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .short
+        f.timeStyle = .medium
+        return f
+    }()
 }
 
 enum JSBridgePlaygroundHTML {
@@ -187,6 +278,16 @@ button:active { opacity: 0.65; }
 .row-in { color: #9ece6a; }
 .row-err { color: #f7768e; }
 .row-time { color: #888; }
+#pending { margin-top: 8px; font-size: 13px; }
+.pending-item { padding: 8px; margin-top: 6px; background: rgba(127,127,127,0.1); border-radius: 6px; }
+.pending-id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; color: #888; word-break: break-all; margin-bottom: 2px; }
+.pending-meta { color: #888; font-size: 11px; margin-top: 2px; }
+.diagnostic-note { background: rgba(127,127,127,0.08); border-left: 3px solid #f7c948; padding: 8px 10px; border-radius: 4px; font-size: 12px; margin-top: 4px; }
+.diagnostic-title { font-weight: 600; color: #888; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.diagnostic-row { display: flex; gap: 8px; padding: 2px 0; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; }
+.diagnostic-pass { color: #5cb85c; min-width: 18px; }
+.diagnostic-fail { color: #d9534f; min-width: 18px; }
+.diagnostic-label { color: #888; min-width: 110px; }
 </style>
 </head>
 <body>
@@ -211,6 +312,13 @@ Handler <code>{{HANDLER}}</code> · Context <code>{{CONTEXT}}</code> · Feature 
 
 <h2>Response log</h2>
 <div id="log"></div>
+
+<h2>Pending notifications <button class="secondary" style="flex:none;padding:4px 10px;font-size:12px;margin-left:6px" onclick="refreshPending()">Refresh</button></h2>
+<div class="diagnostic-note">
+<div class="diagnostic-title">Scheduler guards (all must pass for a notification to actually be added):</div>
+<div id="diagnostics">(tap Refresh)</div>
+</div>
+<div id="pending">(tap Refresh)</div>
 
 <script>
 const HANDLER = {{HANDLER_JS}};
@@ -237,6 +345,62 @@ document.getElementById('method').addEventListener('input', function() {
         document.getElementById('params').value = SAMPLES[name];
     }
 });
+
+function diagnosticRow(label, value, passing) {
+    var row = document.createElement('div');
+    row.className = 'diagnostic-row';
+    var icon = document.createElement('span');
+    icon.className = passing ? 'diagnostic-pass' : 'diagnostic-fail';
+    icon.textContent = passing ? '✓' : '✗';
+    var lbl = document.createElement('span'); lbl.className = 'diagnostic-label'; lbl.textContent = label;
+    var val = document.createElement('span'); val.textContent = value;
+    row.appendChild(icon); row.appendChild(lbl); row.appendChild(val);
+    return row;
+}
+
+async function refreshDiagnostics() {
+    var handler = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.__playgroundSchedulerDiagnostics;
+    var el = document.getElementById('diagnostics');
+    if (!handler) { el.textContent = '(handler not available)'; return; }
+    el.textContent = '(loading...)';
+    try {
+        var d = await handler.postMessage(null);
+        el.innerHTML = '';
+        el.appendChild(diagnosticRow('feature flag', String(d.featureFlagEnabled), d.featureFlagEnabled === true));
+        el.appendChild(diagnosticRow('auth status', d.authorizationStatus, d.authorizationStatus === 'authorized'));
+        el.appendChild(diagnosticRow('subscription', d.subscription, d.subscriptionWarrantsReminder === true));
+    } catch (e) {
+        el.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
+    }
+}
+
+async function refreshPending() {
+    refreshDiagnostics();
+    var handler = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.__playgroundNotifications;
+    var el = document.getElementById('pending');
+    if (!handler) { el.textContent = '(handler not available)'; return; }
+    el.textContent = '(loading...)';
+    try {
+        var list = await handler.postMessage(null);
+        el.innerHTML = '';
+        if (!list || list.length === 0) {
+            el.textContent = '(none scheduled)';
+            return;
+        }
+        list.forEach(function(n) {
+            var item = document.createElement('div');
+            item.className = 'pending-item';
+            var id = document.createElement('div'); id.className = 'pending-id'; id.textContent = n.identifier; item.appendChild(id);
+            if (n.title) { var t = document.createElement('div'); t.textContent = n.title; t.style.fontWeight = '600'; item.appendChild(t); }
+            if (n.body) { var b = document.createElement('div'); b.textContent = n.body; item.appendChild(b); }
+            if (n.categoryIdentifier) { var c = document.createElement('div'); c.className = 'pending-meta'; c.textContent = 'category: ' + n.categoryIdentifier; item.appendChild(c); }
+            if (n.trigger) { var tr = document.createElement('div'); tr.className = 'pending-meta'; tr.textContent = n.trigger; item.appendChild(tr); }
+            el.appendChild(item);
+        });
+    } catch (e) {
+        el.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
+    }
+}
 
 function clearLog() { document.getElementById('log').textContent = ''; }
 

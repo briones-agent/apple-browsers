@@ -26,7 +26,7 @@ import UserScript
 
 struct SubscriptionBridgePlaygroundFeature: JSBridgePlaygroundFeature {
 
-    let displayName = "Subscription"
+    let displayName = "Subscription Expiration Notification"
     let messageHandlerName = SubscriptionPagesUserScript.context
     let messageContext = SubscriptionPagesUserScript.context
     let featureName = SubscriptionPagesUseSubscriptionFeatureConstants.featureName
@@ -61,13 +61,7 @@ struct SubscriptionBridgePlaygroundFeature: JSBridgePlaygroundFeature {
             storePurchaseManager: subscriptionManager.storePurchaseManager(),
             pendingTransactionHandler: pendingTransactionHandler
         )
-        let appStorePurchaseFlow = DefaultAppStorePurchaseFlow(
-            subscriptionManager: subscriptionManager,
-            storePurchaseManager: subscriptionManager.storePurchaseManager(),
-            appStoreRestoreFlow: appStoreRestoreFlow,
-            wideEvent: AppDependencyProvider.shared.wideEvent,
-            pendingTransactionHandler: pendingTransactionHandler
-        )
+        let appStorePurchaseFlow = PlaygroundMockAppStorePurchaseFlow()
         let subscriptionFeatureAvailability = BrowserServicesKit.DefaultSubscriptionFeatureAvailability(
             privacyConfigurationManager: ContentBlocking.shared.privacyConfigurationManager,
             purchasePlatform: .appStore,
@@ -89,7 +83,8 @@ struct SubscriptionBridgePlaygroundFeature: JSBridgePlaygroundFeature {
             wideEvent: AppDependencyProvider.shared.wideEvent,
             pendingTransactionHandler: pendingTransactionHandler,
             subscriptionFlowsExecuter: subscriptionFlowsExecuter,
-            requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)
+            requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
+            expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler
         )
 
         let userScript = SubscriptionPagesUserScript()
@@ -97,3 +92,21 @@ struct SubscriptionBridgePlaygroundFeature: JSBridgePlaygroundFeature {
         return [userScript]
     }
 }
+
+/// Mock that drives the production purchase handler down the success path so the
+/// scheduler integration can be exercised without StoreKit.
+private final class PlaygroundMockAppStorePurchaseFlow: AppStorePurchaseFlow {
+
+    func purchaseSubscription(with subscriptionIdentifier: String, includeProTier: Bool) async -> Result<PurchaseResult, AppStorePurchaseFlowError> {
+        .success((transactionJWS: "playground-mock-jws", accountCreationDuration: nil))
+    }
+
+    func completeSubscriptionPurchase(with transactionJWS: TransactionJWS, additionalParams: [String: String]?) async -> Result<PurchaseUpdate, AppStorePurchaseFlowError> {
+        .success(PurchaseUpdate.completed)
+    }
+
+    func changeTier(to subscriptionIdentifier: String) async -> Result<TransactionJWS, AppStorePurchaseFlowError> {
+        .success("playground-mock-jws")
+    }
+}
+
