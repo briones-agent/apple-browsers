@@ -30,6 +30,11 @@ enum SyncErrorMessage {
     case unableToRemoveDevice
     case unableToCreateRecoveryPdf
     case unableToRecognizeCode
+    case updateRequired
+    case codeOnlyCompatibleWithDuckAI
+    case codeMustBeScannedWithDuckDuckGo
+    case syncFromAnotherConnectedDevice
+    case syncCancelledFromOtherDevice
 
     var title: String {
         return UserText.syncErrorAlertTitle
@@ -57,6 +62,16 @@ enum SyncErrorMessage {
             return UserText.unableToCreateRecoveryPDF
         case .unableToRecognizeCode:
             return UserText.unableToRecognizeCode
+        case .updateRequired:
+            return UserText.syncUpdateRequiredDescription
+        case .codeOnlyCompatibleWithDuckAI:
+            return UserText.syncCodeOnlyCompatibleWithDuckAIDescription
+        case .codeMustBeScannedWithDuckDuckGo:
+            return UserText.syncCodeMustBeScannedWithDuckDuckGoDescription
+        case .syncFromAnotherConnectedDevice:
+            return UserText.syncFromAnotherConnectedDeviceDescription
+        case .syncCancelledFromOtherDevice:
+            return UserText.syncCancelledFromOtherDeviceDescription
         }
     }
 

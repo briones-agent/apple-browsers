@@ -365,7 +365,7 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
 
     @MainActor
     func testWhenControllerDidFinishTransmittingRecoveryKeyThenNoSuccessExperimentMetricIsFired() {
-        vc.controllerDidFinishTransmittingRecoveryKey()
+        vc.controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: true)
 
         XCTAssertFalse(syncSetupExperimentPixels.firedMetrics.contains("setup_ended_successful"))
     }
