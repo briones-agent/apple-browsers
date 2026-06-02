@@ -90,7 +90,7 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
 
-        // Copy taken from the tech spec; subject to product/copy review before launch and likely to be localized.
+        // TODO: Revisit after copy finalized
         let content = UNMutableNotificationContent()
         content.title = "Your Privacy Pro subscription is ending soon"
         content.body = "Tap to review your subscription and stay protected."

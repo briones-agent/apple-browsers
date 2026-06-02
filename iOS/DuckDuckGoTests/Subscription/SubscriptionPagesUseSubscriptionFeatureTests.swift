@@ -1256,7 +1256,7 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
         XCTAssertEqual(result.notificationsPermission, .granted)
     }
 
-    func testGetUserSettings_WhenProvisional_ReturnsGranted() async throws {
+    func testGetUserSettings_WhenProvisional_ReturnsDenied() async throws {
         let center = MockUNUserNotificationCenter()
         center.authorizationStatus = .provisional
         let sut = makeFeature(notificationCenter: center)
@@ -1264,7 +1264,9 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
         let response = await sut.getUserSettings(params: "", original: WKScriptMessage.mock())
         let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.UserSettingsResponse)
 
-        XCTAssertEqual(result.notificationsPermission, .granted)
+        // .provisional has no programmatic upgrade path — only Settings can raise it to .authorized.
+        // Bucketing it with .denied gives FE a clear "needs Settings change" signal.
+        XCTAssertEqual(result.notificationsPermission, .denied)
     }
 
     func testGetUserSettings_WhenDenied_ReturnsDenied() async throws {

@@ -920,9 +920,11 @@ extension DefaultSubscriptionPagesUseSubscriptionFeature {
     func requestNotificationsPermission(params: Any, original: WKScriptMessage) async -> Encodable? {
         let status = await userNotificationCenter.authorizationStatus()
         switch status {
-        case .authorized, .provisional, .ephemeral:
+        case .authorized, .ephemeral:
             return NotificationsPermissionResponse(granted: true)
-        case .denied:
+        case .denied, .provisional:
+            // OS won't show a prompt in either state — `.denied` is blocked, and `.provisional` has
+            // no programmatic upgrade path (only Settings can raise it to `.authorized`).
             return NotificationsPermissionResponse(granted: false)
         case .notDetermined:
             let granted = (try? await userNotificationCenter.requestAuthorization(options: [.alert, .sound])) ?? false
@@ -932,11 +934,14 @@ extension DefaultSubscriptionPagesUseSubscriptionFeature {
         }
     }
 
+    /// Any status that requires a Settings change to become `.authorized` is reported as `.denied`.
+    /// `.provisional` is bucketed with `.denied` because there's no programmatic upgrade path —
+    /// iOS won't show a prompt from `requestAuthorization` when state is `.provisional`.
     private static func permissionStatus(from status: UNAuthorizationStatus) -> NotificationsPermissionStatus {
         switch status {
-        case .authorized, .provisional, .ephemeral: return .granted
+        case .authorized, .ephemeral: return .granted
         case .notDetermined: return .notDetermined
-        case .denied: return .denied
+        case .denied, .provisional: return .denied
         @unknown default: return .denied
         }
     }
