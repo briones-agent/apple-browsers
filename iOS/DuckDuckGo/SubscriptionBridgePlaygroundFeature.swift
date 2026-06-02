@@ -35,21 +35,14 @@ struct SubscriptionBridgePlaygroundFeature: JSBridgePlaygroundFeature {
         AppDependencyProvider.shared.subscriptionManager.url(for: .baseURL)
     }
 
-    // Side-effecting handlers (subscriptionSelected starts an Apple purchase sheet, backToSettings
-    // and featureSelected navigate away from the playground) are still safe to expose — sending is
-    // a deliberate action. Samples are filled in automatically when a chip is clicked or the method
-    // name is typed.
     var knownMethods: [JSBridgePlaygroundMethod] {
         [
-            JSBridgePlaygroundMethod(name: "getAccessToken", sampleParamsJSON: "{}"),
-            JSBridgePlaygroundMethod(name: "getAuthAccessToken", sampleParamsJSON: "{}"),
-            JSBridgePlaygroundMethod(name: "getFeatureConfig", sampleParamsJSON: "{}"),
-            JSBridgePlaygroundMethod(name: "getSubscriptionTierOptions", sampleParamsJSON: "{}"),
-            JSBridgePlaygroundMethod(name: "subscriptionsMonthlyPriceClicked", sampleParamsJSON: "{}"),
-            JSBridgePlaygroundMethod(name: "featureSelected",
-                                     sampleParamsJSON: #"{"productFeature": "networkProtection"}"#),
-            JSBridgePlaygroundMethod(name: "subscriptionSelected",
-                                     sampleParamsJSON: #"{"id": "ddg.privacy.pro.monthly.renews.us"}"#)
+            JSBridgePlaygroundMethod(name: "getUserSettings", sampleParamsJSON: "{}"),
+            JSBridgePlaygroundMethod(name: "requestNotificationsPermission", sampleParamsJSON: "{}"),
+            JSBridgePlaygroundMethod(
+                name: "subscriptionSelected",
+                sampleParamsJSON: #"{"id": "ddg.privacy.pro.monthly.renews.us", "scheduleNotification": {"daysBeforeCancel": 3}}"#
+            )
         ]
     }
 
