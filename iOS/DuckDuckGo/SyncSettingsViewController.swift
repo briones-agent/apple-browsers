@@ -648,6 +648,11 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
         syncSetupExperimentPixels.fireLogin()
         handleSuccessfulSetupOutcome(.loginCompleted(setupRole: setupRole))
         AutofillOnboardingExperimentPixelReporter().fireSyncEnabled(true)
+        if case .receiver(.recovery, _) = setupRole {
+            Task {
+                await connectionController.cancel()
+            }
+        }
         presentSyncCompletionAfterDelay()
         guard case .receiver(let syncSetupSource, let syncCodeSource) = setupRole else {
             // .sharer reaches here only via the connect flow (exchange-sharer terminates in controllerDidFinishTransmittingRecoveryKey).

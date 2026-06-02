@@ -146,6 +146,12 @@ private actor SyncConnectionState {
         await _pairingV2Coordinator?.cancel()
         _pairingV2Coordinator = nil
     }
+
+    func prepareForNewFlow() async {
+        stopConnectMode()
+        stopExchangeMode()
+        await cancelPairingV2()
+    }
 }
 
 public class SyncConnectionController: SyncConnectionControlling {
@@ -173,6 +179,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             return try await startPairingV2PresenterMode()
         }
 
+        await state.prepareForNewFlow()
         let exchanger = try remoteExchange()
         await state.setExchanger(exchanger)
         startExchangePolling()
@@ -185,6 +192,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             return try await startPairingV2PresenterMode()
         }
 
+        await state.prepareForNewFlow()
         let connector = try remoteConnect()
         await state.setConnector(connector)
         self.startConnectPolling()
@@ -220,6 +228,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             guard await shouldContinueServerSyncOperation(setupRole: setupRole) else {
                 return false
             }
+            await state.prepareForNewFlow()
             return await handleExchangeKey(exchangeKey, codeSource: codeSource)
         } else if let connectKey = syncCode.connect {
             let setupRole: SyncSetupRole = .receiver(.connect, codeSource)
@@ -227,6 +236,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             guard await shouldContinueServerSyncOperation(setupRole: setupRole) else {
                 return false
             }
+            await state.prepareForNewFlow()
             return await handleConnectKey(connectKey, codeSource: codeSource)
         } else {
             await delegate?.controllerDidRecognizeCode(setupSource: .recovery, codeSource: codeSource)
@@ -275,6 +285,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             guard await shouldContinueServerSyncOperation(setupRole: setupRole) else {
                 return false
             }
+            await state.prepareForNewFlow()
             return await handleExchangeKey(exchangeKey, codeSource: codeSource)
         } else if let recovery = syncCode.recovery, let recoveryKey = recovery.legacyRecoveryKey() {
             let setupRole: SyncSetupRole = .receiver(.recovery, codeSource)
@@ -282,6 +293,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             guard await shouldContinueServerSyncOperation(setupRole: setupRole) else {
                 return false
             }
+            await state.prepareForNewFlow()
             return await handleRecoveryKey(recoveryKey, isRecovery: true, setupRole: .receiver(.recovery, codeSource))
         } else if syncCode.recovery != nil {
             await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: nil, setupRole: .receiver(.unknown, codeSource))
@@ -292,6 +304,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             guard await shouldContinueServerSyncOperation(setupRole: setupRole) else {
                 return false
             }
+            await state.prepareForNewFlow()
             return await handleConnectKey(connectKey, codeSource: codeSource)
         } else {
             // We shouldn't ever really reach this point
@@ -302,6 +315,7 @@ public class SyncConnectionController: SyncConnectionControlling {
     }
 
     private func startPairingV2PresenterMode() async throws -> PairingInfo {
+        await state.prepareForNewFlow()
         let coordinator = makePairingV2Coordinator()
         let payload = try await coordinator.startPresenting()
         let url: URL
@@ -330,6 +344,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             return false
         }
 
+        await state.prepareForNewFlow()
         let coordinator = makePairingV2Coordinator()
         await state.replacePairingV2Coordinator(with: coordinator)
         defer {

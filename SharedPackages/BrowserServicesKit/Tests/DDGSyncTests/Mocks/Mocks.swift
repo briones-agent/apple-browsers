@@ -473,7 +473,7 @@ final class MockRemoteConnecting: RemoteConnecting {
 
     var stopPollingCalled = 0
     func stopPolling() {
-        pollForRecoveryKeyCalled += 1
+        stopPollingCalled += 1
     }
 }
 

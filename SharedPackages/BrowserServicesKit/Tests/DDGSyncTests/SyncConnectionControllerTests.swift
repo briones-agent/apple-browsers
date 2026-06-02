@@ -211,6 +211,48 @@ final class SyncConnectionControllerTests: XCTestCase {
         await controller.cancel()
     }
 
+    func test_startExchangeMode_whenConnectModeIsActive_stopsConnectPolling() async throws {
+        let remoteConnector = MockRemoteConnecting()
+        dependencies.createRemoteConnectorStub = remoteConnector
+        _ = try await controller.startConnectMode()
+
+        let remoteExchanger = MockRemoteKeyExchanging()
+        dependencies.createRemoteKeyExchangerStub = remoteExchanger
+        _ = try await controller.startExchangeMode()
+
+        XCTAssertEqual(remoteConnector.stopPollingCalled, 1)
+    }
+
+    @MainActor
+    func test_startExchangeMode_whenLegacyConnectModeIsActiveAndPairingV2CodeEnabled_stopsConnectPolling() async throws {
+        let remoteConnector = MockRemoteConnecting()
+        dependencies.createRemoteConnectorStub = remoteConnector
+        _ = try await controller.startConnectMode()
+
+        dependencies.isPairingV2CodeEnabled = { true }
+        let messageExchanger = PairingV2MessageExchangingMock()
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        _ = try await controller.startExchangeMode()
+
+        XCTAssertEqual(remoteConnector.stopPollingCalled, 1)
+    }
+
+    @MainActor
+    func test_startExchangeMode_whenPairingV2PresenterIsActiveAndPairingV2CodeDisabled_cancelsPresenterCoordinator() async throws {
+        dependencies.isPairingV2CodeEnabled = { true }
+        let messageExchanger = PairingV2MessageExchangingMock()
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        let presenterInfo = try await controller.startExchangeMode()
+        let presenterPayload = try XCTUnwrap(PairingV2QRCodePayload(url: try XCTUnwrap(URL(string: presenterInfo.base64Code))))
+
+        dependencies.isPairingV2CodeEnabled = { false }
+        let remoteExchanger = MockRemoteKeyExchanging()
+        dependencies.createRemoteKeyExchangerStub = remoteExchanger
+        _ = try await controller.startExchangeMode()
+
+        XCTAssertTrue(messageExchanger.closeChannelCalls.contains(presenterPayload.channelId))
+    }
+
     func test_startExchangeMode_whenPairingV2CodeEnabledAndScopedAccessDisabled_returnsLegacyPairingInfo() async throws {
         dependencies.isPairingV2CodeEnabled = { true }
         dependencies.isScopedAccessCredentialsEnabled = { false }
@@ -464,6 +506,18 @@ final class SyncConnectionControllerTests: XCTestCase {
 
         XCTAssertEqual(pairingInfo.base64Code, expectedConnectorCode)
         XCTAssertEqual(pairingInfo.deviceName, Self.deviceName)
+    }
+
+    func test_startConnectMode_whenExchangeModeIsActive_stopsExchangePolling() async throws {
+        let remoteExchanger = MockRemoteKeyExchanging()
+        dependencies.createRemoteKeyExchangerStub = remoteExchanger
+        _ = try await controller.startExchangeMode()
+
+        let remoteConnector = MockRemoteConnecting()
+        dependencies.createRemoteConnectorStub = remoteConnector
+        _ = try await controller.startConnectMode()
+
+        XCTAssertEqual(remoteExchanger.stopPollingCalled, 1)
     }
 
     func test_startConnectMode_whenPairingV2CodeEnabled_returnsV2PairingInfo() async throws {
@@ -810,6 +864,22 @@ final class SyncConnectionControllerTests: XCTestCase {
     }
 
     @MainActor
+    func test_syncCodeEntered_withLegacyExchangeCodeWhenPairingV2PresenterIsActive_cancelsPresenterCoordinator() async throws {
+        dependencies.isPairingV2CodeEnabled = { true }
+        let messageExchanger = PairingV2MessageExchangingMock()
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        let presenterInfo = try await controller.startExchangeMode()
+        let presenterPayload = try XCTUnwrap(PairingV2QRCodePayload(url: try XCTUnwrap(URL(string: presenterInfo.base64Code))))
+
+        let mockExchangePublicKeyTransmitter = MockExchangePublicKeyTransmitting()
+        dependencies.createExchangePublicKeyTransmitterStub = mockExchangePublicKeyTransmitter
+        let result = await controller.syncCodeEntered(code: Self.validExchangeCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
+
+        XCTAssertFalse(result)
+        XCTAssertTrue(messageExchanger.closeChannelCalls.contains(presenterPayload.channelId))
+    }
+
+    @MainActor
     func test_syncCodeEntered_withV2UrlAndPairingV2ScanningDisabled_returnsFailureBeforeStartingPairingV2() async throws {
         dependencies.isPairingV2ScanningEnabled = { false }
         let payload = PairingV2QRCodePayload(channelId: "channel-1", publicKey: "public-key")
@@ -1133,6 +1203,22 @@ final class SyncConnectionControllerTests: XCTestCase {
         await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         XCTAssertTrue(mockAccountManager.loginCalled)
+    }
+
+    @MainActor
+    func test_syncCodeEntered_withRecoveryCodeWhenPairingV2PresenterIsActive_cancelsPresenterCoordinator() async throws {
+        dependencies.isPairingV2CodeEnabled = { true }
+        let messageExchanger = PairingV2MessageExchangingMock()
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        let presenterInfo = try await controller.startExchangeMode()
+        let presenterPayload = try XCTUnwrap(PairingV2QRCodePayload(url: try XCTUnwrap(URL(string: presenterInfo.base64Code))))
+
+        let mockAccountManager = AccountManagingMock()
+        dependencies.account = mockAccountManager
+        let result = await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
+
+        XCTAssertTrue(result)
+        XCTAssertTrue(messageExchanger.closeChannelCalls.contains(presenterPayload.channelId))
     }
 
     @MainActor
