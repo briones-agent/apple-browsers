@@ -160,7 +160,9 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(request.identifier, identifier)
         XCTAssertEqual(request.content.title, "Your Privacy Pro subscription is ending soon")
         XCTAssertEqual(request.content.categoryIdentifier, identifier)
-        XCTAssertTrue(request.trigger is UNCalendarNotificationTrigger)
+        let trigger = try XCTUnwrap(request.trigger as? UNTimeIntervalNotificationTrigger)
+        XCTAssertEqual(trigger.timeInterval, days(23), accuracy: 5)
+        XCTAssertFalse(trigger.repeats)
     }
 
     func test_scheduleReminder_removesPreviouslyScheduledReminderBeforeAdding() async {

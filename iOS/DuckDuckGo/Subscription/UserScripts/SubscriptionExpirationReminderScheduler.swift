@@ -96,8 +96,7 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         content.body = "Tap to review your subscription and stay protected."
         content.categoryIdentifier = Self.notificationIdentifier
 
-        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: fireDate)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: fireDate.timeIntervalSince(dateProvider()), repeats: false)
         let request = UNNotificationRequest(identifier: Self.notificationIdentifier, content: content, trigger: trigger)
 
         do {
