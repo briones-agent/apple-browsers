@@ -162,7 +162,7 @@ private extension RebrandedNewTabDaxDialogFactory {
         return FadeInView {
             OnboardingRebranding.OnboardingTrySiteDialog(viewModel: viewModel, onManualDismiss: manualDismissAction)
         }
-        .applyNewTabOnboardingBackground(backgroundType: .tryVisitingASiteNTP)
+        .applyNewTabOnboardingBackground(backgroundType: isChatPath ? .tryVisitingASiteChatPath : .tryVisitingASiteNTP)
         .onFirstAppear { [weak self] in
             if isChatPath {
                 self?.daxDialogsFlowCoordinator.setChatPathVisitSiteSeen()

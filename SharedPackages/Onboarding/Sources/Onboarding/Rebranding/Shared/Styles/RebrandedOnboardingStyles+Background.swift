@@ -28,6 +28,7 @@ public enum ContextualOnboardingBackgroundType {
     case tryASearch
     case tryASearchCompleted
     case tryVisitingASiteNTP
+    case tryVisitingASiteChatPath
     case trackers
     case fireDialog
     case endOfJourney
@@ -41,9 +42,17 @@ public enum ContextualOnboardingBackgroundType {
             return .bottomTrailing
         case .endOfJourneyNTPChat:
             return .bottomLeading
-        case .endOfJourney, .endOfJourneyNTP, .privacyProTrial:
+        case .endOfJourney, .endOfJourneyNTP, .privacyProTrial, .tryVisitingASiteChatPath:
             return .bottom
         }
+    }
+
+    /// When `true`, the image is rendered with `aspectRatio(.fill)` and an explicit
+    /// `frame(width:)` equal to the container width — matching how linear-flow backgrounds
+    /// are displayed in `RebrandedScrollableOnboardingBackground`. When `false`, the standard
+    /// `scaledToFit` contextual rendering is used and `frame(width: nil)` is a no-op.
+    var fillsContainerWidth: Bool {
+        self == .tryVisitingASiteChatPath
     }
 
     var image: Image {
@@ -54,6 +63,8 @@ public enum ContextualOnboardingBackgroundType {
             return OnboardingRebrandingImages.Contextual.searchDoneBackground
         case .tryVisitingASiteNTP:
             return OnboardingRebrandingImages.Contextual.tryASiteBackground
+        case .tryVisitingASiteChatPath:
+            return OnboardingRebrandingImages.Linear.addressBarSearchPreferenceBackground
         case .trackers:
             return OnboardingRebrandingImages.Contextual.trackerBlockedBackground
         case .fireDialog:
@@ -129,23 +140,29 @@ extension OnboardingRebranding.OnboardingStyles {
                 theme.colorPalette.background
                     .ignoresSafeArea()
                     .overlay(
-                        ZStack(alignment: backgroundType.alignment) {
-                            Color.clear
-                            backgroundType.image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: maxHeightMetrics, alignment: .bottom)
-                                .background(
-                                    GeometryReader { proxy in
-                                        Color.clear
-                                            .preference(key: BackgroundIllustrationHeightPreferenceKey.self, value: proxy.size.height)
-                                            .preference(key: BackgroundIllustrationBottomPreferenceKey.self, value: proxy.frame(in: .global).maxY)
-                                    }
-                                )
-                                .offset(y: calculateImageOffset())
-                                #if os(iOS)
-                                .animation(.easeInOut(duration: 0.3), value: keyboardResponder.keyboardFrame)
-                                #endif
+                        // `GeometryReader` provides the pixel-exact container width needed so that
+                        // linear-style backgrounds (`.fillsContainerWidth`) can use `aspectRatio(.fill)`
+                        // and scale correctly. For all other types `frame(width: nil)` is a no-op.
+                        GeometryReader { geo in
+                            ZStack(alignment: backgroundType.alignment) {
+                                Color.clear
+                                backgroundType.image
+                                    .resizable()
+                                    .aspectRatio(contentMode: backgroundType.fillsContainerWidth ? .fill : .fit)
+                                    .frame(width: backgroundType.fillsContainerWidth ? geo.size.width : nil)
+                                    .frame(maxHeight: maxHeightMetrics, alignment: .bottom)
+                                    .background(
+                                        GeometryReader { proxy in
+                                            Color.clear
+                                                .preference(key: BackgroundIllustrationHeightPreferenceKey.self, value: proxy.size.height)
+                                                .preference(key: BackgroundIllustrationBottomPreferenceKey.self, value: proxy.frame(in: .global).maxY)
+                                        }
+                                    )
+                                    .offset(y: calculateImageOffset())
+                                    #if os(iOS)
+                                    .animation(.easeInOut(duration: 0.3), value: keyboardResponder.keyboardFrame)
+                                    #endif
+                            }
                         }
                     )
                     .clipped()
@@ -209,6 +226,10 @@ extension OnboardingRebranding.OnboardingStyles {
         #if os(iOS)
         private static let maxHeightContextualAssets = MetricBuilder<CGFloat?>(default: nil).iPad(200).iPhone(landscape: 200)
         private static let maxHeightNewTabPageAssets = MetricBuilder<CGFloat?>(default: nil).iPad(290).iPhone(landscape: 290)
+        /// Height cap for linear-flow backgrounds reused in the contextual NTP dialog.
+        /// Matches `chooseSearchExperienceDialog.backgroundMaxHeight` from the linear onboarding
+        /// and is sized to show the illustration correctly at each form factor.
+        private static let maxHeightLinearStyleNTPAssets = MetricBuilder<CGFloat?>(default: 296).iPad(294).iPhone(landscape: 200)
         #endif
 
         /// Pushes the modifier's frame past the home-indicator inset on iPhone landscape so
@@ -225,6 +246,8 @@ extension OnboardingRebranding.OnboardingStyles {
                 return Self.maxHeightContextualAssets.build(v: vSizeClass, h: hSizeClass)
             case .tryASearch, .tryVisitingASiteNTP, .endOfJourneyNTP, .endOfJourneyNTPChat, .privacyProTrial:
                 return Self.maxHeightNewTabPageAssets.build(v: vSizeClass, h: hSizeClass)
+            case .tryVisitingASiteChatPath:
+                return Self.maxHeightLinearStyleNTPAssets.build(v: vSizeClass, h: hSizeClass)
             }
             #else
             return nil
@@ -309,6 +332,13 @@ public enum KeyboardBehavior: Equatable {
 
 public extension View {
 
+    // Linear-style backgrounds that fill the container width are positioned by the
+    // ZStack alignment rather than by a keyboard-driven offset, so keyboard adjustment
+    // is disabled for them (calculateImageOffset returns 0 via the .ignoreKeyboard guard).
+    private func keyboardBehavior(for backgroundType: ContextualOnboardingBackgroundType) -> KeyboardBehavior {
+        backgroundType.fillsContainerWidth ? .ignoreKeyboard : .adjustForKeyboard
+    }
+
     /// Applies a keyboard-aware background for new tab page onboarding dialogs.
     ///
     /// This modifier is designed for onboarding dialogs shown on the new tab page where
@@ -321,22 +351,22 @@ public extension View {
     func applyNewTabOnboardingBackground(
         backgroundType: ContextualOnboardingBackgroundType
     ) -> some View {
-        #if os(iOS)
-            self.modifier(
-                OnboardingRebranding.OnboardingStyles.ContextualBackgroundStyle(
-                    backgroundType: backgroundType,
-                    imageOffsetY: 0,
-                    keyboardBehavior: .adjustForKeyboard
-                )
+#if os(iOS)
+        self.modifier(
+            OnboardingRebranding.OnboardingStyles.ContextualBackgroundStyle(
+                backgroundType: backgroundType,
+                imageOffsetY: 0,
+                keyboardBehavior: keyboardBehavior(for: backgroundType)
             )
-        #elseif os(macOS)
-            self.modifier(
-                OnboardingRebranding.OnboardingStyles.ContextualBackgroundStyle(
-                    backgroundType: backgroundType,
-                    imageOffsetY: 0
-                )
+        )
+#elseif os(macOS)
+        self.modifier(
+            OnboardingRebranding.OnboardingStyles.ContextualBackgroundStyle(
+                backgroundType: backgroundType,
+                imageOffsetY: 0
             )
-        #endif
+        )
+#endif
     }
 
     /// Applies an animated background for contextual onboarding dialogs.
