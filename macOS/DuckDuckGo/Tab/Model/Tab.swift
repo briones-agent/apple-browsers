@@ -90,6 +90,10 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     let crashIndicatorModel = TabCrashIndicatorModel()
     let pinnedTabsManagerProvider: PinnedTabsManagerProviding
 
+    /// Per-tab Duck.ai omnibar state (prompt text, selection, mode, tool, attachments).
+    /// Owned by Tab so it survives TabViewModel recreation when the tab moves to a new window.
+    let addressBarSharedTextState = AddressBarSharedTextState()
+
     private let webViewConfiguration: WKWebViewConfiguration
 
     let startupPreferences: StartupPreferences
@@ -775,11 +779,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
 
         guard webView.url != nil else { return nil }
 
-        if #available(macOS 12.0, *) {
-            self.interactionState = (webView.interactionState as? Data).map { .webViewProvided($0) } ?? .none
-        } else {
-            self.interactionState = webView.sessionStateData().map { .webViewProvided($0) } ?? .none
-        }
+        self.interactionState = (webView.interactionState as? Data).map { .webViewProvided($0) } ?? .none
 
         return self.interactionState.data
     }
@@ -977,9 +977,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
             setContent(.onboarding)
             return
         }
-        if #available(macOS 12.0, *) {
-            Application.appDelegate.onboardingContextualDialogsManager.state = .notStarted
-        }
+
+        Application.appDelegate.onboardingContextualDialogsManager.state = .notStarted
         setContent(.onboarding)
     }
 
@@ -1070,7 +1069,7 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         }
 
         var request = URLRequest(url: url, cachePolicy: source.cachePolicy)
-        if #available(macOS 12.0, *), content.isUserEnteredUrl {
+        if content.isUserEnteredUrl {
             request.attribution = .user
         }
 
@@ -1103,12 +1102,12 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
 
         // should load on Web View instantiation?
         case .loadInBackgroundIfNeeded(shouldLoadInBackground: let shouldLoadInBackground):
+#if DEBUG
+            // Prevent background auto-loading when running unit tests, as this can stress out the CI runner.
+            guard AppVersion.runType.requiresEnvironment else { return false }
+#endif
             switch content {
             case .newtab, .bookmarks, .settings:
-#if DEBUG
-                // prevent auto loading when running Unit Tests
-                guard AppVersion.runType.requiresEnvironment else { return false }
-#endif
                 return webView.url == nil // navigate to empty pages loaded for duck:// urls
             default:
                 return shouldLoadInBackground
@@ -1152,10 +1151,6 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     }
 
     private func restoreInteractionState(with interactionStateData: Data) {
-        guard #available(macOS 12.0, *) else {
-            webView.restoreSessionState(from: interactionStateData)
-            return
-        }
         webView.interactionState = interactionStateData
     }
 
