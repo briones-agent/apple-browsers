@@ -69,7 +69,7 @@ final class NewTabPageNextStepsSingleCardProvider: NewTabPageNextStepsCardsProvi
         static let maxTimesCardDismissed = 1
 
         /// Maximum times a card can be shown before it is moved to the back of the card list.
-        static let maxTimesCardShown = 10
+        static let maxTimesCardShown = 3
 
         /// How many days to prioritize Level 1 cards before highlighting Level 2 cards.
         static let cardLevel1PriorityDays = 2
@@ -275,7 +275,7 @@ private extension NewTabPageNextStepsSingleCardProvider {
         // Get the card list based on persisted or default order
         var orderedCards = persistor.orderedCardIDs ?? defaultAdvancedCards.map { $0.cardID }
 
-        // Check if the first visible card has been shown 10+ times, and move it to the end of the list
+        // Check if the first visible card has been shown the maximum times, and move it to the end of the list
         if let firstVisibleCard = orderedCards.first(where: shouldShowCard),
            persistor.timesShown(for: firstVisibleCard) >= Constants.maxTimesCardShown,
            let index = orderedCards.firstIndex(where: { $0 == firstVisibleCard }) {

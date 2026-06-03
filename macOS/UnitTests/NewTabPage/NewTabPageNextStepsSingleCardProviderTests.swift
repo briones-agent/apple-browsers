@@ -788,7 +788,7 @@ final class NewTabPageNextStepsSingleCardProviderTests: XCTestCase {
     func testWhenCardShownMaxTimes_WithAdvancedOrderingEnabled_ThenCardMovesToBack() throws {
         featureFlagger.setAdvancedCardOrderingExperimentEnrollment(cohort: .treatment)
         let testPersistor = MockNewTabPageNextStepsCardsPersistor()
-        testPersistor.setTimesShown(10, for: .personalizeBrowser)
+        testPersistor.setTimesShown(NewTabPageNextStepsSingleCardProvider.Constants.maxTimesCardShown, for: .personalizeBrowser)
         testPersistor.orderedCardIDs = [.personalizeBrowser, .sync, .emailProtection]
         let testProvider = createProvider(persistor: testPersistor)
 
@@ -802,7 +802,7 @@ final class NewTabPageNextStepsSingleCardProviderTests: XCTestCase {
     func testWhenCardShownMaxTimes_WithAdvancedOrderingEnabled_ThenTimesShownResets() {
         featureFlagger.setAdvancedCardOrderingExperimentEnrollment(cohort: .treatment)
         let testPersistor = MockNewTabPageNextStepsCardsPersistor()
-        testPersistor.setTimesShown(10, for: .personalizeBrowser)
+        testPersistor.setTimesShown(NewTabPageNextStepsSingleCardProvider.Constants.maxTimesCardShown, for: .personalizeBrowser)
         testPersistor.orderedCardIDs = [.personalizeBrowser, .sync, .emailProtection]
         let testProvider = createProvider(persistor: testPersistor)
 
