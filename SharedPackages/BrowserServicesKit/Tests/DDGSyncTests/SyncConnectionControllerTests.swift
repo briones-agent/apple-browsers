@@ -924,6 +924,38 @@ final class SyncConnectionControllerTests: XCTestCase {
     }
 
     @MainActor
+    func test_syncCodeEntered_withV2UrlAndSend404_notifiesFetchError() async throws {
+        let messageExchanger = PairingV2MessageExchangingMock()
+        messageExchanger.sendError = SyncError.unexpectedStatusCode(404)
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
+        let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
+
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
+
+        XCTAssertFalse(result)
+        XCTAssertEqual(delegate.didErrorErrors?.error, .failedToFetchExchangeRecoveryKey)
+        XCTAssertNil(delegate.didErrorErrors?.underlyingError)
+    }
+
+    @MainActor
+    func test_syncCodeEntered_withV2UrlAndRelayExpired_notifiesFetchError() async throws {
+        let messageExchanger = PairingV2MessageExchangingMock()
+        messageExchanger.fetchMessagesError = PairingV2Error.relayChannelExpired
+        dependencies.createPairingV2MessageExchangerStub = messageExchanger
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let payload = PairingV2QRCodePayload(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)
+        let url = try payload.toURL(baseURL: URL(string: "https://duckduckgo.com")!)
+
+        let result = await controller.syncCodeEntered(code: url.absoluteString, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
+
+        XCTAssertFalse(result)
+        XCTAssertEqual(delegate.didErrorErrors?.error, .failedToFetchExchangeRecoveryKey)
+        XCTAssertNil(delegate.didErrorErrors?.underlyingError)
+    }
+
+    @MainActor
     func test_syncCodeEntered_withV2SameAccount_notifiesAlreadyConnected() async throws {
         try dependencies.secureStore.persistAccount(SyncAccount.mock)
         let messageExchanger = PairingV2MessageExchangingMock()

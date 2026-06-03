@@ -171,6 +171,8 @@ enum PairingV2Error: Error, Equatable {
     case recoveryCodeUnavailable
     case unsupportedVersion(String)
     case unsupportedFlow(String)
+    case relayChannelUnavailable
+    case relayChannelExpired
     case cancelled
 }
 

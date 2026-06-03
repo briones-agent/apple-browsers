@@ -153,6 +153,78 @@ final class PairingV2CoordinatorTests: XCTestCase {
         XCTAssertEqual(messageExchanger.closeChannelCalls, [hello.channelId])
     }
 
+    func testWhenPollReceivesRelayChannelUnavailableThenContinuesPollingWithinTolerance() async throws {
+        let dependencies = MockSyncDependencies()
+        let syncService = DDGSync(dataProvidersSource: MockDataProvidersSource(), dependencies: dependencies)
+        let messageExchanger = PairingV2MessageExchangingMock()
+        let coordinator = makeCoordinator(syncService: syncService, messageExchanger: messageExchanger)
+
+        let payload = try await coordinator.startPresenting()
+        messageExchanger.fetchMessagesError = PairingV2Error.relayChannelUnavailable
+
+        try await coordinator.pollOnce()
+
+        XCTAssertEqual(messageExchanger.fetchMessagesCalls.map(\.channelID), [payload.channelId])
+        XCTAssertTrue(messageExchanger.closeChannelCalls.isEmpty)
+        XCTAssertEqual(
+            coordinator.state,
+            .waitingForPeerHello(.init(localClient: .init(name: "Mac", kind: .ddg, hasAccount: false, isPresenter: true), peerChannelID: nil))
+        )
+    }
+
+    func testWhenPollReceivesRelayChannelUnavailableBeyondToleranceThenFails() async throws {
+        let dependencies = MockSyncDependencies()
+        let syncService = DDGSync(dataProvidersSource: MockDataProvidersSource(), dependencies: dependencies)
+        let messageExchanger = PairingV2MessageExchangingMock()
+        let coordinator = makeCoordinator(syncService: syncService, messageExchanger: messageExchanger)
+
+        let payload = try await coordinator.startPresenting()
+        messageExchanger.fetchMessagesError = PairingV2Error.relayChannelUnavailable
+
+        do {
+            try await coordinator.pollOnce()
+            try await coordinator.pollOnce()
+            try await coordinator.pollOnce()
+            try await coordinator.pollOnce()
+            XCTFail("Expected PairingV2Error.relayChannelUnavailable")
+        } catch PairingV2Error.relayChannelUnavailable {
+        } catch {
+            XCTFail("Expected PairingV2Error.relayChannelUnavailable, got \(error)")
+        }
+
+        XCTAssertEqual(messageExchanger.fetchMessagesCalls.map(\.channelID), [payload.channelId, payload.channelId, payload.channelId, payload.channelId])
+        XCTAssertEqual(messageExchanger.closeChannelCalls, [payload.channelId])
+        XCTAssertEqual(coordinator.state, .failed(.relayChannelUnavailable))
+    }
+
+    func testWhenSendReceivesUnexpectedStatusCode404ThenThrowsRelayChannelUnavailable() async throws {
+        let dependencies = MockSyncDependencies()
+        let syncService = DDGSync(dataProvidersSource: MockDataProvidersSource(), dependencies: dependencies)
+        let messageExchanger = PairingV2MessageExchangingMock()
+        let messageCrypto = PairingV2MessageCrypto()
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let coordinator = makeCoordinator(syncService: syncService, messageExchanger: messageExchanger, messageCrypto: messageCrypto)
+
+        let payload = try await coordinator.startPresenting()
+        messageExchanger.fetchMessagesStub = try encryptedPeerMessages(
+            [
+                .hello(.init(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey))
+            ],
+            recipientPublicKey: payload.publicKey,
+            peerKeyPair: peerKeyPair,
+            messageCrypto: messageCrypto
+        )
+        messageExchanger.sendError = SyncError.unexpectedStatusCode(404)
+
+        do {
+            try await coordinator.pollOnce()
+            XCTFail("Expected PairingV2Error.relayChannelUnavailable")
+        } catch PairingV2Error.relayChannelUnavailable {
+        } catch {
+            XCTFail("Expected PairingV2Error.relayChannelUnavailable, got \(error)")
+        }
+    }
+
     func testWhenPresenterHostsNativePeerThenSendsProgressMessagesBeforeRecoveryCodeResponse() async throws {
         let dependencies = MockSyncDependencies()
         try dependencies.secureStore.persistAccount(SyncAccount.mock)

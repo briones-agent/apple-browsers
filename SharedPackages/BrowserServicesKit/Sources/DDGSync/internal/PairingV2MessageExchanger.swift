@@ -29,6 +29,15 @@ struct PairingV2MessageExchanger: PairingV2MessageExchanging {
 
     let endpoints: Endpoints
     let api: RemoteAPIRequestCreating
+    let sendRetryDelaysNanoseconds: [UInt64]
+
+    init(endpoints: Endpoints,
+         api: RemoteAPIRequestCreating,
+         sendRetryDelaysNanoseconds: [UInt64] = [200_000_000, 500_000_000]) {
+        self.endpoints = endpoints
+        self.api = api
+        self.sendRetryDelaysNanoseconds = sendRetryDelaysNanoseconds
+    }
 
     func openChannel(_ channelID: String) async throws {
         let request = api.createRequest(url: channelURL(channelID),
@@ -38,27 +47,35 @@ struct PairingV2MessageExchanger: PairingV2MessageExchanging {
                                         body: nil,
                                         contentType: nil)
         let result = try await request.execute()
-        // API currently documents 200, while the deployed service has returned 204.
-        // Treat both as success until the contract and deployment converge.
-        guard [200, 204].contains(result.response.statusCode) else {
+        guard result.response.statusCode.isSuccessfulHTTPStatusCode else {
             throw SyncError.unexpectedStatusCode(result.response.statusCode)
         }
     }
 
     func send(_ messages: [PairingV2EncryptedMessage], to channelID: String) async throws {
         let body = try JSONEncoder.snakeCaseKeys.encode(SendMessagesRequest(messages: messages))
+        try await send(body: body, to: channelID, retryDelaysNanoseconds: sendRetryDelaysNanoseconds)
+    }
+
+    private func send(body: Data, to channelID: String, retryDelaysNanoseconds: [UInt64]) async throws {
         let request = api.createRequest(url: messagesURL(channelID),
                                         method: .post,
                                         headers: [:],
                                         parameters: [:],
                                         body: body,
                                         contentType: "application/json")
-        let result = try await request.execute()
-        // A first send can rarely see 404 while a just-created relay channel is still
-        // replicating. This implementation intentionally aborts and lets the user retry
-        // the whole pairing flow; targeted retry may be added later if needed.
-        guard result.response.statusCode == 204 else {
-            throw SyncError.unexpectedStatusCode(result.response.statusCode)
+        do {
+            let result = try await request.execute()
+            guard result.response.statusCode.isSuccessfulHTTPStatusCode else {
+                throw SyncError.unexpectedStatusCode(result.response.statusCode)
+            }
+        } catch SyncError.unexpectedStatusCode(404) where !retryDelaysNanoseconds.isEmpty {
+            try await Task.sleep(nanoseconds: retryDelaysNanoseconds[0])
+            try await send(body: body, to: channelID, retryDelaysNanoseconds: Array(retryDelaysNanoseconds.dropFirst()))
+        } catch SyncError.unexpectedStatusCode(404) {
+            throw PairingV2Error.relayChannelUnavailable
+        } catch SyncError.unexpectedStatusCode(410) {
+            throw PairingV2Error.relayChannelExpired
         }
     }
 
@@ -69,11 +86,20 @@ struct PairingV2MessageExchanger: PairingV2MessageExchanging {
                                         parameters: ["after": String(sequence)],
                                         body: nil,
                                         contentType: nil)
-        let result = try await request.execute()
-        guard let body = result.data else {
-            throw SyncError.noResponseBody
+        do {
+            let result = try await request.execute()
+            guard result.response.statusCode.isSuccessfulHTTPStatusCode else {
+                throw SyncError.unexpectedStatusCode(result.response.statusCode)
+            }
+            guard let body = result.data else {
+                throw SyncError.noResponseBody
+            }
+            return try JSONDecoder.snakeCaseKeys.decode(FetchMessagesResponse.self, from: body).messages
+        } catch SyncError.unexpectedStatusCode(404) {
+            throw PairingV2Error.relayChannelUnavailable
+        } catch SyncError.unexpectedStatusCode(410) {
+            throw PairingV2Error.relayChannelExpired
         }
-        return try JSONDecoder.snakeCaseKeys.decode(FetchMessagesResponse.self, from: body).messages
     }
 
     func closeChannel(_ channelID: String) async throws {
@@ -83,7 +109,14 @@ struct PairingV2MessageExchanger: PairingV2MessageExchanging {
                                         parameters: [:],
                                         body: nil,
                                         contentType: nil)
-        _ = try await request.execute()
+        do {
+            let result = try await request.execute()
+            guard result.response.statusCode.isSuccessfulHTTPStatusCode else {
+                throw SyncError.unexpectedStatusCode(result.response.statusCode)
+            }
+        } catch SyncError.unexpectedStatusCode(404), SyncError.unexpectedStatusCode(410) {
+            return
+        }
     }
 
     private struct SendMessagesRequest: Encodable {
@@ -100,5 +133,12 @@ struct PairingV2MessageExchanger: PairingV2MessageExchanging {
 
     private func messagesURL(_ channelID: String) -> URL {
         channelURL(channelID).appendingPathComponent("messages")
+    }
+}
+
+private extension Int {
+
+    var isSuccessfulHTTPStatusCode: Bool {
+        (200..<300).contains(self)
     }
 }

@@ -27,6 +27,8 @@ protocol PairingV2ConfirmationDelegate: AnyObject {
 
 final class PairingV2Coordinator {
 
+    private static let maximumToleratedUnavailablePollCount = 3
+
     private let syncService: DDGSyncing
     private let messageExchanger: PairingV2MessageExchanging
     private let messageCrypto: PairingV2MessageCrypto
@@ -41,6 +43,7 @@ final class PairingV2Coordinator {
     private var peerChannelID: String?
     private var peerPublicKey: String?
     private var lastProcessedSequence = 0
+    private var consecutiveUnavailablePollCount = 0
     private(set) var completedRegisteredDevices: [RegisteredDevice]?
     private(set) var pendingRecoveryKey: SyncCode.RecoveryKey?
 
@@ -72,6 +75,7 @@ final class PairingV2Coordinator {
         peerChannelID = nil
         peerPublicKey = nil
         lastProcessedSequence = 0
+        consecutiveUnavailablePollCount = 0
 
         let commands = stateMachine.handle(
             .presentCodeRequested(localClient: localClient(isPresenter: true), flags: flags)
@@ -87,6 +91,7 @@ final class PairingV2Coordinator {
         peerChannelID = qrPayload.channelId
         peerPublicKey = qrPayload.publicKey
         lastProcessedSequence = 0
+        consecutiveUnavailablePollCount = 0
 
         let commands = stateMachine.handle(
             .scannedCode(.v2Linking(peerChannelID: qrPayload.channelId), localClient: localClient(isPresenter: false), flags: flags)
@@ -99,7 +104,20 @@ final class PairingV2Coordinator {
             throw SyncError.failedToPrepareForExchange("Pairing V2 local channel is not ready")
         }
 
-        let messages = try await messageExchanger.fetchMessages(from: channelID, after: lastProcessedSequence)
+        let messages: [PairingV2SequencedMessage]
+        do {
+            messages = try await messageExchanger.fetchMessages(from: channelID, after: lastProcessedSequence)
+            consecutiveUnavailablePollCount = 0
+        } catch SyncError.unexpectedStatusCode(404) {
+            try await handleRelayChannelUnavailableDuringPolling()
+            return
+        } catch PairingV2Error.relayChannelUnavailable {
+            try await handleRelayChannelUnavailableDuringPolling()
+            return
+        } catch SyncError.unexpectedStatusCode(410), PairingV2Error.relayChannelExpired {
+            try await execute(stateMachine.handle(.failed(.relayChannelExpired)))
+            throw PairingV2Error.relayChannelExpired
+        }
         for message in messages.sorted(by: { $0.seq < $1.seq }) {
             guard !isTerminal else {
                 return
@@ -261,6 +279,9 @@ final class PairingV2Coordinator {
         case .sendRecoveryCode(let recoveryCode):
             do {
                 try await sendRecoveryCode(recoveryCode)
+            } catch let error as PairingV2Error {
+                try await execute(stateMachine.handle(.failed(error)))
+                throw error
             } catch {
                 try await execute(stateMachine.handle(.failed(.recoveryCodeSendFailed)))
                 throw PairingV2Error.recoveryCodeSendFailed
@@ -304,7 +325,23 @@ final class PairingV2Coordinator {
         }
 
         let encryptedMessage = try messageCrypto.encrypt(message, recipientPublicKey: peerPublicKey, senderChannelID: try requiredLocalChannelID())
-        try await messageExchanger.send([encryptedMessage], to: peerChannelID)
+        do {
+            try await messageExchanger.send([encryptedMessage], to: peerChannelID)
+        } catch SyncError.unexpectedStatusCode(404) {
+            throw PairingV2Error.relayChannelUnavailable
+        } catch SyncError.unexpectedStatusCode(410) {
+            throw PairingV2Error.relayChannelExpired
+        }
+    }
+
+    private func handleRelayChannelUnavailableDuringPolling() async throws {
+        consecutiveUnavailablePollCount += 1
+        guard consecutiveUnavailablePollCount > Self.maximumToleratedUnavailablePollCount else {
+            return
+        }
+
+        try await execute(stateMachine.handle(.failed(.relayChannelUnavailable)))
+        throw PairingV2Error.relayChannelUnavailable
     }
 
     private func recoveryCodeStatusMessage(for status: PairingV2PeerStatus) -> PairingV2ApplicationMessage {

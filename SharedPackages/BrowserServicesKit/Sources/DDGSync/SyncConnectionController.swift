@@ -665,7 +665,7 @@ public class SyncConnectionController: SyncConnectionControlling {
                 return .codeOnlyCompatibleWithDuckAI
             }
             return .codeMustBeScannedWithDuckDuckGo
-        case .unexpectedEvent:
+        case .unexpectedEvent, .relayChannelUnavailable, .relayChannelExpired:
             return .failedToFetchExchangeRecoveryKey
         case .cancelled:
             return .syncCancelledFromOtherDevice
