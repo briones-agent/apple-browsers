@@ -1951,6 +1951,7 @@ extension Pixel {
 
         // MARK: - Danger test
         case dangerNoIssue
+        case dangerIssueOldPixel
     }
 
 }
@@ -3823,6 +3824,7 @@ extension Pixel.Event {
 
         // MARK: - Danger test
         case .dangerNoIssue: return "danger_test_no_issue"
+        case .dangerIssueOldPixel: return "m_danger_test_warn"
         }
     }
 }
