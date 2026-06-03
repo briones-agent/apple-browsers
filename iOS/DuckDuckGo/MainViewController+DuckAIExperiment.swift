@@ -383,7 +383,9 @@ extension MainViewController {
                 // It must be removed only after contentContainer is fully opaque.
                 let transitionFill = UIView()
                 transitionFill.backgroundColor = UIColor(singleUseColor: .duckAIWebViewBackground)
-                transitionFill.frame = viewCoordinator.contentContainer.frame
+                var fillFrame = view.bounds
+                fillFrame.size.height -= view.safeAreaInsets.bottom
+                transitionFill.frame = fillFrame
                 transitionFill.autoresizingMask = [.flexibleWidth, .flexibleHeight]
                 transitionFill.isUserInteractionEnabled = false
                 view.insertSubview(transitionFill, belowSubview: viewCoordinator.contentContainer)
