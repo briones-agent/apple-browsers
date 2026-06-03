@@ -1257,21 +1257,18 @@ public struct UserText {
     }
     public static let syncRemoveDeviceConfirmAction = NSLocalizedString("sync.remove-device.action", value: "Remove", comment: "Caption for a button to remove device from Sync")
     public static let syncCodeCopied = NSLocalizedString("sync.code.copied", value: "Recovery code copied to clipboard", comment: "Message confirming that recovery code was copied to clipboard")
-    public static let syncPairingV2ConfirmationTitle = NotLocalizedString("sync.pairing-v2.confirmation.title", value: "Sync your data?", comment: "Title of the dialog to confirm Pairing V2 sync setup with another device")
-    public static let syncPairingV2ConfirmationAction = NotLocalizedString("sync.pairing-v2.confirmation.action", value: "Sync", comment: "Caption for a button to confirm Pairing V2 sync setup with another device")
-    public static let syncPairingV2UnknownPeerName = NotLocalizedString("sync.pairing-v2.unknown-peer-name", value: "the other device", comment: "Fallback device name for Pairing V2 confirmation dialogs")
-    public static func syncPairingV2JoinerConfirmationMessage(_ deviceName: String) -> String {
-        let message = NotLocalizedString(
-            "sync.pairing-v2.joiner-confirmation.message",
-            value: "Sync your data with \"%@\"?",
-            comment: "Message for the dialog to confirm joining Sync with another device")
-        return message.format(arguments: deviceName)
-    }
-    public static func syncPairingV2HostConfirmationMessage(_ deviceName: String) -> String {
-        let message = NotLocalizedString(
-            "sync.pairing-v2.host-confirmation.message",
-            value: "Allow \"%@\" to sync with this device?",
-            comment: "Message for the dialog to confirm allowing another device to join Sync")
+    public static let syncPairingV2ConfirmationTitle = NotLocalizedString("sync.pairing-v2.confirmation.title", value: "Sync new device?", comment: "Title of the dialog to confirm sync setup with another device")
+    public static let syncPairingV2ConfirmationAction = NotLocalizedString("sync.pairing-v2.confirmation.action", value: "Sync Now", comment: "Caption for a button to confirm sync setup with another device")
+    public static let syncPairingV2UnknownPeerName = NotLocalizedString("sync.pairing-v2.unknown-peer-name", value: "the other device", comment: "Fallback device name for confirmation dialogs")
+    public static func syncPairingV2ConfirmationMessage(_ deviceName: String, isThirdPartyPeer: Bool) -> String {
+        let message = isThirdPartyPeer ? NotLocalizedString(
+            "sync.pairing-v2.confirmation.third-party.message",
+            value: "\"%@\" will be able to access your synced Duck.ai chats.",
+            comment: "Message for the dialog to confirm sync setup with a third-party device")
+        : NotLocalizedString(
+            "sync.pairing-v2.confirmation.ddg.message",
+            value: "\"%@\" will be able to access your synced DuckDuckGo passwords, autofill data, and Duck.ai chats.",
+            comment: "Message for the dialog to confirm sync setup with another DuckDuckGo device")
         return message.format(arguments: deviceName)
     }
 
@@ -1340,7 +1337,9 @@ public struct UserText {
     public static let syncCodeOnlyCompatibleWithDuckAIDescription = NSLocalizedString("alert.sync-code-only-compatible-with-duckai-description", value: "This code is only compatible with Duck.ai website.", comment: "Description for Sync error shown when a code can only be used with Duck.ai")
     public static let syncCodeMustBeScannedWithDuckDuckGoDescription = NSLocalizedString("alert.sync-code-must-be-scanned-with-duckduckgo-description", value: "Please scan this code with the DuckDuckGo browser.", comment: "Description for Sync error shown when a code must be scanned with DuckDuckGo")
     public static let syncFromAnotherConnectedDeviceDescription = NSLocalizedString("alert.sync-from-another-connected-device-description", value: "Please Sync this device from an already-connected DuckDuckGo browser on another device.", comment: "Description for Sync error shown when the current device already has native credentials")
-    public static let syncCancelledFromOtherDeviceDescription = NSLocalizedString("alert.sync-cancelled-from-other-device-description", value: "Sync canceled from your other device.", comment: "Description for Sync error shown when setup is canceled from the other device")
+    public static let syncCancelledFromOtherDeviceTitle = NSLocalizedString("alert.sync-cancelled-from-other-device-title", value: "Sync canceled from your other device.", comment: "Title for Sync error shown when setup is canceled from the other device")
+    public static let syncCancelledFromOtherDeviceDescription = NSLocalizedString("alert.sync-cancelled-from-other-device-description", value: "Please try again.", comment: "Description for Sync error shown when setup is canceled from the other device")
+    public static let syncCancelledFromOtherDeviceButton = NSLocalizedString("alert.sync-cancelled-from-other-device-button", value: "Got It", comment: "Button title for Sync error shown when setup is canceled from the other device")
     static let syncUnavailableMessage = NSLocalizedString("sync.warning.data.syncing.disabled", value: "Sorry, but Sync & Backup is currently unavailable. Please try again later.", comment: "Data syncing unavailable warning message")
     static let syncUnavailableMessageUpgradeRequired = NSLocalizedString("sync.warning.data.syncing.disabled.upgrade.required", value: "Sorry, but Sync & Backup is no longer available in this app version. Please update DuckDuckGo to the latest version to continue.", comment: "Data syncing unavailable warning message")
 

@@ -33,6 +33,10 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
     var vc: SyncSettingsViewController!
     var errorHandler: CapturingSyncPausedStateManager!
     var ddgSyncing: MockDDGSyncing!
+    var syncBookmarksAdapter: SyncBookmarksAdapter!
+    var syncCredentialsAdapter: SyncCredentialsAdapter!
+    var syncCreditCardsAdapter: SyncCreditCardsAdapter!
+    var featureFlagger: MockFeatureFlagger!
     var syncAutoRestoreHandler: MockSyncAutoRestoreHandler!
     var syncSetupExperimentPixels: MockSyncSetupExperimentPixelFiring!
     var testRecoveryCode = "eyJyZWNvdmVyeSI6eyJ1c2VyX2lkIjoiMDZGODhFNzEtNDFBRS00RTUxLUE2UkRtRkEwOTcwMDE5QkYwIiwicHJpbWFyeV9rZXkiOiI1QTk3U3dsQVI5RjhZakJaU09FVXBzTktnSnJEYnE3aWxtUmxDZVBWazgwPSJ9fQ=="
@@ -53,27 +57,27 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
                                         readOnly: true,
                                         options: [:])
         ddgSyncing = MockDDGSyncing(authState: .active, isSyncInProgress: false)
-        let bookmarksAdapter = SyncBookmarksAdapter(
+        syncBookmarksAdapter = SyncBookmarksAdapter(
             database: database,
             favoritesDisplayModeStorage: MockFavoritesDisplayModeStoring(),
             syncErrorHandler: CapturingAdapterErrorHandler(),
             faviconStoring: MockFaviconStore())
-        let credentialsAdapter = SyncCredentialsAdapter(
+        syncCredentialsAdapter = SyncCredentialsAdapter(
             secureVaultErrorReporter: MockSecureVaultReporting(),
             syncErrorHandler: CapturingAdapterErrorHandler(),
             tld: TLD())
-        let creditCardsAdapter = SyncCreditCardsAdapter(
+        syncCreditCardsAdapter = SyncCreditCardsAdapter(
             secureVaultErrorReporter: MockSecureVaultReporting(),
             syncErrorHandler: CapturingAdapterErrorHandler())
-        let featureFlagger = MockFeatureFlagger(enabledFeatureFlags: [.syncSeamlessAccountSwitching])
+        featureFlagger = MockFeatureFlagger(enabledFeatureFlags: [.syncSeamlessAccountSwitching])
         syncAutoRestoreHandler = MockSyncAutoRestoreHandler()
         syncAutoRestoreHandler.isAutoRestoreFeatureEnabled = true
         syncSetupExperimentPixels = MockSyncSetupExperimentPixelFiring()
         vc = SyncSettingsViewController(
             syncService: ddgSyncing,
-            syncBookmarksAdapter: bookmarksAdapter,
-            syncCredentialsAdapter: credentialsAdapter,
-            syncCreditCardsAdapter: creditCardsAdapter,
+            syncBookmarksAdapter: syncBookmarksAdapter,
+            syncCredentialsAdapter: syncCredentialsAdapter,
+            syncCreditCardsAdapter: syncCreditCardsAdapter,
             syncPausedStateManager: errorHandler,
             featureFlagger: featureFlagger,
             syncAutoRestoreHandler: syncAutoRestoreHandler,
@@ -85,6 +89,10 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         cancellables = nil
         errorHandler = nil
         vc = nil
+        syncBookmarksAdapter = nil
+        syncCredentialsAdapter = nil
+        syncCreditCardsAdapter = nil
+        featureFlagger = nil
         syncAutoRestoreHandler = nil
         syncSetupExperimentPixels = nil
         super.tearDown()
@@ -371,6 +379,25 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
     }
 
     @MainActor
+    func testWhenControllerDidFinishTransmittingRecoveryKeyWithoutWaitingThenShowsDeviceSyncedToast() {
+        let spyVC = SpySyncSettingsViewController(
+            syncService: ddgSyncing,
+            syncBookmarksAdapter: syncBookmarksAdapter,
+            syncCredentialsAdapter: syncCredentialsAdapter,
+            syncCreditCardsAdapter: syncCreditCardsAdapter,
+            syncPausedStateManager: errorHandler,
+            featureFlagger: featureFlagger,
+            syncAutoRestoreHandler: syncAutoRestoreHandler,
+            syncSetupExperimentPixels: syncSetupExperimentPixels
+        )
+
+        spyVC.controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: false)
+
+        XCTAssertEqual(spyVC.dismissVCAndShowDeviceSyncedToastCallCount, 1)
+        XCTAssertEqual(spyVC.dismissPresentedViewControllerCallCount, 0)
+    }
+
+    @MainActor
     func testWhenConnectReceiverWasNewlyEnabledThenSuccessExperimentMetricIsFired() {
         vc.controllerDidCompleteAccountConnection(shouldShowSyncEnabled: false, setupSource: .connect, codeSource: .qrCode)
 
@@ -540,5 +567,21 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         ddgSyncing.account = SyncAccount(deviceId: id, deviceName: "iPhone", deviceType: "iPhone", userId: "", primaryKey: Data(), secretKey: Data(), token: nil, state: .active)
         ddgSyncing.registeredDevices = [RegisteredDevice(id: id, name: "iPhone", type: "iPhone")]
         vc.viewModel.devices = [SyncSettingsViewModel.Device(id: id, name: "iPhone", type: "iPhone", isThisDevice: true)]
+    }
+}
+
+@MainActor
+private final class SpySyncSettingsViewController: SyncSettingsViewController {
+
+    var dismissPresentedViewControllerCallCount = 0
+    var dismissVCAndShowDeviceSyncedToastCallCount = 0
+
+    override func dismissPresentedViewController(completion: (() -> Void)? = nil) {
+        dismissPresentedViewControllerCallCount += 1
+        completion?()
+    }
+
+    override func dismissVCAndShowDeviceSyncedToast() {
+        dismissVCAndShowDeviceSyncedToastCallCount += 1
     }
 }

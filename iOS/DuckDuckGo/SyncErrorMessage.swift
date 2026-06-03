@@ -37,7 +37,12 @@ enum SyncErrorMessage {
     case syncCancelledFromOtherDevice
 
     var title: String {
-        return UserText.syncErrorAlertTitle
+        switch self {
+        case .syncCancelledFromOtherDevice:
+            return UserText.syncCancelledFromOtherDeviceTitle
+        default:
+            return UserText.syncErrorAlertTitle
+        }
     }
 
     var description: String {
@@ -72,6 +77,15 @@ enum SyncErrorMessage {
             return UserText.syncFromAnotherConnectedDeviceDescription
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceDescription
+        }
+    }
+
+    var buttonTitle: String {
+        switch self {
+        case .syncCancelledFromOtherDevice:
+            return UserText.syncCancelledFromOtherDeviceButton
+        default:
+            return UserText.syncPausedAlertOkButton
         }
     }
 

@@ -24,17 +24,17 @@ import XCTest
 private final class PairingV2ConfirmationDelegateMock: PairingV2ConfirmationDelegate {
     var shouldAllowPeerToJoin = true
     var shouldJoinPeer = true
-    var allowPeerToJoinCalls: [String?] = []
-    var joinPeerCalls: [String?] = []
+    var allowPeerToJoinCalls: [(peerName: String?, peerKind: PairingV2DeviceKind)] = []
+    var joinPeerCalls: [(peerName: String?, peerKind: PairingV2DeviceKind)] = []
     var didCreateSyncAccountCallCount = 0
 
-    func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?) async -> Bool {
-        allowPeerToJoinCalls.append(peerName)
+    func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        allowPeerToJoinCalls.append((peerName, peerKind))
         return shouldAllowPeerToJoin
     }
 
-    func pairingV2CoordinatorShouldJoinPeer(peerName: String?) async -> Bool {
-        joinPeerCalls.append(peerName)
+    func pairingV2CoordinatorShouldJoinPeer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        joinPeerCalls.append((peerName, peerKind))
         return shouldJoinPeer
     }
 
@@ -255,7 +255,8 @@ final class PairingV2CoordinatorTests: XCTestCase {
         try await coordinator.pollOnce()
 
         let recoveryCode = try XCTUnwrap(syncService.account?.recoveryCode)
-        XCTAssertEqual(confirmationDelegate.allowPeerToJoinCalls, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.allowPeerToJoinCalls.map { $0.peerName }, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.allowPeerToJoinCalls.map { $0.peerKind }, [.ddg])
         XCTAssertEqual(messageExchanger.sendCalls.map(\.channelID), [
             peerKeyPair.channelID,
             peerKeyPair.channelID,
@@ -365,7 +366,8 @@ final class PairingV2CoordinatorTests: XCTestCase {
 
         try await coordinator.pollOnce()
 
-        XCTAssertEqual(confirmationDelegate.allowPeerToJoinCalls, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.allowPeerToJoinCalls.map { $0.peerName }, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.allowPeerToJoinCalls.map { $0.peerKind }, [.ddg])
         XCTAssertEqual(
             try decryptSentMessage(at: 2, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
             .recoveryCodeDenied(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeDenied))
@@ -408,7 +410,8 @@ final class PairingV2CoordinatorTests: XCTestCase {
                     senderChannelID: peerKeyPair.channelID).payload)
         ]
         try await coordinator.pollOnce()
-        XCTAssertEqual(confirmationDelegate.joinPeerCalls, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.joinPeerCalls.map { $0.peerName }, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.joinPeerCalls.map { $0.peerKind }, [.thirdParty])
         XCTAssertEqual(
             coordinator.state,
             .joinerWaitingForRecoveryCode(
@@ -486,7 +489,8 @@ final class PairingV2CoordinatorTests: XCTestCase {
         ]
         try await coordinator.pollOnce()
 
-        XCTAssertEqual(confirmationDelegate.joinPeerCalls, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.joinPeerCalls.map { $0.peerName }, ["Peer"])
+        XCTAssertEqual(confirmationDelegate.joinPeerCalls.map { $0.peerKind }, [.thirdParty])
         XCTAssertTrue(upgradeCoordinator.upgradeThirdPartyAccountCalls.isEmpty)
         XCTAssertNil(coordinator.completedRegisteredDevices)
         XCTAssertEqual(coordinator.state, .failed(.cancelled))

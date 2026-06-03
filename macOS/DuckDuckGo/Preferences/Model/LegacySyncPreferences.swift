@@ -979,14 +979,16 @@ extension LegacySyncPreferences: SyncConnectionControllerDelegate {
         presentDialog(for: .prepareToSync)
     }
 
-    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?) async -> Bool {
+    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
         let peerName = peerName ?? UserText.syncPairingV2UnknownPeerName
-        return await showPairingV2Confirmation(message: UserText.syncPairingV2AllowPeerMessage(peerName))
+        let message = UserText.syncPairingV2ConfirmationMessage(peerName, isThirdPartyPeer: peerKind == .thirdParty)
+        return await showPairingV2Confirmation(message: message)
     }
 
-    func controllerShouldJoinPairingV2Peer(peerName: String?) async -> Bool {
+    func controllerShouldJoinPairingV2Peer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
         let peerName = peerName ?? UserText.syncPairingV2UnknownPeerName
-        return await showPairingV2Confirmation(message: UserText.syncPairingV2JoinPeerMessage(peerName))
+        let message = UserText.syncPairingV2ConfirmationMessage(peerName, isThirdPartyPeer: peerKind == .thirdParty)
+        return await showPairingV2Confirmation(message: message)
     }
 
     func controllerDidCreateSyncAccount() {

@@ -28,8 +28,8 @@ public protocol SyncConnectionControllerDelegate: AnyObject {
     func controllerDidRecognizeCode(setupSource: SyncSetupSource, codeSource: SyncCodeSource) async
 
     func controllerWillPerformServerSyncOperation(setupRole: SyncSetupRole) async -> Bool
-    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?) async -> Bool
-    func controllerShouldJoinPairingV2Peer(peerName: String?) async -> Bool
+    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool
+    func controllerShouldJoinPairingV2Peer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool
 
     func controllerDidCreateSyncAccount()
     func controllerDidCompleteAccountConnection(shouldShowSyncEnabled: Bool, setupSource: SyncSetupSource, codeSource: SyncCodeSource)
@@ -690,11 +690,11 @@ public extension SyncConnectionControllerDelegate {
         true
     }
 
-    func controllerShouldAllowPairingV2PeerToJoin(peerName _: String?) async -> Bool {
+    func controllerShouldAllowPairingV2PeerToJoin(peerName _: String?, peerKind _: PairingV2DeviceKind) async -> Bool {
         false
     }
 
-    func controllerShouldJoinPairingV2Peer(peerName _: String?) async -> Bool {
+    func controllerShouldJoinPairingV2Peer(peerName _: String?, peerKind _: PairingV2DeviceKind) async -> Bool {
         false
     }
 
@@ -704,12 +704,12 @@ public extension SyncConnectionControllerDelegate {
 
 extension SyncConnectionController: PairingV2ConfirmationDelegate {
 
-    func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?) async -> Bool {
-        await delegate?.controllerShouldAllowPairingV2PeerToJoin(peerName: peerName) ?? false
+    func pairingV2CoordinatorShouldAllowPeerToJoin(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        await delegate?.controllerShouldAllowPairingV2PeerToJoin(peerName: peerName, peerKind: peerKind) ?? false
     }
 
-    func pairingV2CoordinatorShouldJoinPeer(peerName: String?) async -> Bool {
-        await delegate?.controllerShouldJoinPairingV2Peer(peerName: peerName) ?? false
+    func pairingV2CoordinatorShouldJoinPeer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        await delegate?.controllerShouldJoinPairingV2Peer(peerName: peerName, peerKind: peerKind) ?? false
     }
 
     func pairingV2CoordinatorDidCreateSyncAccount() async {

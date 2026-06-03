@@ -103893,31 +103893,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Sync"
+            "value" : "Sync Now"
           }
         }
       }
     },
-    "sync.pairing-v2.confirmation.allow-peer.message" : {
-      "comment" : "Message asking whether another device should be allowed to sync with this device. The placeholder is the other device name.",
+    "sync.pairing-v2.confirmation.ddg.message" : {
+      "comment" : "Message asking whether another DuckDuckGo device should sync with this device. The placeholder is the other device name.",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow \"%@\" to sync with this device?"
+            "value" : "\"%@\" will be able to access your synced DuckDuckGo passwords, autofill data, and Duck.ai chats."
           }
         }
       }
     },
-    "sync.pairing-v2.confirmation.join-peer.message" : {
-      "comment" : "Message asking whether this device should sync with another device. The placeholder is the other device name.",
+    "sync.pairing-v2.confirmation.third-party.message" : {
+      "comment" : "Message asking whether a third-party device should sync with this device. The placeholder is the other device name.",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Sync your data with \"%@\"?"
+            "value" : "\"%@\" will be able to access your synced Duck.ai chats."
           }
         }
       }
@@ -103929,7 +103929,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Sync your data?"
+            "value" : "Sync new device?"
           }
         }
       }

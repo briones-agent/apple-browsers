@@ -240,7 +240,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 title: type.title,
                 message: [type.description, error?.localizedDescription].compactMap({ $0 }).joined(separator: "\n"),
                 preferredStyle: .alert)
-            let okAction = UIAlertAction(title: UserText.syncPausedAlertOkButton, style: .default, handler: nil)
+            let okAction = UIAlertAction(title: type.buttonTitle, style: .default, handler: nil)
             alertController.addAction(okAction)
 
             if type == .unableToSyncToServer || type == .unableToSyncWithDevice || type == .unableToMergeTwoAccounts {
@@ -734,18 +734,20 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         }
     }
 
-    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?) async -> Bool {
+    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
         let peerName = pairingV2DisplayName(for: peerName)
-        let isConfirmed = await presentPairingV2ConfirmationAlert(message: UserText.syncPairingV2HostConfirmationMessage(peerName))
+        let message = UserText.syncPairingV2ConfirmationMessage(peerName, isThirdPartyPeer: peerKind == .thirdParty)
+        let isConfirmed = await presentPairingV2ConfirmationAlert(message: message)
         if !isConfirmed {
             dismissPairingV2UIAfterDeniedConfirmation()
         }
         return isConfirmed
     }
 
-    func controllerShouldJoinPairingV2Peer(peerName: String?) async -> Bool {
+    func controllerShouldJoinPairingV2Peer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
         let peerName = pairingV2DisplayName(for: peerName)
-        let isConfirmed = await presentPairingV2ConfirmationAlert(message: UserText.syncPairingV2JoinerConfirmationMessage(peerName))
+        let message = UserText.syncPairingV2ConfirmationMessage(peerName, isThirdPartyPeer: peerKind == .thirdParty)
+        let isConfirmed = await presentPairingV2ConfirmationAlert(message: message)
         if !isConfirmed {
             dismissPairingV2UIAfterDeniedConfirmation()
         }

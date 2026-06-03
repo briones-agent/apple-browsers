@@ -88,11 +88,11 @@ final class MockSyncConnectionControllerDelegate: SyncConnectionControllerDelega
         return shouldContinueServerSyncOperation
     }
 
-    func controllerShouldAllowPairingV2PeerToJoin(peerName _: String?) async -> Bool {
+    func controllerShouldAllowPairingV2PeerToJoin(peerName _: String?, peerKind _: PairingV2DeviceKind) async -> Bool {
         shouldAllowPairingV2PeerToJoin
     }
 
-    func controllerShouldJoinPairingV2Peer(peerName _: String?) async -> Bool {
+    func controllerShouldJoinPairingV2Peer(peerName _: String?, peerKind _: PairingV2DeviceKind) async -> Bool {
         shouldJoinPairingV2Peer
     }
 

@@ -283,8 +283,14 @@
 /* Title for alert shown when sync bookmarks paused for too many items */
 "alert.sync-bookmarks-paused-title" = "Bookmark Sync is Paused";
 
+/* Button title for Sync error shown when setup is canceled from the other device */
+"alert.sync-cancelled-from-other-device-button" = "Got It";
+
 /* Description for Sync error shown when setup is canceled from the other device */
-"alert.sync-cancelled-from-other-device-description" = "Sync canceled from your other device.";
+"alert.sync-cancelled-from-other-device-description" = "Please try again.";
+
+/* Title for Sync error shown when setup is canceled from the other device */
+"alert.sync-cancelled-from-other-device-title" = "Sync canceled from your other device.";
 
 /* Description for Sync error shown when a code must be scanned with DuckDuckGo */
 "alert.sync-code-must-be-scanned-with-duckduckgo-description" = "Please scan this code with the DuckDuckGo browser.";
