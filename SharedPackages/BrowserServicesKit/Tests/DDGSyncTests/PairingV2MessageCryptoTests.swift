@@ -194,9 +194,12 @@ final class PairingV2MessageCryptoTests: XCTestCase {
         let keyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "channel-1")
         let crypto = PairingV2MessageCrypto()
         let data = try XCTUnwrap(json.data(using: .utf8))
+        // keyPair.publicKey is the base64url SPKI string; encryptRSAOAEP256 needs the SecKey,
+        // which is the public half of the keypair's private key.
+        let recipientPublicKey = try XCTUnwrap(SecKeyCopyPublicKey(keyPair.privateKey))
         let encryptedMessage = PairingV2EncryptedMessage(
             payload: try JWECompactCodec().encryptRSAOAEP256(payload: data,
-                                                             recipientPublicKey: keyPair.publicKey,
+                                                             recipientPublicKey: recipientPublicKey,
                                                              kid: "sender-channel")
         )
 
