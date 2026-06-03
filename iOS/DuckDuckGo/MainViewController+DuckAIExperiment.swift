@@ -421,7 +421,8 @@ extension MainViewController {
                             cancellable = nil
                             revealContent()
                         }
-                   
+                    _=cancellable // suppress warning
+
                 }
                 self.newTabPageViewController?.onboardingCompleted()
                 return
