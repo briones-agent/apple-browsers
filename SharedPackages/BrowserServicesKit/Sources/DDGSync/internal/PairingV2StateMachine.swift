@@ -16,7 +16,7 @@
 //  limitations under the License.
 //
 
-enum PairingV2DeviceKind: String, Codable, Equatable {
+public enum PairingV2DeviceKind: String, Codable, Equatable {
     case ddg
     case thirdParty = "3party"
 }
@@ -54,7 +54,7 @@ struct PairingV2PeerStatus: Equatable {
 
 enum PairingV2ScannedCode: Equatable {
     case v1Linking
-    case v2Linking(peerChannelID: String)
+    case v2Linking(peerChannelID: String, localChannelID: String)
     case recoveryCode(kind: PairingV2DeviceKind, code: String)
     case unknown
 }
@@ -67,17 +67,20 @@ struct PairingV2RolloutFlags: Equatable {
 struct PairingV2Session: Equatable {
     let localClient: PairingV2LocalClient
     let peerChannelID: String?
+    let localChannelID: String?
     let peerStatus: PairingV2PeerStatus?
     let purpose: String
     let hasReceivedHello: Bool
 
     init(localClient: PairingV2LocalClient,
          peerChannelID: String?,
+         localChannelID: String? = nil,
          peerStatus: PairingV2PeerStatus? = nil,
          purpose: String = "ai_chats",
          hasReceivedHello: Bool = false) {
         self.localClient = localClient
         self.peerChannelID = peerChannelID
+        self.localChannelID = localChannelID
         self.peerStatus = peerStatus
         self.purpose = purpose
         self.hasReceivedHello = hasReceivedHello
@@ -86,6 +89,7 @@ struct PairingV2Session: Equatable {
     func withPeerStatus(_ peerStatus: PairingV2PeerStatus) -> PairingV2Session {
         PairingV2Session(localClient: localClient,
                          peerChannelID: peerChannelID,
+                         localChannelID: localChannelID,
                          peerStatus: peerStatus,
                          purpose: purpose,
                          hasReceivedHello: hasReceivedHello)
@@ -94,6 +98,7 @@ struct PairingV2Session: Equatable {
     func withReceivedHello() -> PairingV2Session {
         PairingV2Session(localClient: localClient,
                          peerChannelID: peerChannelID,
+                         localChannelID: localChannelID,
                          peerStatus: peerStatus,
                          purpose: purpose,
                          hasReceivedHello: true)
@@ -149,8 +154,8 @@ enum PairingV2Command: Equatable {
     case sendRecoveryCodeAwaitingConfirmation
     case sendRecoveryCodeConfirmed
     case sendRecoveryCodeDenied
-    case requestHostConfirmation(peerName: String?)
-    case requestJoinerConfirmation(peerName: String?)
+    case requestHostConfirmation(peerName: String?, peerKind: PairingV2DeviceKind)
+    case requestJoinerConfirmation(peerName: String?, peerKind: PairingV2DeviceKind)
     case prepareRecoveryCode(credentialKind: PairingV2DeviceKind, purpose: String)
     case sendRecoveryCode(String)
     case loginWithRecoveryCode(String)
@@ -304,7 +309,7 @@ struct PairingV2StateMachine {
         case .v1Linking:
             return fail(with: .unsupportedFlow("V1 fallback is handled outside Pairing V2"))
 
-        case .v2Linking(let peerChannelID):
+        case .v2Linking(let peerChannelID, let localChannelID):
             guard flags.isV2ScanningEnabled else {
                 return fail(with: .v2ScanningDisabled)
             }
@@ -313,7 +318,7 @@ struct PairingV2StateMachine {
                 return fail(with: .unsupportedFlow("Pairing V2 scanning requires a native client"))
             }
 
-            let session = PairingV2Session(localClient: localClient, peerChannelID: peerChannelID)
+            let session = PairingV2Session(localClient: localClient, peerChannelID: peerChannelID, localChannelID: localChannelID)
             state = .waitingForPeerStatus(session)
 
             let commands: [PairingV2Command] = [
@@ -371,7 +376,12 @@ struct PairingV2StateMachine {
         }
 
         let updatedSession = session.withPeerStatus(peerStatus)
-        switch PairingV2RoleElection.decideRole(localClient: updatedSession.localClient, peerStatus: peerStatus) {
+        let raceLocalChannelID = updatedSession.hasReceivedHello ? updatedSession.localChannelID : nil
+        let racePeerChannelID = updatedSession.hasReceivedHello ? updatedSession.peerChannelID : nil
+        switch PairingV2RoleElection.decideRole(localClient: updatedSession.localClient,
+                                                peerStatus: peerStatus,
+                                                localChannelID: raceLocalChannelID,
+                                                peerChannelID: racePeerChannelID) {
         case .host(let joinerKind):
             let credentialKind = Self.recoveryCredentialKind(hostKind: updatedSession.localClient.kind, joinerKind: joinerKind)
             guard updatedSession.localClient.kind == .ddg else {
@@ -381,7 +391,7 @@ struct PairingV2StateMachine {
             state = .hostWaitingForConfirmation(updatedSession, credentialKind: credentialKind)
             return [
                 .sendRecoveryCodeAwaitingConfirmation,
-                .requestHostConfirmation(peerName: peerStatus.name)
+                .requestHostConfirmation(peerName: peerStatus.name, peerKind: peerStatus.kind)
             ]
 
         case .joiner(let hostKind):
@@ -390,7 +400,7 @@ struct PairingV2StateMachine {
             }
 
             state = .joinerWaitingForConfirmation(updatedSession)
-            return [.requestJoinerConfirmation(peerName: peerStatus.name)]
+            return [.requestJoinerConfirmation(peerName: peerStatus.name, peerKind: peerStatus.kind)]
         }
     }
 
