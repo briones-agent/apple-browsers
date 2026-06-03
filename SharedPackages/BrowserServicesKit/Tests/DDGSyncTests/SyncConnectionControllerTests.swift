@@ -57,6 +57,7 @@ final class MockSyncConnectionControllerDelegate: SyncConnectionControllerDelega
     var didCompletePairingWithAlreadyConnectedAccountCalled = { }
     var didCompletePairingWithAlreadyConnectedAccountSetupRole: SyncSetupRole?
     var didFindTwoAccountsDuringRecoveryCalled: SyncCode.RecoveryKey?
+    var didFindTwoAccountsDuringRecoveryShouldPromptBeforeSwitchingAccounts: Bool?
     var didErrorCalled = { }
     var didErrorErrors: (error: SyncConnectionError, underlyingError: Error?)?
     var shouldContinueServerSyncOperation = true
@@ -112,8 +113,11 @@ final class MockSyncConnectionControllerDelegate: SyncConnectionControllerDelega
         didCompletePairingWithAlreadyConnectedAccountCalled()
     }
 
-    func controllerDidFindTwoAccountsDuringRecovery(_ recoveryKey: SyncCode.RecoveryKey, setupRole: SyncSetupRole) async {
+    func controllerDidFindTwoAccountsDuringRecovery(_ recoveryKey: SyncCode.RecoveryKey,
+                                                    setupRole: SyncSetupRole,
+                                                    shouldPromptBeforeSwitchingAccounts: Bool) async {
         didFindTwoAccountsDuringRecoveryCalled = recoveryKey
+        didFindTwoAccountsDuringRecoveryShouldPromptBeforeSwitchingAccounts = shouldPromptBeforeSwitchingAccounts
     }
 
     func controllerDidError(_ error: SyncConnectionError, underlyingError: (any Error)?, setupRole: SyncSetupRole) async {
@@ -1103,6 +1107,7 @@ final class SyncConnectionControllerTests: XCTestCase {
 
         XCTAssertFalse(result)
         XCTAssertNotNil(delegate.didFindTwoAccountsDuringRecoveryCalled)
+        XCTAssertEqual(delegate.didFindTwoAccountsDuringRecoveryShouldPromptBeforeSwitchingAccounts, false)
         XCTAssertNil(delegate.didErrorErrors)
     }
 
@@ -1288,7 +1293,9 @@ final class SyncConnectionControllerTests: XCTestCase {
         await controller.syncCodeEntered(code: Self.validRecoveryCode, canScanLegacyURLBarcodes: true, codeSource: .pastedCode)
 
         let twoAccountsKey = await delegate.didFindTwoAccountsDuringRecoveryCalled
+        let shouldPromptBeforeSwitchingAccounts = await delegate.didFindTwoAccountsDuringRecoveryShouldPromptBeforeSwitchingAccounts
         XCTAssertNotNil(twoAccountsKey)
+        XCTAssertEqual(shouldPromptBeforeSwitchingAccounts, true)
     }
 
     @MainActor

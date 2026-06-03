@@ -159,7 +159,10 @@ final class SyncDialogControllerTests: XCTestCase {
             XCTAssert(ddgSyncing.disconnectCalled)
             return [RegisteredDevice(id: "1", name: "iPhone", type: "iPhone"), RegisteredDevice(id: "2", name: "Macbook Pro", type: "Macbook Pro")]
         }
-        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(testRecoveryKey, setupRole: .sharer)
+        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(
+            testRecoveryKey,
+            setupRole: .receiver(.recovery, .pastedCode),
+            shouldPromptBeforeSwitchingAccounts: true)
         XCTAssert(didCallDDGSyncLogin)
     }
 
@@ -171,7 +174,10 @@ final class SyncDialogControllerTests: XCTestCase {
 
         ddgSyncing.stubLogin = [RegisteredDevice(id: "1", name: "iPhone", type: "iPhone"), RegisteredDevice(id: "2", name: "Macbook Pro", type: "Macbook Pro")]
 
-        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(testRecoveryKey, setupRole: .sharer)
+        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(
+            testRecoveryKey,
+            setupRole: .receiver(.recovery, .pastedCode),
+            shouldPromptBeforeSwitchingAccounts: true)
 
         syncDialogController.$devices.sink {
             if $0.map(\.id) == ["1", "2"] {
@@ -193,7 +199,10 @@ final class SyncDialogControllerTests: XCTestCase {
             return [RegisteredDevice(id: "1", name: "iPhone", type: "iPhone"), RegisteredDevice(id: "2", name: "Macbook Pro", type: "Macbook Pro")]
         }
 
-        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(testRecoveryKey, setupRole: .sharer)
+        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(
+            testRecoveryKey,
+            setupRole: .receiver(.recovery, .pastedCode),
+            shouldPromptBeforeSwitchingAccounts: true)
 
         XCTAssertNil(managementDialogModel.currentDialog)
     }
@@ -203,10 +212,41 @@ final class SyncDialogControllerTests: XCTestCase {
         ddgSyncing.account = SyncAccount(deviceId: "1", deviceName: "", deviceType: "", userId: "", primaryKey: Data(), secretKey: Data(), token: nil, state: .active)
         syncDialogController.devices = [SyncDevice(RegisteredDevice(id: "1", name: "iPhone", type: "iPhone")), SyncDevice(RegisteredDevice(id: "2", name: "iPhone", type: "iPhone"))]
 
-        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(testRecoveryKey, setupRole: .sharer)
+        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(
+            testRecoveryKey,
+            setupRole: .receiver(.recovery, .pastedCode),
+            shouldPromptBeforeSwitchingAccounts: true)
 
         XCTAssert(managementDialogModel.shouldShowErrorMessage)
         XCTAssert(managementDialogModel.shouldShowSwitchAccountsMessage)
+    }
+
+    func test_controllerDidFindTwoAccountsDuringRecovery_whenV2AndTwoOrMoreDevices_switchesWithoutAccountSwitchingMessage() async throws {
+        ddgSyncing.account = SyncAccount(
+            deviceId: "1",
+            deviceName: "",
+            deviceType: "",
+            userId: "",
+            primaryKey: Data(),
+            secretKey: Data(),
+            token: nil,
+            state: .active)
+        syncDialogController.devices = [
+            SyncDevice(RegisteredDevice(id: "1", name: "iPhone", type: "iPhone")),
+            SyncDevice(RegisteredDevice(id: "2", name: "iPhone", type: "iPhone"))
+        ]
+        ddgSyncing.stubLogin = [
+            RegisteredDevice(id: "1", name: "iPhone", type: "iPhone"),
+            RegisteredDevice(id: "2", name: "Macbook Pro", type: "Macbook Pro")
+        ]
+
+        await syncDialogController.controllerDidFindTwoAccountsDuringRecovery(
+            testRecoveryKey,
+            setupRole: .sharer,
+            shouldPromptBeforeSwitchingAccounts: false)
+
+        XCTAssertTrue(ddgSyncing.loginCalled)
+        XCTAssertFalse(managementDialogModel.shouldShowSwitchAccountsMessage)
     }
 
     func test_switchAccounts_disconnectsThenLogsInAgain() async throws {
@@ -880,6 +920,23 @@ final class SyncDialogControllerTests: XCTestCase {
         await syncDialogController.controllerDidError(.failedToLogIn, underlyingError: nil, setupRole: .sharer)
 
         XCTAssertEqual(managementDialogModel.syncErrorMessage?.type, .unableToSyncToOtherDevice)
+    }
+
+    func testManagementDialogErrorDescription_whenDetailMatchesTypeDescription_doesNotDuplicateDescription() {
+        managementDialogModel.syncErrorMessage = SyncErrorMessage(type: .syncFromAnotherConnectedDevice)
+
+        let dialog = ManagementDialog(model: managementDialogModel)
+
+        XCTAssertEqual(dialog.errorDescription, SyncErrorType.syncFromAnotherConnectedDevice.description)
+    }
+
+    func testManagementDialogErrorDescription_whenDetailDiffersFromTypeDescription_preservesDetail() {
+        let detail = "The request timed out."
+        managementDialogModel.syncErrorMessage = SyncErrorMessage(type: .unableToSyncToOtherDevice, description: detail)
+
+        let dialog = ManagementDialog(model: managementDialogModel)
+
+        XCTAssertEqual(dialog.errorDescription, "\(SyncErrorType.unableToSyncToOtherDevice.description)\n\(detail)")
     }
 
     func testControllerDidError_pollingTimeout_endsFlow() async {

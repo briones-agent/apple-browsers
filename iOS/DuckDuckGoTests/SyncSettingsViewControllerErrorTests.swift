@@ -427,6 +427,34 @@ final class SyncSettingsViewControllerErrorTests: XCTestCase {
         XCTAssertFalse(syncSetupExperimentPixels.firedMetrics.contains("setup_ended_successful"))
     }
 
+    @MainActor
+    func testWhenV2AccountConflictHasMultipleDevicesThenSwitchesWithoutPrompting() async throws {
+        vc.viewModel.devices = [
+            SyncSettingsViewModel.Device(id: "1", name: "iPhone", type: "iPhone", isThisDevice: true),
+            SyncSettingsViewModel.Device(id: "2", name: "Macbook Pro", type: "Macbook Pro", isThisDevice: false)
+        ]
+        var loginCalled = false
+        ddgSyncing.spyLogin = { [weak self] _, _, _ in
+            guard let self else { return [] }
+            XCTAssert(ddgSyncing.disconnectCalled)
+            loginCalled = true
+            throw SyncError.failedToDecryptValue("")
+        }
+
+        guard let syncCode = try? SyncCode.decodeBase64String(testRecoveryCode),
+              let recoveryKey = syncCode.recovery?.legacyRecoveryKey() else {
+            XCTFail("Could not create RecoveryKey from code")
+            return
+        }
+
+        await vc.controllerDidFindTwoAccountsDuringRecovery(
+            recoveryKey,
+            setupRole: .sharer,
+            shouldPromptBeforeSwitchingAccounts: false)
+
+        XCTAssertTrue(loginCalled)
+    }
+
     func x_test_syncCodeEntered_accountAlreadyExists_oneDevice_disconnectsThenLogsInAgain() async {
         await setUpWithSingleDevice(id: "1")
 
