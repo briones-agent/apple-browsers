@@ -611,11 +611,15 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
         await showPreparingSync()
     }
     
-    func controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange _: Bool) {
+    func controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: Bool) {
         Pixel.fire(pixel: .syncSetupEndedSuccessful,
                    withAdditionalParameters: [PixelParameters.source: SyncSetupSource.exchange.rawValue],
                    includedParameters: [.appVersion])
-        dismissPresentedViewController()
+        if shouldWaitForDevicesToChange {
+            dismissPresentedViewController()
+        } else {
+            dismissVCAndShowDeviceSyncedToast()
+        }
     }
     
     func controllerDidReceiveRecoveryKey() {
