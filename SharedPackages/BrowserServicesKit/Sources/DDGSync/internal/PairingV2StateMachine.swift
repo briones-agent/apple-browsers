@@ -365,11 +365,14 @@ struct PairingV2StateMachine {
             return fail(with: .unexpectedEvent("peer status received before channel hierarchy was ready"))
         }
 
+        // A matching non-null user_id means both devices are already on the same account, so the
+        // flow short-circuits to "Connected" regardless of device kind. Per the Unified Algorithm
+        // (Exchange Confirmations) and support matrix, a native and a 3party client sharing one
+        // account must not re-pair, so the same-account check must not be gated on matching kind.
         if peerStatus.hasAccount,
            let peerUserId = peerStatus.userId,
            let localUserId = session.localClient.userId,
-           peerUserId == localUserId,
-           peerStatus.kind == session.localClient.kind {
+           peerUserId == localUserId {
             state = .completed(.alreadyConnected)
             return [.stopPolling]
         }

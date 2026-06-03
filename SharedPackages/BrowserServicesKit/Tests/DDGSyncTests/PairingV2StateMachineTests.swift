@@ -386,7 +386,7 @@ final class PairingV2StateMachineTests: XCTestCase {
         XCTAssertEqual(stateMachine.state, .completed(.alreadyConnected))
     }
 
-    func testWhenThirdPartyPeerAvailableHasSameUserIdAsLocalNativeAccountThenNativeHosts() {
+    func testWhenThirdPartyPeerAvailableHasSameUserIdAsLocalNativeAccountThenFlowCompletesAlreadyConnected() {
         var stateMachine = PairingV2StateMachine()
         let localClient = makeLocalClient(kind: .ddg, hasAccount: true, isPresenter: false, userId: "same-user")
 
@@ -395,19 +395,11 @@ final class PairingV2StateMachineTests: XCTestCase {
         )
         let commands = stateMachine.handle(.receivedPeerStatus(.recoveryCodeAvailable(kind: .thirdParty, userId: "same-user")))
 
-        XCTAssertEqual(commands, [
-            .sendRecoveryCodeAwaitingConfirmation,
-            .requestHostConfirmation(peerName: nil)
-        ])
-        XCTAssertEqual(
-            stateMachine.state,
-            .hostWaitingForConfirmation(
-                .init(localClient: localClient,
-                      peerChannelID: "channel-1",
-                      peerStatus: .recoveryCodeAvailable(kind: .thirdParty, userId: "same-user")),
-                credentialKind: .thirdParty
-            )
-        )
+        // A 3party client already on this native account shares the same user_id, so the flow must
+        // short-circuit to already-connected rather than re-pairing — the same-account check is not
+        // gated on matching device kind.
+        XCTAssertEqual(commands, [.stopPolling])
+        XCTAssertEqual(stateMachine.state, .completed(.alreadyConnected))
     }
 
     func testWhenPresenterReceivesPeerAvailableWithSameUserIdAsLocalAccountThenFlowCompletesAlreadyConnected() {
