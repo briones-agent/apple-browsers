@@ -77,12 +77,7 @@ extension MainViewController {
     /// Both the `onboardingDuckAIQueryTrackersDemoExperiment` experiment in the default flow and the Duck.ai tailored flow
     /// drive the same Fire-onboarding code path; either being active is sufficient.
     var isDuckAIFireFlowEnabled: Bool {
-        // TODO: OVERRIDE - Remove before shipping. Feature flag is off and onboardingFlowType
-        // is reset to nil (.default), so the production check would return false and skip the
-        // entire fire-onboarding path (controls lock, fire dialog, completion dialog).
-        // return true
-        // swiftlint:disable:next unreachable_code
-        return featureFlagger.isFeatureOn(.onboardingDuckAIQueryTrackersDemoExperiment) || onboardingManager.currentOnboardingFlow == .duckAI
+        featureFlagger.isFeatureOn(.onboardingDuckAIQueryTrackersDemoExperiment) || onboardingManager.currentOnboardingFlow == .duckAI
     }
 
     // MARK: Session setup
