@@ -568,16 +568,16 @@ final class MainCoordinator {
 
     // MARK: - Public API
 
-    func segueToDuckDuckGoSubscription() {
-        controller.segueToDuckDuckGoSubscription()
+    func segueToDuckDuckGoSubscription(origin: String?) {
+        controller.segueToDuckDuckGoSubscription(origin: origin)
     }
 
     func segueToSubscriptionSettings() {
         controller.segueToSubscriptionSettings()
     }
 
-    func presentNetworkProtectionStatusSettingsModal() {
-        controller.presentNetworkProtectionStatusSettingsModal()
+    func presentNetworkProtectionStatusSettingsModal(origin: SubscriptionFunnelOrigin) {
+        controller.presentNetworkProtectionStatusSettingsModal(origin: origin)
     }
 
     func presentDataBrokerProtectionDashboard() {
@@ -689,7 +689,7 @@ extension MainCoordinator: URLHandling {
         case .newEmail:
             controller.newEmailAddress()
         case .openVPN:
-            presentNetworkProtectionStatusSettingsModal()
+            presentNetworkProtectionStatusSettingsModal(origin: .widgetVPN)
         case .openPasswords:
             handleOpenPasswords(url: url)
         case .openAIChat:
@@ -758,7 +758,7 @@ extension MainCoordinator: ShortcutItemHandling {
         } else if item.type == ShortcutKey.passwords {
             handleSearchPassword()
         } else if item.type == ShortcutKey.openVPNSettings {
-            controller.presentNetworkProtectionStatusSettingsModal()
+            controller.presentNetworkProtectionStatusSettingsModal(origin: .shortcutVPN)
         } else if item.type == ShortcutKey.aiChat {
             handleAIChatAppIconShortuct()
         } else if item.type == ShortcutKey.voiceSearch {
