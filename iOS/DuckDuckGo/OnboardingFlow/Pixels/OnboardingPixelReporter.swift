@@ -67,7 +67,7 @@ protocol OnboardingIntroPixelReporting: OnboardingIntroImpressionReporting {
     func measureDuckAIQuerySelectionImpression()
     func measureDuckAIQueryChooseSearchOnly()
     func measureDuckAIQueryChooseAIChat()
-    func measureDuckAIQuerySubmission(selection: DuckAIQueryExperimentMode, promptSource: DuckAIQueryExperimentPromptSource)
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource)
     func measureSkipOnboardingScreenImpression()
     func measureSetDefaultBrowserSkipped()
 }
@@ -98,6 +98,7 @@ protocol OnboardingDaxDialogsReporting {
     func measureTrackersDialogDismissButtonTapped()
     func measureFireDialogDismissButtonTapped()
     func measureDuckAIFireButtonCTAAction()
+    func measureDuckAIFireDialogImpression()
     func measureDuckAIFinalDialogImpression()
     func measureDuckAIFinalDialogCTAAction()
     func measureEndOfJourneyDialogNewTabDismissButtonTapped()
@@ -164,7 +165,7 @@ final class OnboardingPixelReporter {
 
 }
 
-enum DuckAIQueryExperimentPromptSource: String {
+enum DuckAIQueryPromptSource: String {
     case custom
     case option1
     case option2
@@ -322,7 +323,7 @@ extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
         fire(event: .onboardingIntroDuckAIExperimentToggleContinuePressedAI, unique: false)
     }
 
-    func measureDuckAIQuerySubmission(selection: DuckAIQueryExperimentMode, promptSource: DuckAIQueryExperimentPromptSource) {
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource) {
         switch (promptSource, selection) {
         case (.custom, .duckAI):
             sharedPixelHandler.fire(.searchChatToggle(.clicked(.customChat)),
@@ -521,6 +522,10 @@ extension OnboardingPixelReporter: OnboardingDaxDialogsReporting {
 
     func measureDuckAIFireButtonCTAAction() {
         fire(event: .onboardingDuckAIExperimentFireButtonCTAPressed, unique: false)
+    }
+
+    func measureDuckAIFireDialogImpression() {
+        fire(event: .onboardingDuckAIExperimentFireDialogShownUnique, unique: true)
     }
 
     func measureDuckAIFinalDialogImpression() {

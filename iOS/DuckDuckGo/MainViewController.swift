@@ -212,6 +212,7 @@ class MainViewController: UIViewController {
     private var vpnCancellables = Set<AnyCancellable>()
     private var feedbackCancellable: AnyCancellable?
     private var aiChatCancellables = Set<AnyCancellable>()
+    private var aiChatChromeChipCancellables = Set<AnyCancellable>()
     private var settingsCancellables = Set<AnyCancellable>()
     private var lastForegroundEntryDate = Date.distantPast
     private var syncRecoveryPromptService: SyncRecoveryPromptService?
@@ -946,6 +947,43 @@ class MainViewController: UIViewController {
         viewCoordinator.tabBarContainer.addSubview(controller.view)
         tabsBarController = controller
         controller.didMove(toParent: self)
+        bindAIChatChromeChipToCurrentTab()
+    }
+
+    /// Rebinds chip subscriptions to the current tab's URL + contextual sheet publishers.
+    /// Called whenever the active tab changes (transitionTo) or the tabs bar is created.
+    func bindAIChatChromeChipToCurrentTab() {
+        aiChatChromeChipCancellables.removeAll()
+
+        guard let currentTab else {
+            refreshAIChatChromeChip()
+            return
+        }
+
+        currentTab.urlPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refreshAIChatChromeChip() }
+            .store(in: &aiChatChromeChipCancellables)
+
+        currentTab.aiChatContextualSheetCoordinator.$isSheetPresented
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refreshAIChatChromeChip() }
+            .store(in: &aiChatChromeChipCancellables)
+
+        refreshAIChatChromeChip()
+    }
+
+    private func refreshAIChatChromeChip() {
+        guard let tabsBarController else { return }
+        let currentTabModel = tabManager.currentTabsModel.currentTab
+        let isAIChat = currentTabModel?.isAITab ?? false
+        let isHome = currentTabModel?.isHomeTab ?? false
+        let isSheetPresented = currentTab?.aiChatContextualSheetCoordinator.isSheetPresented ?? false
+        tabsBarController.updateAIChatChipState(
+            isCurrentTabAIChat: isAIChat,
+            isCurrentTabHome: isHome,
+            isContextualSheetPresented: isSheetPresented
+        )
     }
 
     func startAddFavoriteFlow() {
@@ -1374,7 +1412,7 @@ class MainViewController: UIViewController {
     private func initTabButton() {
         assert(tabSwitcherButton == nil)
 
-        tabSwitcherButton = TabSwitcherStaticButton()
+        tabSwitcherButton = TabSwitcherStaticButton(showMenuOnLongPress: fireModeCapability.isFireModeEnabled)
 
         tabSwitcherButton?.delegate = self
         viewCoordinator.toolbarTabSwitcherButton.customView = tabSwitcherButton
@@ -1385,7 +1423,7 @@ class MainViewController: UIViewController {
         viewCoordinator.toolbarTabSwitcherButton.accessibilityTraits = .button
 
         // Omnibar tab switcher button (for iPhone landscape combined bar)
-        let omniBarTabSwitcher = TabSwitcherStaticButton()
+        let omniBarTabSwitcher = TabSwitcherStaticButton(showMenuOnLongPress: fireModeCapability.isFireModeEnabled)
         omniBarTabSwitcher.delegate = self
         omniBarTabSwitcher.translatesAutoresizingMaskIntoConstraints = false
         let container = viewCoordinator.omniBar.barView.tabSwitcherContainerView
@@ -1949,6 +1987,7 @@ class MainViewController: UIViewController {
             refreshControls()
             tabsBarController?.refresh(tabsModel: tabManager.currentTabsModel, scrollToSelected: true)
             swipeTabsCoordinator?.refresh(tabsModel: tabManager.currentTabsModel, scrollToSelected: true)
+            bindAIChatChromeChipToCurrentTab()
         }
 
         if clearInProgress {
@@ -1972,7 +2011,22 @@ class MainViewController: UIViewController {
         }
         // Make sure that once query is submitted, we don't trigger the non-SERP flow
         skipSERPFlow = false
-        loadUrl(url)
+        loadUrlRespectingAIBoundary(url)
+    }
+
+    func loadUrlRespectingAIBoundary(_ url: URL, fromExternalLink: Bool = false) {
+        let decision = AIBoundaryNavigationDecision.forProgrammaticNavigation(
+            currentIsAI: currentTab?.isAITab == true,
+            currentHasContent: currentTab?.tabModel.link != nil,
+            targetIsAI: url.isDuckAIURL,
+            unifiedToggleInputAvailable: unifiedToggleInputFeature.isAvailable
+        )
+        switch decision {
+        case .openInNewTab:
+            loadUrlInNewTab(url, inheritedAttribution: nil, fromExternalLink: fromExternalLink)
+        case .loadInPlace:
+            loadUrl(url, fromExternalLink: fromExternalLink)
+        }
     }
 
     func stopLoading() {
@@ -2106,6 +2160,7 @@ class MainViewController: UIViewController {
         }
         themeColorManager.updateThemeColor()
         tabsBarController?.refresh(tabsModel: tabManager.currentTabsModel, scrollToSelected: true)
+        bindAIChatChromeChipToCurrentTab()
         swipeTabsCoordinator?.refresh(tabsModel: tabManager.currentTabsModel, scrollToSelected: true)
         if daxDialogsManager.shouldShowFireButtonPulse {
             showFireButtonPulse()
@@ -2178,9 +2233,6 @@ class MainViewController: UIViewController {
         refreshBackForwardMenuItems()
         updateChromeForDuckPlayer()
         refreshMiddleButton()
-        aiChatTabChatHeaderView?.setNavAvailable(canGoBack: currentTab?.canGoBack ?? false,
-                                                  canGoForward: currentTab?.canGoForward ?? false)
-        reconcileBackArrowForceVisibility()
         // Belt-and-braces reconciliation. Most explicit transitions also call this directly
         // (NTP attach, AI-tab refresh, etc.); doing it here too means any future state-change
         // hook that fires `refreshControls` self-corrects the toolbar's hidden state without
@@ -2215,9 +2267,7 @@ class MainViewController: UIViewController {
         omniBarTabSwitcherButton?.tabCount = count
         omniBarTabSwitcherButton?.hasUnread = hasUnread
         omniBarTabSwitcherButton?.isFireMode = isFireMode
-        aiChatTabChatHeaderView?.tabSwitcherButton.tabCount = count
-        aiChatTabChatHeaderView?.tabSwitcherButton.hasUnread = hasUnread
-        aiChatTabChatHeaderView?.tabSwitcherButton.isFireMode = isFireMode
+        aiChatTabChatHeaderView?.setTabIconState(count: count, hasUnread: hasUnread, isFireMode: isFireMode)
     }
 
     private func refreshTabBar() {
@@ -3661,7 +3711,7 @@ extension MainViewController: BrowserChromeDelegate {
         switch suggestion {
         case .phrase(phrase: let phrase):
             if let url = URL.makeSearchURL(query: phrase, useUnifiedLogic: isUnifiedURLPredictionEnabled, forceSearchQuery: true) {
-                loadUrl(url)
+                loadUrlRespectingAIBoundary(url)
             } else {
                 Logger.lifecycle.error("Couldn't form URL for suggestion: \(phrase, privacy: .public)")
             }
@@ -3670,14 +3720,14 @@ extension MainViewController: BrowserChromeDelegate {
             if url.isBookmarklet() {
                 executeBookmarklet(url)
             } else {
-                loadUrl(url)
+                loadUrlRespectingAIBoundary(url)
             }
 
         case .bookmark(_, url: let url, _, _):
-            loadUrl(url)
+            loadUrlRespectingAIBoundary(url)
 
         case .historyEntry(_, url: let url, _):
-            loadUrl(url)
+            loadUrlRespectingAIBoundary(url)
 
         case .openTab(title: _, url: let url, tabId: let tabId, _):
             if newTabPageViewController != nil, let tab = tabManager.currentTabsModel.currentTab {
@@ -4182,6 +4232,20 @@ extension MainViewController: OmniBarDelegate {
         ])
         guard !experimentDuckAIFireOnboardingFlow.controlsLocked else { return }
         postIdleSessionInstrumentation.sessionEnded(reason: .tabSwitcherSelected)
+        performCancel()
+        newTab()
+    }
+
+    private func newFireTabLongPressMenuAction() {
+        postIdleSessionInstrumentation.sessionEnded(reason: .tabSwitcherSelected)
+        tabManager.setBrowsingMode(.fire, source: .longPressTabsIcon)
+        performCancel()
+        newTab()
+    }
+
+    private func newNormalTabLongPressMenuAction() {
+        postIdleSessionInstrumentation.sessionEnded(reason: .tabSwitcherSelected)
+        tabManager.setBrowsingMode(.normal, source: .longPressTabsIcon)
         performCancel()
         newTab()
     }
@@ -5156,6 +5220,23 @@ extension MainViewController: TabDelegate {
         openAIChat()
     }
 
+    func tabDidRequestAIChatHistory(tab: TabViewController) {
+        openAIChatHistory()
+    }
+
+    func openAIChatHistory() {
+        let viewModel = AIChatHistoryViewModel()
+        viewModel.delegate = self
+        let content = AIChatHistoryViewController(viewModel: viewModel)
+        let navigationController = UINavigationController(rootViewController: content)
+        navigationController.modalPresentationStyle = .automatic
+        present(navigationController, animated: true)
+    }
+
+    func tabDidRequestNewVoiceChat(_ tab: TabViewController) {
+        aiChatTabChatHeaderDidTapNewVoiceChat()
+    }
+
     func tabDidRequestBookmarks(tab: TabViewController) {
         Pixel.fire(pixel: .bookmarksButtonPressed,
                    withAdditionalParameters: [PixelParameters.originatedFromMenu: "1"])
@@ -5322,7 +5403,7 @@ extension MainViewController: TabDelegate {
     }
 
     func tab(_ tab: TabViewController, didRequestLoadURL url: URL) {
-        loadUrl(url, fromExternalLink: true)
+        loadUrlRespectingAIBoundary(url, fromExternalLink: true)
     }
 
     func tab(_ tab: TabViewController, didRequestLoadQuery query: String) {
@@ -5337,6 +5418,17 @@ extension MainViewController: TabDelegate {
         hideNotificationBarIfBrokenSitePromptShown()
     }
 
+}
+
+// MARK: - AIChatHistoryViewModelDelegate
+
+extension MainViewController: AIChatHistoryViewModelDelegate {
+
+    func viewModelDidRequestOpenDuckAi() {
+        dismiss(animated: true) { [weak self] in
+            self?.openAIChat()
+        }
+    }
 }
 
 extension MainViewController: TabSwitcherDelegate {
@@ -5537,6 +5629,14 @@ extension MainViewController: TabSwitcherButtonDelegate {
 
     func launchNewTabWithCurrentMode(_ button: TabSwitcherButton) {
         newTabShortcutAction()
+    }
+
+    func launchNewNormalTab(_ button: any TabSwitcherButton) {
+        newNormalTabLongPressMenuAction()
+    }
+
+    func launchNewFireTab(_ button: TabSwitcherButton) {
+        newFireTabLongPressMenuAction()
     }
 
     func showTabSwitcher(_ button: TabSwitcherButton) {

@@ -259,7 +259,7 @@ struct OnboardingView: View {
         .onboardingDaxDialogStyle()
     }
 
-    private func experimentSearchExperienceSelectionView(defaultMode: DuckAIQueryExperimentMode) -> some View {
+    private func experimentSearchExperienceSelectionView(defaultMode: DuckAIQueryMode) -> some View {
         DuckAIExperimentSearchContent(
             defaultMode: defaultMode,
             animateTitle: $model.introState.animateIntroText,
@@ -353,7 +353,7 @@ extension OnboardingView.ViewState.Intro {
         case chooseAppIconDialog(content: OnboardingAppIconColorContent)
         case chooseAddressBarPositionDialog(content: OnboardingAddressBarPositionContent)
         case chooseSearchExperienceDialog(content: OnboardingSearchExperienceContent)
-        case duckAIQueryExperimentDialog(content: OnboardingDuckAIQueryContent, defaultMode: DuckAIQueryExperimentMode)
+        case duckAIQueryExperimentDialog(content: OnboardingDuckAIQueryContent, defaultMode: DuckAIQueryMode)
     }
 
     struct StepInfo: Equatable {

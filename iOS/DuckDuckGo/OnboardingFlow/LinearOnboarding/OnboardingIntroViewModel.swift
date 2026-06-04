@@ -265,7 +265,7 @@ final class OnboardingIntroViewModel: ObservableObject {
         makeNextViewState()
     }
 
-    func selectDuckAIQueryAction(selection: DuckAIQueryExperimentMode) {
+    func selectDuckAIQueryAction(selection: DuckAIQueryMode) {
         switch selection {
         case .duckAI:
             pixelReporter.measureDuckAIQueryChooseAIChat()
@@ -287,7 +287,7 @@ final class OnboardingIntroViewModel: ObservableObject {
         onSearchFromOnboarding?(query)
     }
 
-    func measureDuckAIQuerySubmission(selection: DuckAIQueryExperimentMode, promptSource: DuckAIQueryExperimentPromptSource) {
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource) {
         pixelReporter.measureDuckAIQuerySubmission(
             selection: selection,
             promptSource: promptSource
@@ -401,7 +401,7 @@ private extension OnboardingIntroViewModel {
             case .duckAIQuerySelection:
                 let isDuckAiTailoredFlow = onboardingManager.currentOnboardingFlow == .duckAI
                 // Duck.ai Tailored flow pre-selects Duck.ai; the default flow always pre-selects Search.
-                let duckAIQueryMode: DuckAIQueryExperimentMode = isDuckAiTailoredFlow ? .duckAI : .search
+                let duckAIQueryMode: DuckAIQueryMode = isDuckAiTailoredFlow ? .duckAI : .search
                 // Duck.ai Tailored flow shows step counter; the default flow hides it.
                 let progressStep: OnboardingView.ViewState.Intro.StepInfo = isDuckAiTailoredFlow ? stepInfo() : .hidden
                 return .onboarding(

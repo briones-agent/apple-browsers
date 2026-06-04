@@ -69,8 +69,9 @@ final class OnboardingPixelReporterMock: OnboardingIntroPixelReporting, Onboardi
     private(set) var didCallMeasureDuckAIQueryExperimentChooseAIChat = false
     private(set) var didCallMeasureDuckAIQueryExperimentQuerySubmission = false
     private(set) var didCaptureDuckAIQueryExperimentPromptSourceValue: String?
-    private(set) var didCaptureDuckAIQueryExperimentSelection: DuckAIQueryExperimentMode?
+    private(set) var didCaptureDuckAIQueryExperimentSelection: DuckAIQueryMode?
     private(set) var didCallMeasureDuckAIExperimentFireButtonCTAAction = false
+    private(set) var didCallMeasureDuckAIExperimentFireDialogImpression = false
     private(set) var didCallMeasureDuckAIExperimentFinalDialogImpression = false
     private(set) var didCallMeasureDuckAIExperimentFinalDialogCTAAction = false
 
@@ -263,7 +264,7 @@ final class OnboardingPixelReporterMock: OnboardingIntroPixelReporting, Onboardi
         didCallMeasureDuckAIQueryExperimentChooseAIChat = true
     }
 
-    func measureDuckAIQuerySubmission(selection: DuckAIQueryExperimentMode, promptSource: DuckAIQueryExperimentPromptSource) {
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource) {
         didCallMeasureDuckAIQueryExperimentQuerySubmission = true
         didCaptureDuckAIQueryExperimentPromptSourceValue = promptSource.rawValue
         didCaptureDuckAIQueryExperimentSelection = selection
@@ -303,6 +304,10 @@ final class OnboardingPixelReporterMock: OnboardingIntroPixelReporting, Onboardi
 
     func measureDuckAIFireButtonCTAAction() {
         didCallMeasureDuckAIExperimentFireButtonCTAAction = true
+    }
+
+    func measureDuckAIFireDialogImpression() {
+        didCallMeasureDuckAIExperimentFireDialogImpression = true
     }
 
     func measureDuckAIFinalDialogImpression() {
