@@ -739,22 +739,13 @@ extension SyncDialogController: SyncConnectionControllerDelegate {
     }
 
     private func showPairingV2Confirmation(message: String) async -> Bool {
-        await withCheckedContinuation { continuation in
-            let alert = NSAlert()
-            alert.messageText = UserText.syncPairingV2ConfirmationTitle
-            alert.informativeText = message
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: UserText.cancel)
-            alert.addButton(withTitle: UserText.syncPairingV2ConfirmationAction)
+        let alert = NSAlert.syncPairingV2Confirmation(message: message)
 
-            guard let window = NSApplication.shared.keyWindow else {
-                continuation.resume(returning: alert.runModal() == .alertSecondButtonReturn)
-                return
-            }
-
-            alert.beginSheetModal(for: window) { response in
-                continuation.resume(returning: response == .alertSecondButtonReturn)
-            }
+        guard let parentWindow = Application.appDelegate.windowControllersManager.lastKeyMainWindowController?.window else {
+            return await alert.runModal() == .alertSecondButtonReturn
         }
+
+        let presentationWindow = parentWindow.attachedSheet ?? parentWindow
+        return await alert.beginSheetModal(for: presentationWindow) == .alertSecondButtonReturn
     }
 }
