@@ -105,7 +105,7 @@ final class UnifiedToggleInputFeatureTests: XCTestCase {
                        enrollmentDate: Date())
     }
 
-    // MARK: - Master flag + device gate
+    // MARK: - Primary flag + device gate
 
     func test_isAvailable_whenFlagOnAndIphone() {
         XCTAssertTrue(makeFeature(flagEnabled: true, isIphone: true).isAvailable)
@@ -245,18 +245,18 @@ final class UnifiedToggleInputFeatureTests: XCTestCase {
 
     // MARK: - New-user gate matrix
     //
-    // Matrix over {master} × {includeNewUsers default-on / disabled} × {new / returning|existing|nil}
+    // Matrix over {primary flag} × {includeNewUsers default-on / disabled} × {new / returning|existing|nil}
     // × {sticky grant set / unset}, evaluated on an eligible iPhone. `isNewUser` collapses the user-type
     // axis: only `.new` reads as true (see adapter tests below); returning / existing / nil read as false.
 
-    func test_masterOff_isNeverAvailable_evenWhenGranted() {
-        // (a) master kill switch wins over everything, including a prior grant.
+    func test_whenFlagOff_isNeverAvailable_evenWhenGranted() {
+        // (a) the primary kill switch wins over everything, including a prior grant.
         XCTAssertFalse(makeFeature(flagEnabled: false, isIphone: true, includeNewUsers: true, isNewUser: false, granted: true).isAvailable)
         XCTAssertFalse(makeFeature(flagEnabled: false, isIphone: true, includeNewUsers: false, isNewUser: true, granted: true).isAvailable)
     }
 
     func test_includeNewUsersDefaultOn_includesEveryone() {
-        // The no-config GA state: master on, includeNewUsers absent (default on). Everyone is in.
+        // The no-config GA state: primary flag on, includeNewUsers absent (default on). Everyone is in.
         for isNewUser in [true, false] {
             XCTAssertTrue(makeFeature(flagEnabled: true, isIphone: true, includeNewUsers: true, isNewUser: isNewUser).isAvailable,
                           "Default-on lever must include every user type (isNewUser=\(isNewUser))")
@@ -291,7 +291,7 @@ final class UnifiedToggleInputFeatureTests: XCTestCase {
         XCTAssertEqual(store.recordGrantCallCount, 0)
     }
 
-    func test_grantNotRecorded_whenMasterOff() {
+    func test_grantNotRecorded_whenFlagOff() {
         let store = MockGrantStore(hasGranted: false)
         _ = makeFeature(flagEnabled: false, isIphone: true, includeNewUsers: true, isNewUser: false, grantStore: store)
         XCTAssertFalse(store.hasGrantedUnifiedToggleInput)

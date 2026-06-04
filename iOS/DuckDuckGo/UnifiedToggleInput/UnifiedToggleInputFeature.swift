@@ -50,7 +50,7 @@ struct UnifiedToggleInputFeature: UnifiedToggleInputFeatureProviding {
     /// `isToggleHiddenOnDuckAITab`.
     ///
     /// Gate precedence:
-    /// a. `unifiedToggleInput` off → off for everyone (master kill switch wins, even over a grant).
+    /// a. `unifiedToggleInput` off → off for everyone (primary kill switch wins, even over a grant).
     /// b. already granted → on (grandfathered; the grant is never revoked).
     /// c. `!includeNewUsers` && the user is a new install → off.
     /// d. otherwise → on, and the grant is recorded (gated on the device actually being able to show UTI).
@@ -63,7 +63,7 @@ struct UnifiedToggleInputFeature: UnifiedToggleInputFeatureProviding {
                         devicePlatform: DevicePlatformProviding.Type = DevicePlatform.self) {
         let gateDecision: Bool
         if !featureFlagger.isFeatureOn(.unifiedToggleInput) {
-            gateDecision = false // (a) master wins; the sticky grant is deliberately left untouched.
+            gateDecision = false // (a) primary kill switch wins; the sticky grant is deliberately left untouched.
         } else if grantStore.hasGrantedUnifiedToggleInput {
             gateDecision = true // (b) grandfathered.
         } else if !featureFlagger.isFeatureOn(.unifiedToggleInputIncludeNewUsers) && userTypeProvider.isNewUser {
