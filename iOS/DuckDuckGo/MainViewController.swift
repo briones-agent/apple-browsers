@@ -5203,7 +5203,7 @@ extension MainViewController: TabDelegate {
     private func presentChatPathOnboardingCompletionIfNeeded() {
         guard daxDialogsManager.chatPathPhase == .trackerToEOJ,
               aiChatSettings.isAIChatEnabled else { return }
-        let message = UserText.Onboarding.DuckAIQueryExperiment.completionOnboardingMessage
+        let message = UserText.Onboarding.DuckAIQuery.completionOnboardingMessage
         // Hide the NTP synchronously, before any frame is rendered, so its empty-state Dax can't
         // flash before the editing-state transition begins. Restored by NewTabPageViewController
         // on every dismissal path.

@@ -117,7 +117,7 @@ extension OnboardingView {
                 unselectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.findSearch)
             ),
             ImageSegmentedPickerItem(
-                text: UserText.Onboarding.DuckAIQueryExperiment.toggleAILabel,
+                text: UserText.Onboarding.DuckAIQuery.toggleAILabel,
                 selectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.aiChatGradientColor),
                 unselectedImage: Image(uiImage: DesignSystemImages.Glyphs.Size16.aiChat)
             )
@@ -125,9 +125,9 @@ extension OnboardingView {
 
         init(
             content: OnboardingDuckAIQueryContent = .init(
-                title: UserText.Onboarding.DuckAIQueryExperiment.title,
-                searchPlaceholder: UserText.Onboarding.DuckAIQueryExperiment.searchPlaceholder,
-                aiPlaceholder: UserText.Onboarding.DuckAIQueryExperiment.aiPlaceholder,
+                title: UserText.Onboarding.DuckAIQuery.title,
+                searchPlaceholder: UserText.Onboarding.DuckAIQuery.searchPlaceholder,
+                aiPlaceholder: UserText.Onboarding.DuckAIQuery.aiPlaceholder,
                 isToggleVisible: true
             ),
             defaultMode: DuckAIQueryMode,
