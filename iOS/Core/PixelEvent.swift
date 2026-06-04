@@ -1952,6 +1952,10 @@ extension Pixel {
         // MARK: - Danger test
         case dangerNoIssue
         case dangerIssueOldPixel
+        case dangerPixelKitMultilineNoIssue
+        case dangerPixelKitMultilineOldPixel
+        case dangerPixelKitDashedNoIssue
+        case dangerPixelKitDashedOldPixel
     }
 
 }
@@ -3825,6 +3829,14 @@ extension Pixel.Event {
         // MARK: - Danger test
         case .dangerNoIssue: return "danger_test_no_issue"
         case .dangerIssueOldPixel: return "m_danger_test_warn"
+        case .dangerPixelKitMultilineNoIssue:
+            return "danger_pixelkit_no_issue"
+        case .dangerPixelKitMultilineOldPixel:
+            return "m_danger_pixelkit_warn"
+        case .dangerPixelKitDashedNoIssue:
+            return "danger-pixelkit-dashed_no-issue"
+        case .dangerPixelKitDashedOldPixel:
+            return "m_danger-pixelkit-dashed_warn"
         }
     }
 }
