@@ -1219,7 +1219,8 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
 
     private func makeFeature(notificationCenter: MockUNUserNotificationCenter,
                              scheduler: SubscriptionExpirationReminderSchedulerMock? = nil,
-                             appStorePurchaseFlow: AppStorePurchaseFlowMock? = nil) -> DefaultSubscriptionPagesUseSubscriptionFeature {
+                             appStorePurchaseFlow: AppStorePurchaseFlowMock? = nil,
+                             isExpirationReminderFeatureEnabled: @escaping () -> Bool = { true }) -> DefaultSubscriptionPagesUseSubscriptionFeature {
         let purchaseFlow = appStorePurchaseFlow ?? mockAppStorePurchaseFlow!
         let executer = DefaultSubscriptionFlowsExecuter(
             subscriptionManager: mockSubscriptionManager,
@@ -1241,7 +1242,8 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
             subscriptionFlowsExecuter: executer,
             requestValidator: mockRequestValidator,
             userNotificationCenter: notificationCenter,
-            expirationReminderScheduler: scheduler
+            expirationReminderScheduler: scheduler,
+            isExpirationReminderFeatureEnabled: isExpirationReminderFeatureEnabled
         )
     }
 
@@ -1340,6 +1342,19 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
 
         XCTAssertFalse(result.granted)
         XCTAssertTrue(center.didRequestAuthorization)
+    }
+
+    func testRequestNotificationsPermission_WhenFeatureFlagOff_ReturnsFalseWithoutPrompting() async throws {
+        let center = MockUNUserNotificationCenter()
+        center.authorizationStatus = .notDetermined
+        let sut = makeFeature(notificationCenter: center, isExpirationReminderFeatureEnabled: { false })
+
+        let response = await sut.requestNotificationsPermission(params: "", original: WKScriptMessage.mock())
+        let result = try XCTUnwrap(response as? DefaultSubscriptionPagesUseSubscriptionFeature.NotificationsPermissionResponse)
+
+        XCTAssertFalse(result.granted)
+        XCTAssertFalse(center.didRequestAuthorization,
+                       "Prompt must not fire when the experiment flag is off — the user would be granting permission for nothing")
     }
 
     @MainActor

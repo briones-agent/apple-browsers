@@ -105,7 +105,8 @@ enum SubscriptionContainerViewFactory {
                                                                        pendingTransactionHandler: pendingTransactionHandler,
                                                                        subscriptionFlowsExecuter: subscriptionFlowsExecuter,
                                                                        requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
-                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler),
+                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler,
+                                                                       isExpirationReminderFeatureEnabled: { featureFlagger.isFeatureOn(.subscriptionExpirationReminderNotification) }),
             dataBrokerProtectionViewControllerProvider: dataBrokerProtectionViewControllerProvider
         )
         viewModel.email.setEmailFlowMode(.restoreFlow)
@@ -148,7 +149,8 @@ enum SubscriptionContainerViewFactory {
                                                                                                      pendingTransactionHandler: pendingTransactionHandler,
                                                                                                      subscriptionFlowsExecuter: subscriptionFlowsExecuter,
                                                                                                      requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
-                                                                                                     expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler)
+                                                                                                     expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler,
+                                                                                                     isExpirationReminderFeatureEnabled: { featureFlagger.isFeatureOn(.subscriptionExpirationReminderNotification) })
 
         let viewModel = SubscriptionContainerViewModel(subscriptionManager: subscriptionManager,
                                                        isInternalUser: internalUserDecider.isInternalUser,
@@ -217,7 +219,8 @@ enum SubscriptionContainerViewFactory {
                                                                        pendingTransactionHandler: pendingTransactionHandler,
                                                                        subscriptionFlowsExecuter: subscriptionFlowsExecuter,
                                                                        requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
-                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler),
+                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler,
+                                                                       isExpirationReminderFeatureEnabled: { featureFlagger.isFeatureOn(.subscriptionExpirationReminderNotification) }),
             dataBrokerProtectionViewControllerProvider: dataBrokerProtectionViewControllerProvider
         )
         return SubscriptionContainerView(currentView: .subscribe, viewModel: viewModel, featureFlagger: featureFlagger)
@@ -264,7 +267,8 @@ enum SubscriptionContainerViewFactory {
                                                                        pendingTransactionHandler: pendingTransactionHandler,
                                                                        subscriptionFlowsExecuter: subscriptionFlowsExecuter,
                                                                        requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
-                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler),
+                                                                       expirationReminderScheduler: AppDependencyProvider.shared.subscriptionExpirationReminderScheduler,
+                                                                       isExpirationReminderFeatureEnabled: { featureFlagger.isFeatureOn(.subscriptionExpirationReminderNotification) }),
             dataBrokerProtectionViewControllerProvider: dataBrokerProtectionViewControllerProvider
         )
 

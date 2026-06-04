@@ -115,8 +115,6 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         let pending = await notificationCenter.pendingNotificationRequests()
         guard pending.contains(where: { $0.identifier == Self.notificationIdentifier }) else { return }
 
-        // If the feature was disabled remotely after a reminder was scheduled, treat it as a kill switch
-        // and clean up without consulting the backend.
         guard isFeatureEnabled() else {
             cancelPendingReminder()
             return

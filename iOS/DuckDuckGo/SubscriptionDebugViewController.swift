@@ -689,6 +689,11 @@ final class SubscriptionDebugViewController: UITableViewController {
                     self.showAlert(title: "No active subscription", message: "Sign in with an active subscription before triggering the reminder.")
                     return
                 }
+                guard subscription.hasActiveTrialOffer else {
+                    self.showAlert(title: "Subscription not on free trial",
+                                   message: "The expiration reminder is only scheduled for free-trial subscribers — the production scheduler will silently skip this call. Sign in with a trial subscription to test the firing path.")
+                    return
+                }
                 let remaining = subscription.expiresOrRenewsAt.timeIntervalSinceNow
                 guard remaining > 0 else {
                     self.showAlert(title: "Subscription already expired",
@@ -790,7 +795,8 @@ final class SubscriptionDebugViewController: UITableViewController {
                 wideEvent: AppDependencyProvider.shared.wideEvent,
                 pendingTransactionHandler: pendingTransactionHandler,
                 subscriptionFlowsExecuter: subscriptionFlowsExecuter,
-                requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)
+                requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager),
+                isExpirationReminderFeatureEnabled: { AppDependencyProvider.shared.featureFlagger.isFeatureOn(.subscriptionExpirationReminderNotification) }
             )
 
             // Create params matching what the web would send

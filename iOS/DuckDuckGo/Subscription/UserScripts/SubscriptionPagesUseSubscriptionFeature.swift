@@ -170,6 +170,7 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
     private let requestValidator: any ScriptRequestValidator
     private let userNotificationCenter: UNUserNotificationCenterRepresentable
     private let expirationReminderScheduler: SubscriptionExpirationReminderScheduling?
+    private let isExpirationReminderFeatureEnabled: () -> Bool
 
     init(subscriptionManager: SubscriptionManager,
          subscriptionFeatureAvailability: SubscriptionFeatureAvailability,
@@ -189,7 +190,8 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
             isFreemiumEnabled: { true }
          ),
          userNotificationCenter: UNUserNotificationCenterRepresentable = UNUserNotificationCenter.current(),
-         expirationReminderScheduler: SubscriptionExpirationReminderScheduling? = nil) {
+         expirationReminderScheduler: SubscriptionExpirationReminderScheduling? = nil,
+         isExpirationReminderFeatureEnabled: @escaping () -> Bool = { false }) {
         self.subscriptionManager = subscriptionManager
         self.subscriptionFeatureAvailability = subscriptionFeatureAvailability
         self.appStorePurchaseFlow = appStorePurchaseFlow
@@ -205,6 +207,7 @@ final class DefaultSubscriptionPagesUseSubscriptionFeature: SubscriptionPagesUse
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
         self.userNotificationCenter = userNotificationCenter
         self.expirationReminderScheduler = expirationReminderScheduler
+        self.isExpirationReminderFeatureEnabled = isExpirationReminderFeatureEnabled
     }
 
     // Transaction Status and errors are observed from ViewModels to handle errors in the UI
@@ -921,6 +924,9 @@ extension DefaultSubscriptionPagesUseSubscriptionFeature {
     }
 
     func requestNotificationsPermission(params: Any, original: WKScriptMessage) async -> Encodable? {
+        guard isExpirationReminderFeatureEnabled() else {
+            return NotificationsPermissionResponse(granted: false)
+        }
         let status = await userNotificationCenter.authorizationStatus()
         switch status {
         case .authorized, .ephemeral:
@@ -938,7 +944,7 @@ extension DefaultSubscriptionPagesUseSubscriptionFeature {
     }
 
     /// Any status that requires a Settings change to become `.authorized` is reported as `.denied`.
-    /// `.provisional` is bucketed with `.denied` because there's no programmatic upgrade path —
+    /// `.provisional` is bucketed with `.denied` because there's no programmatic upgrade path.
     /// iOS won't show a prompt from `requestAuthorization` when state is `.provisional`.
     private static func permissionStatus(from status: UNAuthorizationStatus) -> NotificationsPermissionStatus {
         switch status {
