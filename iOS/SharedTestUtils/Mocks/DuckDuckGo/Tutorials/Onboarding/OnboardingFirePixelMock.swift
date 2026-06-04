@@ -67,4 +67,3 @@ final class OnboardingUniquePixelFireMock: OnboardingPixelFiring {
         capturedPixelEventHistory = []
     }
 }
-
