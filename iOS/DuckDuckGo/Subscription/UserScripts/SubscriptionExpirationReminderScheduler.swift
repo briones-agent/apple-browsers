@@ -26,7 +26,7 @@ import Subscription
 
 protocol SubscriptionExpirationReminderScheduling: AnyObject {
     /// Schedules a single local reminder firing `timeBeforeCancel` seconds before the active subscription's expiry/renewal date.
-    /// Silently skips when the feature flag is off, permission is unavailable, `timeBeforeCancel <= 0`, the subscription has no expiry, or the computed fire date is in the past.
+    /// Silently skips when the feature flag is off, permission is unavailable, `timeBeforeCancel <= 0`, the subscription is not on a free trial, the subscription has no expiry, or the computed fire date is in the past.
     /// Cancels any previously scheduled reminder with the same identifier before scheduling the new one.
     func scheduleReminder(timeBeforeCancel: TimeInterval) async
 }
@@ -65,20 +65,6 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
                 Task { [weak self] in await self?.cancelReminderIfInactive(forceRefresh: true) }
             }
             .store(in: &cancellables)
-
-        // Sign-out posts .accountDidSignOut (not .subscriptionDidChange), so cancel unconditionally.
-        notificationCenterObserver.publisher(for: .accountDidSignOut)
-            .sink { [weak self] _ in
-                Task { [weak self] in await self?.cancelReminder() }
-            }
-            .store(in: &cancellables)
-    }
-
-    /// Removes the reminder from both the pending queue and Notification Center (delivered).
-    @MainActor
-    private func cancelReminder() async {
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
-        notificationCenter.removeDeliveredNotifications(withIdentifiers: [Self.notificationIdentifier])
     }
 
     func scheduleReminder(timeBeforeCancel: TimeInterval) async {
@@ -93,6 +79,11 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         guard let subscription = try? await subscriptionManager.getSubscription(forceRefresh: false),
               Self.statusWarrantsReminder(subscription.status) else {
             Logger.subscription.log("Expiration reminder skipped: subscription not in an active state for reminders")
+            return
+        }
+
+        guard subscription.hasActiveTrialOffer else {
+            Logger.subscription.log("Expiration reminder skipped: subscription is not on a free trial")
             return
         }
 
@@ -121,21 +112,18 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         }
     }
 
-    /// Cancels the pending and delivered reminder unless the subscription is in an active state,
+    /// Cancels the pending reminder unless the subscription still warrants one (active status + on a free trial),
     /// or unconditionally when the feature flag is off (remote kill switch).
-    /// A thrown error (e.g. transient network failure) leaves the reminder alone; a confirmed inactive/missing subscription cancels it.
+    /// A thrown error (e.g. transient network failure) leaves the reminder alone; a confirmed inactive/missing/no-longer-trial subscription cancels it.
     @MainActor
     private func cancelReminderIfInactive(forceRefresh: Bool) async {
-        async let pendingTask = notificationCenter.pendingNotificationRequests()
-        async let deliveredTask = notificationCenter.deliveredNotifications()
-        let hasPending = await pendingTask.contains { $0.identifier == Self.notificationIdentifier }
-        let hasDelivered = await deliveredTask.contains { $0.request.identifier == Self.notificationIdentifier }
-        guard hasPending || hasDelivered else { return }
+        let pending = await notificationCenter.pendingNotificationRequests()
+        guard pending.contains(where: { $0.identifier == Self.notificationIdentifier }) else { return }
 
         // If the feature was disabled remotely after a reminder was scheduled, treat it as a kill switch
         // and clean up without consulting the backend.
         guard isFeatureEnabled() else {
-            await cancelReminder()
+            cancelPendingReminder()
             return
         }
 
@@ -147,10 +135,15 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
             return
         }
 
-        if let status = subscription?.status, Self.statusWarrantsReminder(status) {
+        if let subscription, Self.subscriptionWarrantsReminder(subscription) {
             return
         }
-        await cancelReminder()
+        cancelPendingReminder()
+    }
+
+    @MainActor
+    private func cancelPendingReminder() {
+        notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
     }
 
     private static func statusWarrantsReminder(_ status: DuckDuckGoSubscription.Status) -> Bool {
@@ -158,5 +151,11 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         case .autoRenewable, .notAutoRenewable, .gracePeriod: return true
         case .inactive, .expired, .unknown: return false
         }
+    }
+
+    /// A subscription warrants a reminder iff its status is active AND it is on a free trial.
+    /// Composed from `statusWarrantsReminder` so the schedule-time guards can keep granular logging on each component.
+    private static func subscriptionWarrantsReminder(_ subscription: DuckDuckGoSubscription) -> Bool {
+        statusWarrantsReminder(subscription.status) && subscription.hasActiveTrialOffer
     }
 }

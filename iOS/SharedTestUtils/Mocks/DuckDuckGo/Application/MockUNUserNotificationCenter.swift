@@ -36,7 +36,6 @@ final class MockUNUserNotificationCenter: UNUserNotificationCenterRepresentable 
     // Spies
     private(set) var addedRequests: [UNNotificationRequest] = []
     private(set) var removedIdentifiers: [[String]] = []
-    private(set) var removedDeliveredIdentifiers: [[String]] = []
     private(set) var didCheckAuthorizationStatus = false
     private(set) var didRequestAuthorization = false
     private(set) var requestedAuthorizationOptions: UNAuthorizationOptions = []
@@ -65,19 +64,9 @@ final class MockUNUserNotificationCenter: UNUserNotificationCenterRepresentable 
         addedRequests
     }
 
-    func deliveredNotifications() async -> [UNNotification] {
-        // UNNotification cannot be instantiated outside the system, so the mock returns empty
-        // by default. Tests verifying delivered-removal behavior assert via `removedDeliveredIdentifiers`.
-        []
-    }
-
     func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
         removedIdentifiers.append(identifiers)
         let set = Set(identifiers)
         addedRequests.removeAll { set.contains($0.identifier) }
-    }
-
-    func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
-        removedDeliveredIdentifiers.append(identifiers)
     }
 }
