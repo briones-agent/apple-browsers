@@ -34,10 +34,13 @@ enum SyncErrorMessage {
     case codeOnlyCompatibleWithDuckAI
     case codeMustBeScannedWithDuckDuckGo
     case syncFromAnotherConnectedDevice
+    case alreadyPairedWithAccount
     case syncCancelledFromOtherDevice
 
     var title: String {
         switch self {
+        case .alreadyPairedWithAccount:
+            return UserText.syncAlreadyPairedWithAccountTitle
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceTitle
         default:
@@ -75,6 +78,8 @@ enum SyncErrorMessage {
             return UserText.syncCodeMustBeScannedWithDuckDuckGoDescription
         case .syncFromAnotherConnectedDevice:
             return UserText.syncFromAnotherConnectedDeviceDescription
+        case .alreadyPairedWithAccount:
+            return UserText.syncAlreadyPairedWithAccountDescription
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceDescription
         }
@@ -82,6 +87,8 @@ enum SyncErrorMessage {
 
     var buttonTitle: String {
         switch self {
+        case .alreadyPairedWithAccount:
+            return UserText.syncAlreadyPairedWithAccountButton
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceButton
         default:

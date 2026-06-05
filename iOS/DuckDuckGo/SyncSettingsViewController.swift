@@ -674,7 +674,9 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
     }
 
     func controllerDidCompletePairingWithAlreadyConnectedAccount(setupRole _: SyncSetupRole) {
-        dismissVCAndShowDeviceSyncedToast()
+        Task { @MainActor in
+            await handleError(.alreadyPairedWithAccount, error: nil, event: nil)
+        }
     }
     
     func controllerDidError(_ error: SyncConnectionError, underlyingError: (any Error)?, setupRole: SyncSetupRole) async {

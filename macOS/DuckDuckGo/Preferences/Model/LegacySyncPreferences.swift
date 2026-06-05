@@ -1033,7 +1033,7 @@ extension LegacySyncPreferences: SyncConnectionControllerDelegate {
     }
 
     func controllerDidCompletePairingWithAlreadyConnectedAccount(setupRole _: SyncSetupRole) {
-        presentDialog(for: .nowSyncing)
+        managementDialogModel.syncErrorMessage = SyncErrorMessage(type: .alreadyPairedWithAccount)
     }
 
     func controllerDidFindTwoAccountsDuringRecovery(_ recoveryKey: SyncCode.RecoveryKey,

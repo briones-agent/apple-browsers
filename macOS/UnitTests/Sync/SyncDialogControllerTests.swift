@@ -886,10 +886,10 @@ final class SyncDialogControllerTests: XCTestCase {
         XCTAssertEqual(managementDialogModel.currentDialog, initialDialog)
     }
 
-    func testControllerDidCompletePairingWithAlreadyConnectedAccount_presentsDeviceSyncedDialog() {
+    func testControllerDidCompletePairingWithAlreadyConnectedAccount_presentsAlreadyPairedError() {
         syncDialogController.controllerDidCompletePairingWithAlreadyConnectedAccount(setupRole: .receiver(.exchange, .pastedCode))
 
-        XCTAssertEqual(managementDialogModel.currentDialog, .nowSyncing)
+        XCTAssertEqual(managementDialogModel.syncErrorMessage?.type, .alreadyPairedWithAccount)
     }
 
     func testControllerDidCompleteLogin_updatesDevicesAndPresentsRecoveryDialog() async {

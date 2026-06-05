@@ -98,12 +98,15 @@ public enum SyncErrorType {
     case codeOnlyCompatibleWithDuckAI
     case codeMustBeScannedWithDuckDuckGo
     case syncFromAnotherConnectedDevice
+    case alreadyPairedWithAccount
     case syncCancelledFromOtherDevice
 
     var title: String {
         switch self {
         case .unableToAuthenticateOnDevice:
             return UserText.syncDeviceAuthenticationErrorAlertTitle
+        case .alreadyPairedWithAccount:
+            return UserText.syncAlreadyPairedWithAccountTitle
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceTitle
         default:
@@ -143,6 +146,8 @@ public enum SyncErrorType {
             return UserText.syncCodeMustBeScannedWithDuckDuckGoDescription
         case .syncFromAnotherConnectedDevice:
             return UserText.syncFromAnotherConnectedDeviceDescription
+        case .alreadyPairedWithAccount:
+            return UserText.syncAlreadyPairedWithAccountDescription
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceDescription
         }
@@ -152,6 +157,8 @@ public enum SyncErrorType {
         switch self {
         case .unableToAuthenticateOnDevice:
             return UserText.syncDeviceAuthenticationErrorAlertButton
+        case .alreadyPairedWithAccount:
+            return UserText.syncAlreadyPairedWithAccountButton
         case .syncCancelledFromOtherDevice:
             return UserText.syncCancelledFromOtherDeviceButton
         default:
