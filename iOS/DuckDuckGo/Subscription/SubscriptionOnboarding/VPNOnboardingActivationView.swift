@@ -29,6 +29,7 @@ struct VPNOnboardingActivationView: View {
 
     @StateObject private var viewModel: VPNOnboardingActivationViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var presentedURL: URL?
 
     private let onNext: () -> Void
 
@@ -39,6 +40,21 @@ struct VPNOnboardingActivationView: View {
     }
 
     var body: some View {
+        Group {
+            if let presentedURL {
+                OnboardingWebSheet(urlString: presentedURL.absoluteString) {
+                    self.presentedURL = nil
+                }
+            } else {
+                onboardingContent
+            }
+        }
+        .task {
+            await viewModel.fetchRealIPLocation()
+        }
+    }
+
+    private var onboardingContent: some View {
         SubscriptionOnboardingPage(
             title: Text("Step 1 of 4")
                 .font(Font(UIFont.daxSubheadSemibold()))
@@ -58,9 +74,10 @@ struct VPNOnboardingActivationView: View {
             }
             .animation(.easeInOut, value: viewModel.isConnected)
         }
-        .task {
-            await viewModel.fetchRealIPLocation()
-        }
+        .environment(\.openURL, OpenURLAction { url in
+            presentedURL = url
+            return .handled
+        })
     }
 
     private var headerContent: SettingsDescription {

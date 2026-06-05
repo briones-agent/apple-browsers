@@ -40,7 +40,7 @@ struct DuckAIOnboardingActivationView: View {
     var body: some View {
         Group {
             if let presentedURL {
-                DuckAIChatWebScreen(urlString: presentedURL.absoluteString) {
+                OnboardingWebSheet(urlString: presentedURL.absoluteString) {
                     self.presentedURL = nil
                 }
             } else {
@@ -88,7 +88,7 @@ struct DuckAIOnboardingActivationView: View {
 
 }
 
-struct DuckAIChatWebScreen: View {
+struct OnboardingWebSheet: View {
 
     let urlString: String
     let onBack: () -> Void
