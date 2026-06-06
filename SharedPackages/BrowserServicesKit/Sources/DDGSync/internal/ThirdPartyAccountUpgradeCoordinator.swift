@@ -21,9 +21,7 @@ import Foundation
 import os.log
 
 protocol ThirdPartyAccountUpgradeCoordinating {
-    func upgradeThirdPartyAccountToDefaultCredential(_ recoveryCode: String,
-                                                     deviceName: String,
-                                                     deviceType: String) async throws -> UpgradedThirdPartyAccount
+    func upgradeThirdPartyAccountToDefaultCredential(_ recoveryCode: String, deviceName: String, deviceType: String) async throws -> UpgradedThirdPartyAccount
 }
 
 struct UpgradedThirdPartyAccount {
@@ -63,21 +61,22 @@ struct ThirdPartyAccountUpgradeCoordinator: ThirdPartyAccountUpgradeCoordinating
     let scopedAccess: ScopedAccessCredentialManaging
     let account: AccountManaging
 
+    private static let finalNativeLoginRetryDelays: [UInt64] = [500_000_000, 1_000_000_000]
+
+    private(set) var retrySleep: @Sendable (UInt64) async throws -> Void = {
+        try await Task.sleep(nanoseconds: $0)
+    }
+
     private let jweCompactCodec = JWECompactCodec()
     private let scopedAccessCredentialEnvelope = ScopedAccessCredentialEnvelope()
 
-    func upgradeThirdPartyAccountToDefaultCredential(_ recoveryCode: String,
-                                                     deviceName: String,
-                                                     deviceType: String) async throws -> UpgradedThirdPartyAccount {
+    func upgradeThirdPartyAccountToDefaultCredential(_ recoveryCode: String, deviceName: String, deviceType: String) async throws -> UpgradedThirdPartyAccount {
         let recoveryKey = try decodeThirdPartyRecoveryKey(from: recoveryCode)
         let scopedPassword = try decodeScopedPassword(from: recoveryKey)
 
         let thirdPartyLogin: ThirdPartyLogin
         do {
-            thirdPartyLogin = try await loginThirdPartyCredential(recoveryKey,
-                                                                  scopedPassword: scopedPassword,
-                                                                  deviceName: deviceName,
-                                                                  deviceType: deviceType)
+            thirdPartyLogin = try await loginThirdPartyCredential(recoveryKey, scopedPassword: scopedPassword, deviceName: deviceName, deviceType: deviceType)
         } catch let error as ThirdPartyAccountUpgradeError {
             throw error
         } catch {
@@ -93,43 +92,37 @@ struct ThirdPartyAccountUpgradeCoordinator: ThirdPartyAccountUpgradeCoordinating
                                             token: thirdPartyLogin.token,
                                             state: .addingNewDevice)
 
-        let accessCredentials = try await fetchAccessCredentials(for: thirdPartyAccount)
-        guard !accessCredentials.contains(where: { $0.id == SyncCredentialID.defaultCredential }) else {
-            throw ThirdPartyAccountUpgradeError.nativeCredentialAlreadyPresent
-        }
-
-        let thirdPartyProtectedKeys = try await fetchUsableThirdPartyProtectedKeys(for: thirdPartyAccount)
-        let accountKeys = try generateDefaultCredentialMaterial(userId: recoveryKey.userId)
-        let defaultCredentialMainKey = ScopedAccessKeyDerivation.mainKey(from: accountKeys.primaryKey, userID: recoveryKey.userId)
-        let rewrappedProtectedKeys = try rewrapThirdPartyProtectedKeys(thirdPartyProtectedKeys,
-                                                                       fromWrappingKey: thirdPartyLogin.mainKey,
-                                                                       toAccountSecretKey: accountKeys.secretKey)
-        let encryptedThirdPartyCredential = try encryptThirdPartyCredential(scopedPassword,
-                                                                           defaultCredentialMainKey: defaultCredentialMainKey)
-        try await postDefaultAccessCredential(token: thirdPartyLogin.token,
-                                             hashedPassword: thirdPartyLogin.hashedPassword,
-                                             credentialHashedPassword: accountKeys.passwordHash.base64EncodedString(),
-                                             protectedEncryptionKey: accountKeys.protectedSecretKey.base64EncodedString(),
-                                             encryptedThirdPartyCredential: encryptedThirdPartyCredential,
-                                             keys: rewrappedProtectedKeys)
-
-        let nativeLogin: LoginResult
+        var didLogoutTemporaryThirdPartyDevice = false
         do {
-            nativeLogin = try await loginDefaultCredential(userId: recoveryKey.userId,
-                                                           accountKeys: accountKeys,
-                                                           deviceName: deviceName,
-                                                           deviceType: deviceType)
-        } catch let error as ThirdPartyAccountUpgradeError {
-            throw error
-        } catch {
-            throw ThirdPartyAccountUpgradeError.finalNativeLoginFailed
-        }
-        await logoutTemporaryThirdPartyDevice(thirdPartyLogin)
+            let accessCredentials = try await fetchAccessCredentials(for: thirdPartyAccount)
+            guard !accessCredentials.contains(where: { $0.id == SyncCredentialID.defaultCredential }) else {
+                throw ThirdPartyAccountUpgradeError.nativeCredentialAlreadyPresent
+            }
 
-        return UpgradedThirdPartyAccount(account: nativeLogin.account,
-                                         devices: nativeLogin.devices,
-                                         scopedPassword: scopedPassword,
-                                         protectedKeys: rewrappedProtectedKeys)
+            let thirdPartyProtectedKeys = try await fetchUsableThirdPartyProtectedKeys(for: thirdPartyAccount)
+            let accountKeys = try generateDefaultCredentialMaterial(userId: recoveryKey.userId)
+            let defaultCredentialMainKey = ScopedAccessKeyDerivation.mainKey(from: accountKeys.primaryKey, userID: recoveryKey.userId)
+            let rewrappedProtectedKeys = try rewrapThirdPartyProtectedKeys(thirdPartyProtectedKeys, fromWrappingKey: thirdPartyLogin.mainKey, toAccountSecretKey: accountKeys.secretKey)
+            let encryptedThirdPartyCredential = try encryptThirdPartyCredential(scopedPassword, defaultCredentialMainKey: defaultCredentialMainKey)
+            try await postDefaultAccessCredential(token: thirdPartyLogin.token,
+                                                 hashedPassword: thirdPartyLogin.hashedPassword,
+                                                 credentialHashedPassword: accountKeys.passwordHash.base64EncodedString(),
+                                                 protectedEncryptionKey: accountKeys.protectedSecretKey.base64EncodedString(),
+                                                 encryptedThirdPartyCredential: encryptedThirdPartyCredential,
+                                                 keys: rewrappedProtectedKeys)
+
+            await logoutTemporaryThirdPartyDevice(thirdPartyLogin)
+            didLogoutTemporaryThirdPartyDevice = true
+
+            let nativeLogin = try await loginDefaultCredentialWithRetry(userId: recoveryKey.userId, accountKeys: accountKeys, deviceName: deviceName, deviceType: deviceType)
+
+            return UpgradedThirdPartyAccount(account: nativeLogin.account, devices: nativeLogin.devices, scopedPassword: scopedPassword, protectedKeys: rewrappedProtectedKeys)
+        } catch {
+            if !didLogoutTemporaryThirdPartyDevice {
+                await logoutTemporaryThirdPartyDevice(thirdPartyLogin)
+            }
+            throw error
+        }
     }
 
     private func decodeThirdPartyRecoveryKey(from recoveryCode: String) throws -> SyncCode.RecoveryKeyV2 {
@@ -183,9 +176,7 @@ struct ThirdPartyAccountUpgradeCoordinator: ThirdPartyAccountUpgradeCoordinating
         }
     }
 
-    private func rewrapThirdPartyProtectedKeys(_ keys: [ProtectedKey],
-                                               fromWrappingKey wrappingKey: Data,
-                                               toAccountSecretKey accountSecretKey: Data) throws -> [ProtectedKey] {
+    private func rewrapThirdPartyProtectedKeys(_ keys: [ProtectedKey], fromWrappingKey wrappingKey: Data, toAccountSecretKey accountSecretKey: Data) throws -> [ProtectedKey] {
         do {
             return try keys.map { key in
                 let decryptedPrivateKey = try jweCompactCodec.decryptDirect(token: key.encryptedPrivateKey, contentEncryptionKey: wrappingKey)
@@ -213,10 +204,7 @@ struct ThirdPartyAccountUpgradeCoordinator: ThirdPartyAccountUpgradeCoordinating
         }
     }
 
-    private func loginThirdPartyCredential(_ recoveryKey: SyncCode.RecoveryKeyV2,
-                                           scopedPassword: Data,
-                                           deviceName: String,
-                                           deviceType: String) async throws -> ThirdPartyLogin {
+    private func loginThirdPartyCredential(_ recoveryKey: SyncCode.RecoveryKeyV2, scopedPassword: Data, deviceName: String, deviceType: String) async throws -> ThirdPartyLogin {
         let deviceId = UUID().uuidString
         let hashedPassword = ScopedAccessKeyDerivation.hashedPassword(from: scopedPassword, userID: recoveryKey.userId)
         let params = ThirdPartyLoginParameters(userId: recoveryKey.userId,
@@ -247,6 +235,34 @@ struct ThirdPartyAccountUpgradeCoordinator: ThirdPartyAccountUpgradeCoordinating
         } catch {
             Logger.sync.error("3party account upgrade failed to log out temporary 3party device: \(String(reflecting: error))")
         }
+    }
+
+    private func loginDefaultCredentialWithRetry(userId: String, accountKeys: AccountCreationKeys, deviceName: String, deviceType: String) async throws -> LoginResult {
+        var retryDelays = Self.finalNativeLoginRetryDelays
+
+        while true {
+            do {
+                return try await loginDefaultCredential(userId: userId, accountKeys: accountKeys, deviceName: deviceName, deviceType: deviceType)
+            } catch let error as ThirdPartyAccountUpgradeError {
+                throw error
+            } catch {
+                guard shouldRetryFinalNativeLogin(after: error), !retryDelays.isEmpty else {
+                    throw ThirdPartyAccountUpgradeError.finalNativeLoginFailed
+                }
+                let retryDelay = retryDelays.removeFirst()
+                if retryDelay > 0 {
+                    try await retrySleep(retryDelay)
+                }
+            }
+        }
+    }
+
+    private func shouldRetryFinalNativeLogin(after error: Error) -> Bool {
+        if let error = error as? SyncError,
+           case .unexpectedStatusCode(let code) = error {
+            return code != 401
+        }
+        return true
     }
 
     private func postDefaultAccessCredential(token: String,

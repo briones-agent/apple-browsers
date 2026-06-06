@@ -116,6 +116,92 @@ final class ThirdPartyAccountUpgradeCoordinatorTests: XCTestCase {
         XCTAssertEqual(result.account.token, "native-token")
     }
 
+    func testWhenUpgradeAbortsAfterTemporaryLoginThenTemporaryThirdPartyDeviceIsLoggedOut() async throws {
+        let accessCredentials = [AccessCredential(id: SyncCredentialID.defaultCredential, scope: "sync", encrypted3PartyCredential: nil)]
+        let setup = try makeSUT(accessCredentials: accessCredentials)
+
+        do {
+            _ = try await setup.coordinator.upgradeThirdPartyAccountToDefaultCredential(
+                recoveryCode(),
+                deviceName: "Mac",
+                deviceType: "desktop")
+            XCTFail("Expected existing ddg credential to abort upgrade")
+        } catch ThirdPartyAccountUpgradeError.nativeCredentialAlreadyPresent {
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(setup.account.logoutCalls.map(\.token), ["third-party-token"])
+    }
+
+    func testWhenFinalNativeLoginFailsTransientlyThenRetriesAndReturnsNativeAccount() async throws {
+        let setup = try makeSUT()
+        setup.api.fakeRequests[setup.endpoints.login] = SequencedThrowingHTTPRequestingMock(results: [
+            .success(.init(data: Data(thirdPartyLoginBody().utf8), response: makeHTTPURLResponse(statusCode: 200))),
+            .failure(SyncError.unexpectedStatusCode(500)),
+            .success(.init(data: Data(finalNativeLoginBody().utf8), response: makeHTTPURLResponse(statusCode: 200)))
+        ])
+
+        let result = try await setup.coordinator.upgradeThirdPartyAccountToDefaultCredential(
+            recoveryCode(),
+            deviceName: "Mac",
+            deviceType: "desktop")
+
+        let loginCalls = setup.api.createRequestCallArgs.filter { $0.url == setup.endpoints.login }
+        XCTAssertEqual(loginCalls.count, 3)
+        XCTAssertEqual(setup.account.logoutCalls.map(\.token), ["third-party-token"])
+        XCTAssertEqual(result.account.token, "native-token")
+    }
+
+    func testWhenFinalNativeLoginKeepsFailingThenRetriesAndLogsOutTemporaryThirdPartyDevice() async throws {
+        let setup = try makeSUT()
+        setup.api.fakeRequests[setup.endpoints.login] = SequencedThrowingHTTPRequestingMock(results: [
+            .success(.init(data: Data(thirdPartyLoginBody().utf8), response: makeHTTPURLResponse(statusCode: 200))),
+            .failure(SyncError.unexpectedStatusCode(500)),
+            .failure(SyncError.unexpectedStatusCode(500)),
+            .failure(SyncError.unexpectedStatusCode(500))
+        ])
+
+        do {
+            _ = try await setup.coordinator.upgradeThirdPartyAccountToDefaultCredential(
+                recoveryCode(),
+                deviceName: "Mac",
+                deviceType: "desktop")
+            XCTFail("Expected persistent final native login failure")
+        } catch ThirdPartyAccountUpgradeError.finalNativeLoginFailed {
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let loginCalls = setup.api.createRequestCallArgs.filter { $0.url == setup.endpoints.login }
+        XCTAssertEqual(loginCalls.count, 4)
+        XCTAssertEqual(setup.account.logoutCalls.map(\.token), ["third-party-token"])
+    }
+
+    func testWhenFinalNativeLoginReturnsUnauthorizedThenDoesNotRetryAndLogsOutTemporaryThirdPartyDevice() async throws {
+        let setup = try makeSUT()
+        setup.api.fakeRequests[setup.endpoints.login] = SequencedThrowingHTTPRequestingMock(results: [
+            .success(.init(data: Data(thirdPartyLoginBody().utf8), response: makeHTTPURLResponse(statusCode: 200))),
+            .failure(SyncError.unexpectedStatusCode(401)),
+            .success(.init(data: Data(finalNativeLoginBody().utf8), response: makeHTTPURLResponse(statusCode: 200)))
+        ])
+
+        do {
+            _ = try await setup.coordinator.upgradeThirdPartyAccountToDefaultCredential(
+                recoveryCode(),
+                deviceName: "Mac",
+                deviceType: "desktop")
+            XCTFail("Expected unauthorized final native login failure")
+        } catch ThirdPartyAccountUpgradeError.finalNativeLoginFailed {
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let loginCalls = setup.api.createRequestCallArgs.filter { $0.url == setup.endpoints.login }
+        XCTAssertEqual(loginCalls.count, 2)
+        XCTAssertEqual(setup.account.logoutCalls.map(\.token), ["third-party-token"])
+    }
+
     func testWhenDDGCredentialAlreadyExistsThenUpgradeAborts() async throws {
         let accessCredentials = [AccessCredential(id: SyncCredentialID.defaultCredential, scope: "sync", encrypted3PartyCredential: nil)]
         let setup = try makeSUT(accessCredentials: accessCredentials)
@@ -259,7 +345,8 @@ final class ThirdPartyAccountUpgradeCoordinatorTests: XCTestCase {
                                                               api: api,
                                                               crypter: crypter,
                                                               scopedAccess: manager,
-                                                              account: account)
+                                                              account: account,
+                                                              retrySleep: { _ in })
         let keys = try protectedKeys ?? [thirdPartyProtectedKey()]
 
         api.fakeRequests[endpoints.login] = SequencedHTTPRequestingMock(results: [
@@ -373,5 +460,22 @@ final class ThirdPartyAccountUpgradeCoordinatorTests: XCTestCase {
 private extension Endpoints {
     func accessCredential(_ id: String) -> URL {
         accessCredentials.appendingPathComponent(id)
+    }
+}
+
+private final class SequencedThrowingHTTPRequestingMock: HTTPRequestingMock {
+    private var results: [Result<HTTPResult, Error>]
+
+    init(results: [Result<HTTPResult, Error>]) {
+        self.results = results
+        super.init(result: (try? results.last?.get()) ?? .init(data: Data(), response: HTTPURLResponse()))
+    }
+
+    override func execute() async throws -> HTTPResult {
+        executeCallCount += 1
+        if results.count > 1 {
+            return try results.removeFirst().get()
+        }
+        return try results.first?.get() ?? result
     }
 }
