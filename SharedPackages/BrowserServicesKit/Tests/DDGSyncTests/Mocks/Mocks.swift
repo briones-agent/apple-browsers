@@ -328,6 +328,7 @@ final class PairingV2MessageExchangingMock: PairingV2MessageExchanging {
     var fetchMessagesStub: [PairingV2SequencedMessage] = []
     var fetchMessagesError: Error?
     var closeChannelCalls: [String] = []
+    var closeChannelHandler: ((String) async throws -> Void)?
 
     func openChannel(_ channelID: String) async throws {
         openChannelCalls.append(channelID)
@@ -356,6 +357,7 @@ final class PairingV2MessageExchangingMock: PairingV2MessageExchanging {
 
     func closeChannel(_ channelID: String) async throws {
         closeChannelCalls.append(channelID)
+        try await closeChannelHandler?(channelID)
     }
 }
 

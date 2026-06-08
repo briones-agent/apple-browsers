@@ -49,6 +49,21 @@ private final class PairingV2ConfirmationDelegateMock: PairingV2ConfirmationDele
     }
 }
 
+private actor PairingV2CoordinatorTestGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    func open() {
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
 final class PairingV2CoordinatorTests: XCTestCase {
 
     func testWhenStartPresentingThenOpensLocalChannelAndReturnsQRCodePayload() async throws {
@@ -274,7 +289,7 @@ final class PairingV2CoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.state, .completed(.recoveryCodeSent(credentialKind: .ddg)))
     }
 
-    func testWhenNoAccountPresenterHostsNativePeerThenCreatesAccountBeforeSendingRecoveryCodeResponse() async throws {
+    func testWhenNoAccountPresenterHostsNativePeerThenCreatesAccountAfterConfirmedAndBeforeRecoveryCodeResponse() async throws {
         let dependencies = MockSyncDependencies()
         let accountManager = AccountManagingMock()
         dependencies.account = accountManager
@@ -325,6 +340,56 @@ final class PairingV2CoordinatorTests: XCTestCase {
             .recoveryCodeResponse(.init(recoveryCode: recoveryCode))
         )
         XCTAssertEqual(coordinator.state, .completed(.recoveryCodeSent(credentialKind: .ddg)))
+    }
+
+    func testWhenNoAccountPresenterCannotSendRecoveryCodeConfirmedThenDoesNotCreateAccount() async throws {
+        let dependencies = MockSyncDependencies()
+        let accountManager = AccountManagingMock()
+        dependencies.account = accountManager
+        let syncService = DDGSync(dataProvidersSource: MockDataProvidersSource(), dependencies: dependencies)
+        let messageExchanger = PairingV2MessageExchangingMock()
+        let messageCrypto = PairingV2MessageCrypto()
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let confirmationDelegate = PairingV2ConfirmationDelegateMock()
+        let coordinator = makeCoordinator(syncService: syncService,
+                                          messageExchanger: messageExchanger,
+                                          messageCrypto: messageCrypto,
+                                          confirmationDelegate: confirmationDelegate)
+
+        let payload = try await coordinator.startPresenting()
+        messageExchanger.fetchMessagesStub = try encryptedPeerMessages(
+            [
+                .hello(.init(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey)),
+                .recoveryCodeRequest(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeRequest,
+                                           name: "Peer",
+                                           kind: .ddg))
+            ],
+            recipientPublicKey: payload.publicKey,
+            peerKeyPair: peerKeyPair,
+            messageCrypto: messageCrypto
+        )
+        messageExchanger.sendHandler = { _, _ in
+            if messageExchanger.sendCalls.count == 3 {
+                throw PairingV2Error.relayChannelUnavailable
+            }
+        }
+
+        do {
+            try await coordinator.pollOnce()
+            XCTFail("Expected PairingV2Error.relayChannelUnavailable")
+        } catch PairingV2Error.relayChannelUnavailable {
+        } catch {
+            XCTFail("Expected PairingV2Error.relayChannelUnavailable, got \(error)")
+        }
+
+        XCTAssertTrue(accountManager.createAccountCalls.isEmpty)
+        XCTAssertNil(syncService.account)
+        XCTAssertTrue(confirmationDelegate.didCreateSyncAccountCalls.isEmpty)
+        XCTAssertEqual(messageExchanger.sendCalls.count, 3)
+        XCTAssertEqual(
+            try decryptSentMessage(at: 2, from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto),
+            .recoveryCodeConfirmed(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeConfirmed))
+        )
     }
 
     func testWhenPresenterHostConfirmationIsDeniedThenSendsRecoveryCodeDeniedAndStops() async throws {
@@ -431,6 +496,69 @@ final class PairingV2CoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.pendingRecoveryKey, loginRecoveryKey)
         XCTAssertEqual(coordinator.completedRegisteredDevices?.map(\.id), [RegisteredDevice.mock.id])
         XCTAssertEqual(coordinator.state, .completed(.loggedIn))
+    }
+
+    func testWhenNativeJoinerLogsInThenPollUntilFinishedReturnsBeforeLocalChannelCloseCompletes() async throws {
+        let dependencies = MockSyncDependencies()
+        dependencies.account = AccountManagingMock()
+        (dependencies.secureStore as? SecureStorageStub)?.theAccount = nil
+
+        let syncService = DDGSync(dataProvidersSource: MockDataProvidersSource(), dependencies: dependencies)
+        let messageExchanger = PairingV2MessageExchangingMock()
+        let messageCrypto = PairingV2MessageCrypto()
+        let peerKeyPair = try PairingV2KeyPairFactory.makeKeyPair(channelID: "peer-channel")
+        let confirmationDelegate = PairingV2ConfirmationDelegateMock()
+        let coordinator = makeCoordinator(syncService: syncService,
+                                          messageExchanger: messageExchanger,
+                                          messageCrypto: messageCrypto,
+                                          confirmationDelegate: confirmationDelegate)
+        let closeStarted = expectation(description: "Local channel close started")
+        let pollCompleted = expectation(description: "Polling completed")
+        let closeGate = PairingV2CoordinatorTestGate()
+        messageExchanger.closeChannelHandler = { _ in
+            closeStarted.fulfill()
+            await closeGate.wait()
+        }
+
+        let userId = "v2-ddg-user"
+        let primaryKey = Data((0..<32).map(UInt8.init))
+        try await coordinator.startScanning(qrPayload: .init(channelId: peerKeyPair.channelID, publicKey: peerKeyPair.publicKey))
+        let hello = try localHello(from: messageExchanger, peerPrivateKey: peerKeyPair.privateKey, messageCrypto: messageCrypto)
+        let recoveryCode = try Self.makeRecoveryCodeV2(userId: userId,
+                                                       secret: Base64URL.encode(primaryKey),
+                                                       credentialId: SyncCredentialID.defaultCredential)
+        messageExchanger.fetchMessagesStub = [
+            .init(seq: 1,
+                  version: PairingV2ProtocolVersion.current,
+                  payload: try messageCrypto.encrypt(
+                    .recoveryCodeAvailable(.init(type: PairingV2ApplicationMessage.MessageType.recoveryCodeAvailable,
+                                                 name: "Peer",
+                                                 kind: .ddg,
+                                                 userId: userId)),
+                    recipientPublicKey: hello.publicKey,
+                    senderChannelID: peerKeyPair.channelID).payload),
+            .init(seq: 2,
+                  version: PairingV2ProtocolVersion.current,
+                  payload: try messageCrypto.encrypt(
+                    .recoveryCodeResponse(.init(recoveryCode: recoveryCode)),
+                    recipientPublicKey: hello.publicKey,
+                    senderChannelID: peerKeyPair.channelID).payload)
+        ]
+
+        let pollingTask = Task {
+            try await coordinator.pollUntilFinished(pollInterval: 0)
+        }
+        let completionTask = Task {
+            let completion = try await pollingTask.value
+            XCTAssertEqual(completion, .loggedIn)
+            pollCompleted.fulfill()
+        }
+
+        await fulfillment(of: [pollCompleted], timeout: 1)
+        await fulfillment(of: [closeStarted], timeout: 1)
+        await closeGate.open()
+        try await completionTask.value
+        XCTAssertEqual(messageExchanger.closeChannelCalls.count, 1)
     }
 
     func testWhenNativeJoinerReceivesThirdPartyRecoveryCodeThenDelegatesUpgradeToSyncService() async throws {

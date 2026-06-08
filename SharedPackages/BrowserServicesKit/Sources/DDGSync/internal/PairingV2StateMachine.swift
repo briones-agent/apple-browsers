@@ -346,8 +346,8 @@ struct PairingV2StateMachine {
             return fail(with: .unexpectedEvent(.startRequestedWhileSessionActive))
         }
 
-        guard flags.isV2CodeEnabled else {
-            return fail(with: .unsupportedFlow("Pairing V2 code presentation is disabled"))
+        guard flags.isV2ScanningEnabled else {
+            return fail(with: .v2ScanningDisabled)
         }
 
         guard localClient.kind == .ddg else {
@@ -402,7 +402,7 @@ struct PairingV2StateMachine {
     }
 
     private mutating func handleReceivedHello(_ message: PairingV2HelloMessage) -> [PairingV2Command] {
-        guard PairingV2ProtocolVersion.supports(message.version) else {
+        guard Self.supports(version: message.version) else {
             return fail(with: .unsupportedVersion(message.version))
         }
 
@@ -471,7 +471,7 @@ struct PairingV2StateMachine {
         }
 
         state = .hostPreparingRecoveryCode(session, credentialKind: credentialKind)
-        return [.prepareRecoveryCode(credentialKind: credentialKind, purpose: session.purpose)]
+        return [.sendRecoveryCodeConfirmed, .prepareRecoveryCode(credentialKind: credentialKind, purpose: session.purpose)]
     }
 
     private mutating func handleHostConfirmationDenied() -> [PairingV2Command] {
@@ -507,7 +507,7 @@ struct PairingV2StateMachine {
         }
 
         state = .hostSendingRecoveryCode(session, credentialKind: credentialKind, recoveryCode: recoveryCode)
-        return [.sendRecoveryCodeConfirmed, .sendRecoveryCode(recoveryCode)]
+        return [.sendRecoveryCode(recoveryCode)]
     }
 
     private mutating func handleReceivedRecoveryCode(_ recoveryCode: String) -> [PairingV2Command] {
@@ -523,17 +523,23 @@ struct PairingV2StateMachine {
     }
 
     private mutating func handleRecoveryCodeProgress(message: PairingV2RecoveryCodeMessage) -> [PairingV2Command] {
-        guard case .joinerWaitingForRecoveryCode = state else {
+        switch state {
+        case .joinerWaitingForConfirmation,
+             .joinerWaitingForRecoveryCode:
+            return []
+        default:
             return fail(with: .unexpectedEvent(.recoveryCodeMessageReceivedWhileNotJoining(message)))
         }
-        return []
     }
 
     private mutating func handleRecoveryCodeTerminalAbort(message: PairingV2RecoveryCodeMessage, error: PairingV2Error) -> [PairingV2Command] {
-        guard case .joinerWaitingForRecoveryCode = state else {
+        switch state {
+        case .joinerWaitingForConfirmation,
+             .joinerWaitingForRecoveryCode:
+            return fail(with: error)
+        default:
             return fail(with: .unexpectedEvent(.recoveryCodeMessageReceivedWhileNotJoining(message)))
         }
-        return fail(with: error)
     }
 
     private mutating func handleRecoveryCodeSent() -> [PairingV2Command] {
@@ -570,6 +576,10 @@ struct PairingV2StateMachine {
             return .thirdParty
         }
         return hostKind
+    }
+
+    private static func supports(version: String) -> Bool {
+        PairingV2ProtocolVersion.supports(version)
     }
 
 }
