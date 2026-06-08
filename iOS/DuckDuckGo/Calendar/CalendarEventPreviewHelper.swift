@@ -121,30 +121,18 @@ final class CalendarEventPreviewHelper: NSObject, FilePreview {
         return event
     }
 
-    /// Toast fires in QL's `present` completion so it stacks above QL. The pre-dismiss
-    /// keeps UIKit from silently dropping `present` when a modal (address-bar editing,
-    /// etc.) is already up.
     private func fallbackToQuickLook(reporting failure: Failure?) {
         let reportFailure = onFailure
         let reportDismiss = onDismiss
-        guard let viewController else {
+        let report = {
             if let failure { reportFailure?(failure) }
             reportDismiss?()
+        }
+        guard let viewController else {
+            report()
             return
         }
-        let presentQuickLook = { [filePath] in
-            let iPadFormSheet: UIModalPresentationStyle? = UIDevice.current.userInterfaceIdiom == .pad ? .formSheet : nil
-            QuickLookPreviewHelper(filePath, viewController: viewController)
-                .preview(modalPresentationStyle: iPadFormSheet) {
-                    if let failure { reportFailure?(failure) }
-                    reportDismiss?()
-                }
-        }
-        if let presented = viewController.presentedViewController {
-            presented.dismiss(animated: false, completion: presentQuickLook)
-        } else {
-            presentQuickLook()
-        }
+        QuickLookPreviewHelper.presentAsFallback(filePath, from: viewController, completion: report)
     }
 }
 

@@ -474,6 +474,10 @@
 		5B6D65182FB3B48500BDCF4D /* CalendarEventEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6D65172FB3B47F00BDCF4D /* CalendarEventEditView.swift */; };
 		5B6D651A2FB4BB8000BDCF4D /* ICSFileReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6D65192FB4BB7E00BDCF4D /* ICSFileReader.swift */; };
 		5B6D651D2FB4D2EB00BDCF4D /* ICSFileReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6D651C2FB4D2E900BDCF4D /* ICSFileReaderTests.swift */; };
+		BCC0F7A12FB3000000BDCF01 /* VCardFileReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC0F7A02FB3000000BDCF01 /* VCardFileReader.swift */; };
+		BCC0F7A32FB3000000BDCF02 /* ContactPreviewHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC0F7A22FB3000000BDCF02 /* ContactPreviewHelper.swift */; };
+		BCC0F7A52FB3000000BDCF03 /* ContactCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC0F7A42FB3000000BDCF03 /* ContactCardView.swift */; };
+		BCC0F7A82FB3000000BDCF05 /* VCardFileReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC0F7A72FB3000000BDCF05 /* VCardFileReaderTests.swift */; };
 		5B6D651F2FB4D30A00BDCF4D /* CompleteDownloadRowViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6D651E2FB4D30700BDCF4D /* CompleteDownloadRowViewModelTests.swift */; };
 		5B6D65212FBA000000BDCF4D /* FilePreviewHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6D65202FBA000000BDCF4D /* FilePreviewHelperTests.swift */; };
 		5B7CA46B2FAE693000D69C83 /* ICSParser in Frameworks */ = {isa = PBXBuildFile; productRef = 5B7CA46A2FAE693000D69C83 /* ICSParser */; };
@@ -3105,6 +3109,10 @@
 		5B6D65172FB3B47F00BDCF4D /* CalendarEventEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEventEditView.swift; sourceTree = "<group>"; };
 		5B6D65192FB4BB7E00BDCF4D /* ICSFileReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSFileReader.swift; sourceTree = "<group>"; };
 		5B6D651C2FB4D2E900BDCF4D /* ICSFileReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSFileReaderTests.swift; sourceTree = "<group>"; };
+		BCC0F7A02FB3000000BDCF01 /* VCardFileReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCardFileReader.swift; sourceTree = "<group>"; };
+		BCC0F7A22FB3000000BDCF02 /* ContactPreviewHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactPreviewHelper.swift; sourceTree = "<group>"; };
+		BCC0F7A42FB3000000BDCF03 /* ContactCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactCardView.swift; sourceTree = "<group>"; };
+		BCC0F7A72FB3000000BDCF05 /* VCardFileReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCardFileReaderTests.swift; sourceTree = "<group>"; };
 		5B6D651E2FB4D30700BDCF4D /* CompleteDownloadRowViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteDownloadRowViewModelTests.swift; sourceTree = "<group>"; };
 		5B6D65202FBA000000BDCF4D /* FilePreviewHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewHelperTests.swift; sourceTree = "<group>"; };
 		5B941E712FA29A2900AF2CE7 /* QuickActionsMediumWidgetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsMediumWidgetTests.swift; sourceTree = "<group>"; };
@@ -5883,6 +5891,7 @@
 			isa = PBXGroup;
 			children = (
 				5B6D65102FB39F4800BDCF4D /* Calendar */,
+				BCC0F7A62FB3000000BDCF04 /* Contacts */,
 				1E8AD1DC27C653F800ABA377 /* Downloads.xcassets */,
 				1E8AD1C527BE45F800ABA377 /* DownloadsList */,
 				3132FA2227A0776B00DD7A12 /* FilePreview */,
@@ -6201,6 +6210,7 @@
 				5B6D651E2FB4D30700BDCF4D /* CompleteDownloadRowViewModelTests.swift */,
 				5B6D65202FBA000000BDCF4D /* FilePreviewHelperTests.swift */,
 				5B6D651B2FB4D2DC00BDCF4D /* Calendar */,
+				BCC0F7AB2FB3000000BDCF07 /* Contacts */,
 				31C138B027A4096C00FFD4B2 /* Helper */,
 				31C138AD27A408B800FFD4B2 /* Mocks */,
 				31C138A227A3350A00FFD4B2 /* DownloadTests.swift */,
@@ -6821,12 +6831,30 @@
 			path = Calendar;
 			sourceTree = "<group>";
 		};
+		BCC0F7A62FB3000000BDCF04 /* Contacts */ = {
+			isa = PBXGroup;
+			children = (
+				BCC0F7A02FB3000000BDCF01 /* VCardFileReader.swift */,
+				BCC0F7A22FB3000000BDCF02 /* ContactPreviewHelper.swift */,
+				BCC0F7A42FB3000000BDCF03 /* ContactCardView.swift */,
+			);
+			path = Contacts;
+			sourceTree = "<group>";
+		};
 		5B6D651B2FB4D2DC00BDCF4D /* Calendar */ = {
 			isa = PBXGroup;
 			children = (
 				5B6D651C2FB4D2E900BDCF4D /* ICSFileReaderTests.swift */,
 			);
 			path = Calendar;
+			sourceTree = "<group>";
+		};
+		BCC0F7AB2FB3000000BDCF07 /* Contacts */ = {
+			isa = PBXGroup;
+			children = (
+				BCC0F7A72FB3000000BDCF05 /* VCardFileReaderTests.swift */,
+			);
+			path = Contacts;
 			sourceTree = "<group>";
 		};
 		5B941E702FA29A1600AF2CE7 /* Widgets */ = {
@@ -12729,6 +12757,9 @@
 				F2DE024241BD443BAA7E32E3 /* AfterInactivityOptionAdapter.swift in Sources */,
 				99E2FD79C4FC4D9F8863DCB8 /* LastTabShortcutAdapter.swift in Sources */,
 				5B6D651A2FB4BB8000BDCF4D /* ICSFileReader.swift in Sources */,
+				BCC0F7A12FB3000000BDCF01 /* VCardFileReader.swift in Sources */,
+				BCC0F7A32FB3000000BDCF02 /* ContactPreviewHelper.swift in Sources */,
+				BCC0F7A52FB3000000BDCF03 /* ContactCardView.swift in Sources */,
 				CBAD0F3B2D02EE5B006267B8 /* IdleReturnCohort.swift in Sources */,
 				80A09D522F6B854400AACDEE /* URLCacheFireWorker.swift in Sources */,
 				CBAD0F2D2D02EE50006267B8 /* IdleReturnEligibilityManager.swift in Sources */,
@@ -14136,6 +14167,7 @@
 				9FD6E61B2DFA739200C2B032 /* MockAVPictureInPictureController.swift in Sources */,
 				8528AE7E212EF5FF00D0BD74 /* AppRatingPromptTests.swift in Sources */,
 				5B6D651D2FB4D2EB00BDCF4D /* ICSFileReaderTests.swift in Sources */,
+				BCC0F7A82FB3000000BDCF05 /* VCardFileReaderTests.swift in Sources */,
 				4BC21A2F27238B7500229F0E /* RunLoopExtensionTests.swift in Sources */,
 				C18390CA2F5099D8001939B9 /* UnifiedToggleInputHandlerTests.swift in Sources */,
 				C18390CC2F5099D8001939B9 /* UnifiedToggleInputCoordinatorTests.swift in Sources */,
