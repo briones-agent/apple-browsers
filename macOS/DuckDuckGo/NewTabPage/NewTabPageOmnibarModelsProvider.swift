@@ -30,10 +30,14 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
     private let subscriptionManager: any SubscriptionManager
 
     init(
-        modelsService: AIChatModelsProviding = AIChatModelsService(),
+        modelsService: AIChatModelsProviding? = nil,
         subscriptionManager: any SubscriptionManager = Application.appDelegate.subscriptionManager
     ) {
-        self.modelsService = modelsService
+        // Send the subscription JWT so the backend can resolve the user's tier and return correct
+        // entityHasAccess. Falls back to no header (free) when signed out or the token can't be fetched.
+        self.modelsService = modelsService ?? AIChatModelsService(
+            accessTokenProvider: { [subscriptionManager] in try? await subscriptionManager.getAccessToken() }
+        )
         self.subscriptionManager = subscriptionManager
     }
 

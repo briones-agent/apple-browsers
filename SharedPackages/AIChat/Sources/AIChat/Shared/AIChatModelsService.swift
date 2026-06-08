@@ -154,18 +154,27 @@ public final class AIChatModelsService: AIChatModelsProviding {
         }
     }
 
+    /// Returns a subscription access token (JWT) to send as a `Bearer` Authorization header,
+    /// or `nil` when the user is signed out / free. The backend needs this token to resolve the
+    /// caller's tier and return correct `entityHasAccess` values. Optional so callers that don't
+    /// wire a subscription (e.g. tests, or platforms still on local access computation) are unaffected.
+    public typealias AccessTokenProviding = () async -> String?
+
     private let baseURL: URL
     private let session: URLSession
     private let cookieProvider: AIChatCookieProviding
+    private let accessTokenProvider: AccessTokenProviding?
 
     public init(
         baseURL: URL = URL(string: "https://duck.ai")!,
         session: URLSession = .shared,
-        cookieProvider: AIChatCookieProviding = WKHTTPCookieStoreProvider()
+        cookieProvider: AIChatCookieProviding = WKHTTPCookieStoreProvider(),
+        accessTokenProvider: AccessTokenProviding? = nil
     ) {
         self.baseURL = baseURL
         self.session = session
         self.cookieProvider = cookieProvider
+        self.accessTokenProvider = accessTokenProvider
     }
 
     public func fetchModels() async throws -> AIChatModelsResponse {
@@ -177,6 +186,15 @@ public final class AIChatModelsService: AIChatModelsProviding {
             request.addValue($1, forHTTPHeaderField: $0)
         }
 
+        let accessToken = await accessTokenProvider?()
+        if let accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+
+        // Diagnostics for backend: log what we actually send (auth presence + cookie names only,
+        // never values/tokens) so backend folks can correlate a request with the tier they resolve.
+        Logger.aiChat.log("duck.ai models request — Authorization: \(accessToken != nil ? "Bearer present" : "none", privacy: .public), cookies: [\(cookies.map(\.name).sorted().joined(separator: ", "), privacy: .public)]")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -186,7 +204,20 @@ public final class AIChatModelsService: AIChatModelsProviding {
             throw ServiceError.httpError(statusCode: httpResponse.statusCode)
         }
 
-        return try JSONDecoder().decode(AIChatModelsResponse.self, from: data)
+        // Diagnostics for backend: dump the full raw body (debug level → not persisted in production,
+        // visible only when streaming logs). Logged before decoding so it survives a decode failure.
+        if let bodyString = String(data: data, encoding: .utf8) {
+            Logger.aiChat.debug("duck.ai models raw response body: \(bodyString, privacy: .public)")
+        }
+
+        let decoded = try JSONDecoder().decode(AIChatModelsResponse.self, from: data)
+
+        // Diagnostics for backend: log the entityHasAccess / accessTier the backend returned per model,
+        // so a discrepancy with the user's real tier is visible in logs.
+        let summary = decoded.models.map { "\($0.id)=\($0.entityHasAccess)[\($0.accessTier.joined(separator: "|"))]" }.joined(separator: ", ")
+        Logger.aiChat.log("duck.ai models response — \(summary, privacy: .public)")
+
+        return decoded
     }
 
 }

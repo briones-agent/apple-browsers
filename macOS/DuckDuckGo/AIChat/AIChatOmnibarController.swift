@@ -184,7 +184,7 @@ final class AIChatOmnibarController {
         searchPreferencesPersistor: SearchPreferencesPersistor = SearchPreferencesUserDefaultsPersistor(),
         suggestionsReader: AIChatSuggestionsReading? = nil,
         preferences: AIChatPreferencesPersisting = AIChatPreferencesPersistor(),
-        modelsService: AIChatModelsProviding = AIChatModelsService(),
+        modelsService: AIChatModelsProviding? = nil,
         subscriptionManager: any SubscriptionManager = Application.appDelegate.subscriptionManager
     ) {
         self.aiChatTabOpener = aiChatTabOpener
@@ -194,7 +194,11 @@ final class AIChatOmnibarController {
         self.searchPreferencesPersistor = searchPreferencesPersistor
         self.suggestionsReader = suggestionsReader
         self.preferences = preferences
-        self.modelsService = modelsService
+        // Send the subscription JWT so the backend can resolve the user's tier and return correct
+        // entityHasAccess. Falls back to no header (free) when signed out or the token can't be fetched.
+        self.modelsService = modelsService ?? AIChatModelsService(
+            accessTokenProvider: { [subscriptionManager] in try? await subscriptionManager.getAccessToken() }
+        )
         self.subscriptionManager = subscriptionManager
         self.suggestionsViewModel = AIChatSuggestionsViewModel(
             maxSuggestions: suggestionsReader?.maxHistoryCount ?? AIChatSuggestionsViewModel.defaultMaxSuggestions
