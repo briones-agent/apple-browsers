@@ -626,7 +626,7 @@ final class OnboardingIntroViewModelTests: XCTestCase {
         XCTAssertTrue(didCallOnCompletingOnboardingIntro)
     }
 
-    func testWhenIsDuckAIFlow_AndReachingDuckAIQueryExperimentDialog_ThenModeIsDuckAI() {
+    func testWhenIsDuckAIFlow_AndReachingDuckAIQueryDialog_ThenModeIsDuckAI() {
         // In the Duck.ai tailored flow the mode is always .duckAI — no experiment involved.
         // GIVEN
         onboardingManagerMock.onboardingSteps = OnboardingStepsHelper.expectedDuckAISteps(isReturningUser: false)
@@ -1089,7 +1089,7 @@ final class OnboardingIntroViewModelTests: XCTestCase {
 
     // MARK: Pixels
 
-    func testWhenSelectDuckAIQueryExperimentChooseDuckAIThenCorrectPixelFires() {
+    func testWhenSelectDuckAIQueryChooseDuckAIThenCorrectPixelFires() {
         // GIVEN
         onboardingManagerMock.onboardingSteps = [.duckAIQuerySelection]
         let sut = makeSUT(currentOnboardingStep: .duckAIQuerySelection)
@@ -1103,7 +1103,7 @@ final class OnboardingIntroViewModelTests: XCTestCase {
         XCTAssertFalse(pixelReporterMock.didCallMeasureDuckAIQueryExperimentChooseSearchOnly)
     }
 
-    func testWhenSelectDuckAIQueryExperimentChooseSearchThenCorrectPixelFires() {
+    func testWhenSelectDuckAIQueryChooseSearchThenCorrectPixelFires() {
         // GIVEN
         onboardingManagerMock.onboardingSteps = [.duckAIQuerySelection]
         let sut = makeSUT(currentOnboardingStep: .duckAIQuerySelection)
@@ -1132,6 +1132,34 @@ final class OnboardingIntroViewModelTests: XCTestCase {
 
         // THEN
         XCTAssertTrue(pixelReporterMock.didCallMeasureDuckAIQueryExperimentSelectionImpression)
+    }
+
+    func testWhenStateChangesToAiComparisonDialogThenImpressionPixelFires() {
+        // GIVEN: Duck.ai tailored flow places AI Comparison immediately after the intro step.
+        onboardingManagerMock.onboardingSteps = OnboardingStepsHelper.expectedDuckAISteps(isReturningUser: false)
+        onboardingManagerMock.currentOnboardingFlow = .duckAI
+        let sut = makeSUT()
+        XCTAssertFalse(pixelReporterMock.didCallMeasureAiComparisonImpression)
+
+        // WHEN: advancing into the AI Comparison step.
+        sut.startOnboardingAction()
+
+        // THEN
+        XCTAssertTrue(pixelReporterMock.didCallMeasureAiComparisonImpression)
+    }
+
+    func testWhenAiComparisonActionIsCalledThenCTAPixelFires() {
+        // GIVEN
+        onboardingManagerMock.onboardingSteps = OnboardingStepsHelper.expectedDuckAISteps(isReturningUser: false)
+        onboardingManagerMock.currentOnboardingFlow = .duckAI
+        let sut = makeSUT(currentOnboardingStep: .aiComparison)
+        XCTAssertFalse(pixelReporterMock.didCallMeasureAiComparisonCTAAction)
+
+        // WHEN
+        sut.aiComparisonAction()
+
+        // THEN
+        XCTAssertTrue(pixelReporterMock.didCallMeasureAiComparisonCTAAction)
     }
 
 }

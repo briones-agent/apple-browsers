@@ -52,7 +52,10 @@ final class MockFeatureFlagger: FeatureFlagger {
         return nil
     }
 
+    private(set) var didCallResolveCohort: Bool = false
+
     func resolveCohort<Flag>(for featureFlag: Flag, allowOverride: Bool) -> (any FeatureFlagCohortDescribing)? where Flag: FeatureFlagDescribing {
+        didCallResolveCohort = true
         return nil
     }
 
