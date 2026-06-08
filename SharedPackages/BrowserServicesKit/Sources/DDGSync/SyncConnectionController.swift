@@ -695,12 +695,6 @@ public class SyncConnectionController: SyncConnectionControlling {
             return unsupportedVersionConnectionError(for: version, supportedMajor: PairingV2ProtocolVersion.supportedMajor)
         case .v2ScanningDisabled, .unknownCode, .unsupportedFlow:
             return .unableToRecognizeCode
-        case .incompatibleRecoveryCode(let scanningKind, let codeKind):
-            if scanningKind == .ddg && codeKind == .thirdParty {
-                return .unsupportedThirdPartyRecoveryCode
-            }
-            assertionFailure("Unexpected recovery code incompatibility for native Sync client: scanningKind=\(scanningKind), codeKind=\(codeKind)")
-            return .unableToRecognizeCode
         case .secondHello, .unexpectedEvent, .pairingSessionNotReady, .relayChannelUnavailable, .relayChannelExpired:
             return .failedToFetchExchangeRecoveryKey
         case .cancelled:

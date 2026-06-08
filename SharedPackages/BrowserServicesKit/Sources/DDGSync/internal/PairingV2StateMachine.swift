@@ -55,7 +55,6 @@ struct PairingV2PeerStatus: Equatable {
 enum PairingV2ScannedCode: Equatable {
     case v1Linking
     case v2Linking(peerChannelID: String, localChannelID: String)
-    case recoveryCode(kind: PairingV2DeviceKind, code: String)
     case unknown
 }
 
@@ -167,7 +166,6 @@ enum PairingV2Command: Equatable {
 enum PairingV2Error: Error, Equatable {
     case v2ScanningDisabled
     case unknownCode
-    case incompatibleRecoveryCode(scanningKind: PairingV2DeviceKind, codeKind: PairingV2DeviceKind)
     case secondHello
     case unexpectedEvent(PairingV2UnexpectedEvent)
     case pairingSessionNotReady(PairingV2MissingSessionData)
@@ -389,13 +387,6 @@ struct PairingV2StateMachine {
                 .sendRecoveryCodeStatus(Self.localRecoveryCodeStatus(for: localClient))
             ]
             return commands
-
-        case .recoveryCode(let codeKind, _):
-            guard codeKind == localClient.kind else {
-                return fail(with: .incompatibleRecoveryCode(scanningKind: localClient.kind, codeKind: codeKind))
-            }
-
-            return fail(with: .unsupportedFlow("Pairing V2 recovery-code scanning is not implemented"))
 
         case .unknown:
             return fail(with: .unknownCode)

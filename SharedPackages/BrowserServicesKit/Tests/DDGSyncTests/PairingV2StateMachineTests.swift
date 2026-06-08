@@ -329,20 +329,6 @@ final class PairingV2StateMachineTests: XCTestCase {
         XCTAssertEqual(stateMachine.state, .failed(.unsupportedVersion("3.0")))
     }
 
-    func testWhenNativeScansThirdPartyRecoveryCodeThenFlowAbortsAsIncompatible() {
-        var stateMachine = PairingV2StateMachine()
-        let localClient = makeLocalClient(kind: .ddg, hasAccount: false, isPresenter: false)
-
-        let commands = stateMachine.handle(
-            .scannedCode(.recoveryCode(kind: .thirdParty, code: "recovery-code"), localClient: localClient, flags: enabledFlags)
-        )
-
-        XCTAssertEqual(commands, [
-            .abort(.incompatibleRecoveryCode(scanningKind: .ddg, codeKind: .thirdParty))
-        ])
-        XCTAssertEqual(stateMachine.state, .failed(.incompatibleRecoveryCode(scanningKind: .ddg, codeKind: .thirdParty)))
-    }
-
     func testWhenNativeHostReceivesThirdPartyAvailableThenItRequestsHostConfirmation() {
         var stateMachine = PairingV2StateMachine()
         let localClient = makeLocalClient(kind: .ddg, hasAccount: true, isPresenter: false)
@@ -786,19 +772,6 @@ final class PairingV2StateMachineTests: XCTestCase {
         _ = stateMachine.handle(.presentCodeRequested(localClient: localClient, flags: enabledFlags))
         let error = PairingV2Error.unexpectedEvent(.recoveryCodeMessageReceivedWhileNotJoining(.response))
         let commands = stateMachine.handle(.receivedRecoveryCode("recovery-code"))
-
-        XCTAssertEqual(commands, [.abort(error)])
-        XCTAssertEqual(stateMachine.state, .failed(error))
-    }
-
-    func testWhenCompatibleRecoveryCodeIsScannedThenFlowAbortsAsUnsupported() {
-        var stateMachine = PairingV2StateMachine()
-        let localClient = makeLocalClient(kind: .ddg, hasAccount: true, isPresenter: false)
-        let error = PairingV2Error.unsupportedFlow("Pairing V2 recovery-code scanning is not implemented")
-
-        let commands = stateMachine.handle(
-            .scannedCode(.recoveryCode(kind: .ddg, code: "recovery-code"), localClient: localClient, flags: enabledFlags)
-        )
 
         XCTAssertEqual(commands, [.abort(error)])
         XCTAssertEqual(stateMachine.state, .failed(error))
