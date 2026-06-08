@@ -706,13 +706,45 @@ final class DDGSyncTests: XCTestCase {
         let scopedAccess = try XCTUnwrap(dependencies.scopedAccess as? ScopedAccessCredentialManagingMock)
         scopedAccess.ensureThirdPartyScopedPasswordStub = EnsuredThirdPartyCredential(scopedPassword: scopedPassword,
                                                                                      protectedKeysToCache: [])
+        let secureStore = try XCTUnwrap(dependencies.secureStore as? SecureStorageStub)
+        let scopedPasswordCached = expectation(description: "Scoped password cached")
+        secureStore.persistScopedPasswordCalled = {
+            scopedPasswordCached.fulfill()
+        }
         let syncService = DDGSync(dataProvidersSource: dataProvidersSource, dependencies: dependencies)
 
         let code = try await syncService.prepareThirdPartyRecoveryCode(purpose: "ai_chats")
         let decoded = try SyncCode.decodeBase64URLString(code)
+        await fulfillment(of: [scopedPasswordCached], timeout: 1.0)
 
         XCTAssertEqual(scopedAccess.ensureThirdPartyScopedPasswordCalls.count, 1)
-        XCTAssertEqual((dependencies.secureStore as? SecureStorageStub)?.theScopedPassword, scopedPassword)
+        XCTAssertEqual(secureStore.theScopedPassword, scopedPassword)
+        guard case .v2(let payload) = decoded.recovery else {
+            XCTFail("Expected v2 recovery payload")
+            return
+        }
+        XCTAssertEqual(Base64URL.decode(payload.secret), scopedPassword)
+    }
+
+    func testWhenPreparingThirdPartyRecoveryCodeAndScopedPasswordCacheWriteFailsThenRecoveryCodeIsPrepared() async throws {
+        let scopedPassword = Data(repeating: 8, count: 32)
+        let scopedAccess = try XCTUnwrap(dependencies.scopedAccess as? ScopedAccessCredentialManagingMock)
+        scopedAccess.ensureThirdPartyScopedPasswordStub = EnsuredThirdPartyCredential(scopedPassword: scopedPassword,
+                                                                                     protectedKeysToCache: [])
+        let secureStore = try XCTUnwrap(dependencies.secureStore as? SecureStorageStub)
+        secureStore.mockWriteError = .failedToWriteSecureStore(status: -1)
+        let scopedPasswordCacheAttempted = expectation(description: "Scoped password cache attempted")
+        secureStore.persistScopedPasswordCalled = {
+            scopedPasswordCacheAttempted.fulfill()
+        }
+        let syncService = DDGSync(dataProvidersSource: dataProvidersSource, dependencies: dependencies)
+
+        let code = try await syncService.prepareThirdPartyRecoveryCode(purpose: "ai_chats")
+        let decoded = try SyncCode.decodeBase64URLString(code)
+        await fulfillment(of: [scopedPasswordCacheAttempted], timeout: 1.0)
+
+        XCTAssertEqual(scopedAccess.ensureThirdPartyScopedPasswordCalls.count, 1)
+        XCTAssertNil(secureStore.theScopedPassword)
         guard case .v2(let payload) = decoded.recovery else {
             XCTFail("Expected v2 recovery payload")
             return

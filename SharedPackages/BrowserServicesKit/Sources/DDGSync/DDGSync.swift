@@ -288,7 +288,7 @@ public class DDGSync: DDGSyncing {
         do {
             let scopedPassword = try await ensureThirdPartyScopedPassword(for: account, purpose: purpose)
             let code = try makeThirdPartyRecoveryCode(account: account, scopedPassword: scopedPassword)
-            try dependencies.secureStore.persistScopedPassword(scopedPassword)
+            cacheScopedPasswordInBackground(scopedPassword)
             return code
         } catch {
             throw handleUnauthenticatedAndMap(error)
@@ -638,6 +638,13 @@ public class DDGSync: DDGSyncing {
             throw SyncError.invalidRecoveryKey
         }
         return code
+    }
+
+    private func cacheScopedPasswordInBackground(_ scopedPassword: Data) {
+        let secureStore = dependencies.secureStore
+        Task {
+            try? secureStore.persistScopedPassword(scopedPassword)
+        }
     }
 
     public func setCustomOperations(_ operations: [any SyncCustomOperation]) {
