@@ -234,7 +234,7 @@ public class SyncConnectionController: SyncConnectionControlling {
         do {
             syncCode = try SyncCode.decodeBase64String(pairingInfo.base64Code)
         } catch {
-            await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: error, setupRole: .receiver(.unknown, codeSource))
+            await delegate?.controllerDidError(syncCodeDecodingConnectionError(for: error), underlyingError: error, setupRole: .receiver(.unknown, codeSource))
             return false
         }
 
@@ -275,8 +275,19 @@ public class SyncConnectionController: SyncConnectionControlling {
 
         let syncCode: SyncCode
         do {
-            if let url = URL(string: code), let pairingV2Payload = PairingV2QRCodePayload(url: url) {
-                return await handlePairingV2(qrPayload: pairingV2Payload, codeSource: codeSource)
+            if let url = URL(string: code) {
+                if let pairingV2Payload = PairingV2QRCodePayload(url: url) {
+                    return await handlePairingV2(qrPayload: pairingV2Payload, codeSource: codeSource)
+                }
+                if let unsupportedVersion = PairingV2QRCodePayload.unsupportedMajorVersion(in: url) {
+                    let setupRole: SyncSetupRole = .receiver(.exchange, codeSource)
+                    guard isPairingV2ScanningEnabled else {
+                        await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: nil, setupRole: setupRole)
+                        return false
+                    }
+                    await delegate?.controllerDidError(.updateRequired, underlyingError: PairingV2Error.unsupportedVersion(unsupportedVersion), setupRole: setupRole)
+                    return false
+                }
             }
 
             if canScanLegacyURLBarcodes, let url = URL(string: code) {
@@ -290,7 +301,7 @@ public class SyncConnectionController: SyncConnectionControlling {
             } catch {
                 // Very important that this returning blocks further execution as it could be a camera scanning continuously
                 // and therefore call this multiple times.
-                await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: error, setupRole: .receiver(.unknown, codeSource))
+                await delegate?.controllerDidError(syncCodeDecodingConnectionError(for: error), underlyingError: error, setupRole: .receiver(.unknown, codeSource))
                 return false
             }
         }
@@ -341,9 +352,8 @@ public class SyncConnectionController: SyncConnectionControlling {
 
     private func handlePairingV2(qrPayload: PairingV2QRCodePayload, codeSource: SyncCodeSource) async -> Bool {
         let setupRole: SyncSetupRole = .receiver(.exchange, codeSource)
-        let isPairingV2ScanningEnabled = dependencies.syncFeatureFlags.isScopedAccessCredentialsEnabled() && dependencies.syncFeatureFlags.isPairingV2ScanningEnabled()
         guard isPairingV2ScanningEnabled else {
-            await delegate?.controllerDidError(.updateRequired, underlyingError: nil, setupRole: setupRole)
+            await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: nil, setupRole: setupRole)
             return false
         }
         await delegate?.controllerDidRecognizeCode(setupSource: .exchange, codeSource: codeSource)
@@ -389,6 +399,13 @@ public class SyncConnectionController: SyncConnectionControlling {
                                                setupRole: setupRole)
             await coordinator.cancel()
             return false
+        } catch PairingV2MessageCryptoError.unsupportedVersion(let version) {
+            await delegate?.controllerDidError(
+                unsupportedVersionConnectionError(for: version, supportedMajor: PairingV2ProtocolVersion.supportedMajor),
+                underlyingError: PairingV2MessageCryptoError.unsupportedVersion(version),
+                setupRole: setupRole)
+            await coordinator.cancel()
+            return false
         } catch let error as PairingV2MessageCryptoError {
             await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: error, setupRole: setupRole)
             await coordinator.cancel()
@@ -409,8 +426,15 @@ public class SyncConnectionController: SyncConnectionControlling {
             }
 
             let setupRole = SyncSetupRole.sharer
+            var didNotifyPeerConnected = false
             do {
-                let completion = try await pollPairingV2PresenterUntilFinished(coordinator)
+                let completion = try await coordinator.pollUntilFinished(onStateUpdate: { state in
+                    guard !didNotifyPeerConnected && self.shouldDismissPairingV2PresenterCode(for: state) else {
+                        return
+                    }
+                    didNotifyPeerConnected = true
+                    await self.delegate?.controllerWillBeginTransmittingRecoveryKey()
+                })
                 await handlePairingV2Completion(completion, coordinator: coordinator, setupRole: setupRole)
             } catch SyncError.pollingDidTimeOut {
                 await delegate?.controllerDidError(.pollingForRecoveryKeyTimedOut, underlyingError: nil, setupRole: setupRole)
@@ -433,6 +457,12 @@ public class SyncConnectionController: SyncConnectionControlling {
                                                    underlyingError: pairingV2DiagnosticUnderlyingError(for: error, coordinator: coordinator) ?? error,
                                                    setupRole: setupRole)
                 await coordinator.cancel()
+            } catch PairingV2MessageCryptoError.unsupportedVersion(let version) {
+                await delegate?.controllerDidError(
+                    unsupportedVersionConnectionError(for: version, supportedMajor: PairingV2ProtocolVersion.supportedMajor),
+                    underlyingError: PairingV2MessageCryptoError.unsupportedVersion(version),
+                    setupRole: setupRole)
+                await coordinator.cancel()
             } catch let error as PairingV2MessageCryptoError {
                 await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: error, setupRole: setupRole)
                 await coordinator.cancel()
@@ -453,35 +483,6 @@ public class SyncConnectionController: SyncConnectionControlling {
             await delegate?.controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: credentialKind == .ddg)
         case .alreadyConnected:
             await delegate?.controllerDidCompletePairingWithAlreadyConnectedAccount(setupRole: setupRole)
-        }
-    }
-
-    private func pollPairingV2PresenterUntilFinished(_ coordinator: PairingV2Coordinator,
-                                                     timeout: TimeInterval = 300,
-                                                     pollInterval: UInt64 = 1_000_000_000) async throws -> PairingV2State.Completion {
-        let timeoutDate = Date().addingTimeInterval(timeout)
-        var didNotifyPeerConnected = false
-
-        while true {
-            switch coordinator.state {
-            case .completed(let completion):
-                return completion
-            case .failed(let error):
-                throw error
-            default:
-                break
-            }
-
-            if Date() > timeoutDate {
-                throw SyncError.pollingDidTimeOut
-            }
-
-            try await coordinator.pollOnce()
-            if !didNotifyPeerConnected && shouldDismissPairingV2PresenterCode(for: coordinator.state) {
-                didNotifyPeerConnected = true
-                await delegate?.controllerWillBeginTransmittingRecoveryKey()
-            }
-            try await Task.sleep(nanoseconds: pollInterval)
         }
     }
 
@@ -602,7 +603,7 @@ public class SyncConnectionController: SyncConnectionControlling {
         let setupRole: SyncSetupRole = .receiver(.recovery, codeSource)
 
         if case .v2(let recoveryKey) = recovery {
-            guard dependencies.syncFeatureFlags.isScopedAccessCredentialsEnabled() && dependencies.syncFeatureFlags.isPairingV2ScanningEnabled() else {
+            guard isPairingV2ScanningEnabled else {
                 await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: nil, setupRole: setupRole)
                 return false
             }
@@ -680,7 +681,6 @@ public class SyncConnectionController: SyncConnectionControlling {
     }
 
     private func makePairingV2Coordinator() -> PairingV2Coordinator {
-        let isPairingV2ScanningEnabled = dependencies.syncFeatureFlags.isScopedAccessCredentialsEnabled() && dependencies.syncFeatureFlags.isPairingV2ScanningEnabled()
         return PairingV2Coordinator(
             syncService: syncService,
             messageExchanger: dependencies.createPairingV2MessageExchanger(),
@@ -712,6 +712,17 @@ public class SyncConnectionController: SyncConnectionControlling {
         case .cancelled:
             return .syncCancelledFromOtherDevice
         }
+    }
+
+    private func syncCodeDecodingConnectionError(for error: Error) -> SyncConnectionError {
+        guard let error = error as? SyncCode.RecoveryCodeVersionError,
+              case .unsupported(let version) = error else {
+            return .unableToRecognizeCode
+        }
+        guard isPairingV2ScanningEnabled else {
+            return .unableToRecognizeCode
+        }
+        return unsupportedVersionConnectionError(for: version, supportedMajor: SyncCode.Recovery.supportedMajor)
     }
 
     private func unsupportedVersionConnectionError(for version: String, supportedMajor: Int) -> SyncConnectionError {
