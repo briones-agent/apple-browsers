@@ -3,7 +3,7 @@ tags:
     - iphone
     - release
     - unified_toggle_input
-name: test_unified_toggle_input
+name: test_unified_input_search
 
 ---
 
@@ -24,35 +24,31 @@ name: test_unified_toggle_input
 - runFlow:
     file: ../shared/dismiss_chat_open_modals.yaml
 
-# Enable "Search & Duck.ai" mode via Settings UI (cannot inject via launch arg — crashes)
 - runFlow:
     file: ../shared/set_search_and_duckai.yaml
 
-# Focus NTP omnibar — reveals the Search/Duck.ai segmented toggle
+# Focus NTP omnibar — segmented toggle appears
 - tapOn:
     id: "searchEntry"
 - assertVisible:
     id: "AddressBar.Button.DuckAI"
-- assertVisible:
-    id: "AddressBar.Button.Search"
 
-# Switch to Duck.ai mode — AI toolbar (ModelChip) appears
-- tapOn:
-    id: "AddressBar.Button.DuckAI"
-- assertVisible:
-    id: "AIChat.Toolbar.Button.ModelChip"
-
-# Switch back to Search mode — ModelChip disappears
+# Ensure Search mode is active (no AI toolbar)
 - tapOn:
     id: "AddressBar.Button.Search"
 - assertNotVisible:
     id: "AIChat.Toolbar.Button.ModelChip"
 
-# Typed text is preserved across mode switches
-- inputText: "What is a tokamak?"
-- assertVisible: "What is a tokamak?"
-- tapOn:
+# Submit a navigation via the unified input in Search mode and confirm the page loads.
+# Uses the deterministic privacy-test-pages site (as release_tests/ai-chat.yaml does) rather
+# than a live SERP, so the assertion is stable and actually proves submission navigated —
+# omnibar-collapse alone does not.
+- inputText: "https://privacy-test-pages.site"
+- pressKey: Enter
+- assertVisible: ".*Privacy Test Pages.*"
+
+# Toggle is gone (navigated away from NTP) and the browser AI entry point returns.
+- assertNotVisible:
     id: "AddressBar.Button.DuckAI"
-- assertVisible: "What is a tokamak?"
 - assertVisible:
-    id: "AIChat.Toolbar.Button.ModelChip"
+    id: "Browser.OmniBar.Button.AIChat"
