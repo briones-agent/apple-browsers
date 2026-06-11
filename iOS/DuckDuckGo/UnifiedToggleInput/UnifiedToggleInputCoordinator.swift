@@ -1801,12 +1801,21 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
 extension UnifiedToggleInputCoordinator {
     
     func handleToolsMenuSelection(_ identifier: UTIToolsMenu.Item.Identifier) {
+        // Customize Responses is an action handed off to the FE, not a model tool: forward it and
+        // skip the tool-toggle bookkeeping (pixels, presentation refresh, persistence).
+        if case .customizeResponses = identifier {
+            viewController.handler.customizeResponsesButtonTapped()
+            return
+        }
+
         let previousTool = toolsController.selectedTool
         switch identifier {
         case .webSearch:
             toolsController.toggleSelection(for: .webSearch, modelStore: modelStore)
         case .imageGeneration:
             toolsController.toggleSelection(for: .imageGeneration, modelStore: modelStore)
+        case .customizeResponses:
+            return
         }
         let currentTool = toolsController.selectedTool
         fireToolToggleTransitionPixel(previous: previousTool, current: currentTool)
