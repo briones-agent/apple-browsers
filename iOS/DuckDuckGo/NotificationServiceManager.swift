@@ -30,9 +30,19 @@ final class NotificationServiceManager: NSObject, NotificationServiceManaging {
 
     private let mainCoordinator: MainCoordinator
 
-    init(mainCoordinator: MainCoordinator) {
+    static let notificationCategories: Set<UNNotificationCategory> = [
+        DefaultSubscriptionExpirationReminderScheduler.notificationCategory
+    ]
+
+    init(mainCoordinator: MainCoordinator,
+         notificationCenter: UNUserNotificationCenterRepresentable = UNUserNotificationCenter.current()) {
         self.mainCoordinator = mainCoordinator
         super.init()
+        Self.registerNotificationCategories(on: notificationCenter)
+    }
+
+    static func registerNotificationCategories(on notificationCenter: UNUserNotificationCenterRepresentable) {
+        notificationCenter.setNotificationCategories(notificationCategories)
     }
 
     /// https://stackoverflow.com/questions/73750724/how-can-usernotificationcenter-didreceive-cause-a-crash-even-with-nothing-in
@@ -50,8 +60,6 @@ final class NotificationServiceManager: NSObject, NotificationServiceManaging {
 
         let id = response.notification.request.identifier
 
-        // The expiration reminder tracks both the tap (default action) and an explicit dismiss,
-        // so it is handled before the default-action guard that other notifications rely on.
         if id == DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier {
             handleSubscriptionExpirationReminder(actionIdentifier: response.actionIdentifier)
             return

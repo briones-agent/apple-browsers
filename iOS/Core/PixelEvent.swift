@@ -1845,10 +1845,10 @@ extension Pixel {
         // MARK: - Push Notifications
         case inactiveUserProvisionalPushNotificationTapped
         case userNotificationAuthorizationStatusDaily
+        case subscriptionExpirationReminderScheduled
         case subscriptionExpirationReminderNotificationTapped
         case subscriptionExpirationReminderNotificationDismissed
         case subscriptionExpirationReminderCancelled
-        case subscriptionExpirationReminderSkippedNoPermission
         case subscriptionExpirationReminderSchedulingError
 
         // MARK: - Freemium Personal Information Removal
@@ -3726,10 +3726,10 @@ extension Pixel.Event {
         // MARK: Push Notification
         case .inactiveUserProvisionalPushNotificationTapped: return "m_push-notification_local-provisional_inactive-user-tap"
         case .userNotificationAuthorizationStatusDaily: return "m_push-notification_user-notification-authorization-status"
+        case .subscriptionExpirationReminderScheduled: return "m_push-notification_subscription-expiration-reminder_scheduled"
         case .subscriptionExpirationReminderNotificationTapped: return "m_push-notification_subscription-expiration-reminder_tapped"
         case .subscriptionExpirationReminderNotificationDismissed: return "m_push-notification_subscription-expiration-reminder_dismissed"
         case .subscriptionExpirationReminderCancelled: return "m_push-notification_subscription-expiration-reminder_cancelled"
-        case .subscriptionExpirationReminderSkippedNoPermission: return "m_push-notification_subscription-expiration-reminder_skipped-no-permission"
         case .subscriptionExpirationReminderSchedulingError: return "m_push-notification_subscription-expiration-reminder_scheduling-error"
 
         // MARK: Freemium Personal Information Removal

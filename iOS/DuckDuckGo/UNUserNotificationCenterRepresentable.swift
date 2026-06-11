@@ -36,7 +36,6 @@ protocol UNUserNotificationCenterRepresentable: AnyObject {
     func add(_ request: UNNotificationRequest) async throws
     func pendingNotificationRequests() async -> [UNNotificationRequest]
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
-    func getNotificationCategories() async -> Set<UNNotificationCategory>
     func setNotificationCategories(_ categories: Set<UNNotificationCategory>)
 }
 
@@ -46,12 +45,6 @@ extension UNUserNotificationCenter: UNUserNotificationCenterRepresentable {
     func authorizationStatus() async -> UNAuthorizationStatus {
         await withCheckedContinuation { cont in
             getNotificationSettings { cont.resume(returning: $0.authorizationStatus) }
-        }
-    }
-
-    func getNotificationCategories() async -> Set<UNNotificationCategory> {
-        await withCheckedContinuation { cont in
-            getNotificationCategories { cont.resume(returning: $0) }
         }
     }
 }
