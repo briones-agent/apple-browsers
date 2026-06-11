@@ -20,6 +20,7 @@
 import XCTest
 import UIKit
 import UserNotifications
+@testable import Core
 @testable import DuckDuckGo
 import Subscription
 import SubscriptionTestingUtilities
@@ -41,11 +42,13 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         notificationCenter.authorizationStatus = .authorized
         observerNotificationCenter = NotificationCenter()
         featureFlagEnabled = true
+        PixelFiringMock.tearDown()
         sut = DefaultSubscriptionExpirationReminderScheduler(
             subscriptionManager: subscriptionManager,
             isFeatureEnabled: { [weak self] in self?.featureFlagEnabled ?? false },
             notificationCenter: notificationCenter,
-            notificationCenterObserver: observerNotificationCenter
+            notificationCenterObserver: observerNotificationCenter,
+            pixelFiring: PixelFiringMock.self
         )
     }
 
@@ -54,6 +57,7 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
         subscriptionManager = nil
         notificationCenter = nil
         observerNotificationCenter = nil
+        PixelFiringMock.tearDown()
         super.tearDown()
     }
 
@@ -290,6 +294,110 @@ final class SubscriptionExpirationReminderSchedulerTests: XCTestCase {
             self.notificationCenter.removedIdentifiers.count > priorRemovalCount
         }
         XCTAssertEqual(notificationCenter.removedIdentifiers.last, [identifier])
+    }
+
+    // MARK: - Pixels: scheduling
+
+    func test_scheduleReminder_registersCustomDismissActionCategory() async throws {
+        setSubscription(status: .autoRenewable)
+
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        let category = try XCTUnwrap(notificationCenter.registeredCategories.first { $0.identifier == identifier })
+        XCTAssertTrue(category.options.contains(.customDismissAction))
+        XCTAssertTrue(category.actions.isEmpty)
+    }
+
+    func test_scheduleReminder_preservesCategoriesRegisteredByOtherFeatures() async {
+        let otherCategory = UNNotificationCategory(identifier: "com.duckduckgo.other.feature",
+                                                   actions: [],
+                                                   intentIdentifiers: [],
+                                                   options: [])
+        notificationCenter.registeredCategories = [otherCategory]
+        setSubscription(status: .autoRenewable)
+
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        XCTAssertTrue(notificationCenter.registeredCategories.contains { $0.identifier == otherCategory.identifier },
+                      "Merging by identifier must not discard categories registered by other features")
+        XCTAssertTrue(notificationCenter.registeredCategories.contains { $0.identifier == identifier })
+    }
+
+    func test_scheduleReminder_doesNotDuplicateCategoryWhenAlreadyRegistered() async {
+        setSubscription(status: .autoRenewable)
+
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        XCTAssertEqual(notificationCenter.registeredCategories.filter { $0.identifier == identifier }.count, 1)
+    }
+
+    func test_scheduleReminder_whenAuthorizationStatusIsDenied_firesSkippedNoPermissionPixel() async {
+        notificationCenter.authorizationStatus = .denied
+        setSubscription(status: .autoRenewable)
+
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        XCTAssertEqual(PixelFiringMock.lastPixelName, Pixel.Event.subscriptionExpirationReminderSkippedNoPermission.name)
+    }
+
+    func test_scheduleReminder_whenAddThrows_firesSchedulingErrorPixel() async {
+        notificationCenter.addRequestError = .addRequestError
+        setSubscription(status: .autoRenewable)
+
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        XCTAssertEqual(PixelFiringMock.lastPixelName, Pixel.Event.subscriptionExpirationReminderSchedulingError.name)
+        XCTAssertNotNil(PixelFiringMock.lastPixelInfo?.error)
+    }
+
+    func test_scheduleReminder_withValidInputs_doesNotFireAnyPixel() async {
+        setSubscription(status: .autoRenewable)
+
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        XCTAssertTrue(PixelFiringMock.allPixelsFired.isEmpty)
+    }
+
+    // MARK: - Pixels: cancellation
+
+    func test_cancelReminderIfInactive_whenSubscriptionInactive_firesCancelledPixel() async {
+        setSubscription(status: .autoRenewable)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        setSubscription(status: .inactive)
+        observerNotificationCenter.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await waitUntil("cancelled pixel fired after subscription became inactive") {
+            PixelFiringMock.allPixelsFired.contains { $0.pixelName == Pixel.Event.subscriptionExpirationReminderCancelled.name }
+        }
+    }
+
+    func test_cancelReminderIfInactive_whenTrialOfferEndsButStatusStaysActive_firesCancelledPixel() async {
+        setSubscription(status: .autoRenewable, withTrialOffer: true)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+
+        setSubscription(status: .autoRenewable, withTrialOffer: false)
+        observerNotificationCenter.post(name: .subscriptionDidChange, object: nil)
+
+        await waitUntil("cancelled pixel fired after trial offer ended") {
+            PixelFiringMock.allPixelsFired.contains { $0.pixelName == Pixel.Event.subscriptionExpirationReminderCancelled.name }
+        }
+    }
+
+    func test_cancelReminderIfInactive_whenFeatureFlagOff_doesNotFireCancelledPixel() async {
+        setSubscription(status: .autoRenewable)
+        await sut.scheduleReminder(timeBeforeCancel: days(7))
+        let priorRemovalCount = notificationCenter.removedIdentifiers.count
+
+        featureFlagEnabled = false
+        observerNotificationCenter.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+
+        await waitUntil("reminder cancelled by feature-flag kill switch") {
+            self.notificationCenter.removedIdentifiers.count > priorRemovalCount
+        }
+        XCTAssertFalse(PixelFiringMock.allPixelsFired.contains { $0.pixelName == Pixel.Event.subscriptionExpirationReminderCancelled.name },
+                       "Kill-switch cancellation should not fire the subscription-state cancelled pixel")
     }
 
     // MARK: - Async test helpers

@@ -48,14 +48,20 @@ final class NotificationServiceManager: NSObject, NotificationServiceManaging {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
 
+        let id = response.notification.request.identifier
+
+        // The expiration reminder tracks both the tap (default action) and an explicit dismiss,
+        // so it is handled before the default-action guard that other notifications rely on.
+        if id == DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier {
+            handleSubscriptionExpirationReminder(actionIdentifier: response.actionIdentifier)
+            return
+        }
+
         guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
 
-        let id = response.notification.request.identifier
         switch id {
         case InactivityNotificationSchedulerService.Constants.notificationIdentifier:
             handleInactivityNotification(for: response)
-        case DefaultSubscriptionExpirationReminderScheduler.notificationIdentifier:
-            handleSubscriptionExpirationReminder()
         case let raw where NetworkProtectionNotificationIdentifier(rawValue: raw) != nil:
             handleVPNNotification()
         case let raw where DataBrokerProtectionNotificationIdentifier(rawValue: raw) != nil:
@@ -85,8 +91,16 @@ private extension NotificationServiceManager {
     }
 
     @MainActor
-    func handleSubscriptionExpirationReminder() {
-        mainCoordinator.segueToSubscriptionSettings()
+    func handleSubscriptionExpirationReminder(actionIdentifier: String) {
+        switch actionIdentifier {
+        case UNNotificationDefaultActionIdentifier:
+            Pixel.fire(pixel: .subscriptionExpirationReminderNotificationTapped)
+            mainCoordinator.segueToSubscriptionSettings()
+        case UNNotificationDismissActionIdentifier:
+            Pixel.fire(pixel: .subscriptionExpirationReminderNotificationDismissed)
+        default:
+            break
+        }
     }
 
     @MainActor

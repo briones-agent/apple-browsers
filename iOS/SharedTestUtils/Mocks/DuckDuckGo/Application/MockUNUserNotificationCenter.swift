@@ -39,6 +39,7 @@ final class MockUNUserNotificationCenter: UNUserNotificationCenterRepresentable 
     private(set) var didCheckAuthorizationStatus = false
     private(set) var didRequestAuthorization = false
     private(set) var requestedAuthorizationOptions: UNAuthorizationOptions = []
+    var registeredCategories: Set<UNNotificationCategory> = []
     
     func authorizationStatus() async -> UNAuthorizationStatus {
         didCheckAuthorizationStatus = true
@@ -68,5 +69,13 @@ final class MockUNUserNotificationCenter: UNUserNotificationCenterRepresentable 
         removedIdentifiers.append(identifiers)
         let set = Set(identifiers)
         addedRequests.removeAll { set.contains($0.identifier) }
+    }
+
+    func getNotificationCategories() async -> Set<UNNotificationCategory> {
+        registeredCategories
+    }
+
+    func setNotificationCategories(_ categories: Set<UNNotificationCategory>) {
+        registeredCategories = categories
     }
 }

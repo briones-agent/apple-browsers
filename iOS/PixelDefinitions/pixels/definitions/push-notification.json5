@@ -30,5 +30,57 @@
                 "enum": ["denied", "authorized"]
             }
         ]
+    },
+    "m_push-notification_subscription-expiration-reminder_tapped": {
+        "description": "Fires when a user taps the scheduled Privacy Pro subscription expiration reminder notification, launching the app.",
+        "owners": ["hanyutang-sandra"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": [
+            "appVersion",
+            "pixelSource"
+        ]
+    },
+    "m_push-notification_subscription-expiration-reminder_dismissed": {
+        "description": "Fires when a user explicitly dismisses the scheduled Privacy Pro subscription expiration reminder notification (single clear; bulk Clear All is not reliably reported by iOS).",
+        "owners": ["hanyutang-sandra"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": [
+            "appVersion",
+            "pixelSource"
+        ]
+    },
+    "m_push-notification_subscription-expiration-reminder_cancelled": {
+        "description": "Fires when a previously scheduled expiration reminder is cancelled before firing because the subscription no longer warrants it (status became inactive/expired/unknown, or the free-trial offer ended). Not fired for the feature-flag kill switch.",
+        "owners": ["hanyutang-sandra"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": [
+            "appVersion",
+            "pixelSource"
+        ]
+    },
+    "m_push-notification_subscription-expiration-reminder_skipped-no-permission": {
+        "description": "Fires when scheduling of the expiration reminder is skipped because notification permissions are not authorized.",
+        "owners": ["hanyutang-sandra"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": [
+            "appVersion",
+            "pixelSource"
+        ]
+    },
+    "m_push-notification_subscription-expiration-reminder_scheduling-error": {
+        "description": "Fires when scheduling the expiration reminder fails (UNUserNotificationCenter.add threw an error).",
+        "owners": ["hanyutang-sandra"],
+        "triggers": ["other"],
+        "suffixes": ["platform", "form_factor"],
+        "parameters": [
+            "appVersion",
+            "pixelSource",
+            "errorDomain",
+            "errorCode"
+        ]
     }
 }

@@ -18,6 +18,7 @@
 //
 
 import Combine
+import Core
 import Foundation
 import UIKit
 import UserNotifications
@@ -39,17 +40,20 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
     private let isFeatureEnabled: () -> Bool
     private let notificationCenter: UNUserNotificationCenterRepresentable
     private let dateProvider: () -> Date
+    private let pixelFiring: any PixelFiring.Type
     private var cancellables: Set<AnyCancellable> = []
 
     init(subscriptionManager: SubscriptionManager,
          isFeatureEnabled: @escaping () -> Bool,
          notificationCenter: UNUserNotificationCenterRepresentable = UNUserNotificationCenter.current(),
          dateProvider: @escaping () -> Date = Date.init,
-         notificationCenterObserver: NotificationCenter = .default) {
+         notificationCenterObserver: NotificationCenter = .default,
+         pixelFiring: any PixelFiring.Type = Pixel.self) {
         self.subscriptionManager = subscriptionManager
         self.isFeatureEnabled = isFeatureEnabled
         self.notificationCenter = notificationCenter
         self.dateProvider = dateProvider
+        self.pixelFiring = pixelFiring
 
         // In-app subscription operations post .subscriptionDidChange after updating the cache.
         notificationCenterObserver.publisher(for: .subscriptionDidChange)
@@ -73,6 +77,7 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
 
         guard await notificationCenter.authorizationStatus() == .authorized else {
             Logger.subscription.log("Expiration reminder skipped: notifications not explicitly authorized")
+            pixelFiring.fire(.subscriptionExpirationReminderSkippedNoPermission, withAdditionalParameters: [:])
             return
         }
 
@@ -90,6 +95,20 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
 
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
 
+        // Register a category with .customDismissAction so the delegate is notified when the user
+        // explicitly dismisses the reminder. No actions are added, so the notification's appearance
+        // and behaviour are unchanged.
+        // setNotificationCategories replaces the whole category set, so merge by identifier to
+        // avoid discarding categories registered by other features.
+        let category = UNNotificationCategory(identifier: Self.notificationIdentifier,
+                                              actions: [],
+                                              intentIdentifiers: [],
+                                              options: [.customDismissAction])
+        var categories = await notificationCenter.getNotificationCategories()
+            .filter { $0.identifier != Self.notificationIdentifier }
+        categories.insert(category)
+        notificationCenter.setNotificationCategories(categories)
+
         // TODO: Revisit after copy finalized
         let content = UNMutableNotificationContent()
         content.title = "Your Privacy Pro subscription is ending soon"
@@ -104,6 +123,11 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
             Logger.subscription.log("Expiration reminder scheduled for \(fireDate, privacy: .public)")
         } catch {
             Logger.subscription.error("Failed to schedule expiration reminder: \(error.localizedDescription, privacy: .public)")
+            pixelFiring.fire(pixel: .subscriptionExpirationReminderSchedulingError,
+                             error: error,
+                             includedParameters: [.appVersion],
+                             withAdditionalParameters: [:],
+                             onComplete: { _ in })
         }
     }
 
@@ -131,6 +155,10 @@ final class DefaultSubscriptionExpirationReminderScheduler: SubscriptionExpirati
         if let subscription, Self.subscriptionWarrantsReminder(subscription) {
             return
         }
+        // Reached only when the subscription itself no longer warrants the reminder
+        // (no subscription found, inactive/expired/unknown status, or the free-trial offer ended).
+        // The feature-flag kill switch cancels and returns earlier, so it does not fire this pixel.
+        pixelFiring.fire(.subscriptionExpirationReminderCancelled, withAdditionalParameters: [:])
         cancelPendingReminder()
     }
 
