@@ -625,6 +625,12 @@ extension DistributedNavigationDelegate: WKNavigationDelegate {
 
         Logger.navigation.debug("decidePolicyFor: \(navigationResponse.debugDescription)")
 
+        // Breakage Signals PoC — main-frame HTTP 4xx/5xx (native, no SPI). This is the only place a
+        // main document that returns an error *status* is visible; didFail callbacks won't fire for it.
+        if navigationResponse.isForMainFrame, let pocStatus = navigationResponse.httpStatusCode, pocStatus >= 400 {
+            Logger.navigation.log("🧪🌐 mainFrame HTTP \(pocStatus) — \(navigationResponse.url.absoluteString, privacy: .public)")
+        }
+
         let responders = (navigationResponse.isForMainFrame ? startedNavigation?.navigationResponders : nil) ?? responders
         makeAsyncDecision(for: navigationResponse.debugDescription, boundToLifetimeOf: webView, with: responders) { @MainActor responder in
             dispatchPrecondition(condition: .onQueue(.main))
@@ -834,6 +840,14 @@ extension DistributedNavigationDelegate: WKNavigationDelegate {
         }
         navigation.didFail(wkNavigation, with: error)
         Logger.navigation.log("didFail \(navigation.debugDescription): \(error.errorDescription ?? error.localizedDescription)")
+
+        // Breakage Signals PoC — main-frame load failure (native WKNavigationDelegate, no SPI).
+        // Filter by "🧪". -999 (cancelled) is omitted: it's navigation churn, not breakage.
+        let pocError = error as NSError
+        if pocError.code != NSURLErrorCancelled {
+            let pocPhase = isProvisional ? "PROVISIONAL" : "started"
+            Logger.navigation.log("🧪🌐 mainFrame load FAILED [\(pocPhase, privacy: .public)] code=\(pocError.code) \(pocError.domain, privacy: .public) — \(navigation.url.absoluteString, privacy: .public)")
+        }
 
         for responder in navigation.navigationResponders {
             responder.navigation(navigation, didFailWith: error)
@@ -1159,4 +1173,31 @@ extension DistributedNavigationDelegate {
         return customDelegateMethodHandlers[selector]?.responder
     }
 
+}
+
+// MARK: - Breakage Signals PoC
+//
+// Observes content-rule-list actions (engine-truth blocks) via the `_WKContentRuleListAction`
+// SPI on WKNavigationDelegatePrivate. Logged to Console.app with the 🧪 marker (filter by "🧪").
+// The action object is read via KVC so we don't need WebKit private headers.
+extension DistributedNavigationDelegate {
+
+    @MainActor
+    @objc(_webView:contentRuleListWithIdentifier:performedAction:forURL:)
+    public func webView(_ webView: WKWebView,
+                        contentRuleListWithIdentifier identifier: String,
+                        performedAction action: NSObject,
+                        forURL url: URL) {
+        let flags: [(String, Bool)] = [
+            ("blockedLoad", (action.value(forKey: "blockedLoad") as? Bool) ?? false),
+            ("blockedCookies", (action.value(forKey: "blockedCookies") as? Bool) ?? false),
+            ("madeHTTPS", (action.value(forKey: "madeHTTPS") as? Bool) ?? false),
+            ("redirected", (action.value(forKey: "redirected") as? Bool) ?? false),
+            ("modifiedHeaders", (action.value(forKey: "modifiedHeaders") as? Bool) ?? false)
+        ]
+        let performed = flags.filter { $0.1 }.map { $0.0 }
+        guard !performed.isEmpty else { return }
+
+        Logger.navigation.log("🧪🚫 ruleList[\(identifier, privacy: .public)] \(performed.joined(separator: ","), privacy: .public) — \(url.absoluteString, privacy: .public)")
+    }
 }

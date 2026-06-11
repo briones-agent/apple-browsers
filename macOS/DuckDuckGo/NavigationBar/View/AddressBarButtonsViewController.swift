@@ -1764,6 +1764,7 @@ final class AddressBarButtonsViewController: NSViewController {
     }
 
     @IBAction func privacyDashboardButtonAction(_ sender: Any) {
+        tabViewModel?.tab.breakageSignals?.emitDigestOnDemand() // Breakage Signals PoC
         openPrivacyDashboardPopover()
     }
 

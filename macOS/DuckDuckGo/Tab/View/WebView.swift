@@ -21,6 +21,8 @@ import Cocoa
 import Combine
 import CommonObjCExtensions
 import FeatureFlags
+import ObjectiveC
+import os.log
 import PrivacyConfig
 import WebKit
 
@@ -67,6 +69,9 @@ final class WebView: WKWebView {
         isInspectorShown && window != nil
     }
 
+    /// Breakage Signals PoC — observes subresource load completions via WebKit SPI. See `BreakageResourceLoadObserver`.
+    private(set) var breakageObserver: BreakageResourceLoadObserver?
+
     init(frame: CGRect = .zero,
          configuration: WKWebViewConfiguration = .init(),
          featureFlagger: FeatureFlagger,
@@ -77,6 +82,8 @@ final class WebView: WKWebView {
         _=Self.swizzleImmediateActionAnimationControllerOnce
 
         super.init(frame: frame, configuration: configuration)
+
+        self.breakageObserver = BreakageResourceLoadObserver.attach(to: self) // Breakage Signals PoC
     }
 
     required init?(coder: NSCoder) {
@@ -546,5 +553,99 @@ private extension WebView {
         ControlClickFixCache.domains = domains
         ControlClickFixCache.configIdentifier = currentIdentifier
         return domains
+    }
+}
+
+// MARK: - Breakage Signals PoC
+//
+// Proof of concept for observing site-breakage signals on macOS via WebKit SPI.
+// Logged to Console.app with the 🧪 marker (filter by "🧪"). Two signals:
+//   1. Content-rule-list blocks — engine-truth, via `_WKContentRuleListAction`
+//      (see DistributedNavigationDelegate, Navigation package).
+//   2. Failed / errored subresources — via `_WKResourceLoadDelegate`, below.
+// SPI types are read loosely via KVC so the PoC needs no WebKit private headers.
+
+private enum BreakagePoCLog {
+    static let logger = Logger(subsystem: "com.duckduckgo.macos.browser.breakage-poc", category: "BreakageSignalsPoC")
+    static let marker = "🧪"
+}
+
+/// A single failed/errored subresource completion, forwarded to interested parties (e.g. `BreakageSignalsTabExtension`).
+struct BreakageResourceObservation {
+    let url: URL?
+    let resourceTypeName: String
+    let error: NSError?
+    let httpStatusCode: Int?
+}
+
+/// Observes per-resource load completions. Set as the `_resourceLoadDelegate` on a WKWebView.
+/// WebKit calls these via `respondsToSelector:`, so we don't need to declare conformance to the SPI protocol.
+final class BreakageResourceLoadObserver: NSObject {
+
+    private static var associatedKey: UInt8 = 0
+
+    /// Invoked for each failed / errored subresource completion (successful loads are not forwarded).
+    var onObservation: ((BreakageResourceObservation) -> Void)?
+
+    /// Attaches a resource-load observer to a web view via the `_setResourceLoadDelegate:` SPI.
+    /// The delegate property is weak, so we retain the observer as an associated object on the web view.
+    @discardableResult
+    static func attach(to webView: WKWebView) -> BreakageResourceLoadObserver? {
+        let setter = NSSelectorFromString("_setResourceLoadDelegate:")
+        guard webView.responds(to: setter) else {
+            BreakagePoCLog.logger.error("\(BreakagePoCLog.marker, privacy: .public)❌ _setResourceLoadDelegate: unavailable — SPI not present")
+            return nil
+        }
+        let observer = BreakageResourceLoadObserver()
+        objc_setAssociatedObject(webView, &associatedKey, observer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        webView.perform(setter, with: observer)
+        BreakagePoCLog.logger.log("\(BreakagePoCLog.marker, privacy: .public)✅ attached resource-load observer")
+        return observer
+    }
+
+    @objc(webView:resourceLoad:didCompleteWithError:response:)
+    func webView(_ webView: WKWebView,
+                 resourceLoad: NSObject,
+                 didCompleteWithError error: NSError?,
+                 response: URLResponse?) {
+        let url = resourceLoad.value(forKey: "originalURL") as? URL
+        let urlString = url?.absoluteString ?? "<?>"
+        let typeName = Self.resourceTypeName((resourceLoad.value(forKey: "resourceType") as? Int) ?? -1)
+        let httpStatusCode = (response as? HTTPURLResponse)?.statusCode
+
+        if let error {
+            BreakagePoCLog.logger.error(
+                "\(BreakagePoCLog.marker, privacy: .public)🛑 resource FAILED [\(typeName, privacy: .public)] code=\(error.code) \(error.domain, privacy: .public) — \(urlString, privacy: .public)")
+        } else if let httpStatusCode, httpStatusCode >= 400 {
+            BreakagePoCLog.logger.error(
+                "\(BreakagePoCLog.marker, privacy: .public)⚠️ resource HTTP \(httpStatusCode) [\(typeName, privacy: .public)] — \(urlString, privacy: .public)")
+        } else {
+            // Successful 2xx/3xx loads are intentionally ignored — we only want breakage signal.
+            return
+        }
+
+        onObservation?(BreakageResourceObservation(url: url, resourceTypeName: typeName, error: error, httpStatusCode: httpStatusCode))
+    }
+
+    private static func resourceTypeName(_ raw: Int) -> String {
+        // Mirrors _WKResourceLoadInfoResourceType.
+        switch raw {
+        case 0: return "ApplicationManifest"
+        case 1: return "Beacon"
+        case 2: return "CSPReport"
+        case 3: return "Document"
+        case 4: return "Image"
+        case 5: return "Fetch"
+        case 6: return "Font"
+        case 7: return "Media"
+        case 8: return "Object"
+        case 9: return "Ping"
+        case 10: return "Script"
+        case 11: return "Stylesheet"
+        case 12: return "XMLHTTPRequest"
+        case 13: return "XSLT"
+        case -1: return "Other"
+        default: return "Unknown(\(raw))"
+        }
     }
 }

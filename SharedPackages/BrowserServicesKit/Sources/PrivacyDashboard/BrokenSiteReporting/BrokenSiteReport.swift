@@ -111,6 +111,7 @@ public struct BrokenSiteReport {
     let autoplayBlockingMode: String?
     let loadedWebExtensions: String?
     let adBlockingExtensionScriptletsVersion: String?
+    let failedResources: String? // Breakage Signals PoC — failed/errored subresources for the page load
 #if os(iOS)
     let siteType: SiteType
     let model: String
@@ -157,7 +158,8 @@ public struct BrokenSiteReport {
         pageLoadTiming: WKPageLoadTiming?,
         breakageData: String? = nil,
         loadedWebExtensions: String? = nil,
-        adBlockingExtensionScriptletsVersion: String? = nil
+        adBlockingExtensionScriptletsVersion: String? = nil,
+        failedResources: String? = nil
     ) {
         self.siteUrl = siteUrl
         self.category = category
@@ -193,6 +195,7 @@ public struct BrokenSiteReport {
         self.breakageData = breakageData
         self.loadedWebExtensions = loadedWebExtensions
         self.adBlockingExtensionScriptletsVersion = adBlockingExtensionScriptletsVersion
+        self.failedResources = failedResources
     }
 #endif
 
@@ -234,7 +237,8 @@ public struct BrokenSiteReport {
         pageLoadTiming: WKPageLoadTiming? = nil,
         breakageData: String? = nil,
         loadedWebExtensions: String? = nil,
-        adBlockingExtensionScriptletsVersion: String? = nil
+        adBlockingExtensionScriptletsVersion: String? = nil,
+        failedResources: String? = nil
     ) {
         self.siteUrl = siteUrl
         self.category = category
@@ -273,6 +277,7 @@ public struct BrokenSiteReport {
         self.breakageData = breakageData
         self.loadedWebExtensions = loadedWebExtensions
         self.adBlockingExtensionScriptletsVersion = adBlockingExtensionScriptletsVersion
+        self.failedResources = failedResources
     }
 #endif
 
@@ -376,6 +381,10 @@ public struct BrokenSiteReport {
         if let loadedWebExtensions {
             result["loadedWebExtensions"] = loadedWebExtensions
             result["adBlockingExtensionScriptletsVersion"] = adBlockingExtensionScriptletsVersion ?? "nil"
+        }
+
+        if let failedResources {
+            result["failedResources"] = failedResources
         }
 
         return result

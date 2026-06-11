@@ -325,7 +325,13 @@ extension PrivacyDashboardViewController: PrivacyDashboardControllerDelegate {
         Task { @MainActor in
             do {
                 let report = try await makeBrokenSiteReport(category: category, description: description, source: privacyDashboardController.source)
-                try brokenSiteReporter.report(report, reportMode: .regular)
+                // Breakage Signals PoC — log instead of send (testing only). Revert before merge.
+                let params = report.getRequestParameters(forReportMode: .regular)
+                if let data = try? JSONSerialization.data(withJSONObject: params, options: [.sortedKeys, .prettyPrinted]),
+                   let json = String(data: data, encoding: .utf8) {
+                    Logger.general.log("🧪📮 BROKEN SITE REPORT (not sent)\n\(json, privacy: .public)")
+                }
+                // try brokenSiteReporter.report(report, reportMode: .regular)
             } catch {
                 Logger.general.error("Failed to generate or send the broken site report: \(error.localizedDescription)")
             }
@@ -455,7 +461,8 @@ extension PrivacyDashboardViewController {
                                                pageLoadTiming: currentTab.brokenSiteInfo?.lastPageLoadTiming,
                                                breakageData: breakageData,
                                                loadedWebExtensions: loadedWebExtensions,
-                                               adBlockingExtensionScriptletsVersion: adBlockingScriptletsVersion)
+                                               adBlockingExtensionScriptletsVersion: adBlockingScriptletsVersion,
+                                               failedResources: currentTab.breakageSignals?.failedResourcesReportParameter())
         return websiteBreakage
     }
 }

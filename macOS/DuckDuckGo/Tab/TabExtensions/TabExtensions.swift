@@ -180,6 +180,11 @@ extension TabExtensionsBuilder {
                                        contentScopeUserScriptPublisher: userScripts.compactMap(\.?.contentScopeUserScriptIsolated))
         }
 
+        add {
+            BreakageSignalsTabExtension(webViewPublisher: args.webViewFuture,
+                                        tld: dependencies.privacyFeatures.contentBlocking.tld)
+        }
+
         if dependencies.featureFlagger.isFeatureOn(.webNotifications) {
             add {
                 WebNotificationsTabExtension(

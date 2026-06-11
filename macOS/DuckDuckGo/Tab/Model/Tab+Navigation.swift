@@ -38,6 +38,7 @@ extension Tab: NavigationResponder {
             .weak(nullable: self.popupHandling),
             .strong(NavigationPixelNavigationResponder(featureFlagger: featureFlagger)),
             .weak(nullable: self.brokenSiteInfo),
+            .weak(nullable: self.breakageSignals), // Breakage Signals PoC
             .weak(nullable: self.tabCrashRecovery),
 
             // redirect to SERP for non-valid domains entered by user
