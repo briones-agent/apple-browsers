@@ -634,7 +634,7 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
     func controllerDidRecognizeCode(setupSource: SyncSetupSource, codeSource: SyncCodeSource) async {
         sendCodeRecognisedPixel(setupSource: setupSource, codeSource: codeSource)
         await dismissPresentedViewController()
-        await showPreparingSync()
+        await showPreparingSync(context: setupSource == .recovery ? .recoveringData : .syncingDevices)
     }
 
     func controllerWillPerformServerSyncOperation(setupRole _: SyncSetupRole) async -> Bool {
@@ -683,7 +683,7 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
         switch error {
         case .unableToRecognizeCode:
             sendCodeParsingFailedPixel(setupRole: setupRole)
-            await handleError(.unableToRecognizeCode, error: underlyingError, event: nil)
+            await handleError(.unableToRecognizeCode, error: underlyingError, event: nil, detail: .invalidCode)
         case .updateRequired:
             sendCodeParsingFailedPixel(setupRole: setupRole)
             await handleError(.updateRequired, error: nil, event: nil)
@@ -696,12 +696,13 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
             await handleError(.syncCancelledFromOtherDevice, error: nil, event: nil)
         case .failedToFetchPublicKey, .failedToTransmitExchangeRecoveryKey, .failedToFetchConnectRecoveryKey, .failedToLogIn, .failedToTransmitExchangeKey, .failedToFetchExchangeRecoveryKey, .failedToTransmitConnectRecoveryKey:
             fireCodeHandlingFailedExperimentPixel(setupRole: setupRole)
-            await handleError(.unableToSyncWithDevice, error: underlyingError, event: .syncLoginError)
+            await handleError(.unableToSyncWithDevice, error: underlyingError, event: .syncLoginError, detail: .connectDeviceFailed)
         case .failedToCreateAccount:
-            await handleError(.unableToSyncWithDevice, error: underlyingError, event: .syncSignupError)
+            await handleError(.unableToSyncWithDevice, error: underlyingError, event: .syncSignupError, detail: .accountCreationFailed)
         case .pollingForRecoveryKeyTimedOut:
             await dismissPresentedViewController()
             handleRecoveryKeyPollingTimeout(setupRole: setupRole)
+            await handleError(.unableToSyncWithDevice, error: underlyingError, event: nil, detail: .recoveryCodeTimeout)
         }
 
         syncSetupExperimentPixels.fireSetupEndedAbandoned()
