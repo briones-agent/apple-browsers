@@ -25,6 +25,17 @@ import DDGSync
 import AVFoundation
 import os.log
 
+enum SyncErrorDetail: String {
+    case invalidCode = "invalid_code"
+    case connectDeviceFailed = "connect_device_failed"
+    case accountCreationFailed = "account_creation_failed"
+    case recoveryCodeTimeout = "recovery_code_timeout"
+
+    var errorParameters: [String: String] {
+        ["error_detail": rawValue]
+    }
+}
+
 extension SyncSettingsViewController: SyncManagementViewModelDelegate {
 
     var syncBookmarksPausedTitle: String? {
@@ -231,14 +242,14 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
     }
 
     @MainActor
-    func handleError(_ type: SyncErrorMessage, error: Error?, event: Pixel.Event?) async {
+    func handleError(_ type: SyncErrorMessage, error: Error?, event: Pixel.Event?, detail: SyncErrorDetail? = nil) async {
         await withCheckedContinuation { continuation in
             if type.shouldSendPixel, let event = event {
-                firePixelIfNeededFor(event: event, error: error)
+                firePixelIfNeededFor(event: event, error: error, detail: detail)
             }
             let alertController = UIAlertController(
                 title: type.title,
-                message: [type.description, error?.localizedDescription].compactMap({ $0 }).joined(separator: "\n"),
+                message: type.description,
                 preferredStyle: .alert)
             let okAction = UIAlertAction(title: type.buttonTitle, style: .default, handler: nil)
             alertController.addAction(okAction)
@@ -314,15 +325,17 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         return AsyncErrorType(rawValue: errorString)
     }
 
-    private func firePixelIfNeededFor(event: Pixel.Event, error: Error?) {
+    private func firePixelIfNeededFor(event: Pixel.Event, error: Error?, detail: SyncErrorDetail? = nil) {
+        let detailParameters = detail?.errorParameters ?? [:]
         if let syncError = error as? SyncError {
             if !syncError.isServerError {
-                Pixel.fire(pixel: event, error: syncError, withAdditionalParameters: syncError.errorParameters)
+                let parameters = syncError.errorParameters.merging(detailParameters) { current, _ in current }
+                Pixel.fire(pixel: event, error: syncError, withAdditionalParameters: parameters)
             }
         } else if let error {
-            Pixel.fire(pixel: event, error: error)
+            Pixel.fire(pixel: event, error: error, withAdditionalParameters: detailParameters)
         } else {
-            Pixel.fire(pixel: event)
+            Pixel.fire(pixel: event, withAdditionalParameters: detailParameters)
         }
     }
 
