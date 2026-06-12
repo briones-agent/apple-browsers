@@ -21,7 +21,7 @@ import Foundation
 @MainActor
 public protocol SyncConnectionControllerDelegate: AnyObject {
     func controllerWillBeginTransmittingRecoveryKey() async
-    func controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: Bool)
+    func controllerDidFinishTransmittingRecoveryKey()
 
     func controllerDidReceiveRecoveryKey()
 
@@ -500,8 +500,8 @@ public class SyncConnectionController: SyncConnectionControlling {
         switch completion {
         case .loggedIn:
             await delegate?.controllerDidCompleteLogin(registeredDevices: coordinator.completedRegisteredDevices ?? [], isRecovery: false, setupRole: setupRole)
-        case .recoveryCodeSent(let credentialKind):
-            await delegate?.controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: credentialKind == .ddg)
+        case .recoveryCodeSent:
+            await delegate?.controllerDidFinishTransmittingRecoveryKey()
         case .alreadyConnected:
             await delegate?.controllerDidCompletePairingWithAlreadyConnectedAccount(setupRole: setupRole)
         }
@@ -558,7 +558,7 @@ public class SyncConnectionController: SyncConnectionControlling {
                 return
             }
 
-            delegate?.controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: true)
+            delegate?.controllerDidFinishTransmittingRecoveryKey()
             (await state.getExchanger())?.stopPolling()
         }
     }

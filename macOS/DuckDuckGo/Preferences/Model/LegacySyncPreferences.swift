@@ -965,13 +965,8 @@ extension LegacySyncPreferences: SyncConnectionControllerDelegate {
         presentDialog(for: .prepareToSync)
     }
 
-    func controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: Bool) {
-        // Temporary handling as devices don't update when 3p device added to account
-        if shouldWaitForDevicesToChange {
-            waitForDevicesToChangeThenPresentSyncing()
-        } else {
-            presentDialog(for: .nowSyncing)
-        }
+    func controllerDidFinishTransmittingRecoveryKey() {
+        waitForDevicesToChangeThenPresentSyncing()
     }
 
     func controllerDidReceiveRecoveryKey() {

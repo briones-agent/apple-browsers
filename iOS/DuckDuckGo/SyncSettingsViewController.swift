@@ -387,7 +387,11 @@ class SyncSettingsViewController: UIHostingController<SyncSettingsRootView> {
 
     func mapDevices(_ devices: [RegisteredDevice]) {
         viewModel.devices = devices.map {
-            .init(id: $0.id, name: $0.name, type: $0.type, isThisDevice: $0.id == syncService.account?.deviceId)
+            .init(id: $0.id,
+                  name: $0.name,
+                  type: $0.type,
+                  credentialId: $0.credentialId,
+                  isThisDevice: $0.id == syncService.account?.deviceId)
         }.sorted(by: { lhs, _ in
             lhs.isThisDevice
         })
@@ -614,15 +618,11 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
         await showPreparingSync()
     }
     
-    func controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: Bool) {
+    func controllerDidFinishTransmittingRecoveryKey() {
         Pixel.fire(pixel: .syncSetupEndedSuccessful,
                    withAdditionalParameters: [PixelParameters.source: SyncSetupSource.exchange.rawValue],
                    includedParameters: [.appVersion])
-        if shouldWaitForDevicesToChange {
-            dismissPresentedViewController()
-        } else {
-            dismissVCAndShowDeviceSyncedToast()
-        }
+        dismissPresentedViewController()
     }
     
     func controllerDidReceiveRecoveryKey() {
