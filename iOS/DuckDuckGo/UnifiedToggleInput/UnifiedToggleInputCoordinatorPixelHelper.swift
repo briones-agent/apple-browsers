@@ -126,6 +126,10 @@ final class UnifiedToggleInputCoordinatorPixelHelper {
         }
     }
 
+    static func fireCustomizeResponsesSelectedPixel() {
+        DailyPixel.fireDailyAndCount(pixel: .unifiedToggleInputCustomizeResponsesSelected)
+    }
+
     static func fireUnifiedPromptSubmittedPixel(
         text: String,
         selectedTool: AIChatRAGTool?,
