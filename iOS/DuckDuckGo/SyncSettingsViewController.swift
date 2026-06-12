@@ -618,11 +618,32 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
         await showPreparingSync()
     }
     
-    func controllerDidFinishTransmittingRecoveryKey() {
+    private func waitForDevicesToChangeThenPresentSyncing() {
+        viewModel.$devices
+            .removeDuplicates()
+            .dropFirst()
+            .prefix(1)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                if self.useSimplifiedLayout {
+                    self.dismissVCAndShowDeviceSyncedToast()
+                } else {
+                    self.dismissVCAndShowRecoveryPDF()
+                }
+            }.store(in: &cancellables)
+    }
+
+    func controllerDidFinishTransmittingRecoveryKey(shouldWaitForDevicesToChange: Bool) {
         Pixel.fire(pixel: .syncSetupEndedSuccessful,
                    withAdditionalParameters: [PixelParameters.source: SyncSetupSource.exchange.rawValue],
                    includedParameters: [.appVersion])
-        dismissPresentedViewController()
+        if shouldWaitForDevicesToChange {
+            waitForDevicesToChangeThenPresentSyncing()
+        } else if useSimplifiedLayout {
+            dismissVCAndShowDeviceSyncedToast()
+        } else {
+            dismissVCAndShowRecoveryPDF()
+        }
     }
     
     func controllerDidReceiveRecoveryKey() {
