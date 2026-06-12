@@ -2469,9 +2469,6 @@ private extension UnifiedToggleInputCoordinator {
             .sink { [weak self] in
                 guard let self else { return }
                 self.didPressCustomizeResponsesButton.send()
-                // Don't clear the selected tool: Customize Responses is an unrelated FE action.
-                // Collapsing here behaves like a dismiss, so the user's Web Search / Create Image
-                // choice must survive — matching dismiss-and-reshow.
                 self.showCollapsed()
             }
             .store(in: &cancellables)
