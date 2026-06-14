@@ -412,42 +412,8 @@ public class SyncConnectionController: SyncConnectionControlling {
             let completion = try await pollPairingV2UntilFinished(coordinator)
             await handlePairingV2Completion(completion, coordinator: coordinator, setupRole: setupRole)
             return true
-        } catch SyncError.pollingDidTimeOut {
-            await delegate?.controllerDidError(.pollingForRecoveryKeyTimedOut, underlyingError: nil, setupRole: setupRole)
-            await coordinator.cancel()
-            return false
-        } catch SyncError.accountAlreadyExists {
-            if let recoveryKey = coordinator.pendingRecoveryKey {
-                await delegate?.controllerDidFindTwoAccountsDuringRecovery(
-                    recoveryKey,
-                    setupRole: setupRole,
-                    shouldPromptBeforeSwitchingAccounts: false)
-            } else {
-                await delegate?.controllerDidError(.failedToLogIn, underlyingError: SyncError.accountAlreadyExists, setupRole: setupRole)
-            }
-            await coordinator.cancel()
-            return false
-        } catch let error as PairingV2Error {
-            guard error != .cancelled else {
-                return false
-            }
-            await delegate?.controllerDidError(pairingV2ConnectionError(for: error), underlyingError: nil, setupRole: setupRole)
-            await coordinator.cancel()
-            return false
-        } catch PairingV2MessageCryptoError.unsupportedVersion(let version) {
-            await delegate?.controllerDidError(
-                unsupportedVersionConnectionError(for: version, supportedMajor: PairingV2ProtocolVersion.supportedMajor),
-                underlyingError: PairingV2MessageCryptoError.unsupportedVersion(version),
-                setupRole: setupRole)
-            await coordinator.cancel()
-            return false
-        } catch let error as PairingV2MessageCryptoError {
-            await delegate?.controllerDidError(.unableToRecognizeCode, underlyingError: error, setupRole: setupRole)
-            await coordinator.cancel()
-            return false
         } catch {
-            await delegate?.controllerDidError(.failedToFetchExchangeRecoveryKey, underlyingError: error, setupRole: setupRole)
-            await coordinator.cancel()
+            await handlePairingV2PollingError(error, coordinator: coordinator, setupRole: setupRole)
             return false
         }
     }
@@ -472,7 +438,7 @@ public class SyncConnectionController: SyncConnectionControlling {
                 }
                 await handlePairingV2Completion(completion, coordinator: coordinator, setupRole: setupRole)
             } catch {
-                await handlePairingV2PresenterPollingError(error, coordinator: coordinator, setupRole: setupRole)
+                await handlePairingV2PollingError(error, coordinator: coordinator, setupRole: setupRole)
             }
         }
 
@@ -481,7 +447,7 @@ public class SyncConnectionController: SyncConnectionControlling {
         }
     }
 
-    private func handlePairingV2PresenterPollingError(_ error: Error, coordinator: PairingV2Coordinator, setupRole: SyncSetupRole) async {
+    private func handlePairingV2PollingError(_ error: Error, coordinator: PairingV2Coordinator, setupRole: SyncSetupRole) async {
         if let pairingV2Error = error as? PairingV2Error, pairingV2Error == .cancelled {
             return
         }
@@ -491,7 +457,7 @@ public class SyncConnectionController: SyncConnectionControlling {
         }
 
         if let syncError = error as? SyncError {
-            await handlePairingV2PresenterSyncError(syncError, coordinator: coordinator, setupRole: setupRole)
+            await handlePairingV2SyncError(syncError, coordinator: coordinator, setupRole: setupRole)
         } else if let pairingV2Error = error as? PairingV2Error {
             await delegate?.controllerDidError(pairingV2ConnectionError(for: pairingV2Error), underlyingError: nil, setupRole: setupRole)
         } else if let cryptoError = error as? PairingV2MessageCryptoError {
@@ -503,18 +469,18 @@ public class SyncConnectionController: SyncConnectionControlling {
         await coordinator.cancel()
     }
 
-    private func handlePairingV2PresenterSyncError(_ error: SyncError, coordinator: PairingV2Coordinator, setupRole: SyncSetupRole) async {
+    private func handlePairingV2SyncError(_ error: SyncError, coordinator: PairingV2Coordinator, setupRole: SyncSetupRole) async {
         switch error {
         case .pollingDidTimeOut:
             await delegate?.controllerDidError(.pollingForRecoveryKeyTimedOut, underlyingError: nil, setupRole: setupRole)
         case .accountAlreadyExists:
-            await handlePairingV2PresenterAccountAlreadyExists(coordinator, setupRole: setupRole)
+            await handlePairingV2AccountAlreadyExists(coordinator, setupRole: setupRole)
         default:
             await delegate?.controllerDidError(.failedToFetchExchangeRecoveryKey, underlyingError: error, setupRole: setupRole)
         }
     }
 
-    private func handlePairingV2PresenterAccountAlreadyExists(_ coordinator: PairingV2Coordinator, setupRole: SyncSetupRole) async {
+    private func handlePairingV2AccountAlreadyExists(_ coordinator: PairingV2Coordinator, setupRole: SyncSetupRole) async {
         if let recoveryKey = coordinator.pendingRecoveryKey {
             await delegate?.controllerDidFindTwoAccountsDuringRecovery(
                 recoveryKey,

@@ -639,10 +639,8 @@ extension SyncSettingsViewController: SyncConnectionControllerDelegate {
                    includedParameters: [.appVersion])
         if shouldWaitForDevicesToChange {
             waitForDevicesToChangeThenPresentSyncing()
-        } else if useSimplifiedLayout {
-            dismissVCAndShowDeviceSyncedToast()
         } else {
-            dismissVCAndShowRecoveryPDF()
+            dismissVCAndShowDeviceSyncedToast()
         }
     }
     
