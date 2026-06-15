@@ -590,9 +590,9 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .memoryUsageReporting:
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.memoryUsageReporting))
         case .faviconLazyImageLoading:
-            Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.faviconLazyImageLoading))
+            Config(defaultValue: .disabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.faviconLazyImageLoading))
         case .faviconImageDownscaling:
-            Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.faviconImageDownscaling))
+            Config(defaultValue: .disabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.faviconImageDownscaling))
         case .aiChatSync:
             Config(source: .remoteReleasable(SyncSubfeature.aiChatSync))
         case .heuristicAction:
