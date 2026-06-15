@@ -575,7 +575,6 @@ extension AppDelegate {
         duckPlayer.preferences.duckPlayerMode = .alwaysAsk
         UserDefaultsWrapper<Bool>(key: .homePageContinueSetUpImport, defaultValue: false).clear()
         homePageSetUpDependencies.clearAll()
-        NotificationCenter.default.post(name: .newTabPageWebViewDidAppear, object: nil)
     }
 
     @MainActor
@@ -1334,6 +1333,12 @@ extension MainViewController {
         duckAIChromeButtonsVisibilityManager.toggleVisibility(for: .sidebar)
     }
 
+    @objc func toggleDuckAISidebar(_ sender: Any?) {
+        guard featureFlagger.isFeatureOn(.aiChatChromeSidebar),
+              aiChatMenuConfig.shouldDisplayAnyAIChatFeature else { return }
+        aiChatCoordinator.toggleSidebar()
+    }
+
     @objc func toggleAutofillShortcut(_ sender: Any) {
         pinningManager.togglePinning(for: .autofill)
     }
@@ -1633,14 +1638,14 @@ extension MainViewController {
         let debugPersistor = NewTabPageNextStepsCardsDebugPersistor()
         guard let card = debugPersistor.debugVisibleCards.first else { return }
         persistor.setTimesShown(10, for: card)
-        NotificationCenter.default.post(name: .newTabPageWebViewDidAppear, object: nil)
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: nil)
     }
 
     @objc func debugShiftNewTabOpeningDate(_ sender: Any?) {
         let persistor = AppearancePreferencesUserDefaultsPersistor(keyValueStore: NSApp.delegateTyped.keyValueStore)
         persistor.continueSetUpCardsLastDemonstrated = (persistor.continueSetUpCardsLastDemonstrated ?? Date()).addingTimeInterval(-.day)
         NSApp.delegateTyped.appearancePreferences.continueSetUpCardsViewDidAppear()
-        NotificationCenter.default.post(name: .newTabPageWebViewDidAppear, object: nil)
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: nil)
     }
 
     @objc func debugShiftNewTabOpeningDateNtimes(_ sender: Any?) {
@@ -1899,6 +1904,11 @@ extension MainViewController: NSMenuItemValidation {
 
         case #selector(MainViewController.summarize(_:)):
             return aiChatMenuConfig.shouldDisplaySummarizationMenuItem
+
+        case #selector(MainViewController.toggleDuckAISidebar(_:)):
+            let isOpen = aiChatCoordinator.isSidebarOpenForCurrentTab()
+            menuItem.title = isOpen ? UserText.aiChatHideSidebar : UserText.aiChatShowSidebar
+            return true
 
         default:
             return true

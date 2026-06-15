@@ -26,6 +26,7 @@ tags:
 - launchApp:
     arguments:
         isRunningUITests: true
+        isInternalUser: ${INTERNAL_USER_MODE}
 
 - runFlow:
     file: ../shared/dismiss_application_lock.yaml
@@ -56,5 +57,6 @@ tags:
 - launchApp:
     arguments:
         isRunningUITests: true
+        isInternalUser: ${INTERNAL_USER_MODE}
 
 - assertVisible: "Privacy Test Pages"

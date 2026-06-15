@@ -157,13 +157,19 @@ final class MainMenu: NSMenu {
         action: #selector(MainViewController.toggleDuckAIChromeSidebarButtonVisibility(_:)),
         keyEquivalent: "U"
     )
+    private let toggleDuckAISidebarMenuItem = NSMenuItem(
+        title: UserText.aiChatShowSidebar,
+        action: #selector(MainViewController.toggleDuckAISidebar(_:)),
+        keyEquivalent: [.option, .command, "l"]
+    )
+    private let toggleDuckAISidebarSeparatorMenuItem = NSMenuItem.separator()
 
     var homeButtonMenuItem = NSMenuItem(title: "HomeButtonPlaceholder")
     var showTabsAndBookmarksBarOnFullScreenMenuItem = NSMenuItem(title: "ShowTabsAndBookmarksBarOnFullScreenMenuItem")
     let toggleShareShortcutMenuItem = NSMenuItem(title: UserText.shareMenuItem, action: #selector(MainViewController.toggleShareShortcut), keyEquivalent: "")
         .withImage(DesignSystemImages.Glyphs.Size12.shareApple)
     let toggleDownloadsShortcutMenuItem = NSMenuItem(title: UserText.mainMenuViewShowDownloadsShortcut, action: #selector(MainViewController.toggleDownloadsShortcut), keyEquivalent: "J")
-        .withImage(DesignSystemImages.Glyphs.Size12.downloads)
+        .withImage(DesignSystemImages.Glyphs.Size12.download)
     let toggleAutofillShortcutMenuItem = NSMenuItem(title: UserText.mainMenuViewShowAutofillShortcut, action: #selector(MainViewController.toggleAutofillShortcut), keyEquivalent: "A")
         .withImage(DesignSystemImages.Glyphs.Size12.keyLogin)
     let toggleBookmarksShortcutMenuItem = NSMenuItem(title: UserText.mainMenuViewShowBookmarksShortcut, action: #selector(MainViewController.toggleBookmarksShortcut), keyEquivalent: "K")
@@ -449,6 +455,8 @@ final class MainMenu: NSMenu {
                 .withImage(DesignSystemImages.Glyphs.Size12.home)
             NSMenuItem.separator()
 
+            toggleDuckAISidebarMenuItem
+            toggleDuckAISidebarSeparatorMenuItem
             toggleDuckAIChromeButtonMenuItem
             toggleDuckAIChromeSidebarButtonMenuItem
             duckAIChromeButtonsSeparatorMenuItem
@@ -458,7 +466,7 @@ final class MainMenu: NSMenu {
             toggleBookmarksBarMenuItem
 
             NSMenuItem(title: UserText.openDownloads, action: #selector(MainViewController.toggleDownloads), keyEquivalent: "j")
-                .withImage(DesignSystemImages.Glyphs.Size12.downloads)
+                .withImage(DesignSystemImages.Glyphs.Size12.download)
             NSMenuItem.separator()
 
             homeButtonMenuItem
@@ -873,6 +881,8 @@ final class MainMenu: NSMenu {
     private func updateDuckAIChromeButtonMenuItems() {
         let shouldShowDuckAIChromeItems = featureFlagger.isFeatureOn(.aiChatChromeSidebar)
             && aiChatMenuConfig.shouldDisplayAnyAIChatFeature
+        toggleDuckAISidebarMenuItem.isHidden = !shouldShowDuckAIChromeItems
+        toggleDuckAISidebarSeparatorMenuItem.isHidden = !shouldShowDuckAIChromeItems
         toggleDuckAIChromeButtonMenuItem.isHidden = !shouldShowDuckAIChromeItems
         toggleDuckAIChromeSidebarButtonMenuItem.isHidden = !shouldShowDuckAIChromeItems
         duckAIChromeButtonsSeparatorMenuItem.isHidden = !shouldShowDuckAIChromeItems
@@ -1077,49 +1087,44 @@ final class MainMenu: NSMenu {
             }
 
             // Closure to handle subscription selection via the user script handler
-            let subscriptionSelectionHandler: SubscriptionSelectionHandler? = {
-                if #available(macOS 12.0, *) {
-                    return { @MainActor (productId: String, changeType: String?) async in
-                        let subscriptionManager = Application.appDelegate.subscriptionManager
-                        let stripePurchaseFlow = DefaultStripePurchaseFlow(subscriptionManager: subscriptionManager)
-                        let subscriptionAppGroup = Bundle.main.appGroup(bundle: .subs)
-                        let subscriptionUserDefaults = UserDefaults(suiteName: subscriptionAppGroup)!
-                        let pixelHandler = SubscriptionPixelHandler(source: .mainApp, pixelKit: nil)
-                        let pendingTransactionHandler = DefaultPendingTransactionHandler(userDefaults: subscriptionUserDefaults, pixelHandler: pixelHandler)
+            let subscriptionSelectionHandler: SubscriptionSelectionHandler = { @MainActor (productId: String, changeType: String?) async in
+                let subscriptionManager = Application.appDelegate.subscriptionManager
+                let stripePurchaseFlow = DefaultStripePurchaseFlow(subscriptionManager: subscriptionManager)
+                let subscriptionAppGroup = Bundle.main.appGroup(bundle: .subs)
+                let subscriptionUserDefaults = UserDefaults(suiteName: subscriptionAppGroup)!
+                let pixelHandler = SubscriptionPixelHandler(source: .mainApp, pixelKit: nil)
+                let pendingTransactionHandler = DefaultPendingTransactionHandler(userDefaults: subscriptionUserDefaults, pixelHandler: pixelHandler)
 
-                        let flowPerformer = DefaultSubscriptionFlowsExecuter(
-                            subscriptionManager: subscriptionManager,
-                            uiHandler: Application.appDelegate.subscriptionUIHandler,
-                            wideEvent: Application.appDelegate.wideEvent,
-                            subscriptionEventReporter: DefaultSubscriptionEventReporter(),
-                            pendingTransactionHandler: pendingTransactionHandler
-                        )
+                let flowPerformer = DefaultSubscriptionFlowsExecuter(
+                    subscriptionManager: subscriptionManager,
+                    uiHandler: Application.appDelegate.subscriptionUIHandler,
+                    wideEvent: Application.appDelegate.wideEvent,
+                    subscriptionEventReporter: DefaultSubscriptionEventReporter(),
+                    pendingTransactionHandler: pendingTransactionHandler
+                )
 
-                        let feature = SubscriptionPagesUseSubscriptionFeature(
-                            subscriptionManager: subscriptionManager,
-                            stripePurchaseFlow: stripePurchaseFlow,
-                            uiHandler: Application.appDelegate.subscriptionUIHandler,
-                            aiChatURL: AIChatRemoteSettings().aiChatURL,
-                            wideEvent: Application.appDelegate.wideEvent,
-                            pendingTransactionHandler: pendingTransactionHandler, flowPerformer: flowPerformer, requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)
-                        )
+                let feature = SubscriptionPagesUseSubscriptionFeature(
+                    subscriptionManager: subscriptionManager,
+                    stripePurchaseFlow: stripePurchaseFlow,
+                    uiHandler: Application.appDelegate.subscriptionUIHandler,
+                    aiChatURL: AIChatRemoteSettings().aiChatURL,
+                    wideEvent: Application.appDelegate.wideEvent,
+                    pendingTransactionHandler: pendingTransactionHandler, flowPerformer: flowPerformer, requestValidator: DefaultScriptRequestValidator(subscriptionManager: subscriptionManager)
+                )
 
-                        // Create params matching what the web would send
-                        var params: [String: Any] = ["id": productId]
-                        if let changeType = changeType {
-                            params["change"] = changeType
-                        }
-
-                        // Call the appropriate handler based on whether it's a tier change or new purchase
-                        if changeType != nil {
-                            _ = try? await feature.subscriptionChangeSelected(params: params, original: WKScriptMessage())
-                        } else {
-                            _ = try? await feature.subscriptionSelected(params: params, original: WKScriptMessage())
-                        }
-                    }
+                // Create params matching what the web would send
+                var params: [String: Any] = ["id": productId]
+                if let changeType = changeType {
+                    params["change"] = changeType
                 }
-                return nil
-            }()
+
+                // Call the appropriate handler based on whether it's a tier change or new purchase
+                if changeType != nil {
+                    _ = try? await feature.subscriptionChangeSelected(params: params, original: WKScriptMessage())
+                } else {
+                    _ = try? await feature.subscriptionSelected(params: params, original: WKScriptMessage())
+                }
+            }
 
             SubscriptionDebugMenu(currentEnvironment: currentEnvironment,
                                   updateServiceEnvironment: updateServiceEnvironment,

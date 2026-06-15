@@ -84,7 +84,6 @@ public enum PrivacyFeature: String {
     case attributedMetrics
     case dataImport
     case duckAiChatHistory
-    case serp
     case popupBlocking
     case pageContext
     case webExtensions
@@ -115,6 +114,10 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
 
     /// Hang reporting feature flag
     case hangReporting
+
+    /// Remote kill switch for native unsupported-OS messaging (launch alert, About/Feedback info box).
+    /// Enabled by default; set to `disabled` in privacy config to suppress the messaging.
+    case osSupportWarning
 
     /// https://app.asana.com/1/137249556945/project/72649045549333/task/1211260578559159?focus=true
     case unifiedURLPredictor
@@ -243,11 +246,25 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214749215529034?focus=true
     case escapeHatchActions
 
+    /// Surfaces the escape-hatch "delete tab" action as a dedicated Fire button on the card and removes it from the menu.
+    /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1215358250572341?focus=true
+    case escapeHatchFireButton
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215530020470713?focus=true
+    case escapeHatchHideShortcut
+
     case crashReportOptInStatusResetting
+
+    /// Internal-only observability for the hard-to-reproduce "web view scroll frozen, taps still work" bug:
+    /// a passive scroll-failure observer plus a gesture watchdog. Off for the general population by default.
+    case webScrollFreezeObservability
 
     case screenTimeCleaning
 
     case minimalChromeInLandscape
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215448831345663?focus=true
+    case bottomBarViewportFixedElementsWorkaround
 
     /// https://app.asana.com/1/137249556945/project/1206329551987282/task/1211806114021630?focus=true
     case onboardingRebranding
@@ -284,6 +301,12 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215169783702336
     case walletPassDownload
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215359554019438?focus=true
+    case floatingUI
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215385432113040?focus=true
+    case removeChatHistory
 }
 
 public enum TabManagerSubfeature: String, PrivacySubfeature {
@@ -527,6 +550,15 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Group into the app's Application Support directory on iOS. Off keeps the
     /// legacy App Group path.
     case nativeStoragePathMigration
+
+    /// Enables the rich Duck.ai tab grid card in the iOS tab switcher (rendered from
+    /// native-storage chat data). When off, Duck.ai tabs fall back to the standard
+    /// screenshot preview.
+    case tabSwitcherRichCard
+
+    /// macOS only. When on, the onboarding Search/Duck.ai toggle choice also drives the New Tab Page
+    /// search-mode toggle and seeds the duckduckgo.com homepage. Off keeps the choice address-bar only.
+    case onboardingToggleAffectsNtpAndDdg
 }
 
 public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {
@@ -572,6 +604,14 @@ public enum NetworkProtectionSubfeature: String, Equatable, PrivacySubfeature {
     /// Risky Domain Protection for VPN
     /// https://app.asana.com/0/1204186595873227/1206489252288889
     case riskyDomainsProtection
+
+    /// Kill switch for the orphaned-proxy detection machinery (tunnel heartbeat + proxy detection loop + pixel).
+    /// Off by default → detection runs; enable remotely to disable it.
+    case orphanProxyDetectionKillSwitch
+
+    /// Kill switch for the orphaned-proxy full-bypass behavior.
+    /// Off by default → bypass engages when an orphaned proxy is detected; enable remotely to disable it.
+    case orphanProxyBypassKillSwitch
 }
 
 public enum SyncSubfeature: String, PrivacySubfeature {
@@ -598,6 +638,9 @@ public enum SyncSubfeature: String, PrivacySubfeature {
     case aiChatSyncPromo
     case simplifiedSyncSetupExperiment
     case allowSingleDeviceOnConnectScreen
+    case scopedAccessCredentials
+    case canUseV2ConnectFlow
+    case canShowV2ConnectCode
 }
 
 public enum AutoconsentSubfeature: String, PrivacySubfeature {
@@ -747,15 +790,6 @@ public enum DataImportSubfeature: String, PrivacySubfeature {
     case dataImportSummarySyncPromotion
 }
 
-public enum SERPSubfeature: String, PrivacySubfeature {
-    public var parent: PrivacyFeature {
-        .serp
-    }
-
-    /// Global switch to disable New Tab Page search box
-    case storeSerpSettings
-}
-
 public enum PopupBlockingSubfeature: String, PrivacySubfeature {
     public var parent: PrivacyFeature {
         .popupBlocking
@@ -771,6 +805,10 @@ public enum WebExtensionsSubfeature: String, PrivacySubfeature {
     case featureEnabled
     case embeddedExtension = "embedded"
     case embeddedRollout
+    /// Failsafe for the lightweight reload on data clear (fire). Disable to fall back to the full reload.
+    case lightweightReloadOnDataClear
+    /// Failsafe for deferring web-extension load/install until protected data is available. Disable to load immediately.
+    case protectedDataLoadGate
 }
 
 public enum AdBlockingExtensionSubfeature: String, PrivacySubfeature {

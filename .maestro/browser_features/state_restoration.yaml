@@ -27,13 +27,6 @@ tags:
 - tapOn: 
     text: 'Help'
 - assertVisible: "DuckDuckGo Help Pages"
-# - scrollUntilVisible:
-#     element: "Privacy Policy"
-#     timeout: 50000
-#     speed: 100
-# # Tap status bar to make sure bottom bar is visible
-# - tapOn:
-#     point: 90%, 1%
 - tapOn: "Browse Back"
 - assertVisible: "DuckDuckGo.*"
 
