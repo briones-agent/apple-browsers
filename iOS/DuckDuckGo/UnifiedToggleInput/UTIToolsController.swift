@@ -167,10 +167,18 @@ struct UTIToolsMenu {
 struct UTIToolsMenuFactory {
 
     func makeMenu(_ menu: UTIToolsMenu, onSelect: @escaping (UTIToolsMenu.Item.Identifier) -> Void) -> UIMenu {
-        let actions = menu.items.map { item in
-            makeAction(item, onSelect: onSelect)
+        let customizeActions = menu.items
+            .filter { $0.identifier == .customizeResponses }
+            .map { makeAction($0, onSelect: onSelect) }
+        let toolActions = menu.items
+            .filter { $0.identifier != .customizeResponses }
+            .map { makeAction($0, onSelect: onSelect) }
+
+        var children: [UIMenuElement] = customizeActions
+        if !toolActions.isEmpty {
+            children.append(UIMenu(options: .displayInline, children: toolActions))
         }
-        return UIMenu(children: actions)
+        return UIMenu(children: children)
     }
 
     private func makeAction(_ item: UTIToolsMenu.Item, onSelect: @escaping (UTIToolsMenu.Item.Identifier) -> Void) -> UIAction {
@@ -197,8 +205,7 @@ struct UTIToolsMenuFactory {
     ) -> UIAction {
         return UIAction(
             title: UserText.aiChatToolbarCustomizeResponsesMenuTitle,
-            subtitle: UserText.aiChatToolbarCustomizeResponsesMenuSubtitle,
-            image: DesignSystemImages.Glyphs.Size24.options
+            subtitle: UserText.aiChatToolbarCustomizeResponsesMenuSubtitle
         ) { _ in
             onSelect(.customizeResponses)
         }
