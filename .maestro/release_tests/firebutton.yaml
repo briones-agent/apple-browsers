@@ -22,7 +22,7 @@ tags:
 # before asserting on counter values, otherwise the assertion can race the page load.
 - extendedWaitUntil:
     visible: "Manual Increment"
-    timeout: 10000
+    timeout: 5000
 
 # Add a cookie
 - assertVisible: "Storage Counter: undefined"
@@ -53,7 +53,7 @@ tags:
 # the host fallback ("Close \"example.com\" at example.com") at this point.
 - extendedWaitUntil:
     visible: "Close \"Example Domain\" at example.com"
-    timeout: 20000
+    timeout: 5000
 - tapOn: "Close \"Example Domain\" at example.com"
 - tapOn: "New Tab"
 
@@ -97,7 +97,7 @@ tags:
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Manual Increment"
-    timeout: 10000
+    timeout: 5000
 - assertVisible: "Storage Counter: undefined"
 - assertVisible: "Cookie Counter:"
 
@@ -134,7 +134,7 @@ tags:
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Manual Increment"
-    timeout: 10000
+    timeout: 5000
 - assertVisible: "Storage Counter: undefined"
 - assertVisible: "Cookie Counter:"
 

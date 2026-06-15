@@ -22,7 +22,7 @@ tags:
 # before asserting on counter values, otherwise the assertion can race the page load.
 - extendedWaitUntil:
     visible: "Manual Increment"
-    timeout: 10000
+    timeout: 5000
 
 # Add a cookie
 - assertVisible: "Storage Counter: undefined"
@@ -57,7 +57,7 @@ tags:
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Manual Increment"
-    timeout: 10000
+    timeout: 5000
 - assertVisible: "Storage Counter: 2"
 - assertVisible: "Cookie Counter: 2"
 
@@ -83,6 +83,6 @@ tags:
 - pressKey: Enter
 - extendedWaitUntil:
     visible: "Manual Increment"
-    timeout: 10000
+    timeout: 5000
 - assertVisible: "Storage Counter: undefined"
 - assertVisible: "Cookie Counter:"
