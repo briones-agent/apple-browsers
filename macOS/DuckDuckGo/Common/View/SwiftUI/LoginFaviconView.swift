@@ -25,13 +25,19 @@ struct LoginFaviconView: View {
     let generatedIconLetters: String
     let faviconManagement: FaviconManagement = NSApp.delegateTyped.faviconManager
 
+    @State private var image: NSImage?
+
     private var displayableFaviconImage: NSImage? {
         faviconManagement.getCachedFaviconSafeForRendering(for: domain, sizeCategory: .small)?.image
     }
 
+    private func refreshImage() {
+        image = displayableFaviconImage
+    }
+
     var body: some View {
         Group {
-            if let image = displayableFaviconImage {
+            if let image = image {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -41,6 +47,18 @@ struct LoginFaviconView: View {
             } else {
                 LetterIconView(title: generatedIconLetters, font: .system(size: 32, weight: .semibold))
                     .padding(.leading, 8)
+            }
+        }.onAppear {
+            refreshImage()
+        }.onReceive(NotificationCenter.default.publisher(for: .faviconCacheUpdated)) { note in
+            // The favicon image may be decoded lazily after first appearance; re-read when the update
+            // is relevant to this view's domain (or defensively if no payload is present).
+            guard let update = note.faviconsCacheUpdate else {
+                refreshImage()
+                return
+            }
+            if update.hosts.contains(domain) {
+                refreshImage()
             }
         }
     }
