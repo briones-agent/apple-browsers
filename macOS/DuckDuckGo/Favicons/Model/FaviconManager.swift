@@ -474,20 +474,77 @@ extension FaviconManager: Bookmarks.FaviconStoring {
 }
 
 fileprivate extension NSImage {
+
+    /**
+     * The maximum pixel size (longest side) at which freshly downloaded favicons are stored and cached.
+     *
+     * The largest size the app ever *displays* a favicon is the New Tab Page favorites tile, which is
+     * 32 pt; at 2x Retina that is 64 device px (the NTP itself requests favicons at `DDG_DEFAULT_ICON_SIZE = 64`).
+     * Anything larger is wasted memory and disk space, so downloaded favicons are downscaled to this cap
+     * before being stored. Bump this if a larger favicon display surface is ever introduced.
+     */
+    static let maxStoredFaviconPixelSize: CGFloat = 64
+
     /**
      * This function attempts to initialize `NSImage` from `CIImage`.
      *
      * This helps to preserve transparency on some PNG images, and fixes
      * storing `NSImage` initialized with `ico` files in NSKeyedArchiver.
+     *
+     * Freshly decoded images are downscaled to `maxStoredFaviconPixelSize` (longest side, aspect ratio
+     * preserved) so that both the in-memory image and the archived blob stay small. Images that are already
+     * at or below the cap are left untouched (downscale only, never upscale).
      */
     convenience init?(dataUsingCIImage data: Data) {
         guard let ciImage = CIImage(data: data) else {
             self.init(data: data)
             return
         }
-        let rep = NSCIImageRep(ciImage: ciImage)
-        self.init(size: rep.size)
-        addRepresentation(rep)
+
+        let downscaledRep = NSImage.downscaledBitmapRep(from: ciImage)
+        self.init(size: downscaledRep.size)
+        addRepresentation(downscaledRep)
+    }
+
+    /**
+     * Renders the given `CIImage` into a bitmap-backed image representation whose pixel dimensions are
+     * capped at `maxStoredFaviconPixelSize` on the longest side (aspect ratio preserved, downscale only).
+     *
+     * The result is always a concrete `NSBitmapImageRep` (not a lazy `NSCIImageRep`), so the backing bitmap
+     * and the archived blob are guaranteed small. Its `size` (in points) equals its pixel dimensions, which
+     * keeps `Favicon.SizeCategory` classification (driven by `image.size`) consistent with the actual pixels.
+     */
+    private static func downscaledBitmapRep(from ciImage: CIImage) -> NSImageRep {
+        let extent = ciImage.extent
+        let longestSide = max(extent.width, extent.height)
+
+        // Downscale only when the image exceeds the cap; never upscale.
+        let scaledImage: CIImage
+        if longestSide > maxStoredFaviconPixelSize, longestSide.isFinite, longestSide > 0 {
+            let scaleFactor = maxStoredFaviconPixelSize / longestSide
+            // High-quality (Lanczos) downscaling keeps small favicons crisp; fall back to an affine
+            // transform if the filter is unavailable for the input.
+            let lanczos = CIFilter(name: "CILanczosScaleTransform", parameters: [
+                kCIInputImageKey: ciImage,
+                kCIInputScaleKey: scaleFactor,
+                kCIInputAspectRatioKey: 1.0
+            ])
+            scaledImage = lanczos?.outputImage ?? ciImage.scaled(by: scaleFactor)
+        } else {
+            scaledImage = ciImage
+        }
+
+        // Render to a concrete CGImage with high-quality interpolation, then wrap in a bitmap rep.
+        let context = CIContext(options: [.highQualityDownsample: true])
+        if let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) {
+            let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
+            // Keep points == pixels (1:1) so SizeCategory, which reads `image.size`, reflects real pixels.
+            bitmapRep.size = NSSize(width: cgImage.width, height: cgImage.height)
+            return bitmapRep
+        }
+
+        // Fallback: if rendering fails for some reason, fall back to the original CIImage-backed rep.
+        return NSCIImageRep(ciImage: scaledImage)
     }
 }
 
