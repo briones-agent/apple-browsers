@@ -33,21 +33,34 @@ final class CalendarEventPreviewHelper: NSObject, FilePreview {
         case parseFailure
     }
 
-    /// Fires after the editor dismisses, or immediately when we fall back to QuickLook.
+    /// Presents `filePath` in QuickLook as a fallback, calling `completion` once it animates in.
+    typealias QuickLookPresentation = (_ filePath: URL, _ viewController: UIViewController, _ completion: @escaping () -> Void) -> Void
+
+    /// Fires after the editor dismisses, after a fallback QuickLook preview is presented, or
+    /// immediately when a malformed file is reported without a preview.
     var onDismiss: (() -> Void)?
 
     /// Fires after the editor dismisses with the user having tapped Add.
     var onSaved: (() -> Void)?
 
-    /// Fires after QuickLook is presented for the fallback cases; never on iOS <17.
+    /// Fires when a fallback is reported: alongside a QuickLook preview for valid-but-unhandled files
+    /// (`multipleEvents`, `unrecognizedTimeZone`), or on its own for a malformed file. Never on iOS <17.
     var onFailure: ((Failure) -> Void)?
 
     private let filePath: URL
     private weak var viewController: UIViewController?
+    private let presentQuickLook: QuickLookPresentation
 
-    required init(_ filePath: URL, viewController: UIViewController) {
+    required convenience init(_ filePath: URL, viewController: UIViewController) {
+        self.init(filePath, viewController: viewController, presentQuickLook: QuickLookPreviewHelper.presentAsFallback)
+    }
+
+    init(_ filePath: URL,
+         viewController: UIViewController,
+         presentQuickLook: @escaping QuickLookPresentation) {
         self.filePath = filePath
         self.viewController = viewController
+        self.presentQuickLook = presentQuickLook
         super.init()
     }
 
@@ -73,7 +86,7 @@ final class CalendarEventPreviewHelper: NSObject, FilePreview {
             fallbackToQuickLook(reporting: .unrecognizedTimeZone)
         case .parseFailure:
             Pixel.fire(pixel: .icsCalendarFallbackParseFailure)
-            fallbackToQuickLook(reporting: .parseFailure)
+            reportFailureWithoutPreview(.parseFailure)
         }
     }
 
@@ -132,7 +145,14 @@ final class CalendarEventPreviewHelper: NSObject, FilePreview {
             report()
             return
         }
-        QuickLookPreviewHelper.presentAsFallback(filePath, from: viewController, completion: report)
+        presentQuickLook(filePath, viewController, report)
+    }
+
+    /// A malformed `.ics` only renders a "couldn't open" placeholder in QuickLook, so we skip the
+    /// preview entirely: the failure toast already points the user to Downloads.
+    private func reportFailureWithoutPreview(_ failure: Failure) {
+        onFailure?(failure)
+        onDismiss?()
     }
 }
 

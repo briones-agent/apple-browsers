@@ -104,7 +104,7 @@ final class ContactPreviewHelper: NSObject, FilePreview {
     private func handleParseResult(_ result: VCardFileReader.Result?) {
         guard let result else {
             pixelFiring.fire(.vcardContactFallbackParseFailure, withAdditionalParameters: [:])
-            fallbackToQuickLook()
+            reportParseFailure()
             return
         }
         if result.wasTruncated {
@@ -155,18 +155,9 @@ final class ContactPreviewHelper: NSObject, FilePreview {
         }
     }
 
-    private func fallbackToQuickLook() {
-        let reportParseFailure = onParseFailure
-        let reportDismiss = onDismiss
-        let report = {
-            reportParseFailure?()
-            reportDismiss?()
-        }
-        guard let viewController else {
-            report()
-            return
-        }
-        QuickLookPreviewHelper.presentAsFallback(filePath, from: viewController, completion: report)
+    private func reportParseFailure() {
+        onParseFailure?()
+        onDismiss?()
     }
 }
 
