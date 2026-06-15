@@ -5,8 +5,8 @@
 source $(dirname $0)/common.sh
 
 ## Constants
-IPAD_DEVICE_TYPE="iPad-Air-11-inch-M3"
-IPAD_DEVICE_NAME="iPad-Air-11-inch-M3"
+IPAD_DEVICE_TYPE="iPad-Pro-13-inch-M4-16GB"
+IPAD_DEVICE_NAME="iPad-Pro-13-inch-M4-16GB"
 
 ## Functions
 

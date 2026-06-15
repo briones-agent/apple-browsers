@@ -178,11 +178,11 @@ jobs:
           # iPad tests - only tests tagged with 'ipad', exclude iPhone specific tests
           - test-tag: device_info
             exclude-tags: iphone
-            device-model: iPad-Air-11-inch-M3
+            device-model: iPad-Pro-13-inch-M4-16GB
             device: ipad
           - test-tag: duckplayer_classic
             exclude-tags: iphone
-            device-model: iPad-Air-11-inch-M3
+            device-model: iPad-Pro-13-inch-M4-16GB
             device: ipad
       max-parallel: 1 # Uncomment this line to run tests sequentially.
       fail-fast: false
