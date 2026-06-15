@@ -62,15 +62,34 @@ final class FaviconStore: FaviconStoring, Sendable {
             guard let self else {
                 return []
             }
-            let fetchRequest = FaviconManagedObject.fetchRequest() as NSFetchRequest<FaviconManagedObject>
+            // Fetch only the columns needed to build `FaviconMetadata`, deliberately
+            // excluding the `imageEncrypted` BLOB. With `.dictionaryResultType` and an
+            // explicit `propertiesToFetch`, the generated SQL SELECTs just these
+            // columns, so the (~1.2 GB) image bytes are never read off disk at launch.
+            let fetchRequest = NSFetchRequest<NSDictionary>(entityName: FaviconManagedObject.className())
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: #keyPath(FaviconManagedObject.dateCreated), ascending: true)]
-            // returnsObjectsAsFaults stays at the default (true). The image
-            // blob (`imageEncrypted`) is never accessed during the metadata
-            // mapping below, so CoreData never realizes it from SQLite —
-            // this is what avoids the ~310 MB launch-time spike.
-            let faviconMOs = try context.fetch(fetchRequest)
-            Logger.favicons.debug("\(faviconMOs.count) favicon metadata entries loaded")
-            return faviconMOs.compactMap { FaviconMetadata(faviconMO: $0) }
+            fetchRequest.resultType = .dictionaryResultType
+            fetchRequest.propertiesToFetch = [
+                #keyPath(FaviconManagedObject.identifier),
+                #keyPath(FaviconManagedObject.urlEncrypted),
+                #keyPath(FaviconManagedObject.documentUrlEncrypted),
+                #keyPath(FaviconManagedObject.dateCreated),
+                #keyPath(FaviconManagedObject.relation)
+            ]
+
+            // `.dictionaryResultType` returns the raw stored value for Transformable
+            // attributes (the encrypted `Data`), without applying the reverse
+            // ValueTransformer. We resolve the transformer from the model and apply it
+            // manually to decode `urlEncrypted`/`documentUrlEncrypted` back to `URL`.
+            let urlTransformer = context.persistentStoreCoordinator?.managedObjectModel
+                .entitiesByName[FaviconManagedObject.className()]?
+                .attributesByName[#keyPath(FaviconManagedObject.urlEncrypted)]?
+                .valueTransformerName
+                .flatMap { ValueTransformer(forName: NSValueTransformerName($0)) }
+
+            let dictionaries = try context.fetch(fetchRequest)
+            Logger.favicons.debug("\(dictionaries.count) favicon metadata entries loaded")
+            return dictionaries.compactMap { FaviconMetadata(dictionary: $0, urlTransformer: urlTransformer) }
         }
     }
 
@@ -249,14 +268,32 @@ final class FaviconStore: FaviconStoring, Sendable {
 
 fileprivate extension FaviconMetadata {
 
-    init?(faviconMO: FaviconManagedObject) {
-        guard let identifier = faviconMO.identifier,
-              let url = faviconMO.urlEncrypted as? URL,
-              let documentUrl = faviconMO.documentUrlEncrypted as? URL,
-              let dateCreated = faviconMO.dateCreated,
-              let relation = Favicon.Relation(rawValue: Int(faviconMO.relation)) else {
+    /// Builds metadata from a `.dictionaryResultType` fetch that excludes the `imageEncrypted` BLOB.
+    ///
+    /// Transformable attributes (`urlEncrypted`, `documentUrlEncrypted`) come back as the raw
+    /// encrypted `Data` because dictionary fetches don't apply the reverse ValueTransformer, so we
+    /// decode them here using `urlTransformer` (the same `EncryptedValueTransformer<NSURL>` the
+    /// managed object would use). Already-decoded `URL`/`NSURL` values are accepted as a fallback.
+    init?(dictionary: NSDictionary, urlTransformer: ValueTransformer?) {
+        func decodeURL(forKey key: String) -> URL? {
+            let value = dictionary[key]
+            if let url = value as? URL {
+                return url
+            }
+            if let data = value as? Data {
+                return urlTransformer?.reverseTransformedValue(data) as? URL
+            }
+            return nil
+        }
+
+        guard let identifier = dictionary[#keyPath(FaviconManagedObject.identifier)] as? UUID,
+              let url = decodeURL(forKey: #keyPath(FaviconManagedObject.urlEncrypted)),
+              let documentUrl = decodeURL(forKey: #keyPath(FaviconManagedObject.documentUrlEncrypted)),
+              let dateCreated = dictionary[#keyPath(FaviconManagedObject.dateCreated)] as? Date,
+              let relationRawValue = dictionary[#keyPath(FaviconManagedObject.relation)] as? Int,
+              let relation = Favicon.Relation(rawValue: relationRawValue) else {
             PixelKit.fire(DebugEvent(GeneralPixel.faviconDecryptionFailedUnique), frequency: .legacyDaily)
-            assertionFailure("FaviconMetadata: Failed to init from FaviconManagedObject")
+            assertionFailure("FaviconMetadata: Failed to init from fetched dictionary")
             return nil
         }
 
