@@ -4517,7 +4517,7 @@ Take back control of your personal information with the browser designed for dat
 "toast.protection.enabled" = "Privacy Protection enabled for %@";
 
 /* Toast shown when a tapped .vcf contact link can't be parsed (e.g. malformed RFC 6350 content) */
-"vcard.add-contact.parse-failure" = "Unable to add contact. Try opening the contact file from downloads instead.";
+"vcard.add-contact.parse-failure" = "Unable to add contact. Try opening the contact file from Downloads instead.";
 
 /* Toast shown after the user successfully adds a contact from a .vcf contact link to their Contacts */
 "vcard.contact-added" = "Contact added";
