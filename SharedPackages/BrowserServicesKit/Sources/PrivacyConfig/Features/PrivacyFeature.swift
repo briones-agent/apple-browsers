@@ -264,6 +264,9 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// a passive scroll-failure observer plus a gesture watchdog. Off for the general population by default.
     case webScrollFreezeObservability
 
+    /// Internal-only: interactive swipe-up from the bottom bar to open the tab overview (iPhone, bottom address bar).
+    case swipeUpToTabSwitcher
+
     case screenTimeCleaning
 
     case minimalChromeInLandscape

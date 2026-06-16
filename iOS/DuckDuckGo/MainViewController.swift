@@ -250,6 +250,11 @@ class MainViewController: UIViewController {
     let bookmarksCachingSearch: BookmarksCachingSearch
 
     lazy var tabSwitcherTransition = TabSwitcherTransitionDelegate()
+
+    /// Strong owner of the interactive swipe-up presentation's percent-driven interactor while a
+    /// swipe-up gesture is in flight; released by the presentation's transition coordinator. See
+    /// `MainViewController+SwipeUpToTabSwitcher`.
+    var tabSwitcherInteractor: UIPercentDrivenInteractiveTransition?
     var currentTab: TabViewController? {
         return tabManager.current(createIfNeeded: false)
     }
@@ -671,6 +676,7 @@ class MainViewController: UIViewController {
         initTabButton()
         initBookmarksButton()
         setUpUnifiedToggleInputIfNeeded()
+        installSwipeUpToTabSwitcherGesture()
         configureStartupPresentation()
         previewsSource.prepare()
         addLaunchTabNotificationObserver()
@@ -5957,6 +5963,14 @@ extension MainViewController: TabSwitcherButtonDelegate {
     /// Not `private` because the UTI extension in `MainViewController+UnifiedToggleInput`
     /// calls it from another file.
     func requestTabSwitcher() {
+        fireTabSwitcherOpenedPixels()
+        performCancel()
+        showTabSwitcher()
+    }
+
+    /// Fires the counted + daily tab-switcher-opened pixels. Shared by the toolbar button path
+    /// (`requestTabSwitcher`) and the interactive swipe-up gesture, which fires them on commit.
+    func fireTabSwitcherOpenedPixels() {
         Pixel.fire(pixel: .tabBarTabSwitcherOpened,
                    withAdditionalParameters: [PixelParameters.browsingMode: tabManager.currentBrowsingMode.pixelParamValue])
         var openedDailyParams = TabSwitcherOpenDailyPixel().parameters(with: tabManager.allTabsModel.tabs)
@@ -5964,9 +5978,6 @@ extension MainViewController: TabSwitcherButtonDelegate {
         DailyPixel.fireDaily(.tabSwitcherOpenedDaily, withAdditionalParameters: openedDailyParams)
 
         performActionIfAITab { DailyPixel.fireDailyAndCount(pixel: .aiChatTabSwitcherOpened) }
-
-        performCancel()
-        showTabSwitcher()
     }
 
     func showTabSwitcher(forceFireTabsTip: Bool = false) {
@@ -5995,10 +6006,19 @@ extension MainViewController: TabSwitcherButtonDelegate {
 extension MainViewController: UIGestureRecognizerDelegate {
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // The vertical swipe-up-to-overview pan and the horizontal tab-swipe pan share the bottom bar;
+        // never let both drive at once (each begins only for its own axis, but guard the overlap too).
+        if (gestureRecognizer is SwipeUpToTabSwitcherPanGestureRecognizer && otherGestureRecognizer is UnifiedInputSwipeTabsPanGestureRecognizer)
+            || (gestureRecognizer is UnifiedInputSwipeTabsPanGestureRecognizer && otherGestureRecognizer is SwipeUpToTabSwitcherPanGestureRecognizer) {
+            return false
+        }
         return true
     }
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let pan = gestureRecognizer as? SwipeUpToTabSwitcherPanGestureRecognizer {
+            return shouldBeginSwipeUpToTabSwitcherPan(pan)
+        }
         if let pan = gestureRecognizer as? UnifiedInputSwipeTabsPanGestureRecognizer {
             return shouldBeginUnifiedInputSwipeTabsPan(pan)
         }

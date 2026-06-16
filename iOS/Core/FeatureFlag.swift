@@ -321,6 +321,10 @@ public enum FeatureFlag: String {
     /// Internal-only gate for web-scroll-freeze observability (scroll-failure observer + gesture watchdog).
     case webScrollFreezeObservability
 
+    /// Internal-only: interactive swipe-up from the bottom bar to open the tab overview
+    /// (iPhone, bottom address bar only).
+    case swipeUpToTabSwitcher
+
     /// Failsafe kill switch for hiding the Search↔Duck.ai toggle on Duck.ai tabs. On by
     /// default; ship a privacy-config entry to roll back. See
     /// `UnifiedToggleInputFeatureProviding.isToggleHiddenOnDuckAITab`.
@@ -729,6 +733,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(AIChatSubfeature.unifiedToggleInput))
         case .webScrollFreezeObservability:
             Config(defaultValue: .internalOnly, source: .remoteReleasable(iOSBrowserConfigSubfeature.webScrollFreezeObservability))
+        case .swipeUpToTabSwitcher:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(iOSBrowserConfigSubfeature.swipeUpToTabSwitcher))
         case .aiChatTabHideToggle:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.aiChatTabHideToggle))
         case .freeTrialConversionWideEvent:

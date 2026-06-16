@@ -77,7 +77,12 @@ class TabSwitcherTransition: NSObject, UIViewControllerAnimatedTransitioning {
 }
 
 class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDelegate {
-    
+
+    /// Non-nil only while an interactive swipe-up gesture is driving the presentation. The gesture
+    /// owns the interactor strongly; this weak reference lets ordinary button-tap presentations
+    /// (where it stays nil) fall through to the normal, non-interactive animation unchanged.
+    weak var activeInteractor: UIPercentDrivenInteractiveTransition?
+
     func animationController(forPresented presented: UIViewController,
                              presenting: UIViewController,
                              source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
@@ -93,6 +98,11 @@ class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDele
         
         return FromWebViewTransition(mainViewController: mainVC,
                                      tabSwitcherViewController: tabSwitcherVC)
+    }
+
+    func interactionControllerForPresentation(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        // nil for button taps → UIKit performs the normal non-interactive present.
+        return activeInteractor
     }
 
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {

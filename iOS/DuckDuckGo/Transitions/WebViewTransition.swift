@@ -128,7 +128,9 @@ class FromWebViewTransition: WebViewTransition {
         }, completion: { _ in
             self.solidBackground.removeFromSuperview()
             self.imageContainer.removeFromSuperview()
-            transitionContext.completeTransition(true)
+            // `transitionWasCancelled` is always false for a button-tap (non-interactive) present, so
+            // this preserves existing behaviour; it only differs when an interactive gesture cancels.
+            transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
         })
 
     }

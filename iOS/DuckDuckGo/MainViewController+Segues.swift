@@ -219,6 +219,19 @@ extension MainViewController {
             return
         }
 
+        guard let controller = makeTabSwitcherController(initialTrackerCountState: initialTrackerCountState,
+                                                         forceFireTabsTip: forceFireTabsTip) else {
+            return
+        }
+
+        present(controller, animated: true)
+    }
+
+    /// Builds, configures and stores `tabSwitcherController` without presenting it. Shared by the
+    /// async button-tap path (`segueToTabSwitcher`) and the synchronous interactive swipe-up path
+    /// (`beginInteractiveTabSwitcherPresentation`).
+    private func makeTabSwitcherController(initialTrackerCountState: TabSwitcherTrackerCountViewModel.State,
+                                           forceFireTabsTip: Bool) -> TabSwitcherViewController? {
         let duckAIGridContentProvider = DuckAIGridContentResolver(
             featureFlagger: featureFlagger,
             storageHandler: duckAiNativeStorageHandler
@@ -244,7 +257,7 @@ extension MainViewController {
                                       duckAIGridContentProvider: duckAIGridContentProvider)
         }) else {
             assertionFailure()
-            return
+            return nil
         }
 
         controller.transitioningDelegate = tabSwitcherTransition
@@ -255,8 +268,34 @@ extension MainViewController {
         controller.modalPresentationStyle = .overCurrentContext
 
         tabSwitcherController = controller
+        return controller
+    }
 
+    /// Synchronous entry point for the interactive swipe-up gesture. Presents the tab switcher
+    /// immediately so UIKit asks the transitioning delegate for the gesture's interaction controller
+    /// and pins the transition at 0%. Uses a `.hidden` initial tracker-count state to skip the async
+    /// fetch the button-tap path awaits; `TabSwitcherPageViewController` refreshes the real count on
+    /// appear. Returns false if a presentation is already active or the controller can't be built.
+    @discardableResult
+    func beginInteractiveTabSwitcherPresentation(interactor: UIPercentDrivenInteractiveTransition) -> Bool {
+        Logger.lifecycle.debug(#function)
+        guard tabSwitcherController == nil else { return false }
+        hideAllHighlightsIfNeeded()
+        guard let controller = makeTabSwitcherController(initialTrackerCountState: .hidden,
+                                                         forceFireTabsTip: false) else {
+            return false
+        }
+        tabSwitcherTransition.activeInteractor = interactor
         present(controller, animated: true)
+
+        // Release the interactor once the interactive transition settles (whether it finished or was
+        // cancelled), keeping it alive for the whole animation. Clearing it makes the next button-tap
+        // present non-interactive again (the delegate's weak `activeInteractor` then falls back to nil).
+        controller.transitionCoordinator?.animate(alongsideTransition: nil) { [weak self] _ in
+            self?.tabSwitcherTransition.activeInteractor = nil
+            self?.tabSwitcherInteractor = nil
+        }
+        return true
     }
 
     func segueToSettings() {
