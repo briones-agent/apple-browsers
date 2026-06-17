@@ -175,13 +175,13 @@ jobs:
         esac
         # iPhone tests exclude iPad-tagged tests; iPad tests exclude iPhone-tagged tests.
         base='[
-          {"test-tag":"release","exclude-tags":"ipad","device-model":"iPhone-17","device-name":"iPhone","device":"iphone"},
-          {"test-tag":"privacy","exclude-tags":"ipad","device-model":"iPhone-17","device-name":"iPhone","device":"iphone"},
-          {"test-tag":"securityTest","exclude-tags":"ipad","device-model":"iPhone-17","device-name":"iPhone","device":"iphone"},
-          {"test-tag":"adClick","exclude-tags":"ipad","device-model":"iPhone-17","device-name":"iPhone","device":"iphone"},
-          {"test-tag":"duckplayer_native","exclude-tags":"ipad","device-model":"iPhone-17","device":"iphone"},
-          {"test-tag":"device_info","exclude-tags":"ipad","device-model":"iPhone-17","device":"iphone"},
-          {"test-tag":"youtube_adblock","exclude-tags":"ipad","device-model":"iPhone-17","device":"iphone"},
+          {"test-tag":"release","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device-name":"iPhone","device":"iphone"},
+          {"test-tag":"privacy","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device-name":"iPhone","device":"iphone"},
+          {"test-tag":"securityTest","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device-name":"iPhone","device":"iphone"},
+          {"test-tag":"adClick","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device-name":"iPhone","device":"iphone"},
+          {"test-tag":"duckplayer_native","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device":"iphone"},
+          {"test-tag":"device_info","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device":"iphone"},
+          {"test-tag":"youtube_adblock","exclude-tags":"ipad","device-model":"iPhone-17-Pro-Max","device":"iphone"},
           {"test-tag":"device_info","exclude-tags":"iphone","device-model":"iPad-Pro-13-inch-M4-16GB","device":"ipad"},
           {"test-tag":"duckplayer_classic","exclude-tags":"iphone","device-model":"iPad-Pro-13-inch-M4-16GB","device":"ipad"},
           {"test-tag":"duckai_chrome_shortcut","exclude-tags":"iphone","device-model":"iPad-Pro-13-inch-M4-16GB","device":"ipad"}
