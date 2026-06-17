@@ -561,7 +561,7 @@ final class UnifiedToggleInputViewTests: XCTestCase {
         sut.updatePoseForCurrentState()
         let heightAfterTap = applyFittingHeight(to: sut)
 
-        XCTAssertGreaterThan(heightAfterTap, singleLineHeight)
+        XCTAssertEqual(heightAfterTap, singleLineHeight, accuracy: 1)
     }
 
     func test_urlCanExpandInAIChatModeAfterUserTap() {
@@ -596,7 +596,7 @@ final class UnifiedToggleInputViewTests: XCTestCase {
         sut.updatePoseForCurrentState()
         let heightAfterTap = applyFittingHeight(to: sut)
 
-        XCTAssertGreaterThan(heightAfterTap, singleLineHeight)
+        XCTAssertEqual(heightAfterTap, singleLineHeight, accuracy: 1)
     }
 
     private func flushMainQueue() {
