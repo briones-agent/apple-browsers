@@ -868,8 +868,10 @@ extension MainCoordinator: UserActivityHandling {
     }
 
     private func handleHandoffUserActivity(_ userActivity: NSUserActivity) -> Bool {
-        // Receiving is always allowed — it transmits nothing. Only advertising is gated by the user setting.
-        guard let url = HandoffUserActivity.incomingURL(from: userActivity) else {
+        // The feature flag kill-switches both directions; the user setting gates advertising only, so
+        // receiving is not checked against it.
+        guard featureFlagger.isFeatureOn(.handoff),
+              let url = HandoffUserActivity.incomingURL(from: userActivity) else {
             return false
         }
         controller.loadUrlInNewTab(url, reuseExisting: .any, inheritedAttribution: nil)

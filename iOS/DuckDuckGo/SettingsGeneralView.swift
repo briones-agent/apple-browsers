@@ -149,10 +149,12 @@ struct SettingsGeneralView: View {
                                  accessory: .toggle(isOn: viewModel.universalLinksBinding))
             }
 
-            // Handoff
-            Section(footer: Text(UserText.settingsHandoffDescription)) {
-                SettingsCellView(label: UserText.settingsHandoff,
-                                 accessory: .toggle(isOn: viewModel.handoffEnabledBinding))
+            if viewModel.isHandoffFeatureEnabled {
+                // Handoff
+                Section(footer: Text(UserText.settingsHandoffDescription)) {
+                    SettingsCellView(label: UserText.settingsHandoff,
+                                     accessory: .toggle(isOn: viewModel.handoffEnabledBinding))
+                }
             }
 
             // Media

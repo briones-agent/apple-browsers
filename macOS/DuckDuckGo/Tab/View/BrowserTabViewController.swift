@@ -1962,15 +1962,20 @@ enum HandoffUserActivity {
 extension BrowserTabViewController {
 
     override func restoreUserActivityState(_ userActivity: NSUserActivity) {
-        // Receiving is always allowed — it transmits nothing. Only advertising is gated by the user setting.
-        guard let url = HandoffUserActivity.incomingURL(from: userActivity) else {
+        // The feature flag kill-switches both directions; the user setting gates advertising only, so
+        // receiving is not checked against it.
+        guard featureFlagger.isFeatureOn(.handoff),
+              let url = HandoffUserActivity.incomingURL(from: userActivity) else {
             return
         }
         openNewTab(with: .url(url, credential: nil, source: .appOpenUrl))
     }
 
     func becomeCurrentActivity() {
-        guard advertisesHandoff else { return }
+        guard advertisesHandoff else {
+            invalidateCurrentActivity()
+            return
+        }
 
         if currentHandoffURL == nil {
             resetToInertActivity()
@@ -1980,7 +1985,10 @@ extension BrowserTabViewController {
     }
 
     private func updateCurrentActivity(url: URL?) {
-        guard advertisesHandoff else { return }
+        guard advertisesHandoff else {
+            invalidateCurrentActivity()
+            return
+        }
 
         let handoffURL: URL? = {
             guard let url, let scheme = url.scheme, ["http", "https"].contains(scheme) else { return nil }
@@ -2010,6 +2018,25 @@ extension BrowserTabViewController {
         userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
     }
 
-    // TODO: Also gate behind the `.handoff` feature flag once it is added.
-    private var advertisesHandoff: Bool { !tabCollectionViewModel.isBurner && tabsPreferences.handoffEnabled }
+    private func invalidateCurrentActivity() {
+        userActivity?.invalidate()
+        userActivity = nil
+    }
+
+    private var advertisesHandoff: Bool {
+        featureFlagger.isFeatureOn(.handoff)
+        && !tabCollectionViewModel.isBurner
+        && tabsPreferences.handoffEnabled
+        && tabViewModel?.tab.content.isSettings != true
+    }
+}
+
+private extension Tab.TabContent {
+
+    var isSettings: Bool {
+        if case .settings = self {
+            return true
+        }
+        return false
+    }
 }

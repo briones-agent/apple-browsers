@@ -632,6 +632,11 @@ class SettingsUINavigationController: UINavigationController {
         NotificationCenter.default.post(name: .settingsDidDisappear, object: nil)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        NotificationCenter.default.post(name: .settingsDidAppear, object: nil)
+    }
+
     override func pushViewController(_ viewController: UIViewController, animated: Bool) {
         // Settings uses NavigationLink for deep linking, but because we don't use it within a NavigationStack, it talks
         // to the hosting navigation controller. It offers no control over navigation animation, so this workaround
@@ -646,5 +651,6 @@ class SettingsUINavigationController: UINavigationController {
 }
 
 extension NSNotification.Name {
+    static let settingsDidAppear: NSNotification.Name = Notification.Name(rawValue: "com.duckduckgo.settings.didAppear")
     static let settingsDidDisappear: NSNotification.Name = Notification.Name(rawValue: "com.duckduckgo.settings.didDisappear")
 }

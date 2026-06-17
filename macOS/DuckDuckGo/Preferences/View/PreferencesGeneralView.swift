@@ -227,12 +227,14 @@ extension Preferences {
                     }
                 }
 
-                // SECTION: Handoff
-                PreferencePaneSection(UserText.handoff) {
-                    PreferencePaneSubSection {
-                        ToggleMenuItem(UserText.handoffPreferenceToggle, isOn: $tabsModel.handoffEnabled)
-                            .accessibilityIdentifier("PreferencesGeneralView.handoff")
-                        TextMenuItemCaption(UserText.handoffPreferenceCaption)
+                if featureFlagger.isFeatureOn(.handoff) {
+                    // SECTION: Handoff
+                    PreferencePaneSection(UserText.handoff) {
+                        PreferencePaneSubSection {
+                            ToggleMenuItem(UserText.handoffPreferenceToggle, isOn: $tabsModel.handoffEnabled)
+                                .accessibilityIdentifier("PreferencesGeneralView.handoff")
+                            TextMenuItemCaption(UserText.handoffPreferenceCaption)
+                        }
                     }
                 }
 

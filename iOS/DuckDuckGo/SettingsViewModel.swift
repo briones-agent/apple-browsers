@@ -902,6 +902,10 @@ final class SettingsViewModel: ObservableObject {
         )
     }
 
+    var isHandoffFeatureEnabled: Bool {
+        featureFlagger.isFeatureOn(.handoff)
+    }
+
     var crashCollectionOptInStatusBinding: Binding<Bool> {
         Binding<Bool>(
             get: { self.state.crashCollectionOptInStatus == .optedIn },

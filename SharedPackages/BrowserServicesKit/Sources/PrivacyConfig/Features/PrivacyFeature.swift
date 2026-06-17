@@ -199,6 +199,9 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// legacy `javascript:` URL trampoline. Kill switch — disable remotely to revert to the
     /// trampoline if the SPI ever misbehaves.
     case newErrorPageReload
+
+    /// https://app.asana.com/1/137249556945/project/42792087274227/task/1208898050569868
+    case handoff
 }
 
 public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
@@ -307,6 +310,9 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215385432113040?focus=true
     case removeChatHistory
+
+    /// https://app.asana.com/1/137249556945/project/42792087274227/task/1208898050569868
+    case handoff
 }
 
 public enum TabManagerSubfeature: String, PrivacySubfeature {

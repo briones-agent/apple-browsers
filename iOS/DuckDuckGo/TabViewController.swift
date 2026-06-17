@@ -4797,7 +4797,10 @@ enum HandoffUserActivity {
 extension TabViewController {
 
     func becomeCurrentActivity() {
-        guard advertisesHandoff else { return }
+        guard advertisesHandoff else {
+            invalidateCurrentActivity()
+            return
+        }
 
         if currentHandoffURL == nil {
             resetToInertActivity()
@@ -4807,7 +4810,10 @@ extension TabViewController {
     }
 
     private func updateCurrentActivity(url: URL?) {
-        guard advertisesHandoff else { return }
+        guard advertisesHandoff else {
+            invalidateCurrentActivity()
+            return
+        }
 
         let handoffURL: URL? = {
             guard let url, let scheme = url.scheme, ["http", "https"].contains(scheme) else { return nil }
@@ -4837,6 +4843,10 @@ extension TabViewController {
         userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
     }
 
-    // TODO: Also gate behind the `.handoff` feature flag once it is added.
-    private var advertisesHandoff: Bool { appSettings.handoffEnabled }
+    func invalidateCurrentActivity() {
+        userActivity?.invalidate()
+        userActivity = nil
+    }
+
+    private var advertisesHandoff: Bool { featureFlagger.isFeatureOn(.handoff) && appSettings.handoffEnabled && !tabModel.fireTab }
 }

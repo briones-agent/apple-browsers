@@ -481,6 +481,9 @@ public enum FeatureFlag: String {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215597855114767?focus=true
     case syncCanShowV2ConnectCode
+
+    /// https://app.asana.com/1/137249556945/project/42792087274227/task/1208898050569868
+    case handoff
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -825,6 +828,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(SyncSubfeature.canUseV2ConnectFlow))
         case .syncCanShowV2ConnectCode:
             Config(source: .remoteReleasable(SyncSubfeature.canShowV2ConnectCode))
+        case .handoff:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(iOSBrowserConfigSubfeature.handoff))
         }
     }
 

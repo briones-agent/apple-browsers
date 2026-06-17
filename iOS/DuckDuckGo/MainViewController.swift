@@ -677,6 +677,7 @@ class MainViewController: UIViewController {
         subscribeToEmailProtectionStatusNotifications()
         subscribeToURLInterceptorNotifications()
         subscribeToSettingsDeeplinkNotifications()
+        subscribeToSettingsPresentationNotifications()
         subscribeToNetworkProtectionEvents()
         subscribeToUnifiedFeedbackNotifications()
         subscribeToAIChatSettingsEvents()
@@ -3109,6 +3110,23 @@ class MainViewController: UIViewController {
                 handleSettingsDeepLink()
             }
             .store(in: &settingsDeepLinkcancellables)
+    }
+
+    private func subscribeToSettingsPresentationNotifications() {
+        NotificationCenter.default.publisher(for: .settingsDidAppear)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.currentTab?.invalidateCurrentActivity()
+                self?.invalidateCurrentActivity()
+            }
+            .store(in: &settingsCancellables)
+
+        NotificationCenter.default.publisher(for: .settingsDidDisappear)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.currentTab?.becomeCurrentActivity()
+            }
+            .store(in: &settingsCancellables)
     }
     
     private func handleSettingsDeepLink(_ notification: Notification, onPresented: (() -> Void)? = nil) {
@@ -7207,14 +7225,17 @@ extension MainViewController {
 extension MainViewController {
 
     func invalidateCurrentActivity() {
-        guard advertisesHandoff else { return }
-
         userActivity?.invalidate()
+
+        guard advertisesHandoff else {
+            userActivity = nil
+            return
+        }
+
         userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
         userActivity?.webpageURL = nil
         userActivity?.becomeCurrent()
     }
 
-    // TODO: Also gate behind the `.handoff` feature flag once it is added.
-    private var advertisesHandoff: Bool { appSettings.handoffEnabled }
+    private var advertisesHandoff: Bool { featureFlagger.isFeatureOn(.handoff) && appSettings.handoffEnabled }
 }
