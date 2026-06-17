@@ -139,6 +139,12 @@
 /* Placeholder text in search field on the quick actions widget */
 "widget.quickactions.search" = "Search";
 
+/* Brand title shown in the header of the recent chats widget */
+"widget.recentchats.brand.title" = "Duck.ai";
+
+/* Label next to the chat count in the recent chats widget header, e.g. the word after the number in “5 Chats” */
+"widget.recentchats.count.label" = "Chats";
+
 /* Empty-state message shown in the recent chats widget when there are no chats */
 "widget.recentchats.empty" = "Your recent Duck.ai chats will appear here.";
 

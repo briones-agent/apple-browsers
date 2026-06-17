@@ -117,11 +117,10 @@ final class AIChatWidgetSyncEngine {
         }
 
         do {
-            let records = try storage.getAllChats()
-            let chats = records
+            let allChats = try storage.getAllChats()
                 .compactMap { try? DuckAiChat.decode(from: $0.data).chat }
                 .sorted { $0.lastEdit > $1.lastEdit }
-                .prefix(Self.maxChats)
+            let chats = allChats.prefix(Self.maxChats)
 
             try FileManager.default.createDirectory(at: dataLocation.thumbnailsDirectoryURL, withIntermediateDirectories: true)
 
@@ -140,7 +139,8 @@ final class AIChatWidgetSyncEngine {
 
             removeStaleThumbnails(keeping: keptThumbnailIds, location: dataLocation)
 
-            let data = try JSONEncoder().encode(entries)
+            let snapshot = WidgetChatSnapshot(totalChatCount: allChats.count, chats: entries)
+            let data = try JSONEncoder().encode(snapshot)
             try data.write(to: dataLocation.chatsFileURL, options: .atomic)
             reloadWidgets()
         } catch {

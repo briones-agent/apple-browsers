@@ -49,6 +49,14 @@ struct UserText {
                                                                  value: "Your recent Duck.ai chats will appear here.",
                                                                  comment: "Empty-state message shown in the recent chats widget when there are no chats")
 
+    static let recentChatsWidgetBrandTitle = NSLocalizedString("widget.recentchats.brand.title",
+                                                               value: "Duck.ai",
+                                                               comment: "Brand title shown in the header of the recent chats widget")
+
+    static let recentChatsWidgetCountLabel = NSLocalizedString("widget.recentchats.count.label",
+                                                               value: "Chats",
+                                                               comment: "Label next to the chat count in the recent chats widget header, e.g. the word after the number in “5 Chats”")
+
     static let searchDuckDuckGo = NSLocalizedString("widget.search.duckduckgo",
                                                     value: "Search DuckDuckGo",
                                                     comment: "Placeholder text in search field on the search and favorites widget")

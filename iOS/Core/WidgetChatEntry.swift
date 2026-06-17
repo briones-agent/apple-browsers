@@ -43,3 +43,16 @@ public struct WidgetChatEntry: Codable, Equatable {
         self.hasImageThumbnail = hasImageThumbnail
     }
 }
+
+/// Envelope written to the app group: the most-recent chats the widget renders, plus the total
+/// number of chats the user has (so the widget can show an accurate count even though only the
+/// top few are mirrored).
+public struct WidgetChatSnapshot: Codable, Equatable {
+    public let totalChatCount: Int
+    public let chats: [WidgetChatEntry]
+
+    public init(totalChatCount: Int, chats: [WidgetChatEntry]) {
+        self.totalChatCount = totalChatCount
+        self.chats = chats
+    }
+}

@@ -25,6 +25,7 @@ import Core
 struct AIChatRecentChatsEntry: TimelineEntry {
     let date: Date
     let chats: [WidgetChatEntry]
+    let totalChatCount: Int
     let thumbnails: [String: UIImage]
     let isEnabled: Bool
     let isPreview: Bool
@@ -33,12 +34,23 @@ struct AIChatRecentChatsEntry: TimelineEntry {
     static func deepLink(forChatId chatId: String) -> URL {
         AIChatWidgetDeepLink.url(forChatId: chatId, source: WidgetSourceType.recentChatsWidget.rawValue)
     }
+
+    /// Sample content shown in the widget gallery / previews.
+    static var sample: AIChatRecentChatsEntry {
+        let chats = [
+            WidgetChatEntry(chatId: "1", title: "Trip ideas for Lisbon", lastEdit: "", hasImageThumbnail: false),
+            WidgetChatEntry(chatId: "2", title: "Explain quantum computing", lastEdit: "", hasImageThumbnail: false),
+            WidgetChatEntry(chatId: "3", title: "Dinner recipe with salmon", lastEdit: "", hasImageThumbnail: false),
+            WidgetChatEntry(chatId: "4", title: "Summarize this article", lastEdit: "", hasImageThumbnail: false)
+        ]
+        return AIChatRecentChatsEntry(date: Date(), chats: chats, totalChatCount: chats.count, thumbnails: [:], isEnabled: true, isPreview: true)
+    }
 }
 
 struct AIChatRecentChatsProvider: TimelineProvider {
 
     func placeholder(in context: Context) -> AIChatRecentChatsEntry {
-        AIChatRecentChatsEntry(date: Date(), chats: [], thumbnails: [:], isEnabled: true, isPreview: context.isPreview)
+        .sample
     }
 
     func getSnapshot(in context: Context, completion: @escaping (AIChatRecentChatsEntry) -> Void) {
@@ -51,14 +63,20 @@ struct AIChatRecentChatsProvider: TimelineProvider {
     }
 
     private func makeEntry(isPreview: Bool) -> AIChatRecentChatsEntry {
-        guard isWidgetEnabled, let location = AIChatWidgetDataLocation.appGroup() else {
-            return AIChatRecentChatsEntry(date: Date(), chats: [], thumbnails: [:], isEnabled: isWidgetEnabled, isPreview: isPreview)
+        // In the gallery, show curated sample content rather than an empty box.
+        if isPreview {
+            return .sample
         }
 
-        let chats = (try? JSONDecoder().decode([WidgetChatEntry].self, from: Data(contentsOf: location.chatsFileURL))) ?? []
+        guard isWidgetEnabled, let location = AIChatWidgetDataLocation.appGroup() else {
+            return AIChatRecentChatsEntry(date: Date(), chats: [], totalChatCount: 0, thumbnails: [:], isEnabled: isWidgetEnabled, isPreview: false)
+        }
+
+        let snapshot = (try? JSONDecoder().decode(WidgetChatSnapshot.self, from: Data(contentsOf: location.chatsFileURL)))
+            ?? WidgetChatSnapshot(totalChatCount: 0, chats: [])
 
         var thumbnails: [String: UIImage] = [:]
-        for chat in chats where chat.hasImageThumbnail {
+        for chat in snapshot.chats where chat.hasImageThumbnail {
             if let data = try? Data(contentsOf: location.thumbnailURL(forChatId: chat.chatId)),
                let image = UIImage(data: data) {
                 thumbnails[chat.chatId] = image.toSRGB()
@@ -66,10 +84,11 @@ struct AIChatRecentChatsProvider: TimelineProvider {
         }
 
         return AIChatRecentChatsEntry(date: Date(),
-                                      chats: chats,
+                                      chats: snapshot.chats,
+                                      totalChatCount: snapshot.totalChatCount,
                                       thumbnails: thumbnails,
                                       isEnabled: true,
-                                      isPreview: isPreview && chats.isEmpty)
+                                      isPreview: false)
     }
 
     /// Both the global AI Chat toggle and the widget toggle must be on. This is defense in depth:

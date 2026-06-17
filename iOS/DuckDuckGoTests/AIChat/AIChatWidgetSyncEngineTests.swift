@@ -101,9 +101,13 @@ final class AIChatWidgetSyncEngineTests: XCTestCase {
         return AIChatWidgetDataLocation(containerURL: dir)
     }
 
-    private func readEntries(_ location: AIChatWidgetDataLocation) throws -> [WidgetChatEntry] {
+    private func readSnapshot(_ location: AIChatWidgetDataLocation) throws -> WidgetChatSnapshot {
         let data = try Data(contentsOf: location.chatsFileURL)
-        return try JSONDecoder().decode([WidgetChatEntry].self, from: data)
+        return try JSONDecoder().decode(WidgetChatSnapshot.self, from: data)
+    }
+
+    private func readEntries(_ location: AIChatWidgetDataLocation) throws -> [WidgetChatEntry] {
+        try readSnapshot(location).chats
     }
 
     private func makeEngine(storage: MockObservableStorage,
@@ -151,6 +155,22 @@ final class AIChatWidgetSyncEngineTests: XCTestCase {
         let entries = try readEntries(location)
         XCTAssertEqual(entries.count, 6)
         XCTAssertEqual(entries.first?.chatId, "c9")
+    }
+
+    func testWhenMoreThanSixChatsThenSnapshotTotalReflectsAllChats() throws {
+        let storage = MockObservableStorage()
+        storage.chats = (0..<10).map { index in
+            let day = String(format: "%02d", index + 1)
+            return DuckAiChatRecord(chatId: "c\(index)", data: chatData(id: "c\(index)", title: "T\(index)", lastEdit: "2026-03-\(day)T00:00:00.000Z"))
+        }
+        let location = makeLocation()
+        let engine = makeEngine(storage: storage, location: location)
+
+        engine.syncNow()
+
+        let snapshot = try readSnapshot(location)
+        XCTAssertEqual(snapshot.totalChatCount, 10)
+        XCTAssertEqual(snapshot.chats.count, 6)
     }
 
     // MARK: - Thumbnails (Task 5)

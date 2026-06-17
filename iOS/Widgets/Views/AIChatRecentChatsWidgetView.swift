@@ -27,57 +27,124 @@ struct AIChatRecentChatsWidgetView: View {
     var entry: AIChatRecentChatsEntry
 
     private var maxRows: Int { family == .systemLarge ? 6 : 3 }
+    private var rowSpacing: CGFloat { family == .systemLarge ? 14 : 11 }
 
     var body: some View {
         DesignSystemWidgetContainerView {
             if !entry.isEnabled || entry.chats.isEmpty {
-                emptyState
+                AIChatRecentChatsEmptyView()
             } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(Array(entry.chats.prefix(maxRows)), id: \.chatId) { chat in
-                        Link(destination: AIChatRecentChatsEntry.deepLink(forChatId: chat.chatId)) {
-                            AIChatChatRowView(chat: chat, thumbnail: entry.thumbnails[chat.chatId])
+                VStack(alignment: .leading, spacing: 0) {
+                    AIChatRecentChatsHeaderView(count: entry.totalChatCount)
+                        .padding(.bottom, family == .systemLarge ? 14 : 10)
+
+                    VStack(alignment: .leading, spacing: rowSpacing) {
+                        ForEach(entry.chats.prefix(maxRows), id: \.chatId) { chat in
+                            Link(destination: AIChatRecentChatsEntry.deepLink(forChatId: chat.chatId)) {
+                                AIChatChatRowView(chat: chat, thumbnail: entry.thumbnails[chat.chatId])
+                            }
                         }
                     }
+
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
     }
+}
 
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(UserText.recentChatsWidgetGalleryDisplayName)
-                .daxSubheadSemibold()
+// MARK: - Header
+
+private struct AIChatRecentChatsHeaderView: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            DuckAiLogo()
+                .frame(width: 24, height: 24)
+
+            Text(UserText.recentChatsWidgetBrandTitle)
+                .daxBodyBold()
                 .foregroundStyle(Color(designSystemColor: .textPrimary))
-            Text(UserText.recentChatsWidgetEmptyMessage)
-                .daxCaption()
-                .foregroundStyle(Color(designSystemColor: .textSecondary))
+
+            Spacer(minLength: 8)
+
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("\(count)")
+                    .daxBodyBold()
+                    .foregroundStyle(Color(designSystemColor: .accent))
+                Text(UserText.recentChatsWidgetCountLabel)
+                    .daxFootnoteRegular()
+                    .foregroundStyle(Color(designSystemColor: .textSecondary))
+            }
+            .accessibilityElement(children: .combine)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
+
+// MARK: - Row
 
 struct AIChatChatRowView: View {
     let chat: WidgetChatEntry
     let thumbnail: UIImage?
 
+    private let iconSize: CGFloat = 26
+
     var body: some View {
-        HStack(spacing: 8) {
-            if let thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .useFullColorRendering()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 28, height: 28)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
+        HStack(spacing: 10) {
+            icon
             Text(chat.title)
-                .daxBodyRegular()
+                .daxSubheadRegular()
                 .foregroundStyle(Color(designSystemColor: .textPrimary))
                 .lineLimit(1)
             Spacer(minLength: 0)
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        if let thumbnail {
+            Image(uiImage: thumbnail)
+                .resizable()
+                .useFullColorRendering()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: iconSize, height: iconSize)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        } else {
+            Image(systemName: "bubble.left.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color(designSystemColor: .accent))
+                .frame(width: iconSize, height: iconSize)
+                .background(Color(designSystemColor: .accent).opacity(0.12), in: Circle())
+        }
+    }
+}
+
+// MARK: - Empty state
+
+private struct AIChatRecentChatsEmptyView: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            DuckAiLogo()
+                .frame(width: 40, height: 40)
+            Text(UserText.recentChatsWidgetEmptyMessage)
+                .daxFootnoteRegular()
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color(designSystemColor: .textSecondary))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+}
+
+// MARK: - Logo
+
+/// The Duck.ai brand mark, rendered full-color on standard widgets and tintable on accented/
+/// Lock Screen render modes.
+private struct DuckAiLogo: View {
+    var body: some View {
+        ResizableTintableImage(fullColor: UIImage(resource: .widgetDaxLogo),
+                               tintable: UIImage(resource: .widgetDaxLogoTinted))
     }
 }
