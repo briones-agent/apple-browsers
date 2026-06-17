@@ -1814,12 +1814,20 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
 extension UnifiedToggleInputCoordinator {
     
     func handleToolsMenuSelection(_ identifier: UTIToolsMenu.Item.Identifier) {
+        if case .customizeResponses = identifier {
+            UnifiedToggleInputCoordinatorPixelHelper.fireCustomizeResponsesSelectedPixel()
+            viewController.handler.customizeResponsesButtonTapped()
+            return
+        }
+
         let previousTool = toolsController.selectedTool
         switch identifier {
         case .webSearch:
             toolsController.toggleSelection(for: .webSearch, modelStore: modelStore)
         case .imageGeneration:
             toolsController.toggleSelection(for: .imageGeneration, modelStore: modelStore)
+        case .customizeResponses:
+            return
         }
         let currentTool = toolsController.selectedTool
         fireToolToggleTransitionPixel(previous: previousTool, current: currentTool)
@@ -2483,7 +2491,6 @@ private extension UnifiedToggleInputCoordinator {
             .sink { [weak self] in
                 guard let self else { return }
                 self.didPressCustomizeResponsesButton.send()
-                self.resetToolsSelection()
                 self.showCollapsed()
             }
             .store(in: &cancellables)
