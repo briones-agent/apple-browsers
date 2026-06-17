@@ -69,7 +69,9 @@ final class SettingsViewModel: ObservableObject {
     private(set) var historyManager: HistoryManaging
     let subscriptionDataReporter: SubscriptionDataReporting?
     let aiChatSettings: AIChatSettingsProvider
-    let serpSettings: SERPSettingsProviding
+    // `var` because the SERP setting accessors have mutating setters (non-class protocol);
+    // the conformer is a class, so writes go to the shared instance.
+    var serpSettings: SERPSettingsProviding
     let maliciousSiteProtectionPreferencesManager: MaliciousSiteProtectionPreferencesManaging
     private let tabSwitcherSettings: TabSwitcherSettings
     private let autoplaySettings: AutoplaySettings
@@ -207,6 +209,10 @@ final class SettingsViewModel: ObservableObject {
 
     var isDefaultOmnibarModeEnabled: Bool {
         featureFlagger.isFeatureOn(.aiChatOmnibarDefaultPosition)
+    }
+
+    var isAIFeaturesNativeControlsEnabled: Bool {
+        featureFlagger.isFeatureOn(.aiFeaturesNativeControls)
     }
 
     var isTabSwitcherTrackerCountEnabled: Bool {
@@ -1932,6 +1938,50 @@ extension SettingsViewModel {
                 self.aiChatSettings.setDefaultOmnibarMode(newValue)
             }
         )
+    }
+
+    var searchAssistFrequencyBinding: Binding<SearchAssistFrequency> {
+        Binding<SearchAssistFrequency>(
+            get: { self.serpSettings.searchAssistFrequency },
+            set: { newValue in
+                guard newValue != self.serpSettings.searchAssistFrequency else { return }
+                self.objectWillChange.send()
+                self.serpSettings.searchAssistFrequency = newValue
+            }
+        )
+    }
+
+    var hideAIImagesBinding: Binding<HideAIImagesOption> {
+        Binding<HideAIImagesOption>(
+            get: { HideAIImagesOption(hidden: self.serpSettings.hideAIGeneratedImages) },
+            set: { newValue in
+                guard newValue.hidden != self.serpSettings.hideAIGeneratedImages else { return }
+                self.objectWillChange.send()
+                self.serpSettings.hideAIGeneratedImages = newValue.hidden
+            }
+        )
+    }
+
+    /// True when Duck.ai is off and both SERP AI settings are at their most-restrictive values.
+    /// Drives the "Disable AI Features" / "Restore Default AI Settings" button label.
+    var isAllAIDisabled: Bool {
+        !aiChatSettings.isAIChatEnabled
+            && serpSettings.searchAssistFrequency == .never
+            && serpSettings.hideAIGeneratedImages
+    }
+
+    func disableAllAI() {
+        objectWillChange.send()
+        aiChatSettings.enableAIChat(enable: false)
+        serpSettings.searchAssistFrequency = .never
+        serpSettings.hideAIGeneratedImages = true
+    }
+
+    func resetAIToDefault() {
+        objectWillChange.send()
+        aiChatSettings.enableAIChat(enable: true)
+        serpSettings.searchAssistFrequency = .sometimes
+        serpSettings.hideAIGeneratedImages = false
     }
 
     var isChatSuggestionsEnabled: Binding<Bool> {

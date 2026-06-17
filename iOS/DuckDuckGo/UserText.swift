@@ -2272,6 +2272,22 @@ public struct UserText {
 
     public static let settingsAiFeaturesHideAIGeneratedImagesSubtitle = NSLocalizedString("settings.aifeatures.hide.ai.generated.images.subtitle", value: "Filters out AI-Generated images from image search results", comment: "Description of what the hide AI-generated images feature does")
 
+    public static let settingsAiFeaturesSearchAssistTitle = NSLocalizedString("settings.aifeatures.assist.title", value: "Search Assist", comment: "Title of the native Search Assist setting control")
+
+    public static let settingsAiFeaturesSearchAssistNever = NSLocalizedString("settings.aifeatures.assist.never", value: "Never", comment: "Search Assist frequency option: never show AI-assisted answers")
+    public static let settingsAiFeaturesSearchAssistOnDemand = NSLocalizedString("settings.aifeatures.assist.ondemand", value: "On demand", comment: "Search Assist frequency option: show AI-assisted answers on demand")
+    public static let settingsAiFeaturesSearchAssistSometimes = NSLocalizedString("settings.aifeatures.assist.sometimes", value: "Sometimes", comment: "Search Assist frequency option: sometimes show AI-assisted answers")
+    public static let settingsAiFeaturesSearchAssistOften = NSLocalizedString("settings.aifeatures.assist.often", value: "Often", comment: "Search Assist frequency option: often show AI-assisted answers")
+
+    public static let settingsAiFeaturesHideAIGeneratedImagesOn = NSLocalizedString("settings.aifeatures.hide.ai.generated.images.on", value: "On", comment: "Hide AI-Generated Images option: on (images hidden)")
+    public static let settingsAiFeaturesHideAIGeneratedImagesOff = NSLocalizedString("settings.aifeatures.hide.ai.generated.images.off", value: "Off", comment: "Hide AI-Generated Images option: off (images shown)")
+
+    public static let settingsAiFeaturesDisableAIFeatures = NSLocalizedString("settings.aifeatures.disable.all", value: "Disable AI Features", comment: "Button that turns off all AI features")
+    public static let settingsAiFeaturesRestoreDefaultAISettings = NSLocalizedString("settings.aifeatures.restore.default", value: "Restore Default AI Settings", comment: "Button that restores AI features to their default settings")
+    public static let settingsAiFeaturesDisableAllFooter = NSLocalizedString("settings.aifeatures.disable.all.footer", value: "Our Private AI Features are all optional and can be customized above.", comment: "Footer text below the disable all AI features button")
+
+    public static let settingsDuckAiSectionHeader = NSLocalizedString("settings.aifeatures.duckai.section.header", value: "Duck.ai", comment: "Section header for the Duck.ai settings group on the AI Features screen")
+
     public static let settingsAiChatShortcuts = NSLocalizedString("settings.aichat.shortcuts", value: "Duck.ai Shortcuts", comment: "Settings screen text for showing AI Chat in various places in the app")
 
     public static let settingsManageAIChatShortcuts = NSLocalizedString("settings.aichat.manage.shortcuts", value: "Manage Duck.ai Shortcuts", comment: "Top level settings for managing AI Chat shortcuts")
