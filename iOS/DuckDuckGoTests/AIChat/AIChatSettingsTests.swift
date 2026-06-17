@@ -63,6 +63,33 @@ class AIChatSettingsTests: XCTestCase {
         XCTAssertEqual(settings.aiChatURL, expectedURL)
     }
 
+    // MARK: - Recent chats widget
+
+    private func makeSettings() -> AIChatSettings {
+        AIChatSettings(privacyConfigurationManager: mockPrivacyConfigurationManager,
+                       debugSettings: mockAIChatDebugSettings,
+                       keyValueStore: mockKeyValueStore,
+                       notificationCenter: mockNotificationCenter)
+    }
+
+    func testWhenWidgetSettingDefaultsThenEnabled() {
+        let settings = makeSettings()
+        XCTAssertTrue(settings.isAIChatRecentChatsWidgetUserSettingsEnabled)
+    }
+
+    func testWhenWidgetDisabledThenSettingIsOff() {
+        let settings = makeSettings()
+        settings.enableAIChatRecentChatsWidget(enable: false)
+        XCTAssertFalse(settings.isAIChatRecentChatsWidgetUserSettingsEnabled)
+    }
+
+    func testWhenAIChatDisabledThenWidgetSettingIsOffRegardlessOfOwnFlag() {
+        let settings = makeSettings()
+        settings.enableAIChatRecentChatsWidget(enable: true)
+        settings.enableAIChat(enable: false)
+        XCTAssertFalse(settings.isAIChatRecentChatsWidgetUserSettingsEnabled)
+    }
+
     func testAIChatURLReturnsRemoteSettingWhenAvailable() {
         let settings = AIChatSettings(privacyConfigurationManager: mockPrivacyConfigurationManager,
                                       debugSettings: mockAIChatDebugSettings,

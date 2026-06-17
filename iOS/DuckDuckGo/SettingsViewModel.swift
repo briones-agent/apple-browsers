@@ -1844,6 +1844,16 @@ extension SettingsViewModel {
         )
     }
 
+    var isAIChatRecentChatsWidgetEnabledBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { self.aiChatSettings.isAIChatRecentChatsWidgetUserSettingsEnabled },
+            set: { newValue in
+                self.objectWillChange.send()
+                self.aiChatSettings.enableAIChatRecentChatsWidget(enable: newValue)
+            }
+        )
+    }
+
     var aiChatBrowsingMenuEnabledBinding: Binding<Bool> {
         Binding<Bool>(
             get: { self.aiChatSettings.isAIChatBrowsingMenuUserSettingsEnabled },

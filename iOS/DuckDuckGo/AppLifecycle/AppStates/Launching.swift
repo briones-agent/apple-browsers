@@ -345,6 +345,20 @@ struct Launching: LaunchingHandling {
         // 2. Persist throughout the app's runtime
         // 3. Provide core functionality across different parts of the app
 
+        // Mirrors Duck.ai chats into the shared app group for the recent-chats widget. Only active
+        // when native storage exists (i.e. the `aiChatNativeStorage` feature flag is on); the
+        // storage handler conforms to the observable protocol when present.
+        // Built with `if let` rather than `.map { }` to avoid capturing `self` in a closure before
+        // `self.services` is initialized.
+        let widgetSyncEngine: AIChatWidgetSyncEngine?
+        if let observableStorage = duckAiNativeStorageHandler as? DuckAiNativeObservableStorage {
+            widgetSyncEngine = AIChatWidgetSyncEngine(storage: observableStorage,
+                                                      settings: aiChatSettings,
+                                                      dataLocation: .appGroup())
+        } else {
+            widgetSyncEngine = nil
+        }
+
         services = AppServices(contentBlockingService: contentBlockingService,
                                syncService: syncService,
                                vpnService: vpnService,
@@ -363,7 +377,7 @@ struct Launching: LaunchingHandling {
                                systemSettingsPiPTutorialService: systemSettingsPiPTutorialService,
                                inactivityNotificationSchedulerService: inactivityNotificationSchedulerService,
                                wideEventService: wideEventService,
-                               aiChatService: AIChatService(aiChatSettings: aiChatSettings)
+                               aiChatService: AIChatService(aiChatSettings: aiChatSettings, widgetSyncEngine: widgetSyncEngine)
         )
 
         // Clean up wide event data at launch

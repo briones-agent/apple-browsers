@@ -36,6 +36,9 @@ public protocol AIChatSettingsProvider {
     /// The user state for AI chat overall.
     var isAIChatEnabled: Bool { get }
 
+    /// The user settings state for the Duck.ai recent-chats home screen widget.
+    var isAIChatRecentChatsWidgetUserSettingsEnabled: Bool { get }
+
     /// Remote config for keep session subfeature
     var sessionTimerInMinutes: Int { get }
 
@@ -72,6 +75,9 @@ public protocol AIChatSettingsProvider {
 
     /// Updates the user settings state for AI Chat overall.
     func enableAIChat(enable: Bool)
+
+    /// Updates the user settings state for the Duck.ai recent-chats home screen widget.
+    func enableAIChatRecentChatsWidget(enable: Bool)
 
     /// Updates the user settings state for the AI Chat browsing menu.
     func enableAIChatBrowsingMenuUserSettings(enable: Bool)

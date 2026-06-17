@@ -81,6 +81,7 @@ final class MockSERPSettingsProvider: SERPSettingsProviding {
 final class MockAIChatSettingsProvider: AIChatSettingsProvider {
     var aiChatURL: URL = URL(string: "https://duckduckgo.com/ai")!
     var isAIChatEnabled: Bool = false
+    var isAIChatRecentChatsWidgetUserSettingsEnabled: Bool = true
     var sessionTimerInMinutes: Int = 30
     var isAIChatAddressBarUserSettingsEnabled: Bool = false
     var isAIChatSearchInputUserSettingsEnabled: Bool = false
@@ -99,6 +100,7 @@ final class MockAIChatSettingsProvider: AIChatSettingsProvider {
     func enableAIChat(enable: Bool) {
         isAIChatEnabled = enable
     }
+    func enableAIChatRecentChatsWidget(enable: Bool) {}
     func enableAIChatBrowsingMenuUserSettings(enable: Bool) {}
     func enableAIChatAddressBarUserSettings(enable: Bool) {}
     func enableAIChatVoiceSearchUserSettings(enable: Bool) {}

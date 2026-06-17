@@ -244,13 +244,15 @@ struct Widgets: WidgetBundle {
                                                   PasswordsWidget(),
                                                   VPNBundle().body,
                                                   SearchWidget(),
+                                                  AIChatRecentChatsWidget(),
                                                   lockScreenWidgets)
         }
-        
+
         if #available(iOS 16.0, *) {
             return WidgetBundleBuilder.buildBlock(SearchWidget(),
                                                   PasswordsWidget(),
                                                   FavoritesWidget(),
+                                                  AIChatRecentChatsWidget(),
                                                   lockScreenWidgets)
         } else {
             return WidgetBundleBuilder.buildBlock(SearchWidget(),

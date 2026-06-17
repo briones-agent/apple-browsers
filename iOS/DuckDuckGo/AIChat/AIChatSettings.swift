@@ -121,6 +121,11 @@ final class AIChatSettings: AIChatSettingsProvider {
         keyValueStore.bool(.isAIChatEnabledKey, defaultValue: .isAIChatEnabledDefaultValue)
     }
 
+    var isAIChatRecentChatsWidgetUserSettingsEnabled: Bool {
+        keyValueStore.bool(.aiChatRecentChatsWidgetEnabledKey, defaultValue: .isAIChatRecentChatsWidgetEnabledDefaultValue)
+            && isAIChatEnabled
+    }
+
     var isAIChatBrowsingMenuUserSettingsEnabled: Bool {
         keyValueStore.bool(.showAIChatBrowsingMenuKey, defaultValue: .showAIChatBrowsingMenuDefaultValue)
             && isAIChatEnabled
@@ -195,6 +200,12 @@ final class AIChatSettings: AIChatSettingsProvider {
         } else {
             DailyPixel.fireDailyAndCount(pixel: .aiChatSettingsDisabled)
         }
+    }
+
+    func enableAIChatRecentChatsWidget(enable: Bool) {
+        keyValueStore.set(enable, forKey: .aiChatRecentChatsWidgetEnabledKey)
+        // Posting this lets the widget sync engine react (sync or wipe) to the changed gate.
+        triggerSettingsChangedNotification()
     }
 
     func enableAIChatBrowsingMenuUserSettings(enable: Bool) {
@@ -362,6 +373,7 @@ final class AIChatSettings: AIChatSettingsProvider {
 
 private extension String {
     static let isAIChatEnabledKey = AppConfigurationKeyNames.isAIChatEnabled
+    static let aiChatRecentChatsWidgetEnabledKey = AppConfigurationKeyNames.aiChatRecentChatsWidgetEnabled
     static let showAIChatBrowsingMenuKey = "aichat.settings.showAIChatBrowsingMenu"
     static let showAIChatAddressBarKey = "aichat.settings.showAIChatAddressBar"
     static let showAIChatVoiceSearchKey = "aichat.settings.showAIChatVoiceSearch"
@@ -395,6 +407,7 @@ enum LegacyAiChatUserDefaultsKeys {
 private extension Bool {
 
     static let isAIChatEnabledDefaultValue = true
+    static let isAIChatRecentChatsWidgetEnabledDefaultValue = true
     static let showAIChatBrowsingMenuDefaultValue = true
     static let showAIChatAddressBarDefaultValue = true
     static let showAIChatVoiceSearchDefaultValue = true

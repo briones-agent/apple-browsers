@@ -25,6 +25,8 @@ final class MockAppStoreCustomProductPagePresenter: UIViewController, AppStoreCu
 
     func openAIVoiceChatFromDeepLink() {}
 
+    func openAIChat(chatId: String) {}
+
     func openAIChat(
         _ query: String?,
         autoSend: Bool,

@@ -37,6 +37,18 @@ struct UserText {
                                                                   value: "Quickly launch a private search in DuckDuckGo.",
                                                                   comment: "Description of search only widget in widget gallery")
 
+    static let recentChatsWidgetGalleryDisplayName = NSLocalizedString("widget.gallery.recentchats.display.name",
+                                                                       value: "Recent Duck.ai Chats",
+                                                                       comment: "Display name for the recent Duck.ai chats widget in the widget gallery")
+
+    static let recentChatsWidgetGalleryDescription = NSLocalizedString("widget.gallery.recentchats.description",
+                                                                       value: "Quickly jump back into your recent Duck.ai chats.",
+                                                                       comment: "Description of the recent Duck.ai chats widget in the widget gallery")
+
+    static let recentChatsWidgetEmptyMessage = NSLocalizedString("widget.recentchats.empty",
+                                                                 value: "Your recent Duck.ai chats will appear here.",
+                                                                 comment: "Empty-state message shown in the recent chats widget when there are no chats")
+
     static let searchDuckDuckGo = NSLocalizedString("widget.search.duckduckgo",
                                                     value: "Search DuckDuckGo",
                                                     comment: "Placeholder text in search field on the search and favorites widget")

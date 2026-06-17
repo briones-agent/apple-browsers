@@ -230,6 +230,7 @@ private final class PreviewFireproofing: Fireproofing {
 private final class PreviewAIChatSettings: AIChatSettingsProvider {
     var aiChatURL: URL { URL(string: "https://duckduckgo.com")! }
     var isAIChatEnabled: Bool { true }
+    var isAIChatRecentChatsWidgetUserSettingsEnabled: Bool { true }
     var sessionTimerInMinutes: Int { 0 }
     var isAIChatAddressBarUserSettingsEnabled: Bool { false }
     var isAIChatSearchInputUserSettingsEnabled: Bool { false }
@@ -243,6 +244,7 @@ private final class PreviewAIChatSettings: AIChatSettingsProvider {
     var isAutomaticContextAttachmentEnabled: Bool { false }
     var isChatSuggestionsEnabled: Bool { false }
     func enableAIChat(enable: Bool) {}
+    func enableAIChatRecentChatsWidget(enable: Bool) {}
     func enableAIChatBrowsingMenuUserSettings(enable: Bool) {}
     func enableAIChatAddressBarUserSettings(enable: Bool) {}
     func enableAIChatVoiceSearchUserSettings(enable: Bool) {}

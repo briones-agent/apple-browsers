@@ -24,9 +24,14 @@ import AIChat
 final class AIChatService: NSObject {
 
     private let aiChatSettings: AIChatSettingsProvider
-    init(aiChatSettings: AIChatSettingsProvider) {
+    private let widgetSyncEngine: AIChatWidgetSyncEngine?
+
+    init(aiChatSettings: AIChatSettingsProvider,
+         widgetSyncEngine: AIChatWidgetSyncEngine? = nil) {
         self.aiChatSettings = aiChatSettings
+        self.widgetSyncEngine = widgetSyncEngine
         super.init()
+        widgetSyncEngine?.start()
     }
 
     // MARK: - Resume

@@ -26,4 +26,5 @@ enum WidgetSourceType: String {
     case favorite = "widget.favorite"
     case lockscreenComplication = "widget.lockscreen.complication"
     case controlCenter = "widget.controlcenter"
+    case recentChatsWidget = "widget.recentchats"
 }

@@ -1590,6 +1590,7 @@ extension Pixel {
         case openAIChatFromWidgetQuickAction
         case openAIChatFromWidgetControlCenter
         case openAIChatFromWidgetLockScreenComplication
+        case openAIChatFromWidgetRecentChat
         case openAIChatFromIconShortcut
         case openAIChatFromTabManager
         case openAIChatFromNavigationBarShortcut
@@ -3468,6 +3469,7 @@ extension Pixel.Event {
         case .openAIChatFromWidgetQuickAction: return "m_aichat-widget-quickaction"
         case .openAIChatFromWidgetControlCenter: return "m_aichat-widget-control-center"
         case .openAIChatFromWidgetLockScreenComplication: return "m_aichat-widget-lock-screen-complication"
+        case .openAIChatFromWidgetRecentChat: return "m_aichat-widget-recent-chat"
         case .browsingMenuAIChatNewTabPage: return "m_aichat_menu_newtabpage"
         case .browsingMenuAIChatWebPage: return "m_aichat_menu_webpage"
         case .openAIChatFromIconShortcut: return "m_aichat-icon-shortcut"

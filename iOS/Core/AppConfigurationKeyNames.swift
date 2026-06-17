@@ -22,4 +22,8 @@ public enum AppConfigurationKeyNames {
 
     public static let isAIChatEnabled = "aichat.settings.isEnabled"
 
+    /// Whether the Duck.ai recent-chats home screen widget may display data. Read by the widget
+    /// extension, so it must live here (the extension has no access to `AIChatSettings`).
+    public static let aiChatRecentChatsWidgetEnabled = "aichat.settings.recentChatsWidgetEnabled"
+
 }

@@ -132,6 +132,14 @@ struct SettingsAIFeaturesView: View {
                 }
                 .listRowBackground(Color(designSystemColor: .surface))
 
+                Section {
+                    SettingsCellView(label: UserText.settingsAiChatWidgets,
+                                     subtitle: UserText.settingsAiChatWidgetsSubtitle,
+                                     accessory: .toggle(isOn: viewModel.isAIChatRecentChatsWidgetEnabledBinding),
+                                     accessoryAccessibilityIdentifier: "Settings.AIFeatures.WidgetsToggle")
+                }
+                .listRowBackground(Color(designSystemColor: .surface))
+
             }
 
             if !viewModel.openedFromSERPSettingsButton {

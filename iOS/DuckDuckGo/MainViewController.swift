@@ -3467,6 +3467,12 @@ class MainViewController: UIViewController {
         }
     }
 
+    /// Opens a specific Duck.ai conversation by id (e.g. from the recent-chats widget deep link),
+    /// reusing the proven chat-history navigation path.
+    func openAIChat(chatId: String) {
+        onChatHistorySelected(url: aiChatSettings.aiChatURL.withChatID(chatId))
+    }
+
     func onDuckAIVoiceModeRequested() {
         Pixel.fire(pixel: .voiceEntryPointTapped, withAdditionalParameters: [PixelParameters.source: VoiceEntryPointSource.ntp.rawValue])
         if let tab = tabManager.currentTabsModel.currentTab, tab.link == nil {

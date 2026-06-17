@@ -23,6 +23,7 @@ import AIChat
 
 protocol AIChatDeepLinkPresenting: UIViewController {
     func openAIVoiceChatFromDeepLink()
+    func openAIChat(chatId: String)
     func openAIChat(
         _ query: String?,
         autoSend: Bool,
@@ -75,10 +76,18 @@ struct AIChatDeepLinkHandler {
         mainViewController.dismiss(animated: true) {
             if voiceMode {
                 mainViewController.openAIVoiceChatFromDeepLink()
+            } else if let chatId = self.chatID(from: url) {
+                mainViewController.openAIChat(chatId: chatId)
             } else {
                 mainViewController.openAIChat(fromDeepLink: true)
             }
         }
+    }
+
+    /// Extracts a `chatID` query parameter from a deep-link URL, e.g. the recent-chats widget's
+    /// `ddgOpenAIChat://?chatID=<id>`. Returns nil when absent or empty.
+    func chatID(from url: URL) -> String? {
+        AIChatWidgetDeepLink.chatId(from: url)
     }
 
     /// Checks if the AIChatViewController is already presented
@@ -112,6 +121,8 @@ struct AIChatDeepLinkHandler {
                 DailyPixel.fireDailyAndCount(pixel: .openAIChatFromWidgetLockScreenComplication)
             case WidgetSourceType.controlCenter.rawValue:
                 DailyPixel.fireDailyAndCount(pixel: .openAIChatFromWidgetControlCenter)
+            case WidgetSourceType.recentChatsWidget.rawValue:
+                DailyPixel.fireDailyAndCount(pixel: .openAIChatFromWidgetRecentChat)
             default:
                 break
             }

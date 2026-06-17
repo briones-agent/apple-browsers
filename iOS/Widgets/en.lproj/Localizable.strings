@@ -103,6 +103,12 @@
 /* Display name for search passwords widget in widget gallery */
 "widget.gallery.passwords.display.name" = "Search Passwords";
 
+/* Description of the recent Duck.ai chats widget in the widget gallery */
+"widget.gallery.recentchats.description" = "Quickly jump back into your recent Duck.ai chats.";
+
+/* Display name for the recent Duck.ai chats widget in the widget gallery */
+"widget.gallery.recentchats.display.name" = "Recent Duck.ai Chats";
+
 /* Description of search and favorites widget in widget gallery */
 "widget.gallery.search.and.favorites.description" = "Search or visit your favorite sites privately with just one tap.";
 
@@ -132,6 +138,9 @@
 
 /* Placeholder text in search field on the quick actions widget */
 "widget.quickactions.search" = "Search";
+
+/* Empty-state message shown in the recent chats widget when there are no chats */
+"widget.recentchats.empty" = "Your recent Duck.ai chats will appear here.";
 
 /* Placeholder text in search field on the search and favorites widget */
 "widget.search.duckduckgo" = "Search DuckDuckGo";
