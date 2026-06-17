@@ -19,6 +19,7 @@
 
 import UIKit
 import Common
+import FoundationExtensions
 import Core
 import Bookmarks
 import BrowserServicesKit
@@ -37,6 +38,12 @@ extension MainViewController {
         }, deepLinkTarget: .appearance)
     }
 
+    func segueToGeneralSettings() {
+        launchSettings(completion: {
+            $0.triggerDeepLinkNavigation(to: .general)
+        }, deepLinkTarget: .general)
+    }
+
     func segueToCustomizeAddressBarSettings() {
         launchSettings(completion: {
             $0.triggerDeepLinkNavigation(to: .customizeAddressBarButton)
@@ -53,23 +60,23 @@ extension MainViewController {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()
 
-        let controller: Onboarding = if featureFlagger.isFeatureOn(.onboardingRebranding) {
-            OnboardingIntroViewController.rebranded(
-                onboardingPixelReporter: contextualOnboardingPixelReporter,
-                systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
-                daxDialogsManager: daxDialogsManager,
-                syncAutoRestoreHandler: syncAutoRestoreHandler
-            )
-        } else {
-            OnboardingIntroViewController.legacy(
-                onboardingPixelReporter: contextualOnboardingPixelReporter,
-                systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
-                daxDialogsManager: daxDialogsManager,
-                syncAutoRestoreHandler: syncAutoRestoreHandler
-            )
-        }
-        controller.delegate = self
+        let viewModel = OnboardingIntroFactory.makeViewModel(
+            pixelReporter: contextualOnboardingPixelReporter,
+            systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
+            daxDialogsManager: daxDialogsManager,
+            syncAutoRestoreHandler: syncAutoRestoreHandler,
+            onboardingManager: onboardingManager
+        )
+        let controller = OnboardingIntroFactory.makeController(
+            viewModel: viewModel,
+            isRebranded: featureFlagger.isFeatureOn(.onboardingRebranding),
+            delegate: self
+        )
         controller.modalPresentationStyle = .overFullScreen
+        linearOnboardingContext = OnboardingIntroContext(
+            onboardingViewController: controller,
+            onboardingViewModel: viewModel
+        )
         present(controller, animated: false, completion: completion)
     }
 
@@ -212,6 +219,11 @@ extension MainViewController {
             return
         }
 
+        let duckAIGridContentProvider = DuckAIGridContentResolver(
+            featureFlagger: featureFlagger,
+            storageHandler: duckAiNativeStorageHandler
+        )
+
         let storyboard = UIStoryboard(name: "TabSwitcher", bundle: nil)
         guard let controller = storyboard.instantiateInitialViewController(creator: { coder in
             TabSwitcherViewController(coder: coder,
@@ -228,7 +240,8 @@ extension MainViewController {
                                       fireproofing: self.fireproofing,
                                       keyValueStore: self.keyValueStore,
                                       daxDialogsManager: self.daxDialogsManager,
-                                      initialTrackerCountState: initialTrackerCountState)
+                                      initialTrackerCountState: initialTrackerCountState,
+                                      duckAIGridContentProvider: duckAIGridContentProvider)
         }) else {
             assertionFailure()
             return
@@ -252,12 +265,17 @@ extension MainViewController {
         launchSettings()
     }
 
-    func segueToDuckDuckGoSubscription() {
+    func segueToDuckDuckGoSubscription(origin: String?) {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()
+        let components: URLComponents? = origin.map {
+            var components = URLComponents()
+            components.queryItems = [URLQueryItem(name: AttributionParameter.origin, value: $0)]
+            return components
+        }
         launchSettings(completion: {
-            $0.triggerDeepLinkNavigation(to: .subscriptionFlow())
-        }, deepLinkTarget: .subscriptionFlow())
+            $0.triggerDeepLinkNavigation(to: .subscriptionFlow(redirectURLComponents: components))
+        }, deepLinkTarget: .subscriptionFlow(redirectURLComponents: components))
     }
 
     func segueToSubscriptionRestoreFlow() {
@@ -292,7 +310,7 @@ extension MainViewController {
             let subscriptionManager = AppDependencyProvider.shared.subscriptionManager
             let hasEntitlement = (try? await subscriptionManager.isFeatureEnabled(.dataBrokerProtection)) ?? false
 
-            if hasEntitlement {
+            if hasEntitlement || freemiumPIREligibilityChecker.canShowEntryPoint() {
                 launchSettings(completion: {
                     $0.triggerDeepLinkNavigation(to: .dbp)
                 }, deepLinkTarget: .dbp)
@@ -437,11 +455,12 @@ extension MainViewController {
                                                             productSurfaceTelemetry: productSurfaceTelemetry,
                                                             webExtensionManager: webExtensionManager,
                                                             syncAutoRestoreHandler: syncAutoRestoreHandler,
+                                                            freemiumPIRDebugSettings: freemiumPIRDebugSettings,
+                                                            freemiumDBPUserStateManager: freemiumDBPUserStateManager,
                                                             duckAiNativeStorageHandler: duckAiNativeStorageHandler)
 
         let aiChatSettings = AIChatSettings(privacyConfigurationManager: privacyConfigurationManager)
-        let serpSettingsProvider = SERPSettingsProvider(aiChatProvider: aiChatSettings,
-                                                        featureFlagger: featureFlagger)
+        let serpSettingsProvider = SERPSettingsProvider(aiChatProvider: aiChatSettings)
         let whatsNewCoordinator = WhatsNewCoordinator(
             displayContext: .onDemand,
             repository: whatsNewRepository,
@@ -467,10 +486,14 @@ extension MainViewController {
                                                   experimentalAIChatManager: ExperimentalAIChatManager(featureFlagger: featureFlagger),
                                                   privacyConfigurationManager: privacyConfigurationManager,
                                                   keyValueStore: keyValueStore,
+                                                  contentBlockingAssetsPublisher: contentBlockingAssetsPublisher,
                                                   idleReturnEligibilityManager: idleReturnEligibilityManager,
+                                                  afterInactivityOptionAdapter: afterInactivityOptionAdapter,
+                                                  lastTabShortcutAdapter: lastTabShortcutAdapter,
                                                   systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
                                                   runPrerequisitesDelegate: dbpIOSPublicInterface,
                                                   dataBrokerProtectionViewControllerProvider: dbpIOSPublicInterface,
+                                                  freemiumPIREligibilityChecker: freemiumPIREligibilityChecker,
                                                   winBackOfferVisibilityManager: winBackOfferVisibilityManager,
                                                   mobileCustomization: mobileCustomization,
                                                   userScriptsDependencies: userScriptsDependencies,
@@ -479,6 +502,11 @@ extension MainViewController {
                                                   adBlockingAvailability: adBlockingAvailability)
 
         settingsViewModel.autoClearActionDelegate = self
+        settingsViewModel.onRequestOpenDuckAIChat = { [weak self] in
+            self?.dismiss(animated: true) {
+                self?.loadUrlInNewTab(.duckAiSettings, inheritedAttribution: nil)
+            }
+        }
         Pixel.fire(pixel: .settingsPresented)
 
         func doLaunch() {
@@ -540,6 +568,8 @@ extension MainViewController {
             databaseDelegate: self.dbpIOSPublicInterface,
             debuggingDelegate: self.dbpIOSPublicInterface,
             runPrequisitesDelegate: self.dbpIOSPublicInterface,
+            freemiumPIRDebugSettings: self.freemiumPIRDebugSettings,
+            freemiumDBPUserStateManager: self.freemiumDBPUserStateManager,
             subscriptionDataReporter: self.subscriptionDataReporter,
             remoteMessagingDebugHandler: self.remoteMessagingDebugHandler,
             webExtensionManager: self.webExtensionManager,

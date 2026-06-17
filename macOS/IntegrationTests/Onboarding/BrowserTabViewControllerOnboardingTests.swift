@@ -19,6 +19,7 @@
 import AIChat
 import Combine
 import Common
+import FoundationExtensions
 import FeatureFlags
 import History
 import HistoryView
@@ -138,7 +139,6 @@ final class MockAIChatConfig: AIChatMenuVisibilityConfigurable {
     let valuesChangedPublisher = PassthroughSubject<Void, Never>()
 }
 
-@available(macOS 12.0, *)
 final class BrowserTabViewControllerOnboardingTests: XCTestCase {
 
     var window: MockWindow!
@@ -191,8 +191,7 @@ final class BrowserTabViewControllerOnboardingTests: XCTestCase {
                     featureFlagger: MockFeatureFlagger()
                 ),
                 aboutPreferences: AboutPreferences(internalUserDecider: featureFlagger.internalUserDecider, featureFlagger: featureFlagger, windowControllersManager: windowControllersManager, keyValueStore: InMemoryThrowingKeyValueStore()),
-                dockPreferences: DockPreferencesModel(featureFlagger: featureFlagger,
-                                                      dockCustomizer: DockCustomizerMock(),
+                dockPreferences: DockPreferencesModel(dockCustomizer: DockCustomizerMock(),
                                                       pixelFiring: nil),
                 accessibilityPreferences: AccessibilityPreferences(),
                 duckPlayer: DuckPlayer(
@@ -584,7 +583,7 @@ final class BrowserTabViewControllerOnboardingTests: XCTestCase {
         let delegate = BrowserTabViewControllerDelegateSpy()
         viewController.delegate = delegate
         tab.navigateFromOnboarding(to: url)
-        wait(for: [expectation], timeout: 3.0)
+        wait(for: [expectation], timeout: 5.0)
         XCTAssertNil(pixelReporter.gotItPressedDialog)
 
         // WHEN

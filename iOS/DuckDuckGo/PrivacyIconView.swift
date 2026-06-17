@@ -152,8 +152,14 @@ class PrivacyIconView: UIView {
     func loadAnimations(animationCache cache: AnimationCacheProvider = DefaultAnimationCache.sharedCache) {
         let useDarkStyle = traitCollection.userInterfaceStyle == .dark
 
-        let shieldAnimationName = "shield.new"
-        let shieldDotAnimationName = (useDarkStyle ? "dark-shield-dot" : "shield-dot")
+        let isRebranded = AppRebrand.isAppRebranded()
+        let shieldAnimationName = isRebranded ? "shield.new" : "shield.new-legacy"
+        let shieldDotAnimationName: String
+        if useDarkStyle {
+            shieldDotAnimationName = isRebranded ? "dark-shield-dot" : "dark-shield-dot-legacy"
+        } else {
+            shieldDotAnimationName = isRebranded ? "shield-dot" : "shield-dot-legacy"
+        }
 
         let shieldAnimation = LottieAnimation.named(shieldAnimationName, animationCache: cache)
         shieldAnimationView.animation = shieldAnimation
@@ -383,6 +389,10 @@ class PrivacyIconView: UIView {
 
         if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
             loadAnimations()
+
+            /// If the trait collection changes then it means this view is already visible and animations have
+            /// probably completed.
+            shieldDotAnimationView.currentProgress = 1.0
         }
     }
 }

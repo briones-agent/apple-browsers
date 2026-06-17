@@ -174,12 +174,16 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                     guard await self.performDeferredPreservedAccountCleanupIfNeeded() else {
                         return
                     }
-                    self.dismissPresentedViewController()
-                    self.showPreparingSync(nil)
+                    await self.dismissPresentedViewController()
+                    await self.showPreparingSync()
                     try await self.syncService.createAccount(deviceName: self.deviceName, deviceType: self.deviceType)
                     let additionalParameters = self.source.map { ["source": $0] } ?? [:]
                     try await Pixel.fire(pixel: .syncSignupDirect, withAdditionalParameters: additionalParameters, includedParameters: [.appVersion])
                     self.syncSetupExperimentPixels.fireSignupDirect()
+                    Pixel.fire(pixel: .syncSetupEndedSuccessful,
+                               withAdditionalParameters: [PixelParameters.source: "signup"],
+                               includedParameters: [.appVersion],
+                               onComplete: { _ in })
                     self.syncSetupExperimentPixels.fireSetupEndedSuccessful()
                     AutofillOnboardingExperimentPixelReporter().fireSyncEnabled(true)
                     self.viewModel.syncEnabled(recoveryCode: self.recoveryCode)
@@ -203,6 +207,10 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 let additionalParameters = self.source.map { ["source": $0] } ?? [:]
                 try await Pixel.fire(pixel: .syncSignupDirect, withAdditionalParameters: additionalParameters, includedParameters: [.appVersion])
                 self.syncSetupExperimentPixels.fireSignupDirect()
+                Pixel.fire(pixel: .syncSetupEndedSuccessful,
+                           withAdditionalParameters: [PixelParameters.source: "signup"],
+                           includedParameters: [.appVersion],
+                           onComplete: { _ in })
                 self.syncSetupExperimentPixels.fireSetupEndedSuccessful()
                 AutofillOnboardingExperimentPixelReporter().fireSyncEnabled(true)
                 optionsViewModel.syncEnabled(recoveryCode: self.recoveryCode)
@@ -230,9 +238,9 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             }
             let alertController = UIAlertController(
                 title: type.title,
-                message: [type.description, error?.localizedDescription].compactMap({ $0 }).joined(separator: "\n"),
+                message: type.description,
                 preferredStyle: .alert)
-            let okAction = UIAlertAction(title: UserText.syncPausedAlertOkButton, style: .default, handler: nil)
+            let okAction = UIAlertAction(title: type.buttonTitle, style: .default, handler: nil)
             alertController.addAction(okAction)
 
             if type == .unableToSyncToServer || type == .unableToSyncWithDevice || type == .unableToMergeTwoAccounts {
@@ -406,8 +414,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
     }
 
     func showDeviceConnected() {
-        let controller = UIHostingController(
-            rootView: DeviceConnectedView(model: viewModel))
+        let controller = UIHostingController(rootView: DeviceConnectedView(model: viewModel))
         navigationController?.present(controller, animated: true) { [weak self] in
             guard let self else { return }
             self.viewModel.syncEnabled(recoveryCode: self.recoveryCode)
@@ -451,29 +458,37 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         }
     }
 
-    func showPreparingSync() async {
+    func fireSyncSetupPixel(event: SyncSettingsViewModel.SyncSetupPixelEvent) {
+        switch event {
+        case .backUpThisDeviceTapped:
+            Pixel.fire(pixel: .settingsSyncBackUpThisDeviceTapped, includedParameters: [.appVersion])
+        case .signupConfirmedTapped:
+            Pixel.fire(pixel: .settingsSyncSignupConfirmedTapped, includedParameters: [.appVersion])
+        case .signupAbandoned:
+            Pixel.fire(pixel: .syncSetupEndedAbandoned,
+                       withAdditionalParameters: [PixelParameters.source: "signup"],
+                       includedParameters: [.appVersion])
+            syncSetupExperimentPixels.fireSetupEndedAbandoned()
+        case .recoverSyncedDataTapped:
+            Pixel.fire(pixel: .settingsSyncRecoverSyncedDataTapped, includedParameters: [.appVersion])
+        case .recoveryConfirmedTapped:
+            Pixel.fire(pixel: .settingsSyncRecoveryConfirmedTapped, includedParameters: [.appVersion])
+        }
+    }
+
+    func showPreparingSync(context: SimplifiedConnectingSheetView.Context = .syncingDevices) async {
         await withCheckedContinuation { continuation in
-            showPreparingSync {
+            showPreparingSync(context: context) {
                 continuation.resume()
             }
         }
     }
 
-    func showPreparingSync(_ completion: (() -> Void)?) {
+    func showPreparingSync(context: SimplifiedConnectingSheetView.Context = .syncingDevices, _ completion: (() -> Void)?) {
         if useSimplifiedLayout {
-            let controller = UIHostingController(rootView: SimplifiedConnectingSheetView())
+            let controller = UIHostingController(rootView: SimplifiedConnectingSheetView(context: context))
             controller.view.backgroundColor = UIColor(designSystemColor: .backgroundSheets)
-            if #available(iOS 16.4, *) {
-                controller.sizingOptions = .intrinsicContentSize
-            }
-            if #available(iOS 16.0, *) {
-                let fittingSize = controller.view.systemLayoutSizeFitting(
-                    CGSize(width: UIScreen.main.bounds.width, height: UIView.layoutFittingCompressedSize.height)
-                )
-                controller.sheetPresentationController?.detents = [
-                    .custom { _ in fittingSize.height }
-                ]
-            }
+            controller.sheetPresentationController?.detents = [.large()]
             navigationController?.present(controller, animated: true, completion: completion)
         } else {
             let controller = UIHostingController(rootView: PreparingToSyncView(isAIChatSyncEnabled: viewModel.isAIChatSyncEnabled))
@@ -541,7 +556,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
     private func continueSyncSetupFlow(entryPoint: SyncSettingsViewModel.SyncSetupEntryPoint) {
         switch entryPoint {
         case .backup:
-            viewModel.isSyncWithSetUpSheetVisible = true
+            viewModel.showSyncWithSetUpSheet()
         case .pairing:
             showSyncWithAnotherDevice()
         case .simplifiedToggle:
@@ -581,7 +596,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         }
         Task { @MainActor in
             let pairingInfo: PairingInfo
-            let source: SyncSetupSource
+            var source: SyncSetupSource
             if shouldUsePreservedAccountForConnectionFlow {
                 do {
                     pairingInfo = try await connectionController.startExchangeMode()
@@ -599,8 +614,16 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                     return
                 }
             }
+            if !showQRCode {
+                source = .recovery
+            }
             let stringForQRCode = featureFlagger.isFeatureOn(.syncSetupBarcodeIsUrlBased) ? pairingInfo.url.absoluteString : pairingInfo.base64Code
-            presentScanOrPasteCodeView(codeForDisplayOrPasting: pairingInfo.base64Code, stringForQRCode: stringForQRCode, showQRCode: showQRCode, onPresentPixelInfo: .init(pixel: .syncSetupBarcodeScreenShown, source: source))
+            presentScanOrPasteCodeView(
+                codeForDisplayOrPasting: pairingInfo.base64Code,
+                stringForQRCode: stringForQRCode,
+                showQRCode: showQRCode,
+                source: source,
+                onPresentPixelInfo: .init(pixel: .syncSetupBarcodeScreenShown, source: source))
         }
     }
 
@@ -609,27 +632,42 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             let stringForQRCode: String
             let codeForDisplayOrPasting: String
             let onPresentPixelInfo: SyncSetupPixelInfo?
+            let source: SyncSetupSource
             if shouldUsePreservedAccountForConnectionFlow {
                 stringForQRCode = recoveryCode
                 codeForDisplayOrPasting = recoveryCode
                 onPresentPixelInfo = nil
+                source = showQRCode ? .exchange : .recovery
             } else {
                 do {
                     let pairingInfo = try await connectionController.startConnectMode()
                     stringForQRCode = featureFlagger.isFeatureOn(.syncSetupBarcodeIsUrlBased) ? pairingInfo.url.absoluteString : pairingInfo.base64Code
                     codeForDisplayOrPasting = pairingInfo.base64Code
-                    onPresentPixelInfo = .init(pixel: .syncSetupBarcodeScreenShown, source: .connect)
+                    source = showQRCode ? .connect : .recovery
+                    onPresentPixelInfo = .init(pixel: .syncSetupBarcodeScreenShown, source: source)
                 } catch {
                     await handleError(SyncErrorMessage.unableToSyncToServer, error: error, event: .syncLoginError)
                     return
                 }
             }
-            presentScanOrPasteCodeView(codeForDisplayOrPasting: codeForDisplayOrPasting, stringForQRCode: stringForQRCode, showQRCode: showQRCode, onPresentPixelInfo: onPresentPixelInfo)
+            presentScanOrPasteCodeView(
+                codeForDisplayOrPasting: codeForDisplayOrPasting,
+                stringForQRCode: stringForQRCode,
+                showQRCode: showQRCode,
+                source: source,
+                onPresentPixelInfo: onPresentPixelInfo)
         }
     }
 
-    private func presentScanOrPasteCodeView(codeForDisplayOrPasting: String, stringForQRCode: String, showQRCode: Bool, onPresentPixelInfo: SyncSetupPixelInfo?) {
-        let model = ScanOrPasteCodeViewModel(codeForDisplayOrPasting: codeForDisplayOrPasting, qrCodeString: stringForQRCode)
+    private func presentScanOrPasteCodeView(codeForDisplayOrPasting: String,
+                                            stringForQRCode: String,
+                                            showQRCode: Bool,
+                                            source: SyncSetupSource,
+                                            onPresentPixelInfo: SyncSetupPixelInfo?) {
+        let model = ScanOrPasteCodeViewModel(
+            codeForDisplayOrPasting: codeForDisplayOrPasting,
+            qrCodeString: stringForQRCode,
+            source: CodeCollectionSource(syncSetupSource: source))
         model.delegate = self
         
         var controller: UIHostingController<AnyView>
@@ -683,6 +721,52 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         case .denied: model.videoPermission = .denied
         case .authorized: model.videoPermission = .authorised
         default: assertionFailure("Unexpected status \(status)")
+        }
+    }
+
+    func controllerShouldAllowPairingV2PeerToJoin(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        await confirmPairingV2Peer(peerName: peerName, peerKind: peerKind)
+    }
+
+    func controllerShouldJoinPairingV2Peer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        await confirmPairingV2Peer(peerName: peerName, peerKind: peerKind)
+    }
+
+    private func confirmPairingV2Peer(peerName: String?, peerKind: PairingV2DeviceKind) async -> Bool {
+        let peerName = pairingV2DisplayName(for: peerName)
+        let message = UserText.syncPairingV2ConfirmationMessage(peerName, isThirdPartyPeer: peerKind == .thirdParty)
+        let isConfirmed = await presentPairingV2ConfirmationAlert(message: message)
+        if !isConfirmed {
+            dismissPairingV2UIAfterDeniedConfirmation()
+        }
+        return isConfirmed
+    }
+
+    private func presentPairingV2ConfirmationAlert(message: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let alert = UIAlertController(title: UserText.syncPairingV2ConfirmationTitle, message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: UserText.actionCancel, style: .cancel) { _ in
+                continuation.resume(returning: false)
+            })
+            alert.addAction(UIAlertAction(title: UserText.syncPairingV2ConfirmationAction, style: .default) { _ in
+                continuation.resume(returning: true)
+            })
+
+            let viewControllerToPresentFrom = navigationController?.presentedViewController ?? presentedViewController ?? self
+            viewControllerToPresentFrom.present(alert, animated: true)
+        }
+    }
+
+    private func pairingV2DisplayName(for peerName: String?) -> String {
+        guard let peerName = peerName?.trimmingCharacters(in: .whitespacesAndNewlines), !peerName.isEmpty else {
+            return UserText.syncPairingV2UnknownPeerName
+        }
+        return peerName
+    }
+
+    private func dismissPairingV2UIAfterDeniedConfirmation() {
+        DispatchQueue.main.async {
+            self.dismissPresentedViewController()
         }
     }
 
@@ -814,7 +898,6 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
 
     func codeCopied(_ code: String) {
         fireBarcodeCodeCopiedPixel(for: code)
-        ActionMessageView.present(message: UserText.simplifiedCodeCopiedToast)
     }
 
     @MainActor
@@ -914,6 +997,20 @@ private class PortraitNavigationController: UINavigationController {
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         [.portrait, .portraitUpsideDown]
+    }
+}
+
+private extension CodeCollectionSource {
+
+    init(syncSetupSource: SyncSetupSource) {
+        switch syncSetupSource {
+        case .exchange:
+            self = .exchange
+        case .recovery:
+            self = .recovery
+        case .connect, .unknown:
+            self = .connect
+        }
     }
 }
 

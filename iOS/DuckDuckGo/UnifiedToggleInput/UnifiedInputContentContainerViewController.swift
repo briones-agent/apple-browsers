@@ -18,6 +18,7 @@
 //
 
 import UIKit
+import SwiftUI
 import DesignResourcesKit
 import Combine
 import PrivacyConfig
@@ -25,6 +26,7 @@ import Bookmarks
 import Persistence
 import History
 import Core
+import DDGSync
 import Suggestions
 import AIChat
 import RemoteMessaging
@@ -35,20 +37,18 @@ protocol UnifiedInputContentContainerViewControllerDelegate: AnyObject {
     func unifiedInputEditingStateDidSelectFavorite(_ favorite: BookmarkEntity)
     func unifiedInputEditingStateDidEditFavorite(_ favorite: BookmarkEntity)
     func unifiedInputEditingStateDidSelectSuggestion(_ suggestion: Suggestion)
+    func unifiedInputEditingStateDidRequestTextUpdate(_ text: String)
     func unifiedInputEditingStateDidSelectChatHistory(url: URL)
+    func unifiedInputEditingStateDidSelectViewAllChats()
     func unifiedInputEditingStateDidRequestSwitchTab(_ tab: Tab)
+    func unifiedInputEditingStateDidRequestTabSwitcher()
     func unifiedInputEditingStateDidRequestTryFireMode()
     func unifiedInputEditingStateDidChangeMode(_ mode: TextEntryMode)
+    func unifiedInputEditingStateDidRequestSyncSetup()
 }
 
 final class UnifiedInputContentContainerViewController: UIViewController {
 
-    /// Selects how visible content should refresh without spreading query and tray logic across multiple call sites.
-    private enum SuggestionRefreshStrategy {
-        case none
-        case currentQuery(animated: Bool)
-        case currentState
-    }
 
     // MARK: - Properties
 
@@ -61,30 +61,6 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     private var cancellables = Set<AnyCancellable>()
 
     private lazy var contentContainerView = UIView()
-    private lazy var floatingDismissButton: UIButton = {
-        let button: UIButton
-        if #available(iOS 26, *) {
-            var config = UIButton.Configuration.glass()
-            config.image = UIImage(systemName: "xmark")
-            config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
-            button = UIButton(configuration: config)
-        } else {
-            button = UIButton(type: .system)
-            let image = UIImage(systemName: "xmark")?
-                .withConfiguration(UIImage.SymbolConfiguration(pointSize: 12, weight: .medium))
-            button.setImage(image, for: .normal)
-            button.tintColor = UIColor(designSystemColor: .textPrimary)
-            button.backgroundColor = UIColor(designSystemColor: .surface)
-            button.layer.cornerRadius = 22
-            button.layer.shadowColor = UIColor.black.cgColor
-            button.layer.shadowOpacity = 0.1
-            button.layer.shadowRadius = 4
-            button.layer.shadowOffset = CGSize(width: 0, height: 2)
-        }
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(handleFloatingDismissTap), for: .primaryActionTriggered)
-        return button
-    }()
 
     private var isLandscapeOrientation: Bool = false {
         didSet {
@@ -96,9 +72,13 @@ final class UnifiedInputContentContainerViewController: UIViewController {
             isUsingTopBarPosition = !forceBottomBarLayout && (appSettings.currentAddressBarPosition == .top || isLandscapeOrientation)
         }
     }
-    private var isUsingTopBarPosition: Bool
+    private var isUsingTopBarPosition: Bool {
+        didSet {
+            updateSingleHostTopOffset()
+            unifiedSuggestionsHost?.setIsAddressBarAtBottom(!isUsingTopBarPosition)
+        }
+    }
     private var isAdjustedForTopBar: Bool
-    private(set) var currentSectionTitle: String?
 
     private weak var contentContainerViewLeadingConstraint: NSLayoutConstraint?
     private weak var contentContainerViewTrailingConstraint: NSLayoutConstraint?
@@ -107,23 +87,48 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     private let featureFlagger: FeatureFlagger
     private let privacyConfigurationManager: PrivacyConfigurationManaging
     private let aiChatSettings: AIChatSettingsProvider
+    private let aiChatSyncCleaner: AIChatSyncCleaning?
     private let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+    private let syncService: DDGSyncing?
+    private let syncPromoManager: SyncPromoManaging?
+    private let aiChatSyncIntroSheetPresenter: AIChatSyncIntroSheetPresenting
 
     // MARK: - Manager Components
 
-    private var swipeContainerManager: SwipeContainerManager?
-    private var suggestionTrayManager: SuggestionTrayManager?
-    private var aiChatHistoryManager: AIChatHistoryManager?
-    private var isShowingURLFallback = false
+    /// The one resolver-driven host that serves both surfaces; its container pinned directly in
+    /// `contentContainerView`.
+    private var unifiedSuggestionsHost: UnifiedSuggestionsHost?
+    private var unifiedSuggestionsContainerView: UIView?
+    /// Single-host path: the suggestions container's top offset (input height + hatch) lives on this
+    /// constraint, not the hosting view's safe-area inset — so the whole content (incl. the escape
+    /// hatch) glides natively with the input instead of SwiftUI snapping the safe-area reposition.
+    private var unifiedSuggestionsTopConstraint: NSLayoutConstraint?
+    /// The lazily-attached duck.ai surface (source + fetchers + state feed); nil while detached.
+    private var duckAISurface: DuckAISuggestionsSurfaceProvider?
+    /// Stable merge input for the inputs publisher; the surface's state is relayed into it while
+    /// attached, and it reverts to nil on detach (the merger treats nil as no recents / nothing pending).
+    private let duckAIStateRelay = CurrentValueSubject<UnifiedSuggestionsInputsMerger.DuckAIState?, Never>(nil)
+    /// Bridges `duckAISurface.statePublisher → duckAIStateRelay`; cleared on detach.
+    private var duckAIRelayCancellables = Set<AnyCancellable>()
+    /// In-flight search history-delete task; cancelled on deinit so its post-delete refetch can't
+    /// run against a torn-down loader (parity with the duck.ai surface's `deleteTask`).
+    private var searchDeleteTask: Task<Void, Never>?
+    /// The Search surface's loader; held so a Duck.ai-side URL delete can refresh it too.
+    private var searchLoader: SearchSuggestionsLoader?
+    /// The Search surface's data source; held so its bookmark cache can be refreshed each session.
+    private var searchDataSource: AutocompleteSuggestionsDataSource?
+    /// Duck.ai sync-promo presenter; nil when there's no sync service.
+    private lazy var aiChatSyncPromoViewModel: AIChatSyncPromoViewModel? =
+        syncPromoManager.map { AIChatSyncPromoViewModel(syncPromoManager: $0) }
+    /// Built once — its show/hide is driven reactively by `setSyncPromoVisible`, so there's no need
+    /// to reconstruct it on every `updateSyncPromo`.
+    private lazy var syncPromoView = AnyView(AIChatSyncPromoView(
+        onCTATap: { [weak self] in self?.handleSyncPromoCTATap() },
+        onCloseTap: { [weak self] in self?.handleSyncPromoClose() }))
     private var isContentActive = false
     private var needsVisibleRefresh = true
     private var requestedContentInset: (top: CGFloat, bottom: CGFloat) = (0, 0)
     private var escapeHatchModel: EscapeHatchModel?
-    private var escapeHatchTapHandler: (() -> Void)?
-
-    private var chatHasSuggestions: Bool {
-        aiChatHistoryManager?.hasSuggestions ?? false
-    }
 
     private(set) var daxLogoManager: DaxLogoManager
     private var isDaxLogoForcedHidden = false
@@ -138,14 +143,24 @@ final class UnifiedInputContentContainerViewController: UIViewController {
          featureFlagger: FeatureFlagger = AppDependencyProvider.shared.featureFlagger,
          privacyConfigurationManager: PrivacyConfigurationManaging = ContentBlocking.shared.privacyConfigurationManager,
          aiChatSettings: AIChatSettingsProvider = AIChatSettings(),
-         duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil) {
+         duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil,
+         syncService: DDGSyncing? = nil,
+         aiChatSyncCleaner: AIChatSyncCleaning? = nil,
+         aiChatSyncIntroSheetPresenter: AIChatSyncIntroSheetPresenting = AIChatSyncIntroSheetPresenter()) {
         self.switchBarHandler = switchBarHandler
         self.daxLogoManager = DaxLogoManager(isFireTab: switchBarHandler.isFireTab)
+        self.daxLogoManager.usesLottieTransition = true
         self.appSettings = appSettings
         self.featureFlagger = featureFlagger
         self.privacyConfigurationManager = privacyConfigurationManager
         self.aiChatSettings = aiChatSettings
+        self.aiChatSyncCleaner = aiChatSyncCleaner
         self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
+        self.syncService = syncService
+        self.syncPromoManager = syncService.map { SyncPromoManager(syncService: $0,
+                                                                  featureFlagger: featureFlagger,
+                                                                  privacyConfigurationManager: privacyConfigurationManager) }
+        self.aiChatSyncIntroSheetPresenter = aiChatSyncIntroSheetPresenter
         self.isUsingTopBarPosition = appSettings.currentAddressBarPosition == .top
         self.isAdjustedForTopBar = self.isUsingTopBarPosition
 
@@ -155,6 +170,10 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        searchDeleteTask?.cancel()
     }
 
     // MARK: - Lifecycle
@@ -168,20 +187,26 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         observeRemoteMessagesChanges()
         observeAddressBarPositionChanges()
 
-        suggestionTrayManager?.showInitialSuggestions()
         updateDaxVisibility()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        installChatHistoryListIfNeeded()
+        attachDuckAISurfaceIfNeeded()
+    }
+
+    /// Rebuilds the search suggestions' session-scoped caches (currently the bookmark snapshot) so a
+    /// long-lived data source reflects add/remove since the last editing session. Called on each
+    /// omnibar-editing show — legacy got this for free by building a fresh data source per session.
+    func refreshSuggestionsCaches() {
+        searchDataSource?.refreshCaches()
+        duckAISurface?.refreshCaches()
     }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        aiChatHistoryManager?.tearDown()
-        aiChatHistoryManager = nil
+        detachDuckAISurfaceFromSingleHost()
     }
 
     // MARK: - Public Methods
@@ -193,7 +218,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     }
 
     func setLogoYOffset(_ offset: CGFloat) {
-        daxLogoManager.containerYCenterConstraint?.constant = offset
+        daxLogoManager.setLogoYOffset(offset)
     }
 
     func setLogoHidden(_ hidden: Bool) {
@@ -203,12 +228,13 @@ final class UnifiedInputContentContainerViewController: UIViewController {
 
     func refreshFireMode(fireMode: Bool) {
         rebuildDaxLogoManager(isFireTab: fireMode)
-        rebuildChatHistoryManager()
+        rebuildDuckAISuggestionsCoordinator()
     }
 
     private func rebuildDaxLogoManager(isFireTab: Bool) {
         daxLogoManager.tearDown()
         daxLogoManager = DaxLogoManager(isFireTab: isFireTab)
+        daxLogoManager.usesLottieTransition = true
         // Replay cached forcedHidden so rebuilds don't silently un-hide the dax logo / fire empty state.
         daxLogoManager.setForcedHidden(isDaxLogoForcedHidden)
         guard isViewLoaded else { return }
@@ -217,90 +243,46 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         updateDaxVisibility()
     }
 
-    var isSwipeEnabled: Bool = true {
-        didSet { swipeContainerManager?.isSwipeEnabled = isSwipeEnabled }
-    }
-
     func setInputMode(_ mode: TextEntryMode, animated: Bool = true) {
         guard isContentActive else {
             markNeedsVisibleRefresh()
             return
         }
         let didModeChange = switchBarHandler.currentToggleState != mode
-        if !animated {
-            swipeContainerManager?.animateProgrammaticModeChanges = false
-        }
         if didModeChange {
             switchBarHandler.setToggleState(mode)
         }
-        let suggestionRefresh: SuggestionRefreshStrategy = mode == .search ? .currentState : .none
-        refreshVisibleContent(suggestionRefresh: suggestionRefresh, visibleModeAnimation: animated, animateContentUpdates: false)
-        swipeContainerManager?.animateProgrammaticModeChanges = true
-    }
-
-    func setDismissButtonVisible(_ visible: Bool) {
-        floatingDismissButton.isHidden = !visible
+        refreshVisibleContent(animateContentUpdates: false)
     }
 
     func setActive(_ active: Bool) {
         guard active != isContentActive else { return }
         isContentActive = active
         markNeedsVisibleRefresh()
+        if active {
+            duckAISurface?.refreshRecents()
+        }
     }
 
     func refreshVisibleContentIfNeeded() {
         guard isContentActive else { return }
         guard needsVisibleRefresh else { return }
 
-        refreshVisibleContent(
-            suggestionRefresh: currentModeSuggestionRefresh(),
-            visibleModeAnimation: false,
-            animateContentUpdates: false
-        )
+        refreshVisibleContent(animateContentUpdates: false)
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, onTapped: (() -> Void)?) {
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
+        let hatchPresenceChanged = (escapeHatchModel != nil) != (model != nil)
         escapeHatchModel = model
-        escapeHatchTapHandler = onTapped
-        suggestionTrayManager?.setEscapeHatch(model)
-        aiChatHistoryManager?.setEscapeHatch(model, onTapped: onTapped)
-        updateEscapeHatchTopInset()
-    }
-
-    /// Updates top insets for escape hatch positioning on both suggestion tray and chat history.
-    /// The two tabs use different view technologies (SwiftUI NTP vs UITableView) that handle
-    /// safe area differently, so chat history needs per-position compensation to align visually.
-    private func updateEscapeHatchTopInset() {
-        let insets = Self.computeEscapeHatchInsets(
-            hasEscapeHatch: escapeHatchModel != nil,
-            isBottomBar: !isUsingTopBarPosition,
-            chatHasSuggestions: chatHasSuggestions,
-            isLandscape: isLandscapeOrientation
-        )
-        suggestionTrayManager?.setAdditionalTopInset(insets.tray)
-        aiChatHistoryManager?.setAdditionalTopInset(insets.chat)
-    }
-
-    static func computeEscapeHatchInsets(hasEscapeHatch: Bool,
-                                         isBottomBar: Bool,
-                                         chatHasSuggestions: Bool,
-                                         isLandscape: Bool) -> (tray: CGFloat, chat: CGFloat) {
-        // Tray: bottom bar needs space for dismiss button; top bar gets a small pull-up.
-        let suggestionInsetBase: CGFloat = hasEscapeHatch && isBottomBar ? Metrics.escapeHatchBaseTopInset : 0
-        let trayTopBarPullUp: CGFloat = hasEscapeHatch && !isBottomBar ? Metrics.escapeHatchTopBarTrayPullUp : 0
-        let tray = suggestionInsetBase + trayTopBarPullUp
-
-        // Chat history uses the same base, then applies corrections:
-        // - compensation: UITableView vs SwiftUI NTP safe-area difference in bottom bar
-        // - emptyListBoost: vertical centering of hatch when chat list is empty (portrait top bar only)
-        // - landscapeAlignment: small pull-up so chat hatch aligns with Search tray in landscape
-        let compensation: CGFloat = hasEscapeHatch && isBottomBar ? Metrics.chatHistoryBottomBarCompensation : 0
-        let emptyListBoost: CGFloat = hasEscapeHatch && !chatHasSuggestions && !isBottomBar && !isLandscape
-            ? Metrics.escapeHatchEmptyListBoost : 0
-        let landscapeAlignment: CGFloat = hasEscapeHatch && isLandscape ? Metrics.landscapeDuckAiAlignmentPullUp : 0
-        let chat = suggestionInsetBase - compensation + emptyListBoost + landscapeAlignment
-
-        return (tray: tray, chat: chat)
+        // Fire tabs render their own empty state via DaxLogoManager — suppress the hatch to avoid stacking affordances.
+        let nonFireHatchModel = switchBarHandler.isFireTab ? nil : model
+        unifiedSuggestionsHost?.setEscapeHatch(nonFireHatchModel)
+        updateSingleHostTopOffset()
+        // The dax offset depends on hatch presence (`hatchClearance` is added when present),
+        // so refresh visibility when the hatch is added or removed mid-session.
+        if hatchPresenceChanged {
+            updateDaxVisibility()
+        }
     }
 
     func setText(_ text: String) {
@@ -360,8 +342,8 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     private func setupView() {
         view.backgroundColor = Metrics.backgroundColor
         setUpContentContainer()
-        setUpFloatingDismissButton()
         setUpSwipeDownGesture()
+        modeSwitchSwipeController.install(on: view)
     }
 
     private func setUpContentContainer() {
@@ -379,16 +361,6 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         ])
     }
 
-    private func setUpFloatingDismissButton() {
-        view.addSubview(floatingDismissButton)
-        NSLayoutConstraint.activate([
-            floatingDismissButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            floatingDismissButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            floatingDismissButton.widthAnchor.constraint(equalToConstant: 44),
-            floatingDismissButton.heightAnchor.constraint(equalToConstant: 44),
-        ])
-    }
-
     private func setUpSwipeDownGesture() {
         let swipeDownGesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeDown))
         swipeDownGesture.direction = .down
@@ -396,148 +368,259 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         view.addGestureRecognizer(swipeDownGesture)
     }
 
+    /// Routes the swipe through the coordinator (like a toggle tap) so the toggle UI, content, and
+    /// the Dax morph all update — a raw `setToggleState` doesn't propagate the switch at all.
+    private lazy var modeSwitchSwipeController = ModeSwitchSwipeGestureController { [weak self] targetMode in
+        guard let self, switchBarHandler.currentToggleState != targetMode else { return }
+        delegate?.unifiedInputEditingStateDidChangeMode(targetMode)
+    }
+
+    /// Suppresses the content mode-switch swipe (e.g. while the toggle pill is being dragged).
+    var isSwipeEnabled: Bool {
+        get { modeSwitchSwipeController.isEnabled }
+        set { modeSwitchSwipeController.isEnabled = newValue }
+    }
+
     private func installComponents() {
-        installSwipeContainer()
-        installSuggestionsTray()
+        installUnifiedSuggestionsHost()
         installDaxLogoView()
     }
 
-    private func updateSectionTitle() {
-        let text = computedSectionTitleText()
-        currentSectionTitle = text.isEmpty ? nil : text
+    // MARK: - Single suggestions host
 
-        let mode = switchBarHandler.currentToggleState
-        switch mode {
-        case .search:
-            let hasFavorites = suggestionTrayManager?.shouldDisplayFavoritesOverlay == true
-            if hasFavorites {
-                suggestionTrayManager?.setFavoritesSectionTitle(currentSectionTitle)
-                suggestionTrayManager?.setSuggestionsSectionTitle(nil)
-            } else {
-                suggestionTrayManager?.setSuggestionsSectionTitle(currentSectionTitle)
-                suggestionTrayManager?.setFavoritesSectionTitle(nil)
-            }
-            aiChatHistoryManager?.setSectionTitle(nil)
-        case .aiChat:
-            let isURLFallbackShowingContent = isShowingURLFallback && (suggestionTrayManager?.isShowingSuggestionTray ?? false)
-            suggestionTrayManager?.setSuggestionsSectionTitle(isURLFallbackShowingContent ? currentSectionTitle : nil)
-            suggestionTrayManager?.setFavoritesSectionTitle(nil)
-            aiChatHistoryManager?.setSectionTitle(isURLFallbackShowingContent ? nil : currentSectionTitle)
+    /// Builds ONE resolver-driven host serving both surfaces. The search source is permanent; the
+    /// duck.ai source is attached lazily (mirroring the legacy lifecycle). Both keep their OWN
+    /// `AutocompleteRequestRunner`/loaders so the Part 2b mutual DDG-request cancellation fix holds.
+    private func installUnifiedSuggestionsHost() {
+        guard let dependencies = suggestionTrayDependencies else { return }
+
+        let requestRunner = AutocompleteRequestRunner()
+        let dataSource = AutocompleteSuggestionsDataSource(
+            historyManager: dependencies.historyManager,
+            bookmarksDatabase: dependencies.bookmarksDatabase,
+            featureFlagger: dependencies.featureFlagger,
+            tabsModel: dependencies.tabsModelProvider()
+        ) { request, completion in
+            requestRunner.run(request, completion: completion)
         }
-    }
+        let loader = SearchSuggestionsLoader(dataSource: dataSource, useUnifiedURLPrediction: featureFlagger.isFeatureOn(.unifiedURLPredictor))
+        searchLoader = loader
+        searchDataSource = dataSource
 
-    private func computedSectionTitleText() -> String {
-        let mode = switchBarHandler.currentToggleState
-        let hasFavorites = suggestionTrayManager?.shouldDisplayFavoritesOverlay == true
-        let hasAutocomplete = suggestionTrayManager?.shouldDisplaySuggestionTray == true && !hasFavorites
-        let hasChatHistory = aiChatHistoryManager?.hasSuggestions == true
-        let isURLFallbackShowingContent = isShowingURLFallback && (suggestionTrayManager?.isShowingSuggestionTray ?? false)
-        switch mode {
-        case .search:
-            if hasFavorites { return UserText.sectionTitleFavorites }
-            if hasAutocomplete { return UserText.sectionTitleSuggestions }
-            return ""
-        case .aiChat:
-            if isURLFallbackShowingContent { return UserText.sectionTitleSuggestions }
-            if hasChatHistory {
-                return switchBarHandler.currentText.isEmpty ? UserText.aiChatRecentChatsTitle : UserText.aiChatSuggestedChatsTitle
-            }
-            return ""
+        let source = SearchSuggestionsSource(
+            loader: loader,
+            query: { [weak self] in self?.switchBarHandler.currentText ?? "" },
+            showAskAIChat: aiChatSettings.isAIChatEnabled
+        )
+
+        let hasFavorites: () -> Bool = {
+            !dependencies.favoritesViewModel.favorites.isEmpty
         }
-    }
-
-    private func installSwipeContainer() {
-        let manager = SwipeContainerManager(switchBarHandler: switchBarHandler)
-        let containerVC = manager.containerViewController
-        addChild(containerVC)
-        contentContainerView.addSubview(containerVC.view)
-        containerVC.view.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            containerVC.view.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
-            containerVC.view.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
-            containerVC.view.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
-            containerVC.view.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
-        ])
-        containerVC.didMove(toParent: self)
-        manager.delegate = self
-        manager.fadeOutDelegate = self
-        manager.isSwipeEnabled = isSwipeEnabled
-        swipeContainerManager = manager
-    }
-
-    private func installSuggestionsTray() {
-        guard let dependencies = suggestionTrayDependencies,
-              let containerViewController = swipeContainerManager?.containerViewController,
-              let searchContainer = swipeContainerManager?.searchPageContainer else { return }
-
-        let manager = SuggestionTrayManager(switchBarHandler: switchBarHandler, dependencies: dependencies)
-        manager.delegate = self
-        let trayEscapeHatch = switchBarHandler.isFireTab ? nil : escapeHatchModel
-        manager.installInContainerView(searchContainer, parentViewController: containerViewController, escapeHatch: trayEscapeHatch)
-        suggestionTrayManager = manager
-    }
-
-    private func installChatHistoryListIfNeeded() {
-        guard aiChatHistoryManager == nil,
-              featureFlagger.isFeatureOn(.aiChatSuggestions),
-              aiChatSettings.isChatSuggestionsEnabled else { return }
-        installChatHistoryList()
-    }
-
-    private func rebuildChatHistoryManager() {
-        guard aiChatHistoryManager != nil else { return }
-        aiChatHistoryManager?.tearDown()
-        aiChatHistoryManager = nil
-        installChatHistoryListIfNeeded()
-    }
-
-    private func installChatHistoryList() {
-        guard let swipeContainerManager else { return }
-
-        let manager = makeAIChatHistoryManager()
-        manager.delegate = self
-        manager.titleLayoutConfiguration = .unifiedInput
-        swipeContainerManager.installChatHistory(using: manager)
-        manager.subscribeToTextChanges(switchBarHandler.currentTextPublisher)
-        manager.onFetchCompleted = { [weak self] _, _ in
-            guard let self else { return }
-            self.updateDaxVisibility()
-        }
-        aiChatHistoryManager = manager
-        if let escapeHatchModel, !switchBarHandler.isFireTab {
-            manager.setEscapeHatch(escapeHatchModel, onTapped: escapeHatchTapHandler)
+        let hasMessages: () -> Bool = {
+            !dependencies.newTabPageDependencies.homePageMessagesConfiguration.homeMessages.isEmpty
         }
 
-        manager.hasSuggestionsPublisher
+        let searchStateChanged = dependencies.favoritesViewModel.localUpdates
+            .merge(with: dependencies.favoritesViewModel.externalUpdates)
+            // Favorites changes fire on the Core Data context queue; marshal here so the merged
+            // inputs (and the view model's `@Published content` mutation) stay on main.
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                self.refreshVisibleContent(suggestionRefresh: .none, animateContentUpdates: true)
-            }
-            .store(in: &cancellables)
-    }
+            .eraseToAnyPublisher()
+        let inputsPublisher = makeMergedInputsPublisher(hasFavorites: hasFavorites,
+                                                        hasMessages: hasMessages,
+                                                        searchStateChanged: searchStateChanged)
 
-    /// Creates an `AIChatHistoryManager` configured for the current tab.
-    /// Fire tabs use a no-op reader that always returns empty results,
-    /// preventing chat history from being fetched or displayed.
-    private func makeAIChatHistoryManager() -> AIChatHistoryManager {
-        let suggestionsReader: AIChatSuggestionsReading
-        if switchBarHandler.isFireTab {
-            suggestionsReader = NilSuggestionsReader()
-        } else {
-            let reader = SuggestionsReader(
-                featureFlagger: featureFlagger,
-                privacyConfig: privacyConfigurationManager,
-                nativeStorageHandler: duckAiNativeStorageHandler,
-                featureFlagProvider: AIChatFeatureFlagProvider(featureFlagger: featureFlagger)
-            )
-            let historySettings = AIChatHistorySettings(privacyConfig: privacyConfigurationManager)
-            suggestionsReader = AIChatSuggestionsReader(suggestionsReader: reader, historySettings: historySettings)
+        let config = UnifiedSuggestionsHostConfig(
+            source: source,
+            inputsPublisher: inputsPublisher,
+            isAddressBarAtBottom: !isUsingTopBarPosition,
+            favoritesProvider: { [weak self] in self?.makeSearchFavoritesController() },
+            onSelectRow: { [weak self] id in
+                guard let suggestion = source.suggestion(forRowID: id) else { return }
+                self?.delegate?.unifiedInputEditingStateDidSelectSuggestion(suggestion)
+            },
+            onDeleteRow: { [weak self, weak loader] id in
+                guard let self,
+                      let suggestion = source.suggestion(forRowID: id),
+                      case .historyEntry(_, let url, _) = suggestion else { return }
+                self.searchDeleteTask = Task { [weak self] in
+                    await SuggestionHistoryDeletion.delete(url, using: dependencies.historyManager)
+                    guard let self, !Task.isCancelled else { return }
+                    loader?.fetch(query: self.switchBarHandler.currentText)
+                    self.duckAISurface?.refreshURLSuggestions()
+                }
+            },
+            onTapAheadRow: { [weak self] id in
+                guard let suggestion = source.suggestion(forRowID: id) else { return }
+                switch suggestion {
+                case .phrase(let phrase): self?.delegate?.unifiedInputEditingStateDidRequestTextUpdate(phrase)
+                case .website(let url): self?.delegate?.unifiedInputEditingStateDidRequestTextUpdate(url.absoluteString)
+                default: break
+                }
+            },
+            hasContent: { [weak self] in
+                !(self?.switchBarHandler.currentText.isEmpty ?? true)
+            },
+            hasSettled: { [weak loader] query in
+                loader?.lastCompletedFetchQuery == query
+            }
+        )
+
+        let host = UnifiedSuggestionsHost(config: config)
+        host.onContentChanged = { [weak self] in
+            self?.refreshVisibleContent(animateContentUpdates: true)
         }
 
-        return AIChatHistoryManager(suggestionsReader: suggestionsReader,
-                                    aiChatSettings: aiChatSettings,
-                                    viewModel: AIChatSuggestionsViewModel(maxSuggestions: suggestionsReader.maxHistoryCount))
+        let containerView = UIView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        contentContainerView.addSubview(containerView)
+        let topConstraint = containerView.topAnchor.constraint(equalTo: contentContainerView.topAnchor)
+        unifiedSuggestionsTopConstraint = topConstraint
+        NSLayoutConstraint.activate([
+            topConstraint,
+            containerView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            containerView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor)
+        ])
+        unifiedSuggestionsContainerView = containerView
+
+        // Search only fetches in `.search` mode — in Duck.ai the typed prompt must not hit the search
+        // autocomplete endpoint (legacy parity; Duck.ai runs its own URL loader). Filter (pause) rather
+        // than mapping to "": dropping off-mode emissions preserves the last results, and toggling back
+        // with unchanged text is deduped — so no clear-and-refetch flicker on every toggle.
+        let searchTextPublisher = Publishers.CombineLatest(
+            switchBarHandler.toggleStatePublisher,
+            switchBarHandler.currentTextPublisher)
+            .filter { mode, _ in mode == .search }
+            .map { _, text in text }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+
+        host.start(in: containerView,
+                   parentViewController: self,
+                   textPublisher: searchTextPublisher)
+        // The top offset rides the container constraint (UIKit glide); the hosting view keeps no
+        // top safe-area inset of its own.
+        host.setAdditionalTopInset(0)
+        updateSingleHostTopOffset()
+        host.setEscapeHatch(switchBarHandler.isFireTab ? nil : escapeHatchModel)
+        unifiedSuggestionsHost = host
+    }
+
+    /// Single-host path: the suggestions container aligns with the new-tab page (the favorites
+    /// surface IS the NTP, and the hatch lines up with the NTP hatch), so it rides the requested
+    /// inset directly. The constant animates natively, so the hatch glides with the input.
+    private func updateSingleHostTopOffset() {
+        unifiedSuggestionsTopConstraint?.constant = requestedContentInset.top + topBarContentGap
+    }
+
+    /// With a top address bar the input sits above the content, so the content needs a small gap
+    /// beneath it. With a bottom bar the content is anchored to the top of the screen (the input is
+    /// below it), so no gap applies — and adding one there pushes the favorites below the NTP.
+    private var topBarContentGap: CGFloat {
+        isUsingTopBarPosition ? Metrics.topBarContentClearance : 0
+    }
+
+    /// One merged inputs stream feeding the single host: mode + text + search facts (always) +
+    /// duck.ai facts (nil while detached). Combines via the pure `UnifiedSuggestionsInputsMerger`.
+    private func makeMergedInputsPublisher(hasFavorites: @escaping () -> Bool,
+                                           hasMessages: @escaping () -> Bool,
+                                           searchStateChanged: AnyPublisher<Void, Never>) -> AnyPublisher<UnifiedSuggestionsInputs, Never> {
+        // `searchStateChanged` re-resolves when favorites/messages change without a text/toggle change
+        // (e.g. a just-added favorite that loads a beat after a new tab opens, or deleting the last
+        // one). The model notifies after refreshing its array, so the reads below are fresh.
+        Publishers.CombineLatest4(
+            switchBarHandler.toggleStatePublisher,
+            Publishers.CombineLatest(switchBarHandler.currentTextPublisher,
+                                     switchBarHandler.hasUserInteractedWithTextPublisher),
+            duckAIStateRelay,
+            searchStateChanged.prepend(())
+        )
+        .map { mode, textState, duckAIState, _ -> UnifiedSuggestionsInputs in
+            let (text, hasUserInteractedWithText) = textState
+            return UnifiedSuggestionsInputsMerger.merge(
+                mode: mode,
+                text: text,
+                hasUserInteractedWithText: hasUserInteractedWithText,
+                search: .init(hasFavorites: hasFavorites(), hasMessages: hasMessages()),
+                duckAI: duckAIState)
+        }
+        .eraseToAnyPublisher()
+    }
+
+    /// Lazily builds `DuckAISuggestionsSurfaceProvider`, relays its state into the merge input, and attaches
+    /// it to the single host. No-op if already attached or duck.ai suggestions are disabled.
+    private func attachDuckAISurfaceIfNeeded() {
+        guard duckAISurface == nil,
+              let host = unifiedSuggestionsHost,
+              featureFlagger.isFeatureOn(.aiChatSuggestions),
+              aiChatSettings.isChatSuggestionsEnabled,
+              let dependencies = suggestionTrayDependencies else { return }
+
+        let surface = DuckAISuggestionsSurfaceProvider(
+            switchBarHandler: switchBarHandler,
+            dependencies: dependencies,
+            aiChatSettings: aiChatSettings,
+            aiChatSyncCleaner: aiChatSyncCleaner,
+            featureFlagger: featureFlagger,
+            privacyConfigurationManager: privacyConfigurationManager,
+            duckAiNativeStorageHandler: duckAiNativeStorageHandler
+        )
+        surface.delegate = self
+        surface.statePublisher
+            .sink { [weak self] in self?.duckAIStateRelay.send($0) }
+            .store(in: &duckAIRelayCancellables)
+        surface.attach(to: host, textPublisher: switchBarHandler.currentTextPublisher.eraseToAnyPublisher())
+        duckAISurface = surface
+    }
+
+    /// Detaches the duck.ai surface and reverts the merge input to nil (no recents / nothing pending).
+    private func detachDuckAISurfaceFromSingleHost() {
+        guard let surface = duckAISurface else { return }
+        if let host = unifiedSuggestionsHost { surface.detach(from: host) }
+        duckAIRelayCancellables.removeAll()
+        duckAIStateRelay.send(nil)
+        duckAISurface = nil
+    }
+
+    private func makeSearchFavoritesController() -> NewTabPageViewController? {
+        guard let dependencies = suggestionTrayDependencies else { return nil }
+        let ntpDeps = dependencies.newTabPageDependencies
+        let controller = NewTabPageViewController(
+            isFocussedState: true,
+            dismissKeyboardOnScroll: aiChatSettings.isAIChatSearchInputUserSettingsEnabled,
+            tab: Tab(fireTab: dependencies.tabsModelProvider().shouldCreateFireTabs),
+            interactionModel: ntpDeps.favoritesModel,
+            homePageMessagesConfiguration: ntpDeps.homePageMessagesConfiguration,
+            subscriptionDataReporting: ntpDeps.subscriptionDataReporting,
+            newTabDialogFactory: ntpDeps.newTabDialogFactory,
+            daxDialogsManager: ntpDeps.newTabDaxDialogManager,
+            onboardingFlowProvider: ntpDeps.onboardingFlowProvider,
+            faviconLoader: ntpDeps.faviconLoader,
+            remoteMessagingActionHandler: ntpDeps.remoteMessagingActionHandler,
+            remoteMessagingImageLoader: ntpDeps.remoteMessagingImageLoader,
+            remoteMessagingPixelReporter: ntpDeps.remoteMessagingPixelReporter,
+            fireModePromotionEligibility: ntpDeps.fireModePromotionEligibility,
+            appSettings: ntpDeps.appSettings,
+            faviconsCache: ntpDeps.faviconsCache,
+            subscriptionManager: ntpDeps.subscriptionManager,
+            internalUserCommands: ntpDeps.internalUserCommands
+        )
+        controller.hideBorderView()
+        // Route favorite taps / edits / tab actions to the host's delegate so they open like the
+        // standalone NTP (the embedded controller has no owner to set this otherwise).
+        controller.delegate = self
+        // The escape hatch and the empty-state Dax logo are UTI chrome (the unified view's hatch +
+        // DaxLogoManager), not the NTP's — suppress the NTP's own so we never get two Dax logos.
+        controller.setEscapeHatch(nil)
+        controller.setLogoHidden(true)
+        return controller
+    }
+
+    private func rebuildDuckAISuggestionsCoordinator() {
+        guard duckAISurface != nil else { return }
+        detachDuckAISurfaceFromSingleHost()
+        attachDuckAISurfaceIfNeeded()
     }
 
     private func installDaxLogoView() {
@@ -554,7 +637,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                self.refreshVisibleContent(suggestionRefresh: .currentQuery(animated: true), animateContentUpdates: true)
+                self.refreshVisibleContent(animateContentUpdates: true)
             }
             .store(in: &cancellables)
 
@@ -563,8 +646,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     private func updateLayoutForCurrentOrientation() {
         guard isUsingTopBarPosition != isAdjustedForTopBar else { return }
         isAdjustedForTopBar = isUsingTopBarPosition
-        updateSectionTitle()
-        updateEscapeHatchTopInset()
+        updateSingleHostTopOffset()
     }
 
     private func observeAddressBarPositionChanges() {
@@ -585,10 +667,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                self.refreshVisibleContent(
-                    suggestionRefresh: self.currentModeSuggestionRefresh(),
-                    animateContentUpdates: false
-                )
+                self.refreshVisibleContent(animateContentUpdates: false)
             }
     }
 
@@ -614,21 +693,6 @@ final class UnifiedInputContentContainerViewController: UIViewController {
 
     // MARK: - Action Handlers
 
-    private func handleMicrophoneButtonTapped() {
-        guard isViewLoaded, view.window != nil, !view.isHidden, !(view.superview?.isHidden ?? true) else { return }
-        SpeechRecognizer.requestMicAccess { [weak self] permission in
-            guard let self,
-                  self.view.window != nil,
-                  self.view.superview?.isHidden != true else { return }
-            if permission {
-                let preferredTarget: VoiceSearchTarget? = (self.switchBarHandler.currentToggleState == .aiChat) ? .AIChat : .SERP
-                self.showVoiceSearch(preferredTarget: preferredTarget)
-            } else {
-                self.showNoMicrophonePermissionAlert()
-            }
-        }
-    }
-
     @objc private func handleSwipeDown() {
         onSwipeDownRequested?()
     }
@@ -652,27 +716,11 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         )
         insets.top += Metrics.contentTopInset
         daxLogoManager.setFireTabContentInsets(insets)
-        guard swipeContainerManager?.containerViewController.additionalSafeAreaInsets != insets else { return }
-        swipeContainerManager?.containerViewController.additionalSafeAreaInsets = insets
-        // layoutIfNeeded inside the active CATransaction so the inset change animates with the parent.
-        swipeContainerManager?.containerViewController.view.layoutIfNeeded()
-    }
-
-    @objc private func handleFloatingDismissTap() {
-        onDismissRequested?()
-    }
-
-    private func showVoiceSearch(preferredTarget: VoiceSearchTarget? = nil) {
-        let voiceSearchController = VoiceSearchViewController(preferredTarget: preferredTarget)
-        voiceSearchController.delegate = self
-        voiceSearchController.modalTransitionStyle = .crossDissolve
-        voiceSearchController.modalPresentationStyle = .overFullScreen
-        present(voiceSearchController, animated: true)
-    }
-
-    private func showNoMicrophonePermissionAlert() {
-        let alertController = NoMicPermissionAlert.buildAlert()
-        present(alertController, animated: true)
+        // Top offset → container constraint (UIKit glide); only the bottom inset stays on the
+        // hosting view. layoutIfNeeded inside the active animation makes the constraint glide.
+        updateSingleHostTopOffset()
+        unifiedSuggestionsHost?.setContentInsets(UIEdgeInsets(top: 0, left: 0, bottom: insets.bottom, right: 0))
+        contentContainerView.layoutIfNeeded()
     }
 
     private func updateDaxVisibility() {
@@ -680,78 +728,89 @@ final class UnifiedInputContentContainerViewController: UIViewController {
             markNeedsVisibleRefresh()
             return
         }
-        let shouldDisplaySuggestionTray = suggestionTrayManager?.shouldDisplaySuggestionTray == true
-        let isShowingTray = suggestionTrayManager?.isShowingSuggestionTray ?? false
-        let shouldDisplayFavoritesOverlay = suggestionTrayManager?.shouldDisplayFavoritesOverlay == true
+
+        let hasFavorites: Bool
+        let hasRemoteMessages: Bool
+        if let deps = suggestionTrayDependencies {
+            hasFavorites = !deps.favoritesViewModel.favorites.isEmpty
+            hasRemoteMessages = !deps.newTabPageDependencies.homePageMessagesConfiguration.homeMessages.isEmpty
+        } else {
+            hasFavorites = false
+            hasRemoteMessages = false
+        }
+
         let isHorizontallyCompactLayoutEnabled = requiresHorizontallyCompactLayout(for: view.bounds.size)
-        let isShowingChatHistory = aiChatHistoryManager?.hasSuggestions == true
-        let isChatHistoryPending = aiChatHistoryManager != nil
-            && aiChatHistoryManager?.hasCompletedInitialFetch != true
-            && switchBarHandler.currentToggleState == .aiChat
+        let text = switchBarHandler.currentText
+        let searchState = UnifiedSuggestionsInputsMerger.SearchState(hasFavorites: hasFavorites, hasMessages: hasRemoteMessages)
+        let duckAIState = duckAIStateRelay.value
+
+        // The dax derives from the SAME resolver that decides content: a side shows its logo exactly
+        // when it resolves to `.logo`. Resolving both modes keeps the swipe-morph's two empty states
+        // available; landscape suppresses both.
+        func resolvesToLogo(_ mode: TextEntryMode) -> Bool {
+            let inputs = UnifiedSuggestionsInputsMerger.merge(
+                mode: mode,
+                text: text,
+                hasUserInteractedWithText: switchBarHandler.hasUserInteractedWithText,
+                search: searchState,
+                duckAI: duckAIState)
+            return UnifiedSuggestionsContentResolver.resolve(inputs, previous: nil) == .logo
+        }
+
+        let isHomeDaxVisible = !isHorizontallyCompactLayoutEnabled && resolvesToLogo(.search)
+        let isAIDaxVisible = !isHorizontallyCompactLayoutEnabled && resolvesToLogo(.aiChat)
+
+        daxLogoManager.updateVisibility(isHomeDaxVisible: isHomeDaxVisible, isAIDaxVisible: isAIDaxVisible, committedMode: switchBarHandler.currentToggleState)
+        daxLogoManager.setEscapeHatchBaseOffset(daxVerticalOffset(hasEscapeHatch: escapeHatchModel != nil))
+        updateSyncPromo()
+    }
+
+    /// Shows the Duck.ai sync-promo card below the escape hatch in the not-typing state, mirroring
+    /// the legacy Duck.ai suggestions header. Gated by the sync-promo manager + recents count.
+    private func updateSyncPromo() {
+        guard let promoViewModel = aiChatSyncPromoViewModel, let host = unifiedSuggestionsHost else { return }
+        // Install the card once (the host guards on presence); its show/hide is then a reactive
+        // view-model change driven by `setSyncPromoVisible`.
+        host.setSyncPromo(syncPromoView)
+
+        let isTyping = !switchBarHandler.currentText.isEmpty
+        let shouldShow = switchBarHandler.currentToggleState == .aiChat
             && !switchBarHandler.isFireTab
-        let isURLFallbackShowingContent = isShowingURLFallback && isShowingTray
+            && (duckAISurface?.isAttached ?? false)
+            && promoViewModel.shouldShowPromo(isQueryActive: isTyping, chatCount: duckAISurface?.recentsCount ?? 0)
 
-        let hasContent = (shouldDisplaySuggestionTray && isShowingTray) || isHorizontallyCompactLayoutEnabled
-        let homeDaxInputs = HomeDaxInputs(
-            hasContent: hasContent,
-            shouldDisplayFavoritesOverlay: shouldDisplayFavoritesOverlay,
-            hasEscapeHatch: escapeHatchModel != nil,
-            hasFavorites: suggestionTrayManager?.hasFavorites ?? false,
-            hasRemoteMessages: suggestionTrayManager?.hasRemoteMessages ?? false
-        )
-        let isHomeDaxVisible = daxLogoManager.shouldShowHomeDax(homeDaxInputs)
-        let isAIDaxVisible = !hasContent && !isShowingChatHistory && !isChatHistoryPending && !isURLFallbackShowingContent
-
-        daxLogoManager.updateVisibility(isHomeDaxVisible: isHomeDaxVisible, isAIDaxVisible: isAIDaxVisible)
-        let escapeHatchOffset: CGFloat = (escapeHatchModel != nil && !switchBarHandler.isFireTab) ? Metrics.escapeHatchLogoOffset : 0
-        daxLogoManager.setEscapeHatchBaseOffset(escapeHatchOffset)
-        updateSectionTitle()
+        host.setSyncPromoVisible(shouldShow)
+        promoViewModel.recordImpressionIfNeeded(isVisibleContent: isContentActive, isPromoVisible: shouldShow)
     }
 
-    // MARK: - URL Fallback Suggestions
-
-    private func restoreFullSuggestions() {
-        guard isShowingURLFallback else { return }
-        suggestionTrayManager?.resetSuggestionFilter()
-        swipeContainerManager?.setSearchPageVisible(false, animated: false)
-        isShowingURLFallback = false
+    private func handleSyncPromoCTATap() {
+        if aiChatSyncPromoViewModel?.handleCTATap() == .requestSyncSetup {
+            duckAISuggestionsDidRequestSyncSetup()
+        }
+        updateSyncPromo()
     }
 
-    private func updateURLFallbackSuggestions(hasSuggestions: Bool, mode: TextEntryMode) {
-        guard mode == .aiChat else {
-            restoreFullSuggestions()
-            return
-        }
-        let query = switchBarHandler.currentText
-        let shouldShow = !hasSuggestions && !query.isBlank
-        if shouldShow {
-            let wasShowingURLFallback = isShowingURLFallback
-            isShowingURLFallback = true
-            suggestionTrayManager?.showURLOnlySuggestions(for: query, animated: false)
-            if !wasShowingURLFallback {
-                swipeContainerManager?.setSearchPageVisible(true, animated: false)
-            }
-        } else if isShowingURLFallback {
-            isShowingURLFallback = false
-            suggestionTrayManager?.hideURLOnlySuggestions(animated: true)
-            swipeContainerManager?.setSearchPageVisible(false, animated: true)
-            swipeContainerManager?.restoreChatPageVisibility()
-        }
+    private func handleSyncPromoClose() {
+        aiChatSyncPromoViewModel?.handleCloseTap()
+        updateSyncPromo()
+    }
+
+    /// `toolbarCompensationOffset` shifts the dax down because the toolbar still sits under the
+    /// unified input — without it, the keyboard-relative centering reads visually too high.
+    /// `hatchClearance` adds extra padding when the escape hatch is present so the two don't crowd.
+    private func daxVerticalOffset(hasEscapeHatch: Bool) -> CGFloat {
+        Metrics.toolbarCompensationOffset + (hasEscapeHatch ? Metrics.hatchClearance : 0)
     }
 
     private enum Metrics {
         static let horizontalMarginForCompactLayout: CGFloat = 108
         static let backgroundColor = UIColor(designSystemColor: .panel)
         static let contentTopInset: CGFloat = 10
-        static let escapeHatchBaseTopInset: CGFloat = 44
-        static let chatHistoryBottomBarCompensation: CGFloat = 1
-        static let escapeHatchLogoOffset: CGFloat = 120
-        // Vertically centers the escape hatch card when the chat history list is empty (no recent chats)
-        static let escapeHatchEmptyListBoost: CGFloat = 165
-        // Pulls the suggestion tray (NTP/Favorites) upward in UTI top bar to tighten gap between UTI input and hatch.
-        static let escapeHatchTopBarTrayPullUp: CGFloat = -10
-        // Landscape-only small alignment pull-up for chat history hatch so it visually matches Search tray position.
-        static let landscapeDuckAiAlignmentPullUp: CGFloat = -1
+        /// Brings the card's 8pt bottom margin up to the design's 12pt UTI bottom margin on the top bar
+        /// (content then adds its own 6pt top → 18pt UTI→content, per Figma).
+        static let topBarContentClearance: CGFloat = 4
+        static let toolbarCompensationOffset: CGFloat = 80
+        static let hatchClearance: CGFloat = 50
     }
 }
 
@@ -765,28 +824,13 @@ private extension UnifiedInputContentContainerViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 guard let self else { return }
-                self.refreshVisibleContent(
-                    suggestionRefresh: self.currentModeSuggestionRefresh(),
-                    animateContentUpdates: false
-                )
+                self.refreshVisibleContent(animateContentUpdates: false)
             }
             .store(in: &cancellables)
     }
 
-    private func currentModeSuggestionRefresh() -> SuggestionRefreshStrategy {
-        switch switchBarHandler.currentToggleState {
-        case .search:
-            .currentState
-        case .aiChat:
-            .none
-        }
-    }
 
-    private func refreshVisibleContent(
-        suggestionRefresh: SuggestionRefreshStrategy,
-        visibleModeAnimation: Bool? = nil,
-        animateContentUpdates: Bool
-    ) {
+    private func refreshVisibleContent(animateContentUpdates: Bool) {
         guard isContentActive else {
             markNeedsVisibleRefresh()
             return
@@ -794,24 +838,10 @@ private extension UnifiedInputContentContainerViewController {
 
         needsVisibleRefresh = false
 
-        switch suggestionRefresh {
-        case .none:
-            break
-        case .currentQuery(let animated):
-            suggestionTrayManager?.handleQueryUpdate(switchBarHandler.currentText, animated: animated)
-        case .currentState:
-            suggestionTrayManager?.showInitialSuggestions()
-        }
-
-        refreshContentPresentationState()
-
         let applyContentUpdates = {
             self.updateDaxVisibility()
-            self.updateEscapeHatchTopInset()
+            self.updateSingleHostTopOffset()
             self.applyRequestedContentInset()
-            if let visibleModeAnimation {
-                self.swipeContainerManager?.syncVisibleMode(animated: visibleModeAnimation)
-            }
             self.view.layoutIfNeeded()
         }
 
@@ -821,114 +851,118 @@ private extension UnifiedInputContentContainerViewController {
             applyContentUpdates()
         }
     }
+}
 
-    func refreshContentPresentationState() {
-        let mode = switchBarHandler.currentToggleState
-        if mode == .aiChat {
-            updateURLFallbackSuggestions(hasSuggestions: chatHasSuggestions, mode: mode)
-        } else {
-            restoreFullSuggestions()
+// MARK: - DuckAISuggestionsSurfaceProviderDelegate
+
+extension UnifiedInputContentContainerViewController: DuckAISuggestionsSurfaceProviderDelegate {
+
+    func duckAISurfaceDidSelect(_ selection: DuckAISuggestionsSelection) {
+        switch selection {
+        case .chat(let chat): duckAISuggestionsDidSelectChat(chat)
+        case .url(let suggestion): duckAISuggestionsDidSelectURL(suggestion)
+        case .searchDuckDuckGo(let query): duckAISuggestionsDidSelectSearchDuckDuckGo(query: query)
+        case .viewAllChats: delegate?.unifiedInputEditingStateDidSelectViewAllChats()
         }
     }
-}
 
-// MARK: - SwipeContainerViewControllerDelegate
-
-extension UnifiedInputContentContainerViewController: SwipeContainerViewControllerDelegate {
-
-    func swipeContainerViewController(_ controller: SwipeContainerViewController, didSwipeToMode mode: TextEntryMode) {
-        switchBarHandler.setToggleState(mode)
-        delegate?.unifiedInputEditingStateDidChangeMode(mode)
-        let suggestionRefresh: SuggestionRefreshStrategy = mode == .search ? .currentState : .none
-        refreshVisibleContent(suggestionRefresh: suggestionRefresh, animateContentUpdates: false)
+    func duckAISurfaceStateDidChange() {
+        updateDaxVisibility()
     }
 
-    func swipeContainerViewController(_ controller: SwipeContainerViewController, didUpdateScrollProgress progress: CGFloat) {
-        daxLogoManager.updateSwipeProgress(progress)
-    }
-}
-
-// MARK: - FadeOutContainerViewControllerDelegate
-
-extension UnifiedInputContentContainerViewController: FadeOutContainerViewControllerDelegate {
-
-    func fadeOutContainerViewController(_ controller: FadeOutContainerViewController, didTransitionToMode mode: TextEntryMode) {
-        switchBarHandler.setToggleState(mode)
-        delegate?.unifiedInputEditingStateDidChangeMode(mode)
-        let suggestionRefresh: SuggestionRefreshStrategy = mode == .search ? .currentState : .none
-        refreshVisibleContent(suggestionRefresh: suggestionRefresh, animateContentUpdates: false)
+    func duckAISurfaceDidDeleteURLSuggestion() {
+        // The deleted URL was removed from the shared history store; refresh Search so it doesn't
+        // linger there (the gated search loader won't re-fetch on a plain mode toggle).
+        searchLoader?.fetch(query: switchBarHandler.currentText)
     }
 
-    func fadeOutContainerViewController(_ controller: FadeOutContainerViewController, didUpdateTransitionProgress progress: CGFloat) {
-        daxLogoManager.updateSwipeProgress(progress)
-    }
-
-    func fadeOutContainerViewControllerIsShowingSuggestions(_ controller: FadeOutContainerViewController) -> Bool {
-        return suggestionTrayManager?.shouldDisplaySuggestionTray ?? false
-    }
-
-    func fadeOutContainerViewControllerShouldKeepSearchVisible(_ controller: FadeOutContainerViewController) -> Bool {
-        return isShowingURLFallback
+    func duckAISurfaceRequestsChatDeletionConfirmation(for chat: AIChatSuggestion,
+                                                       onConfirm: @escaping () -> Void,
+                                                       onCancel: @escaping () -> Void) {
+        guard let source = unifiedSuggestionsContainerView ?? view else { return }
+        FireConfirmationPresenter.presentFireConfirmation(suggestion: chat,
+                                                          presenter: self,
+                                                          source: source,
+                                                          onCancel: onCancel,
+                                                          onConfirm: onConfirm)
     }
 }
 
-// MARK: - SuggestionTrayManagerDelegate
+// MARK: - Duck.ai suggestion selection handling
 
-extension UnifiedInputContentContainerViewController: SuggestionTrayManagerDelegate {
+extension UnifiedInputContentContainerViewController {
 
-    func suggestionTrayManager(_ manager: SuggestionTrayManager, didSelectSuggestion suggestion: Suggestion) {
+    func duckAISuggestionsDidSelectChat(_ chat: AIChatSuggestion) {
+        let pixel: Pixel.Event = chat.isPinned ? .aiChatRecentChatSelectedPinned : .aiChatRecentChatSelected
+        DailyPixel.fireDailyAndCount(pixel: pixel)
+        Pixel.fire(pixel: .autocompleteDuckAIClickChatHistory)
+
+        let url = aiChatSettings.aiChatURL.withChatID(chat.chatId)
+        delegate?.unifiedInputEditingStateDidSelectChatHistory(url: url)
+    }
+
+    func duckAISuggestionsDidSelectURL(_ suggestion: Suggestion) {
+        fireDuckAISuggestionClickPixel(for: suggestion)
         delegate?.unifiedInputEditingStateDidSelectSuggestion(suggestion)
     }
 
-    func suggestionTrayManager(_ manager: SuggestionTrayManager, didSelectFavorite favorite: BookmarkEntity) {
+    func duckAISuggestionsDidSelectSearchDuckDuckGo(query: String) {
+        Pixel.fire(pixel: .autocompleteDuckAIClickSearchDuckDuckGo)
+        // Symmetric with Search-side "Ask privately" (which calls openAIChat with autoSend:true):
+        // flip toggle to Search and submit the query in one step.
+        switchBarHandler.setToggleState(.search)
+        delegate?.unifiedInputEditingStateDidSubmitQuery(query)
+    }
+
+    func duckAISuggestionsDidRequestSyncSetup() {
+        aiChatSyncIntroSheetPresenter.present(from: self) { [weak self] in
+            self?.delegate?.unifiedInputEditingStateDidRequestSyncSetup()
+        }
+    }
+
+    private func fireDuckAISuggestionClickPixel(for suggestion: Suggestion) {
+        switch suggestion {
+        case .website:
+            Pixel.fire(pixel: .autocompleteDuckAIClickWebsite)
+        case .bookmark(_, _, let isFavorite, _):
+            Pixel.fire(pixel: isFavorite ? .autocompleteDuckAIClickFavorite : .autocompleteDuckAIClickBookmark)
+        case .historyEntry(_, let url, _):
+            Pixel.fire(pixel: url.isDuckDuckGoSearch ? .autocompleteDuckAIClickHistorySearch : .autocompleteDuckAIClickHistorySite)
+        case .openTab:
+            Pixel.fire(pixel: .autocompleteDuckAIClickSwitchToTab)
+        case .phrase, .internalPage, .unknown, .askAIChat:
+            break
+        }
+    }
+}
+
+// MARK: - NewTabPageControllerDelegate
+
+/// Forwards the embedded favorites NTP's actions to the host's delegate so favorites open / edit /
+/// switch-tab exactly like the standalone NTP.
+extension UnifiedInputContentContainerViewController: NewTabPageControllerDelegate {
+
+    func newTabPageDidSelectFavorite(_ controller: NewTabPageViewController, favorite: BookmarkEntity) {
         delegate?.unifiedInputEditingStateDidSelectFavorite(favorite)
     }
 
-    func suggestionTrayManager(_ manager: SuggestionTrayManager, shouldUpdateTextTo text: String) {
-        switchBarHandler.updateCurrentText(text)
-    }
-
-    func suggestionTrayManager(_ manager: SuggestionTrayManager, requestsEditFavorite favorite: BookmarkEntity) {
+    func newTabPageDidEditFavorite(_ controller: NewTabPageViewController, favorite: BookmarkEntity) {
         delegate?.unifiedInputEditingStateDidEditFavorite(favorite)
     }
 
-    func suggestionTrayManager(_ manager: SuggestionTrayManager, requestsSwitchToTab tab: Tab) {
+    func newTabPageDidRequestSwitchToTab(_ controller: NewTabPageViewController, tab: Tab) {
         delegate?.unifiedInputEditingStateDidRequestSwitchTab(tab)
     }
 
-    func suggestionTrayManagerDidRequestTryFireMode(_ manager: SuggestionTrayManager) {
+    func newTabPageDidRequestTabSwitcher(_ controller: NewTabPageViewController) {
+        delegate?.unifiedInputEditingStateDidRequestTabSwitcher()
+    }
+
+    func newTabPageDidRequestTryFireMode(_ controller: NewTabPageViewController) {
         delegate?.unifiedInputEditingStateDidRequestTryFireMode()
     }
 
-    func suggestionTrayManagerDidUpdateVisibility(_ manager: SuggestionTrayManager) {
-        guard isContentActive else {
-            markNeedsVisibleRefresh()
-            return
-        }
-        updateDaxVisibility()
-        view.layoutIfNeeded()
-    }
-}
+    func newTabPageDidRequestFaviconsFetcherOnboarding(_ controller: NewTabPageViewController) {}
 
-// MARK: - VoiceSearchViewControllerDelegate
-
-extension UnifiedInputContentContainerViewController: VoiceSearchViewControllerDelegate {
-
-    func voiceSearchViewController(_ controller: VoiceSearchViewController, didFinishQuery query: String?, target: VoiceSearchTarget) {
-        controller.dismiss(animated: true) { [weak self] in
-            guard let self, let query else { return }
-            let mode: TextEntryMode = (target == .AIChat) ? .aiChat : .search
-            self.switchBarHandler.setToggleState(mode)
-            self.switchBarHandler.submitText(query)
-        }
-    }
-}
-
-// MARK: - AIChatHistoryManagerDelegate
-
-extension UnifiedInputContentContainerViewController: AIChatHistoryManagerDelegate {
-
-    func aiChatHistoryManager(_ manager: AIChatHistoryManager, didSelectChatURL url: URL) {
-        delegate?.unifiedInputEditingStateDidSelectChatHistory(url: url)
-    }
+    func newTabPageDidDismissDuckAIExperimentCompletion(_ controller: NewTabPageViewController) {}
 }

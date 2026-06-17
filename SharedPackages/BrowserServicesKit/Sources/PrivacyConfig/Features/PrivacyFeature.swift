@@ -84,7 +84,6 @@ public enum PrivacyFeature: String {
     case attributedMetrics
     case dataImport
     case duckAiChatHistory
-    case serp
     case popupBlocking
     case pageContext
     case webExtensions
@@ -110,11 +109,15 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     // Demonstrative case for default value. Remove once a real-world feature is added
     case intentionallyLocalOnlySubfeatureForTests
 
-    /// https://app.asana.com/1/137249556945/project/1206580121312550/task/1209808389662317?focus=true
-    case willSoonDropBigSurSupport
+    /// Address-bar render-performance instrumentation kill switch.
+    case addressBarPerformanceInstrumentation
 
     /// Hang reporting feature flag
     case hangReporting
+
+    /// Remote kill switch for native unsupported-OS messaging (launch alert, About/Feedback info box).
+    /// Enabled by default; set to `disabled` in privacy config to suppress the messaging.
+    case osSupportWarning
 
     /// https://app.asana.com/1/137249556945/project/72649045549333/task/1211260578559159?focus=true
     case unifiedURLPredictor
@@ -129,10 +132,6 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// Use WKDownload for favicon fetching to bypass App Transport Security restrictions on HTTP URLs
     case faviconWKDownload
 
-    /// New App Store Update flow feature flag
-    /// https://app.asana.com/1/137249556945/project/1199230911884351/task/1211563301906360?focus=true
-    case appStoreUpdateFlow
-
     /// Hide manual update option and always use automatic updates
     case automaticUpdatesOnly
 
@@ -144,9 +143,16 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1211448334620171?focus=true
     case blurryAddressBarTahoeFix
 
+    /// Prevents IME composition-confirm Return from submitting the address bar.
+    case addressBarIMEConfirmFix
+
     /// Feature Flag for the First Time Quit Survey
     /// https://app.asana.com/1/137249556945/inbox/1203972458584425/item/1212200919350194/story/1212483080081687
     case firstTimeQuitSurvey
+
+    /// Suppresses the first-time quit survey when termination wasn't initiated by the user
+    /// (Sparkle update relaunch, or system logout/restart/shutdown).
+    case firstTimeQuitSurveySkipNonUserQuit
 
     /// Web Notifications API polyfill - allows websites to show notifications via native macOS Notification Center
     /// https://app.asana.com/1/137249556945/project/414235014887631/task/1211395954816928?focus=true
@@ -173,8 +179,6 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// Enables showing browsing history domains in the first-time quit survey
     case websitesHistoryFirstTimeQuitSurvey
 
-    case semaphoreAlwaysVisible
-
     /// Autoplay policy control via WKWebpagePreferences
     case autoplayPolicy
 
@@ -183,9 +187,18 @@ public enum MacOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// Enables lazy reload for the more options menu
     case lazyMenuRebuild
 
-    case addToDockAppStore
-
     case screenTimeCleaning
+
+    /// Enables the custom NSPanel-based bookmarks bar menu (replacing NSPopover) with NSGlassEffectView on macOS 26
+    case bookmarksBarMenusCustomWindow
+
+    /// https://app.asana.com/1/137249556945/project/1211264967278501/task/1211806114021633?focus=true
+    case onboardingRebranding
+
+    /// Routes reload-after-error through `_evaluateJavaScriptWithoutUserGesture` instead of the
+    /// legacy `javascript:` URL trampoline. Kill switch — disable remotely to revert to the
+    /// trampoline if the SPI ever misbehaves.
+    case newErrorPageReload
 }
 
 public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
@@ -230,19 +243,34 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213336304802675
     case showNTPAfterIdleReturn
 
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213557229772465?focus=true
-    case autoplayBlocking
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214749215529034?focus=true
+    case escapeHatchActions
+
+    /// Surfaces the escape-hatch "delete tab" action as a dedicated Fire button on the card and removes it from the menu.
+    /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1215358250572341?focus=true
+    case escapeHatchFireButton
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215530020470713?focus=true
+    case escapeHatchHideShortcut
 
     case crashReportOptInStatusResetting
 
-    case fireproofingETLDPlus1
+    /// Internal-only observability for the hard-to-reproduce "web view scroll frozen, taps still work" bug:
+    /// a passive scroll-failure observer plus a gesture watchdog. Off for the general population by default.
+    case webScrollFreezeObservability
 
     case screenTimeCleaning
 
     case minimalChromeInLandscape
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215448831345663?focus=true
+    case bottomBarViewportFixedElementsWorkaround
+
     /// https://app.asana.com/1/137249556945/project/1206329551987282/task/1211806114021630?focus=true
     case onboardingRebranding
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214974217398704?focus=true
+    case appRebranding
 
     /// https://app.asana.com/1/137249556945/task/1213314048601761
     case fireMode
@@ -250,8 +278,35 @@ public enum iOSBrowserConfigSubfeature: String, PrivacySubfeature {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213965646075290
     case fireButtonRefinements
 
-    /// https://app.asana.com/1/137249556945/project/715106103902962/task/1212810377867736
-    case filterAddressBarUpdates
+    /// https://app.asana.com/1/137249556945/project/392891325557410/task/1212828713075939?focus=true
+    case omniBarLongPressMenu
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214797978179697?focus=true
+    case customProductPageDuckAiChat
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215151176422651?focus=true
+    case customProductPageDuckAiOnboardingFlow
+
+    /// Gate the default-to-NTP-after-idle behavior for existing iPhone users behind a remote flag.
+    /// https://app.asana.com/1/137249556945/project/1204186595873227/task/1214830562427843
+    case defaultExistingIPhoneUsersToNewTabAfterIdle
+
+    /// Coalesces tabManager.save into a debounced/max-wait window and moves the disk write off-main.
+    /// Kill switch in case the new path regresses persistence reliability or hang counts.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215099690878849
+    case tabsSaveOptimization
+
+    /// https://app.asana.com/1/137249556945/project/715106103902962/task/1213690148091855
+    case icsCalendarLinks
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215169783702336
+    case walletPassDownload
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215359554019438?focus=true
+    case floatingUI
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215385432113040?focus=true
+    case removeChatHistory
 }
 
 public enum TabManagerSubfeature: String, PrivacySubfeature {
@@ -305,12 +360,12 @@ public enum DBPSubfeature: String, Equatable, PrivacySubfeature {
     case remoteBrokerDelivery
     case emailConfirmationDecoupling
     case foregroundRunningOnAppActive
-    case foregroundRunningWhenDashboardOpen
     case continuedProcessing
     case pirRollout
     case goToMarket
     case webViewUserAgent
     case freemiumPIR
+    case contentBlocking
 }
 
 public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
@@ -366,6 +421,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables Duck.ai query experiment during onboarding
     case onboardingDuckAIQueryExperiment
 
+    /// Enables Duck.ai query experiment with tracker-blocking demo during onboarding
+    case onboardingDuckAIQueryTrackersDemoExperiment
+
     /// Enables the omnibar toggle for AI Chat
     case omnibarToggle
 
@@ -381,10 +439,12 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables the default omnibar toggle position setting for AI Chat
     case omnibarDefaultPosition
 
-    /// Controls showing the Hide AI section in Settings -> AI Features
-    case showHideAiGeneratedImages
-
     case unifiedToggleInput
+
+    /// Hides the Search↔Duck.ai toggle in the unified input when the user is on a Duck.ai tab,
+    /// regardless of the user's `Settings → Address Bar → Show Duck.ai Toggle` preference. Lets us
+    /// roll out the new Duck.ai-tab nav UI (no toggle on chat) independently of the master flag.
+    case aiChatTabHideToggle
 
     /// Signals that the iOS app should display duck.ai chats in "contextual mode" when opened from specific entry points
     case contextualDuckAIMode
@@ -400,6 +460,12 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
 
     /// Controls deletion of Synced chats
     case supportsSyncChatsDeletion
+
+    /// Controls pin/unpin updates of Synced chats
+    case supportsSyncChatsUpdate
+
+    /// Shows a link in Settings → AI Features that opens the Duck.ai Settings modal.
+    case settingsLinkInAiFeatures
 
     case sidebarResizable
 
@@ -423,8 +489,14 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables support for adding multiple page contexts to a single chat session
     case multiplePageContexts
 
-    /// Enables attaching content from multiple open tabs to Duck.ai chat
-    case attachMoreTabs
+    /// Enables attaching content from multiple open tabs to the Duck.ai sidebar chat.
+    case sidebarAttachMoreTabs
+
+    /// Enables attaching content from multiple open tabs to the Duck.ai omnibar (address bar) chat.
+    case omnibarAttachMoreTabs
+
+    /// Enables attaching content from multiple open tabs to the New Tab Page omnibar Duck.ai chat.
+    case ntpAttachMoreTabs
 
     /// Enables page context feature on iPad
     case iPadPageContext
@@ -470,6 +542,29 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
 
     /// Enables querying AI Chat data directly from local storage instead of via webview
     case nativeDataAccess
+
+    /// macOS only. Routes duck.ai voice-chat microphone permission entirely through native:
+    /// auto-grants per-site mic permission at launch, locks the Permission Center row,
+    /// surfaces a "System microphone disabled" warning when the OS has denied access, and
+    /// presents the Permission Center popover when the FE reports `getUserMedia` failure.
+    case nativeVoicePermissionFlow
+
+    /// Displays the Duck.ai shortcut in the iPad browser chrome (tabs bar).
+    case iPadChromeShortcut
+
+    /// Enables moving the AI Chat native-storage container from the shared App
+    /// Group into the app's Application Support directory on iOS. Off keeps the
+    /// legacy App Group path.
+    case nativeStoragePathMigration
+
+    /// Enables the rich Duck.ai tab grid card in the iOS tab switcher (rendered from
+    /// native-storage chat data). When off, Duck.ai tabs fall back to the standard
+    /// screenshot preview.
+    case tabSwitcherRichCard
+
+    /// macOS only. When on, the onboarding Search/Duck.ai toggle choice also drives the New Tab Page
+    /// search-mode toggle and seeds the duckduckgo.com homepage. Off keeps the choice address-bar only.
+    case onboardingToggleAffectsNtpAndDdg
 }
 
 public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {
@@ -516,9 +611,13 @@ public enum NetworkProtectionSubfeature: String, Equatable, PrivacySubfeature {
     /// https://app.asana.com/0/1204186595873227/1206489252288889
     case riskyDomainsProtection
 
-    /// Connection failure loop detection for VPN
-    /// https://app.asana.com/1/137249556945/project/1207603085593419/task/1213755794484487?focus=true
-    case connectionFailureLoopDetection
+    /// Kill switch for the orphaned-proxy detection machinery (tunnel heartbeat + proxy detection loop + pixel).
+    /// Off by default → detection runs; enable remotely to disable it.
+    case orphanProxyDetectionKillSwitch
+
+    /// Kill switch for the orphaned-proxy full-bypass behavior.
+    /// Off by default → bypass engages when an orphaned proxy is detected; enable remotely to disable it.
+    case orphanProxyBypassKillSwitch
 }
 
 public enum SyncSubfeature: String, PrivacySubfeature {
@@ -542,8 +641,12 @@ public enum SyncSubfeature: String, PrivacySubfeature {
     case syncCreditCards
     case syncIdentities
     case aiChatSync
+    case aiChatSyncPromo
     case simplifiedSyncSetupExperiment
     case allowSingleDeviceOnConnectScreen
+    case scopedAccessCredentials
+    case canUseV2ConnectFlow
+    case canShowV2ConnectCode
 }
 
 public enum AutoconsentSubfeature: String, PrivacySubfeature {
@@ -571,7 +674,6 @@ public enum PrivacyProSubfeature: String, Equatable, PrivacySubfeature {
     case allowProTierPurchase
     case freeTrialConversionWideEvent
     case subscriptionPromoForReinstallers
-    case subscriptionPromoFireWindow
 }
 
 public enum DuckPlayerSubfeature: String, PrivacySubfeature {
@@ -694,15 +796,6 @@ public enum DataImportSubfeature: String, PrivacySubfeature {
     case dataImportSummarySyncPromotion
 }
 
-public enum SERPSubfeature: String, PrivacySubfeature {
-    public var parent: PrivacyFeature {
-        .serp
-    }
-
-    /// Global switch to disable New Tab Page search box
-    case storeSerpSettings
-}
-
 public enum PopupBlockingSubfeature: String, PrivacySubfeature {
     public var parent: PrivacyFeature {
         .popupBlocking
@@ -718,6 +811,17 @@ public enum WebExtensionsSubfeature: String, PrivacySubfeature {
     case featureEnabled
     case embeddedExtension = "embedded"
     case embeddedRollout
+    /// Failsafe for the lightweight reload on data clear (fire). Disable to fall back to the full reload.
+    case lightweightReloadOnDataClear
+    /// Failsafe for deferring web-extension load/install until protected data is available. Disable to load immediately.
+    case protectedDataLoadGate
+}
+
+public enum AdBlockingExtensionSubfeature: String, PrivacySubfeature {
+    public var parent: PrivacyFeature { .adBlockingExtension }
+
+    case featureEnabled
+    case featureEnabledByDefault
 }
 
 public enum ForceDarkModeOnWebsitesSubfeature: String, PrivacySubfeature {
@@ -742,6 +846,7 @@ public enum DuckAiChatHistorySubfeature: String, PrivacySubfeature {
     public var parent: PrivacyFeature { .duckAiChatHistory }
 
     case featureEnabled
+    case nativeChatHistory
 }
 
 public enum PromoQueueSubfeature: String, PrivacySubfeature {
@@ -794,12 +899,6 @@ public enum PageContextSubfeature: String, PrivacySubfeature {
 
 public enum TabSwitcherTrackerCountSubfeature: String, PrivacySubfeature {
     public var parent: PrivacyFeature { .tabSwitcherTrackerCount }
-
-    case featureEnabled
-}
-
-public enum AdBlockingExtensionSubfeature: String, PrivacySubfeature {
-    public var parent: PrivacyFeature { .adBlockingExtension }
 
     case featureEnabled
 }

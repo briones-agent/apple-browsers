@@ -20,6 +20,7 @@ import PrivacyConfig
 import Combine
 import SwiftUI
 import Common
+import FoundationExtensions
 import FeatureFlags
 import Foundation
 import NetworkExtension
@@ -210,26 +211,16 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
     private func handleStatusChange(_ notification: Notification) {
         Logger.networkProtection.log("VPN handle status change: \(notification.debugDescription, privacy: .public)")
         guard let session = (notification.object as? NETunnelProviderSession),
-              session.status != previousStatus,
-              let manager = session.manager as? NETunnelProviderManager else {
-
+              session.status != previousStatus else {
             return
         }
 
         Task { @MainActor in
             previousStatus = session.status
 
-            switch session.status {
-            case .connected:
-                if #unavailable(macOS 12) {
-                    try await enableOnDemand(tunnelManager: manager)
-                }
-            case .invalid:
+            if session.status == .invalid {
                 clearInternalManager()
-            default:
-                break
             }
-
         }
     }
 
@@ -485,6 +476,63 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
         return configuration.providerBundleIdentifier == extensionBundleID
     }
 
+    @MainActor
+    func refreshSystemState() async {
+        let usesSystemExtension = await extensionResolver.isUsingSystemExtension
+        let extensionBundleID = await extensionResolver.activeExtensionBundleID
+
+        let systemExtensionState: SystemExtensionActivationState = if usesSystemExtension {
+            await networkExtensionController.systemExtensionActivationState()
+        } else {
+            .enabled
+        }
+
+        let vpnConfigurationState = await vpnConfigurationState(extensionBundleID: extensionBundleID)
+        let existingStatus = OnboardingStatus(rawValue: onboardingStatusRawValue) ?? .default
+
+        let resolvedStatus = NetworkProtectionSystemStateResolver.resolvedOnboardingStatus(
+            usesSystemExtension: usesSystemExtension,
+            systemExtensionState: systemExtensionState,
+            vpnConfigurationState: vpnConfigurationState,
+            existingStatus: existingStatus
+        )
+
+        guard resolvedStatus.rawValue != onboardingStatusRawValue else {
+            return
+        }
+
+        onboardingStatusRawValue = resolvedStatus.rawValue
+    }
+
+    @MainActor
+    private func vpnConfigurationState(extensionBundleID: String) async -> NetworkProtectionVPNConfigurationState {
+        guard let manager = await manager else {
+            return .missingOrInvalid
+        }
+
+        do {
+            try await manager.loadFromPreferences()
+        } catch {
+            Logger.networkProtection.error("""
+            VPN system state refresh failed to load active tunnel manager from preferences
+              expectedExtensionBundleID: \(extensionBundleID, privacy: .public)
+              description: \(error.localizedDescription, privacy: .public)
+            """)
+            clearInternalManager()
+            return .missingOrInvalid
+        }
+
+        guard let configuration = manager.protocolConfiguration as? NETunnelProviderProtocol,
+              configuration.providerBundleIdentifier == extensionBundleID,
+              manager.connection.status != .invalid else {
+
+            clearInternalManager()
+            return .missingOrInvalid
+        }
+
+        return manager.isEnabled ? .installedAndEnabled : .installedButDisabled
+    }
+
     /// Ensures that the system extension is activated if necessary.
     ///
     private func activateSystemExtension(waitingForUserApproval: @escaping () -> Void) async throws {
@@ -501,11 +549,15 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
                 NetworkProtectionPixelEvent.networkProtectionSystemExtensionActivationSuccess,
                 frequency: .dailyAndCount,
                 includeAppVersionParameter: true)
+        } catch is CancellationError {
+            throw StartError.cancelled
         } catch {
             switch error {
             case OSSystemExtensionError.requestSuperseded:
                 // Even if the installation request is superseded we want to show the message that tells the user
                 // to go to System Settings to allow the extension
+                controllerErrorStore.lastErrorMessage = UserText.networkProtectionSystemSettings
+            case SystemExtensionRequestError.requestTimedOut:
                 controllerErrorStore.lastErrorMessage = UserText.networkProtectionSystemSettings
             case SystemExtensionRequestError.unknownRequestResult:
                 controllerErrorStore.lastErrorMessage = UserText.networkProtectionUnknownActivationError
@@ -608,6 +660,7 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
     @MainActor
     func start() async {
         Logger.networkProtection.log("🚀 Start VPN")
+        await refreshSystemState()
         setupAndStartConnectionWideEvent()
         VPNOperationErrorRecorder().beginRecordingControllerStart()
         PixelKit.fire(NetworkProtectionPixelEvent.networkProtectionControllerStartAttempt,
@@ -637,18 +690,21 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
             VPNOperationErrorRecorder().recordControllerStartFailure(error)
             knownFailureStore.lastKnownFailure = KnownFailure(error)
 
+            let isCancelled: Bool
             if case StartError.cancelled = error {
+                isCancelled = true
                 PixelKit.fire(
                     NetworkProtectionPixelEvent.networkProtectionControllerStartCancelled, frequency: .legacyDailyAndCount, includeAppVersionParameter: true
                 )
             } else {
+                isCancelled = false
                 PixelKit.fire(
                     NetworkProtectionPixelEvent.networkProtectionControllerStartFailure(error), frequency: .legacyDailyAndCount, includeAppVersionParameter: true
                 )
             }
 
             // Always keep the first error message shown, as it's the more actionable one.
-            if controllerErrorStore.lastErrorMessage == nil {
+            if controllerErrorStore.lastErrorMessage == nil && !isCancelled {
                 controllerErrorStore.lastErrorMessage = error.localizedDescription
             }
 
@@ -671,16 +727,21 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
 
             self.controllerErrorStore.lastErrorMessage = nil
 
-            // We'll only update to completed if we were showing the onboarding step to
-            // allow the system extension.  Otherwise we may override the allow-VPN
-            // onboarding step.
-            //
-            // Additionally if the onboarding step was allowing the system extension, we won't
-            // start the tunnel at once, and instead require that the user enables the toggle.
-            //
+            // If activation leaves us on the system extension onboarding step, verify
+            // the real system state before deciding whether to advance. Activation may
+            // complete even when the user has manually disabled the extension.
             if onboardingStatusRawValue == OnboardingStatus.isOnboarding(step: .userNeedsToAllowExtension).rawValue {
-                onboardingStatusRawValue = OnboardingStatus.isOnboarding(step: .userNeedsToAllowVPNConfiguration).rawValue
-                return
+                await refreshSystemState()
+
+                let refreshedStatus = OnboardingStatus(rawValue: onboardingStatusRawValue) ?? .default
+                guard NetworkProtectionSystemStateResolver.shouldContinueStartingTunnel(afterSystemExtensionActivation: refreshedStatus) else {
+                    Logger.networkProtection.info("""
+                    Pausing VPN start after system extension activation
+                      refreshedOnboardingStatus: \(refreshedStatus.rawValue, privacy: .public)
+                    """)
+                    networkExtensionController.openSystemExtensionSettings()
+                    return
+                }
             }
         } else {
             self.connectionWideEventData?.extensionType = .app
@@ -712,7 +773,7 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
                 throw StartError.connectionStatusInvalid
             }
 
-            await clearInternalManager()
+            clearInternalManager()
             resetControllerStartWideEventMeasurement()
             try await start(isFirstAttempt: false)
         case .connected:
@@ -738,11 +799,8 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
             Logger.networkProtection.log("🚀 Starting NetworkProtectionTunnelController, options: \(options, privacy: .public)")
             self.connectionWideEventData?.tunnelStartDuration = WideEvent.MeasuredInterval.startingNow()
             try tunnelManager.connection.startVPNTunnel(options: options)
-
-            if #available(macOS 12, *) {
-                try await startupMonitor.waitForStartSuccess(tunnelManager)
-                try await self.enableOnDemand(tunnelManager: tunnelManager)
-            }
+            try await startupMonitor.waitForStartSuccess(tunnelManager)
+            try await self.enableOnDemand(tunnelManager: tunnelManager)
 
             self.connectionWideEventData?.tunnelStartDuration?.complete()
         } catch {
@@ -756,7 +814,7 @@ final class NetworkProtectionTunnelController: TunnelController, TunnelSessionPr
             frequency: .uniqueByName,
             includeAppVersionParameter: true) { [weak self] fired, error in
                 guard let self, error == nil, fired else { return }
-                self.defaults.vpnFirstEnabled = try? PixelKit.pixelLastFireDate(event: NetworkProtectionPixelEvent.networkProtectionNewUser)
+                self.defaults.vpnFirstEnabled = try? PixelKit.pixelLastFireDate(event: NetworkProtectionPixelEvent.networkProtectionNewUser, frequency: .uniqueByName)
             }
     }
 

@@ -24,6 +24,7 @@ import DDGSync
 import Bookmarks
 import Subscription
 import Common
+import FoundationExtensions
 import VPN
 import DataBrokerProtectionCore
 import DataBrokerProtection_iOS
@@ -114,6 +115,7 @@ final class AppDependencyProvider: DependencyProvider {
         PixelKit.setUp(dryRun: PixelKitConfig.isDryRun(isProductionBuild: BuildFlags.isProductionBuild),
                        appVersion: AppVersion.shared.versionNumber,
                        source: source.rawValue,
+                       session: "ios-browser",
                        defaultHeaders: [:],
                        defaults: UserDefaults(suiteName: Global.appConfigurationGroupName) ?? UserDefaults()) { (pixelName: String, headers: [String: String], parameters: [String: String], _, _, onComplete: @escaping PixelKit.CompletionBlock) in
 
@@ -135,13 +137,6 @@ final class AppDependencyProvider: DependencyProvider {
         }
 
         let featureFlagOverrideStore = UserDefaults(suiteName: FeatureFlag.localOverrideStoreName)!
-
-        // Apply UI test overrides
-        LaunchOptionsHandler().applyUITestOverrides(
-            featureFlagOverrideStore: featureFlagOverrideStore,
-            configRolloutStore: .standard
-        )
-
         let featureFlaggerOverrides = FeatureFlagLocalOverrides(keyValueStore: featureFlagOverrideStore,
                                                                 actionHandler: FeatureFlagOverridesPublishingHandler<FeatureFlag>()
         )
@@ -158,11 +153,21 @@ final class AppDependencyProvider: DependencyProvider {
             let defaultFeatureFlagger = DefaultFeatureFlagger(internalUserDecider: internalUserDecider,
                                                               privacyConfigManager: ContentBlocking.shared.privacyConfigurationManager,
                                                               localOverrides: featureFlaggerOverrides,
+                                                              allowOverrides: { [internalUserDecider, isUITesting=LaunchOptionsHandler().isUITesting] in
+                                                                  internalUserDecider.isInternalUser || isUITesting
+                                                              },
                                                               experimentManager: experimentManager,
                                                               for: FeatureFlag.self)
             self.featureFlagger = defaultFeatureFlagger
             self.contentScopeExperimentsManager = defaultFeatureFlagger
             featureFlagger = defaultFeatureFlagger
+
+            // Applied after DefaultFeatureFlagger.init, which clears local overrides for non-internal users.
+            // Writing overrides afterwards keeps them intact for UI test mode where allowOverrides also returns true.
+            LaunchOptionsHandler().applyUITestOverrides(
+                featureFlagOverrideStore: featureFlagOverrideStore,
+                configRolloutStore: .standard
+            )
         }
 
         // Configure PixelKit Experiments
@@ -275,7 +280,7 @@ final class AppDependencyProvider: DependencyProvider {
         self.freeTrialConversionService = DefaultFreeTrialConversionInstrumentationService(
             wideEvent: wideEvent,
             pixelHandler: FreeTrialPixelHandler(),
-            subscriptionFetcher: { try? await subscriptionManager.getSubscription(cachePolicy: .cacheFirst) },
+            subscriptionFetcher: { try? await subscriptionManager.getSubscription() },
             isFeatureEnabled: { featureFlagger.isFeatureOn(.freeTrialConversionWideEvent) }
         )
         self.freeTrialConversionService.startObservingSubscriptionChanges()

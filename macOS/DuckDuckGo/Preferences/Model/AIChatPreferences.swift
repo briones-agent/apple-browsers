@@ -19,6 +19,7 @@
 import AIChat
 import AppKit
 import Combine
+import CombineExtensions
 import Foundation
 import PixelKit
 import PrivacyConfig
@@ -123,8 +124,8 @@ final class AIChatPreferences: ObservableObject {
         featureFlagger.isFeatureOn(.newTabPageOmnibar)
     }
 
-    var shouldShowHideAIGeneratedImagesSection: Bool {
-        featureFlagger.isFeatureOn(.showHideAIGeneratedImagesSection)
+    var shouldShowDuckAiSettingsLink: Bool {
+        featureFlagger.isFeatureOn(.aiChatSettingsLinkInAiFeatures)
     }
 
     var shouldShowSearchAndDuckAIToggleOption: Bool {
@@ -202,6 +203,12 @@ final class AIChatPreferences: ObservableObject {
 
     @MainActor func openSearchAssistSettings() {
         windowControllersManager.show(url: URL.aiChatSettings, source: .ui, newTab: true, selected: true)
+    }
+
+    /// Opens duck.ai in a new tab and triggers the Duck.ai Settings modal once the page
+    /// has wired up its message subscriptions.
+    @MainActor func openDuckAiSettings() {
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .openSettings, behavior: .newTab(selected: true))
     }
 
     private func subscribeToDuckAIChromeButtonsVisibilityChanges() {

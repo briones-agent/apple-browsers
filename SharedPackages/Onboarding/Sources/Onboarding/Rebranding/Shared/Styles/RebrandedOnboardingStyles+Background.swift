@@ -18,6 +18,7 @@
 
 import SwiftUI
 import Combine
+import CombineExtensions
 #if os(iOS)
 import MetricBuilder
 import UIKit
@@ -74,6 +75,23 @@ private enum ContextualBackgroundStyleMetrics {
     static let referenceBackgroundImageOffset: CGFloat = 90
 }
 
+/// Inner-shadow approximation of Figma's "Inline Dax Dialog" effect token — originally two
+/// stacked INNER_SHADOW passes (Shadow/Purple `#3E228C @ 6 %` offset (0,-4) blur 8, and
+/// Shadow/Blue `#1E42A4 @ 9 %` offset (0,-1) blur 0) — collapsed into a single vertical
+/// gradient band painted along the panel's inside-bottom edge. The effect mimics the web
+/// view beneath the panel casting a shadow upward onto the contextual onboarding.
+///
+/// A `LinearGradient` band is used in place of `ShadowStyle.inner(...)` (iOS 16+) so the
+/// implementation works on the Onboarding package's iOS 15 deployment target.
+private enum ContextualBackgroundShadowMetrics {
+    /// Opacity-weighted blend of `Shadow/Purple` (#3E228C @ 6 %) and `Shadow/Blue` (#1E42A4
+    /// @ 9 %). Resulting tint ≈ #2B359A; combined alpha ≈ 0.15.
+    static let color = Color(red: 43.0 / 255.0, green: 53.0 / 255.0, blue: 154.0 / 255.0).opacity(0.15)
+    /// Vertical extent of the inner-shadow band. Inherits Shadow/Purple's blur radius —
+    /// Shadow/Blue's pass had zero blur (a 1 px hairline) so it doesn't widen the band.
+    static let height: CGFloat = 8
+}
+
 extension OnboardingRebranding.OnboardingStyles {
 
     struct ContextualBackgroundStyle: ViewModifier {
@@ -116,7 +134,7 @@ extension OnboardingRebranding.OnboardingStyles {
                             backgroundType.image
                                 .resizable()
                                 .scaledToFit()
-                                .frame(maxHeight: maxHeightMetrics)
+                                .frame(maxHeight: maxHeightMetrics, alignment: .bottom)
                                 .background(
                                     GeometryReader { proxy in
                                         Color.clear
@@ -145,6 +163,7 @@ extension OnboardingRebranding.OnboardingStyles {
                 content
             }
             .ignoresSafeArea(.keyboard)
+            .ignoresSafeArea(.container, edges: ignoredContainerEdges)
         }
 
         // Calculates the vertical offset needed to adjust the background image when the keyboard appears.
@@ -192,6 +211,13 @@ extension OnboardingRebranding.OnboardingStyles {
         private static let maxHeightNewTabPageAssets = MetricBuilder<CGFloat?>(default: nil).iPad(290).iPhone(landscape: 290)
         #endif
 
+        /// Pushes the modifier's frame past the home-indicator inset on iPhone landscape so
+        /// the screen background fills the entire device width and height; portrait and iPad
+        /// keep respecting the bottom safe area.
+        private var ignoredContainerEdges: Edge.Set {
+            vSizeClass == .compact ? [.horizontal, .bottom] : .horizontal
+        }
+
         var maxHeightMetrics: CGFloat? {
             #if os(iOS)
             switch backgroundType {
@@ -210,7 +236,25 @@ extension OnboardingRebranding.OnboardingStyles {
         let backgroundType: ContextualOnboardingBackgroundType
 
         func body(content: Content) -> some View {
-            content.modifier(backgroundStyle)
+            content
+                .modifier(backgroundStyle)
+                #if os(iOS)
+                // Inner-shadow band painted along the panel's inside-bottom edge. Reads as the
+                // web view (sitting beneath the panel in the tab's stack view) casting a shadow
+                // upward onto the contextual onboarding. Merges Figma's "Inline Dax Dialog"
+                // effect — two stacked INNER_SHADOW passes (Shadow/Purple offset (0,-4) blur 8,
+                // and Shadow/Blue offset (0,-1) blur 0) — into a single vertical gradient,
+                // since `ShadowStyle.inner(...)` is iOS 16+ and the package targets iOS 15.
+                .overlay(alignment: .bottom) {
+                    LinearGradient(
+                        colors: [.clear, ContextualBackgroundShadowMetrics.color],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: ContextualBackgroundShadowMetrics.height)
+                    .allowsHitTesting(false)
+                }
+                #endif
         }
 
         private var backgroundStyle: ContextualBackgroundStyle {

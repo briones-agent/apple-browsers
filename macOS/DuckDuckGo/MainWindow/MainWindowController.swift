@@ -19,6 +19,8 @@
 import Cocoa
 import Combine
 import Common
+import ConcurrencyExtensions
+import FoundationExtensions
 import os.log
 import PixelKit
 import PrivacyConfig
@@ -84,6 +86,7 @@ final class MainWindowController: NSWindowController {
         subscribeToFullScreenToolbarChanges()
         subscribeToKeyWindow()
         subscribeToThemeChanges()
+        subscribeToEffectiveAppearance()
 
         applyThemeStyle()
 
@@ -124,6 +127,7 @@ final class MainWindowController: NSWindowController {
                 // Set onboarding settings so state is persisted across app re-launches during UI Tests
                 if isOnboardingCompleted {
                     OnboardingActionsManager.isOnboardingFinished = true
+                    OnboardingActionsManager.applyAdBlockingRolloutDuckPlayerDefaultIfNeeded(featureFlagger: Application.appDelegate.featureFlagger)
                 }
                 return !isOnboardingCompleted
             }
@@ -139,6 +143,7 @@ final class MainWindowController: NSWindowController {
         if !AppVersion.runType.allowsOnboarding {
             Application.appDelegate.onboardingContextualDialogsManager.state = .onboardingCompleted
             OnboardingActionsManager.isOnboardingFinished = true
+            OnboardingActionsManager.applyAdBlockingRolloutDuckPlayerDefaultIfNeeded(featureFlagger: Application.appDelegate.featureFlagger)
             return false
         } else {
             if AppVersion.runType == .uiTestsOnboarding {
@@ -169,6 +174,21 @@ final class MainWindowController: NSWindowController {
 
     private func subscribeToResolutionChange() {
         NotificationCenter.default.addObserver(self, selector: #selector(didChangeScreenParameters), name: NSApplication.didChangeScreenParametersNotification, object: NSApp)
+    }
+
+    private func subscribeToEffectiveAppearance() {
+        // The titlebarView layer color set in applyThemeStyle is a frozen CGColor that, unlike
+        // window.backgroundColor, does not track the effective appearance. Re-apply the theme when the
+        // appearance changes (e.g. the system switches between light and dark while following the system
+        // setting) so the strip above the tab bar stays in sync. Only relevant on Liquid Glass UI.
+        guard AppVersion.isLiquidGlassSupported else { return }
+        NSApp.publisher(for: \.effectiveAppearance)
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.applyThemeStyle()
+            }
+            .store(in: &cancellables)
     }
 
     private func subscribeToFullScreenToolbarChanges() {
@@ -224,7 +244,7 @@ final class MainWindowController: NSWindowController {
 
     private var trafficLightsAlphaCancellables = [AnyCancellable]()
     private func subscribeToTrafficLightsAlpha() {
-        guard let window, let featureFlagger, featureFlagger.isFeatureOn(.semaphoreAlwaysVisible) else {
+        guard let window else {
             return
         }
 
@@ -352,6 +372,17 @@ extension MainWindowController: ThemeUpdateListening {
     func applyThemeStyle(theme: ThemeStyleProviding) {
         // Prevent a 2px white line from appearing above the tab bar on macOS 26
         window?.backgroundColor = theme.colorsProvider.baseBackgroundColor
+
+        // The tab bar is added to the titlebarView with a 2pt top padding on Liquid Glass,
+        // leaving a thin strip above it that shows through to whatever is behind the titlebarView.
+        // In fullscreen the titlebarView lives in an auxiliary window whose contentView is opaque
+        // white, so coloring the titlebarView's layer itself is the only way to fill that strip.
+        if AppVersion.isLiquidGlassSupported, let titlebarView = window?.titlebarView {
+            titlebarView.wantsLayer = true
+            titlebarView.effectiveAppearance.performAsCurrentDrawingAppearance {
+                titlebarView.layer?.backgroundColor = theme.colorsProvider.baseBackgroundColor.cgColor
+            }
+        }
     }
 }
 
@@ -433,6 +464,12 @@ extension MainWindowController: NSWindowDelegate {
 
     func windowDidEnterFullScreen(_ notification: Notification) {
         guard let window = self.window else { return }
+
+        // Color the auxiliary fullscreen toolbar window's background to match the theme,
+        // hiding the white line above the title bar that appears on macOS 26 Liquid Glass UI.
+        if AppVersion.isLiquidGlassSupported {
+            applyThemeStyle()
+        }
 
         // Detect split screen vs regular fullscreen mode
         if window.isApproximatelyHalfScreenWide {

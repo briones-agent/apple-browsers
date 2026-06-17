@@ -22,8 +22,10 @@ import UIKit
 protocol BrowserChromeDelegate: AnyObject {
     
     func setBarsHidden(_ hidden: Bool, animated: Bool, customAnimationDuration: CGFloat?)
+    func resetBars(animated: Bool)
     func setNavigationBarHidden(_ hidden: Bool)
     func setRefreshControlEnabled(_ isEnabled: Bool)
+    func setUnifiedInputContentOverlaySuppressed(_ suppressed: Bool)
     
     func setBarsVisibility(_ percent: CGFloat, animated: Bool, animationDuration: CGFloat?)
     
@@ -160,8 +162,8 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
         return heightAllowsHide && (delegate?.canHideBars ?? true)
     }
 
-    func reset() {
-        animator.revealBars(animated: true)
+    func reset(animated: Bool = true) {
+        animator.revealBars(animated: animated)
     }
 }
 
