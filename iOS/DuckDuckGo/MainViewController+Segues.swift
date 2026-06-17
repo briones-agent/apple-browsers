@@ -278,20 +278,23 @@ extension MainViewController {
     /// appear. Returns false if a presentation is already active or the controller can't be built.
     @discardableResult
     func beginInteractiveTabSwitcherPresentation(interactor: UIPercentDrivenInteractiveTransition) -> Bool {
-        Logger.lifecycle.debug(#function)
+        Logger.swipeUpToTabSwitcher.debug("beginInteractive enter alreadyPresenting=\(self.tabSwitcherController != nil, privacy: .public)")
         guard tabSwitcherController == nil else { return false }
         hideAllHighlightsIfNeeded()
         guard let controller = makeTabSwitcherController(initialTrackerCountState: .hidden,
                                                          forceFireTabsTip: false) else {
+            Logger.swipeUpToTabSwitcher.debug("beginInteractive: makeTabSwitcherController returned nil")
             return false
         }
         tabSwitcherTransition.activeInteractor = interactor
         present(controller, animated: true)
+        Logger.swipeUpToTabSwitcher.debug("beginInteractive: present called, coordinator=\(controller.transitionCoordinator != nil, privacy: .public)")
 
         // Release the interactor once the interactive transition settles (whether it finished or was
         // cancelled), keeping it alive for the whole animation. Clearing it makes the next button-tap
         // present non-interactive again (the delegate's weak `activeInteractor` then falls back to nil).
-        controller.transitionCoordinator?.animate(alongsideTransition: nil) { [weak self] _ in
+        controller.transitionCoordinator?.animate(alongsideTransition: nil) { [weak self] context in
+            Logger.swipeUpToTabSwitcher.debug("beginInteractive: transition settled cancelled=\(context.isCancelled, privacy: .public)")
             self?.tabSwitcherTransition.activeInteractor = nil
             self?.tabSwitcherInteractor = nil
         }

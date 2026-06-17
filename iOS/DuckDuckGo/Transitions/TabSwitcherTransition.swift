@@ -18,6 +18,8 @@
 //
 
 import UIKit
+import Core
+import os.log
 
 class TabSwitcherTransition: NSObject, UIViewControllerAnimatedTransitioning {
     
@@ -90,8 +92,11 @@ class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDele
             let tabSwitcherVC = presented as? TabSwitcherViewController else {
             return nil
         }
-        
-        if mainVC.newTabPageViewController != nil {
+
+        let isNTP = mainVC.newTabPageViewController != nil
+        Logger.swipeUpToTabSwitcher.debug("animationController(forPresented) interactive=\(self.activeInteractor != nil, privacy: .public) ntp=\(isNTP, privacy: .public)")
+
+        if isNTP {
             return FromHomeScreenTransition(mainViewController: mainVC,
                                             tabSwitcherViewController: tabSwitcherVC)
         }
@@ -102,6 +107,7 @@ class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDele
 
     func interactionControllerForPresentation(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         // nil for button taps → UIKit performs the normal non-interactive present.
+        Logger.swipeUpToTabSwitcher.debug("interactionControllerForPresentation: activeInteractor != nil = \(self.activeInteractor != nil, privacy: .public)")
         return activeInteractor
     }
 

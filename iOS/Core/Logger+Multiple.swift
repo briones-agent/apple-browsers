@@ -29,4 +29,5 @@ public extension Logger {
     static let addressBarPicker = Logger(subsystem: "AddressBar Picker", category: "")
     static let customProductPage = Logger(subsystem: "Custom Product Page", category: "")
     static let interaction = Logger(subsystem: "Interaction", category: "")
+    static let swipeUpToTabSwitcher = Logger(subsystem: "SwipeUpToTabSwitcher", category: "")
 }

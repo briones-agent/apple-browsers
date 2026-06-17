@@ -19,10 +19,20 @@
 
 import UIKit
 import Core
+import os.log
 
 /// Distinct subclass so `MainViewController`'s gesture-recognizer delegate can identify this gesture
 /// and disambiguate it from the horizontal tab-swipe pan that shares the bottom bar.
-final class SwipeUpToTabSwitcherPanGestureRecognizer: UIPanGestureRecognizer {}
+final class SwipeUpToTabSwitcherPanGestureRecognizer: UIPanGestureRecognizer {
+
+    // TEMP debug: confirm whether this recognizer receives touches at all. When the swipe starts on
+    // the address bar, the omnibar's collection view / text field may swallow the touch before it
+    // reaches a recognizer attached to the container.
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        Logger.swipeUpToTabSwitcher.debug("recognizer.touchesBegan view=\(String(describing: type(of: self.view)), privacy: .public)")
+        super.touchesBegan(touches, with: event)
+    }
+}
 
 /// Pure, testable parameters and decisions for the interactive swipe-up-to-tab-overview gesture.
 enum SwipeUpToTabSwitcher {
@@ -54,9 +64,12 @@ extension MainViewController {
     /// container). No-op unless the feature flag is on; per-event gating (iPhone, bottom address bar,
     /// not editing…) lives in `shouldBeginSwipeUpToTabSwitcherPan`.
     func installSwipeUpToTabSwitcherGesture() {
-        guard featureFlagger.isFeatureOn(.swipeUpToTabSwitcher) else { return }
+        let flagOn = featureFlagger.isFeatureOn(.swipeUpToTabSwitcher)
+        Logger.swipeUpToTabSwitcher.debug("install: flagOn=\(flagOn, privacy: .public)")
+        guard flagOn else { return }
         viewCoordinator.toolbar.addGestureRecognizer(makeSwipeUpToTabSwitcherPanGesture())
         viewCoordinator.navigationBarContainer.addGestureRecognizer(makeSwipeUpToTabSwitcherPanGesture())
+        Logger.swipeUpToTabSwitcher.debug("install: added pan to toolbar + navigationBarContainer")
     }
 
     private func makeSwipeUpToTabSwitcherPanGesture() -> SwipeUpToTabSwitcherPanGestureRecognizer {
@@ -68,18 +81,23 @@ extension MainViewController {
     }
 
     func shouldBeginSwipeUpToTabSwitcherPan(_ pan: UIPanGestureRecognizer) -> Bool {
-        guard featureFlagger.isFeatureOn(.swipeUpToTabSwitcher),
-              UIDevice.current.userInterfaceIdiom == .phone,        // iPhone only
-              appSettings.currentAddressBarPosition.isBottom,        // bottom address bar only
-              tabSwitcherController == nil,                          // not already presenting/presented
-              presentedViewController == nil,                        // no other modal up
-              !omniBar.isTextFieldEditing                            // not editing the address bar
-        else {
-            return false
-        }
-        // Only claim a dominantly-upward drag, so the horizontal tab-swipe pan keeps left/right gestures.
+        let flagOn = featureFlagger.isFeatureOn(.swipeUpToTabSwitcher)
+        let isPhone = UIDevice.current.userInterfaceIdiom == .phone
+        let isBottom = appSettings.currentAddressBarPosition.isBottom
+        let noSwitcher = tabSwitcherController == nil
+        let noModal = presentedViewController == nil
+        let notEditing = !omniBar.isTextFieldEditing
         let velocity = pan.velocity(in: pan.view)
-        return velocity.y < 0 && abs(velocity.y) > abs(velocity.x)
+        // Only claim a dominantly-upward drag, so the horizontal tab-swipe pan keeps left/right gestures.
+        let upwardDominant = velocity.y < 0 && abs(velocity.y) > abs(velocity.x)
+        let result = flagOn && isPhone && isBottom && noSwitcher && noModal && notEditing && upwardDominant
+
+        let msg = "shouldBegin result=\(result) flagOn=\(flagOn) isPhone=\(isPhone) isBottom=\(isBottom) "
+            + "noSwitcher=\(noSwitcher) noModal=\(noModal) notEditing=\(notEditing) upwardDominant=\(upwardDominant) "
+            + "v=(\(velocity.x), \(velocity.y)) view=\(type(of: pan.view))"
+        Logger.swipeUpToTabSwitcher.debug("\(msg, privacy: .public)")
+
+        return result
     }
 
     @objc func handleSwipeUpToTabSwitcherPan(_ gesture: SwipeUpToTabSwitcherPanGestureRecognizer) {
@@ -90,6 +108,7 @@ extension MainViewController {
 
         switch gesture.state {
         case .began:
+            Logger.swipeUpToTabSwitcher.debug("pan .began translation.y=\(Double(translation.y), privacy: .public) ref=\(Double(referenceDistance), privacy: .public)")
             // Ensure the web-view transition has a snapshot to animate even on a never-previewed tab.
             captureCurrentTabPreviewForInteractiveTransitionIfNeeded()
 
@@ -100,18 +119,26 @@ extension MainViewController {
             // Mirror the button-tap path's dismissal of any transient omnibar/suggestion state.
             performCancel()
 
-            if !beginInteractiveTabSwitcherPresentation(interactor: interactor) {
+            let started = beginInteractiveTabSwitcherPresentation(interactor: interactor)
+            Logger.swipeUpToTabSwitcher.debug("pan .began -> beginInteractive started=\(started, privacy: .public)")
+            if !started {
                 // Presentation didn't start, so no transition coordinator will clear the interactor.
                 tabSwitcherInteractor = nil
             }
 
         case .changed:
+            Logger.swipeUpToTabSwitcher.debug("pan .changed progress=\(Double(progress), privacy: .public) hasInteractor=\(self.tabSwitcherInteractor != nil, privacy: .public)")
             tabSwitcherInteractor?.update(progress)
 
         case .ended:
-            guard let interactor = tabSwitcherInteractor else { return }
+            guard let interactor = tabSwitcherInteractor else {
+                Logger.swipeUpToTabSwitcher.debug("pan .ended but no interactor")
+                return
+            }
             let velocity = gesture.velocity(in: gesture.view)
-            if SwipeUpToTabSwitcher.shouldCommit(progress: progress, verticalVelocity: velocity.y) {
+            let commit = SwipeUpToTabSwitcher.shouldCommit(progress: progress, verticalVelocity: velocity.y)
+            Logger.swipeUpToTabSwitcher.debug("pan .ended progress=\(Double(progress), privacy: .public) v.y=\(Double(velocity.y), privacy: .public) commit=\(commit, privacy: .public)")
+            if commit {
                 // Finish a touch faster after a flick so the tail feels responsive.
                 interactor.completionSpeed = velocity.y < -SwipeUpToTabSwitcher.flickVelocity ? 1.2 : 1.0
                 fireTabSwitcherOpenedPixels()
@@ -122,6 +149,7 @@ extension MainViewController {
             // `tabSwitcherInteractor` is released by the presentation's transition-coordinator completion.
 
         case .cancelled, .failed:
+            Logger.swipeUpToTabSwitcher.debug("pan .cancelled/.failed")
             tabSwitcherInteractor?.cancel()
 
         default:
