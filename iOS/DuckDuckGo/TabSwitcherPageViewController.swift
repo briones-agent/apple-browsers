@@ -92,6 +92,10 @@ class TabSwitcherPageViewController: UIViewController {
     private var topicCache: TabTopicClassificationCache { .shared }
     /// Guards against overlapping classification passes within this instance.
     private var topicClassificationInFlight = false
+    /// True while a coalesced topic reflow is pending, so rapid classification results batch into one reflow.
+    private var topicReflowScheduled = false
+    /// How long classification results are batched before the grid reflows them together.
+    private static let topicReflowInterval: TimeInterval = 1.0
 
     var selectedIndexPaths: [IndexPath] {
         collectionView.indexPathsForSelectedItems ?? []
@@ -422,6 +426,8 @@ extension TabSwitcherPageViewController {
         /// Topic arrangement only: when non-nil, this is a topic's chips section (the row of domain pills) rather
         /// than a domain's thumbnail section.
         var chipDomains: [DomainChip]?
+        /// The host whose favicon labels this section, when the section represents a single website.
+        var faviconHost: String?
 
         var isTopicChips: Bool { chipDomains != nil }
     }
@@ -736,12 +742,23 @@ extension TabSwitcherPageViewController {
             }
         }
         let orderedTopics = topicToDomains.keys.sorted { lhs, rhs in
-            rank(lhs) != rank(rhs) ? rank(lhs) < rank(rhs) : topicTotal(lhs) > topicTotal(rhs)
+            if rank(lhs) != rank(rhs) {
+                return rank(lhs) < rank(rhs)
+            }
+            if topicTotal(lhs) != topicTotal(rhs) {
+                return topicTotal(lhs) > topicTotal(rhs)
+            }
+            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
         }
 
         var sections: [TabGridSection] = []
         for topic in orderedTopics {
-            let domains = (topicToDomains[topic] ?? []).sorted { $0.tabs.count > $1.tabs.count }
+            let domains = (topicToDomains[topic] ?? []).sorted { lhs, rhs in
+                if lhs.tabs.count != rhs.tabs.count {
+                    return lhs.tabs.count > rhs.tabs.count
+                }
+                return lhs.domain.localizedCaseInsensitiveCompare(rhs.domain) == .orderedAscending
+            }
             let total = topicTotal(topic)
             // A topic leads with its chips row (the domain pills), followed by a thumbnail section per domain
             // (only rendered when that domain's chip is expanded).
@@ -752,7 +769,9 @@ extension TabSwitcherPageViewController {
                                            chipDomains: domains.map { DomainChip(domain: $0.domain, count: $0.tabs.count) }))
             for entry in domains {
                 let sortedTabs = entry.tabs.sorted { ($0.lastViewedDate ?? .distantPast) > ($1.lastViewedDate ?? .distantPast) }
-                sections.append(TabGridSection(title: entry.domain, tabs: sortedTabs, topicTitle: topic))
+                // The hostless catch-all entry is titled "Other" rather than a real host, so it gets no favicon.
+                let faviconHost = entry.domain == otherTopic ? nil : entry.domain
+                sections.append(TabGridSection(title: entry.domain, tabs: sortedTabs, topicTitle: topic, faviconHost: faviconHost))
             }
         }
         return sections
@@ -783,11 +802,16 @@ extension TabSwitcherPageViewController {
         return nil
     }
 
-    /// The index path for a tab only if it is actually rendered. Tabs inside a collapsed topic section have no
-    /// cell, so this returns `nil` there — letting presentation transitions fall back to a crossfade instead of
-    /// scrolling to a non-existent item (which raises an out-of-bounds exception).
+    /// The index path for a tab only if it is actually rendered right now. Tabs in a collapsed topic section have
+    /// no cell, and the collection view may not yet have reloaded to match the model (e.g. a tab opened just before
+    /// the switcher is presented). Either way we return `nil` so presentation transitions fall back to a crossfade
+    /// rather than scrolling to a non-existent item — which raises an out-of-bounds exception.
     func displayIndexPath(for tab: Tab) -> IndexPath? {
         guard let indexPath = indexPath(for: tab), isSectionDisplayed(indexPath.section) else {
+            return nil
+        }
+        guard indexPath.section < collectionView.numberOfSections,
+              indexPath.item < collectionView.numberOfItems(inSection: indexPath.section) else {
             return nil
         }
         return indexPath
@@ -921,15 +945,32 @@ extension TabSwitcherPageViewController {
         guard #available(iOS 26.0, *) else { return }
         topicClassificationInFlight = true
         Task { [weak self] in
-            // One focused call per domain, biggest first; reflow the grid as each result lands so chips move out
-            // of "Sorting…" progressively. Results are cached, so this only runs for domains seen for the first time.
+            // One focused call per domain, biggest first. Results land in the cache as they arrive but the grid
+            // reflows on a coalescing timer rather than per result, so many domains settle into their topics
+            // together instead of the list jumping on every single result. Cached, so first-seen domains only.
             for entry in pending {
                 let topic = await TabDomainTopicClassifier.classify(host: entry.host, sampleTitles: entry.titles)
                 guard let self else { return }
                 self.topicCache.store(topic.map { [entry.host: $0] } ?? [:], attempted: [entry.host])
-                self.reloadData()
+                self.scheduleCoalescedReflow()
             }
             self?.topicClassificationInFlight = false
+        }
+    }
+
+    /// Coalesces classification reflows: results arrive in quick succession, so instead of moving chips on every
+    /// result (which makes the list jump), batch them into at most one crossfaded reflow per interval.
+    private func scheduleCoalescedReflow() {
+        guard !topicReflowScheduled else { return }
+        topicReflowScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.topicReflowInterval) { [weak self] in
+            guard let self else { return }
+            self.topicReflowScheduled = false
+            UIView.transition(with: self.collectionView,
+                              duration: 0.3,
+                              options: [.transitionCrossDissolve, .allowUserInteraction]) {
+                self.reloadData()
+            }
         }
     }
 
@@ -1055,7 +1096,8 @@ extension TabSwitcherPageViewController: UICollectionViewDataSource {
             header.configure(title: section?.title,
                              count: section?.tabs.count ?? 0,
                              menu: pageDelegate?.page(self, menuForSectionAt: indexPath.section),
-                             summary: summaryState(for: section))
+                             summary: summaryState(for: section),
+                             faviconHost: section?.faviconHost)
             return header
         }
 
@@ -1355,6 +1397,16 @@ final class TabSwitcherSectionHeaderView: UICollectionReusableView {
         return label
     }()
 
+    private let faviconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 3
+        imageView.setContentHuggingPriority(.required, for: .horizontal)
+        return imageView
+    }()
+
     private let menuButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -1372,16 +1424,24 @@ final class TabSwitcherSectionHeaderView: UICollectionReusableView {
         textStack.axis = .vertical
         textStack.alignment = .leading
         textStack.spacing = 1
-        textStack.translatesAutoresizingMaskIntoConstraints = false
 
-        addSubview(textStack)
+        let rowStack = UIStackView(arrangedSubviews: [faviconView, textStack])
+        rowStack.axis = .horizontal
+        rowStack.alignment = .center
+        rowStack.spacing = 8
+        rowStack.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(rowStack)
         addSubview(menuButton)
         NSLayoutConstraint.activate([
-            textStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            textStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            textStack.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 4),
+            faviconView.widthAnchor.constraint(equalToConstant: 16),
+            faviconView.heightAnchor.constraint(equalToConstant: 16),
 
-            menuButton.leadingAnchor.constraint(greaterThanOrEqualTo: textStack.trailingAnchor, constant: 8),
+            rowStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            rowStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            rowStack.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 4),
+
+            menuButton.leadingAnchor.constraint(greaterThanOrEqualTo: rowStack.trailingAnchor, constant: 8),
             menuButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             menuButton.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
@@ -1392,11 +1452,18 @@ final class TabSwitcherSectionHeaderView: UICollectionReusableView {
         fatalError("Not implemented")
     }
 
-    func configure(title: String?, count: Int, menu: UIMenu?, summary: SummaryState = .none) {
+    func configure(title: String?, count: Int, menu: UIMenu?, summary: SummaryState = .none, faviconHost: String? = nil) {
         if let title {
             titleLabel.text = "\(title) · \(count)"
         } else {
             titleLabel.text = nil
+        }
+        if let faviconHost {
+            faviconView.isHidden = false
+            faviconView.loadFavicon(forDomain: faviconHost, usingCache: .tabs)
+        } else {
+            faviconView.isHidden = true
+            faviconView.image = nil
         }
         menuButton.menu = menu
         menuButton.isHidden = menu == nil
@@ -1608,7 +1675,7 @@ final class TabDomainChipsCell: UICollectionViewCell {
         pills.forEach { $0.removeFromSuperview() }
         pills = chips.map { chip in
             let pill = DomainPillView()
-            pill.configure(text: "\(chip.domain) · \(chip.count)", isExpanded: expandedHosts.contains(chip.domain))
+            pill.configure(text: "\(chip.domain) · \(chip.count)", host: chip.domain, isExpanded: expandedHosts.contains(chip.domain))
             let host = chip.domain
             pill.addAction(UIAction { [weak self] _ in self?.onTap?(host) }, for: .touchUpInside)
             contentView.addSubview(pill)
@@ -1647,10 +1714,22 @@ final class TabDomainChipsCell: UICollectionViewCell {
     }
 }
 
-/// A tappable pill for one website within a topic. Sizes to its own label, so it always fits its text.
+/// A tappable pill for one website within a topic, showing its favicon. Sizes to its own content.
 final class DomainPillView: UIControl {
 
     private static let horizontalPadding: CGFloat = 12
+    private static let faviconSize: CGFloat = 16
+    private static let faviconSpacing: CGFloat = 6
+
+    private let faviconView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 3
+        imageView.isUserInteractionEnabled = false
+        return imageView
+    }()
 
     private let label: UILabel = {
         let label = UILabel()
@@ -1664,9 +1743,15 @@ final class DomainPillView: UIControl {
         super.init(frame: frame)
         layer.cornerRadius = 8
         layer.borderWidth = 1
+        addSubview(faviconView)
         addSubview(label)
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalPadding),
+            faviconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalPadding),
+            faviconView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            faviconView.widthAnchor.constraint(equalToConstant: Self.faviconSize),
+            faviconView.heightAnchor.constraint(equalToConstant: Self.faviconSize),
+
+            label.leadingAnchor.constraint(equalTo: faviconView.trailingAnchor, constant: Self.faviconSpacing),
             label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalPadding),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
@@ -1677,8 +1762,9 @@ final class DomainPillView: UIControl {
         fatalError("Not implemented")
     }
 
-    func configure(text: String, isExpanded: Bool) {
+    func configure(text: String, host: String, isExpanded: Bool) {
         label.text = text
+        faviconView.loadFavicon(forDomain: host, usingCache: .tabs)
         if isExpanded {
             backgroundColor = UIColor(designSystemColor: .accent)
             layer.borderColor = UIColor.clear.cgColor
@@ -1691,7 +1777,9 @@ final class DomainPillView: UIControl {
     }
 
     override var intrinsicContentSize: CGSize {
-        CGSize(width: label.intrinsicContentSize.width + Self.horizontalPadding * 2, height: TabDomainChipsCell.pillHeight)
+        let width = Self.horizontalPadding + Self.faviconSize + Self.faviconSpacing
+            + label.intrinsicContentSize.width + Self.horizontalPadding
+        return CGSize(width: width, height: TabDomainChipsCell.pillHeight)
     }
 }
 
