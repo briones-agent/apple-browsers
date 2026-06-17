@@ -372,8 +372,7 @@ extension TabSwitcherViewController {
 
     func editMenuArrangeTabs(by arrangement: TabArrangement) {
         tabSwitcherSettings.tabArrangement = arrangement
-        activePageController.reloadData()
-        activePageController.scrollToInitialTab()
+        activePageController.applyArrangementChange()
     }
 
 }

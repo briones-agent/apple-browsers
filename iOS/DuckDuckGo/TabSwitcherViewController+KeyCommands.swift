@@ -127,15 +127,18 @@ extension TabSwitcherViewController {
     }
     
     private func softSelect(tabAtIndex index: Int) {
-        guard tabsModel.count > 0 else { return }
-        
-        var paths = [IndexPath(row: index, section: 0)]
-        if let oldSelection = currentSelection {
-            paths.append(IndexPath(row: oldSelection, section: 0))
+        guard tabsModel.count > 0, let tab = tabsModel.get(tabAt: index),
+              let targetPath = displayIndexPath(for: tab) else { return }
+
+        var paths = [targetPath]
+        if let oldSelection = currentSelection,
+           let oldTab = tabsModel.get(tabAt: oldSelection),
+           let oldPath = displayIndexPath(for: oldTab) {
+            paths.append(oldPath)
         }
         currentSelection = index
         collectionView.reloadItems(at: paths)
-        collectionView.scrollToItem(at: IndexPath(row: index, section: 0), at: .top, animated: true)
+        collectionView.scrollToItem(at: targetPath, at: .top, animated: true)
     }
     
 }

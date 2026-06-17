@@ -110,12 +110,7 @@ class TabSwitcherPageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let layout = UICollectionViewFlowLayout()
-        layout.minimumLineSpacing = 14
-        layout.minimumInteritemSpacing = 14
-        layout.sectionInset = UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
-
-        collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.clipsToBounds = true
@@ -176,6 +171,16 @@ class TabSwitcherPageViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         trackerCountViewModel?.refresh()
+        reconcileLayoutWithArrangement()
+    }
+
+    /// Ensures the layout matches the current arrangement, e.g. when a page is shown after the
+    /// arrangement changed while it was inactive.
+    private func reconcileLayoutWithArrangement() {
+        let isCompositional = collectionView.collectionViewLayout is UICollectionViewCompositionalLayout
+        guard isCompositional != isGrouped else { return }
+        collectionView.setCollectionViewLayout(makeLayout(), animated: false)
+        reloadData()
     }
     
     private func subscribeToTabChanges() {
@@ -389,6 +394,52 @@ extension TabSwitcherPageViewController {
         gridSections = Self.makeSections(tabs: tabsModel.tabs, arrangement: tabSwitcherSettings.tabArrangement)
     }
 
+    /// Swaps the layout for the current arrangement and reloads. Call after the arrangement changes.
+    func applyArrangementChange() {
+        collectionView.setCollectionViewLayout(makeLayout(), animated: false)
+        reloadData()
+        scrollToInitialTab()
+    }
+
+    func makeLayout() -> UICollectionViewLayout {
+        isGrouped ? makeSectionedLayout() : makeFlowLayout()
+    }
+
+    private func makeFlowLayout() -> UICollectionViewFlowLayout {
+        let layout = UICollectionViewFlowLayout()
+        layout.minimumLineSpacing = 14
+        layout.minimumInteritemSpacing = 14
+        layout.sectionInset = UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        return layout
+    }
+
+    /// One horizontally-scrolling row of cards per section, with a section header above each.
+    private func makeSectionedLayout() -> UICollectionViewCompositionalLayout {
+        return UICollectionViewCompositionalLayout { [weak self] _, environment in
+            let containerWidth = environment.container.effectiveContentSize.width
+            let cardWidth = min(180, max(130, containerWidth * 0.42))
+            let cardHeight = self?.calculateRowHeight(columnWidth: cardWidth) ?? cardWidth
+
+            let itemSize = NSCollectionLayoutSize(widthDimension: .absolute(cardWidth),
+                                                  heightDimension: .absolute(cardHeight))
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: itemSize, subitems: [item])
+
+            let section = NSCollectionLayoutSection(group: group)
+            section.interGroupSpacing = 14
+            section.orthogonalScrollingBehavior = .continuous
+            section.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 14, bottom: 14, trailing: 14)
+
+            let headerSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
+                                                    heightDimension: .absolute(TabSwitcherSectionHeaderView.height))
+            let header = NSCollectionLayoutBoundarySupplementaryItem(layoutSize: headerSize,
+                                                                     elementKind: UICollectionView.elementKindSectionHeader,
+                                                                     alignment: .top)
+            section.boundarySupplementaryItems = [header]
+            return section
+        }
+    }
+
     static func makeSections(tabs: [Tab], arrangement: TabArrangement?) -> [TabGridSection] {
         guard let arrangement else {
             return [TabGridSection(title: nil, tabs: tabs)]
@@ -458,7 +509,9 @@ extension TabSwitcherPageViewController: UICollectionViewDataSource {
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cellIdentifier = tabSwitcherSettings.isGridViewEnabled ? TabViewGridCell.reuseIdentifier : TabViewListCell.reuseIdentifier
+        // Arranged sections are horizontal shelves of cards, so always use the grid cell when grouped.
+        let useGridCell = isGrouped || tabSwitcherSettings.isGridViewEnabled
+        let cellIdentifier = useGridCell ? TabViewGridCell.reuseIdentifier : TabViewListCell.reuseIdentifier
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellIdentifier, for: indexPath) as? TabViewCell else {
             fatalError("Failed to dequeue cell \(cellIdentifier) as TabViewCell")
         }
@@ -622,8 +675,8 @@ extension TabSwitcherPageViewController: UICollectionViewDelegateFlowLayout {
 extension TabSwitcherPageViewController: TabViewCellDelegate {
 
     func deleteTab(tab: Tab) {
-        guard let index = tabsModel.indexOf(tab: tab) else { return }
-        deleteTabsAtIndexPaths([IndexPath(row: index, section: 0)])
+        guard let indexPath = indexPath(for: tab) else { return }
+        deleteTabsAtIndexPaths([indexPath])
     }
 
     func isCurrent(tab: Tab) -> Bool {
@@ -644,8 +697,8 @@ extension TabSwitcherPageViewController: TabViewCellDelegate {
 extension TabSwitcherPageViewController: TabObserver {
 
     func didChange(tab: Tab) {
-        guard let index = tabsModel.indexOf(tab: tab),
-              let cell = collectionView.cellForItem(at: IndexPath(row: index, section: 0)) as? TabViewCell else {
+        guard let indexPath = indexPath(for: tab),
+              let cell = collectionView.cellForItem(at: indexPath) as? TabViewCell else {
             return
         }
         guard cell.tab?.uid == tab.uid else {

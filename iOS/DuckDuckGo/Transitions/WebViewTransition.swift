@@ -76,14 +76,13 @@ class FromWebViewTransition: WebViewTransition {
         
         guard let webView = mainViewController.currentTab?.webView,
               let tab = mainViewController.tabManager.currentTabsModel.currentTab,
-              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab)
+              let indexPath = tabSwitcherViewController.displayIndexPath(for: tab)
         else {
             tabSwitcherViewController.view.alpha = 1
             transitionContext.completeTransition(true)
             return
         }
 
-        let indexPath = IndexPath(row: rowIndex, section: 0)
         tabSwitcherViewController.collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
 
         guard let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath),
@@ -142,8 +141,8 @@ class ToWebViewTransition: WebViewTransition {
         guard let mainViewController = transitionContext.viewController(forKey: .to) as? MainViewController,
               let webView = mainViewController.currentTab?.webView,
               let tab = mainViewController.currentTab?.tabModel,
-              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab),
-              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: IndexPath(row: rowIndex, section: 0))
+              let indexPath = tabSwitcherViewController.displayIndexPath(for: tab),
+              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath)
         else {
             // Crossfade fallback when destination is no longer a web view; mirrors ToHomeScreenTransition.
             if let mainViewController = transitionContext.viewController(forKey: .to) as? MainViewController {
@@ -185,7 +184,7 @@ class ToWebViewTransition: WebViewTransition {
             self.imageView.alpha = 0
         }
         
-        scrollIfOutsideViewport(collectionView: tabSwitcherViewController.collectionView, rowIndex: rowIndex, attributes: layoutAttr)
+        scrollIfOutsideViewport(collectionView: tabSwitcherViewController.collectionView, indexPath: indexPath, attributes: layoutAttr)
         
         UIView.animate(withDuration: TabSwitcherTransition.Constants.duration, animations: {
             self.imageContainer.frame = mainViewController.viewCoordinator.contentContainer.frame

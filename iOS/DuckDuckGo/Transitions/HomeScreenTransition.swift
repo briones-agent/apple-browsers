@@ -89,8 +89,8 @@ class FromHomeScreenTransition: HomeScreenTransition {
         
         guard let homeScreen = mainViewController.newTabPageViewController,
               let tab = mainViewController.tabManager.currentTabsModel.currentTab,
-              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab),
-              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: IndexPath(row: rowIndex, section: 0))
+              let indexPath = tabSwitcherViewController.displayIndexPath(for: tab),
+              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath)
         else {
             tabSwitcherViewController.view.alpha = 1
             transitionContext.completeTransition(true)
@@ -165,8 +165,8 @@ class ToHomeScreenTransition: HomeScreenTransition {
         guard let mainViewController = transitionContext.viewController(forKey: .to) as? MainViewController,
               let homeScreen = mainViewController.newTabPageViewController,
               let tab = mainViewController.tabManager.currentTabsModel.currentTab,
-              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab),
-              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: IndexPath(row: rowIndex, section: 0))
+              let indexPath = tabSwitcherViewController.displayIndexPath(for: tab),
+              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath)
         else {
             // Layout attributes can be nil when a new tab was just added but the collection view
             // hasn't laid out its cell yet. Fall back to a simple crossfade to avoid a flash.
@@ -203,7 +203,7 @@ class ToHomeScreenTransition: HomeScreenTransition {
         }
         imageView.backgroundColor = .clear
 
-        scrollIfOutsideViewport(collectionView: tabSwitcherViewController.collectionView, rowIndex: rowIndex, attributes: layoutAttr)
+        scrollIfOutsideViewport(collectionView: tabSwitcherViewController.collectionView, indexPath: indexPath, attributes: layoutAttr)
         
         UIView.animateKeyframes(withDuration: TabSwitcherTransition.Constants.duration, delay: 0, options: .calculationModeLinear, animations: {
             

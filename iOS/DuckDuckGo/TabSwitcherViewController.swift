@@ -115,6 +115,11 @@ class TabSwitcherViewController: UIViewController {
         activePageController.collectionView
     }
 
+    /// The collection-view index path for a tab in the active page, honouring the current arrangement.
+    func displayIndexPath(for tab: Tab) -> IndexPath? {
+        activePageController.indexPath(for: tab)
+    }
+
     var currentSelection: Int? {
         get { activePageController.currentSelection }
         set { activePageController.currentSelection = newValue }

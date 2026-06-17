@@ -61,15 +61,15 @@ class TabSwitcherTransition: NSObject, UIViewControllerAnimatedTransitioning {
     // MARK: Common logic
     
     func scrollIfOutsideViewport(collectionView: UICollectionView,
-                                 rowIndex: Int,
+                                 indexPath: IndexPath,
                                  attributes: UICollectionViewLayoutAttributes) {
         // If cell is outside viewport, scroll while animating
         if attributes.frame.origin.y + attributes.frame.size.height < collectionView.contentOffset.y {
-            collectionView.scrollToItem(at: IndexPath(row: rowIndex, section: 0),
+            collectionView.scrollToItem(at: indexPath,
                                         at: .top,
                                         animated: true)
         } else if attributes.frame.origin.y > collectionView.frame.height + collectionView.contentOffset.y {
-            collectionView.scrollToItem(at: IndexPath(row: rowIndex, section: 0),
+            collectionView.scrollToItem(at: indexPath,
                                         at: .bottom,
                                         animated: true)
         }
