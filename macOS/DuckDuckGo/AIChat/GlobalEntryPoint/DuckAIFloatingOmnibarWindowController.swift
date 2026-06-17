@@ -50,6 +50,10 @@ final class DuckAIFloatingOmnibarWindowController: NSObject, NSWindowDelegate {
         /// Fraction of the visible screen height where the panel's top edge anchors.
         /// 1/3 = "centered ~third from the top", matching ChatGPT/Claude desktop apps.
         static let topInsetFraction: CGFloat = 1.0 / 3.0
+        /// System material driving the floating panel's backdrop. Spotlight uses something close to
+        /// `.hudWindow`; lighter alternatives to try: `.popover`, `.menu`, `.sidebar`, `.fullScreenUI`,
+        /// `.underWindowBackground`.
+        static let backdropMaterial: NSVisualEffectView.Material = .hudWindow
     }
 
     private var window: DuckAIFloatingOmnibarWindow?
@@ -240,11 +244,25 @@ final class DuckAIFloatingOmnibarWindowController: NSObject, NSWindowDelegate {
     private func makeContentView(container: NSView, text: NSView) -> NSView {
         let host = NSView(frame: NSRect(x: 0, y: 0, width: Constants.width, height: Constants.baseContainerHeight))
         host.wantsLayer = true
-        // Opaque white background so the panel's shadow (panel.hasShadow = true) wraps the full
-        // rounded shape uniformly. masksToBounds clips child content to the rounded corners.
-        host.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        // Rounded clipping container. The actual fill is provided by the `NSVisualEffectView` added
+        // below — SwiftUI `Material` equivalent. `masksToBounds` clips both the vibrancy and the
+        // child VCs to the rounded shape; the panel's own `hasShadow = true` wraps the result.
         host.layer?.cornerRadius = Constants.cornerRadius
         host.layer?.masksToBounds = true
+
+        let backdrop = NSVisualEffectView()
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        backdrop.material = Constants.backdropMaterial
+        backdrop.blendingMode = .behindWindow
+        backdrop.state = .active
+        backdrop.isEmphasized = true
+        host.addSubview(backdrop)
+        NSLayoutConstraint.activate([
+            backdrop.topAnchor.constraint(equalTo: host.topAnchor),
+            backdrop.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: host.bottomAnchor)
+        ])
 
         // Wrap the text VC's view in a PassthroughView so clicks in the bottom strip (where the
         // omnibar container's tool buttons sit *behind* the text container) fall through to the

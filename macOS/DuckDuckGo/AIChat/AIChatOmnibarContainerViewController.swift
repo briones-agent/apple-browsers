@@ -1699,13 +1699,21 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let barStyleProvider = theme.addressBarStyleProvider
         let colorsProvider = theme.colorsProvider
 
-        backgroundView.backgroundColor = colorsProvider.activeAddressBarBackgroundColor
+        // When chrome is disabled (floating Duck.ai panel) we want the host's `NSVisualEffectView`
+        // material to show through, so paint the inner backdrop transparent and skip the address-bar
+        // border. With the regular address-bar host this branch is unreached and the existing fill
+        // / border stay exactly as before.
+        if disablesAddressBarChrome {
+            backgroundView.backgroundColor = .clear
+            backgroundView.borderColor = .clear
+        } else {
+            backgroundView.backgroundColor = colorsProvider.activeAddressBarBackgroundColor
+            if let borderColor = NSColor(named: "AddressBarBorderColor") {
+                backgroundView.borderColor = borderColor
+            }
+        }
         backgroundView.cornerRadius = barStyleProvider.addressBarActiveBackgroundViewRadius
         backgroundView.layer?.masksToBounds = false  // Don't clip subviews - important for hit testing
-
-        if let borderColor = NSColor(named: "AddressBarBorderColor") {
-            backgroundView.borderColor = borderColor
-        }
 
         submitButton.layer?.cornerRadius = Constants.submitButtonCornerRadius
         // Colour is set dynamically by applySubmitButtonAppearance based on enabled state.
