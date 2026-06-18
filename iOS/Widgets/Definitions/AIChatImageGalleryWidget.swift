@@ -33,6 +33,12 @@ struct AIChatImageGalleryEntry: TimelineEntry {
     static func deepLink(forChatId chatId: String) -> URL {
         AIChatWidgetDeepLink.url(forChatId: chatId, source: WidgetSourceType.imageGalleryWidget.rawValue)
     }
+
+    /// Deep link that opens a brand-new Duck.ai chat from the gallery's new-chat cell.
+    static var newChatDeepLink: URL {
+        DeepLinks.openAIChat.appendingParameter(name: WidgetSourceType.sourceKey,
+                                                value: WidgetSourceType.imageGalleryWidget.rawValue)
+    }
 }
 
 struct AIChatImageGalleryProvider: TimelineProvider {

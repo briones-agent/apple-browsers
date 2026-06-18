@@ -118,28 +118,20 @@ struct AIChatChatRowView: View {
     }
 
     private func glyphIcon(_ image: UIImage) -> some View {
-        iconContainer {
-            Image(uiImage: image)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(Color(designSystemColor: .accent))
-                .frame(width: 15, height: 15)
-        }
+        Image(uiImage: image)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(Color(designSystemColor: .accent))
+            .frame(width: 20, height: 20)
+            .frame(width: iconSize, height: iconSize)
     }
 
     private func symbolIcon(_ systemName: String) -> some View {
-        iconContainer {
-            Image(systemName: systemName)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color(designSystemColor: .accent))
-        }
-    }
-
-    private func iconContainer<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
+        Image(systemName: systemName)
+            .font(.system(size: 17, weight: .regular))
+            .foregroundStyle(Color(designSystemColor: .accent))
             .frame(width: iconSize, height: iconSize)
-            .background(Color(designSystemColor: .accent).opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 

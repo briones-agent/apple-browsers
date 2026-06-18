@@ -21,29 +21,20 @@ import SwiftUI
 import WidgetKit
 import Core
 import DesignResourcesKit
+import DesignResourcesKitIcons
 import os.log
 
 struct AIChatImageGalleryWidgetView: View {
     @Environment(\.widgetFamily) private var family
     var entry: AIChatImageGalleryEntry
 
-    private let gap: CGFloat = 3
-    private let inset: CGFloat = 8
-
-    /// iOS rounds the home-screen widget container at ~21.5pt. Insetting the grid by `inset` and
-    /// rounding each cell to (container radius − inset) keeps the gap uniform around the corner, so
-    /// the image cells read as concentric with the widget itself (Apple HIG).
-    private let widgetCornerRadius: CGFloat = 21.5
-    private var cornerRadius: CGFloat { max(widgetCornerRadius - inset, 8) }
-
     private var columnsPerRow: Int { family == .systemLarge ? 3 : 4 }
-    /// Fixed row height keeps cells from collapsing to zero in the widget's non-scrolling layout.
-    /// Sized so the rows fit the family's height (Large: 3 rows, Medium: 2 rows) without clipping.
-    private var rowHeight: CGFloat { family == .systemLarge ? 104 : 66 }
+
+    /// Image slots only — the final cell is always reserved for the new-chat button.
     private var maxImages: Int {
         switch family {
-        case .systemLarge: return 9
-        case .systemMedium: return 8
+        case .systemLarge: return 8    // 3×3 grid, last cell = button
+        case .systemMedium: return 7   // 2×4 grid, last cell = button
         default: return 1
         }
     }
@@ -57,7 +48,11 @@ struct AIChatImageGalleryWidgetView: View {
     @ViewBuilder
     private var content: some View {
         if entry.images.isEmpty {
-            AIChatImageGalleryEmptyView()
+            // No images yet — make the entire widget a "start a new Duck.ai chat" CTA.
+            Link(destination: AIChatImageGalleryEntry.newChatDeepLink) {
+                AIChatImageGalleryEmptyView()
+            }
+            .accessibilityLabel(UserText.recentChatsWidgetNewChatAccessibilityLabel)
         } else if family == .systemSmall {
             hero
         } else {
@@ -65,62 +60,80 @@ struct AIChatImageGalleryWidgetView: View {
         }
     }
 
-    // Small: the single most-recent image, full-bleed. A GeometryReader gives the image a concrete
-    // frame (the proven recipe — see `cell(for:width:)`).
+    // Small: the single most-recent image, full-bleed. New-chat button sits in the bottom-right corner.
     @ViewBuilder
     private var hero: some View {
         if let image = entry.images.first, let thumbnail = entry.thumbnails[image.imageId] {
-            Link(destination: AIChatImageGalleryEntry.deepLink(forChatId: image.chatId)) {
-                GeometryReader { geo in
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .useFullColorRendering()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .clipped()
-                        .overlay(alignment: .bottomLeading) { brandChip.padding(10) }
+            ZStack(alignment: .bottomTrailing) {
+                Link(destination: AIChatImageGalleryEntry.deepLink(forChatId: image.chatId)) {
+                    GeometryReader { geo in
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .useFullColorRendering()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    }
                 }
+
+                Link(destination: AIChatImageGalleryEntry.newChatDeepLink) {
+                    newChatChip
+                }
+                .accessibilityLabel(UserText.recentChatsWidgetNewChatAccessibilityLabel)
+                .padding(10)
             }
         }
     }
 
-    // Medium / Large: a photo grid. A single GeometryReader resolves the concrete cell width so each
-    // image gets a FIXED frame — the same recipe the chats-widget thumbnail uses. `aspectRatio(.fill)`
-    // against a flexible (`maxWidth: .infinity`) width does not render inside a widget; a fixed frame does.
+    // Medium / Large: a full-bleed, gap-less grid. Cells tile edge to edge; the widget host clips the
+    // whole thing to its container shape, so the corner cells take the widget's curvature for free.
+    // The final cell is always the new-chat button.
     private var grid: some View {
         GeometryReader { geo in
-            let availableWidth = geo.size.width - inset * 2
-            let cellWidth = (availableWidth - gap * CGFloat(columnsPerRow - 1)) / CGFloat(columnsPerRow)
+            let cellWidth = geo.size.width / CGFloat(columnsPerRow)
+            let totalCells = maxImages + 1
+            let totalRows = Int(ceil(Double(totalCells) / Double(columnsPerRow)))
+            let cellHeight = geo.size.height / CGFloat(totalRows)
+
             let images = Array(entry.images.prefix(maxImages))
-            let rows = stride(from: 0, to: images.count, by: columnsPerRow).map { start in
-                Array(images[start..<min(start + columnsPerRow, images.count)])
-            }
-            VStack(spacing: gap) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, rowImages in
-                    HStack(spacing: gap) {
-                        ForEach(rowImages, id: \.imageId) { image in
-                            Link(destination: AIChatImageGalleryEntry.deepLink(forChatId: image.chatId)) {
-                                cell(for: image, width: cellWidth)
-                            }
-                        }
-                        // Left-align a partial final row.
-                        if rowImages.count < columnsPerRow {
-                            Spacer(minLength: 0)
+            let cells: [GridSlot] = images.map { GridSlot.image($0) } + [GridSlot.newChat]
+
+            VStack(spacing: 0) {
+                ForEach(0..<totalRows, id: \.self) { row in
+                    HStack(spacing: 0) {
+                        ForEach(0..<columnsPerRow, id: \.self) { col in
+                            let index = row * columnsPerRow + col
+                            slotView(at: index, in: cells, width: cellWidth, height: cellHeight)
                         }
                     }
                 }
-                Spacer(minLength: 0)
             }
-            .padding(inset)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-            .overlay(alignment: .topTrailing) { brandChip.padding(10) }
         }
     }
 
-    private func cell(for image: WidgetImageEntry, width: CGFloat) -> some View {
-        // Proven recipe (matches the working chats thumbnail): the modifiers are applied directly to
-        // the Image and end in a FIXED frame, then the result is clipped. The surface background shows
-        // through only while a thumbnail is missing.
+    @ViewBuilder
+    private func slotView(at index: Int, in cells: [GridSlot], width: CGFloat, height: CGFloat) -> some View {
+        if index < cells.count {
+            switch cells[index] {
+            case .image(let image):
+                Link(destination: AIChatImageGalleryEntry.deepLink(forChatId: image.chatId)) {
+                    imageCell(for: image, width: width, height: height)
+                }
+            case .newChat:
+                Link(destination: AIChatImageGalleryEntry.newChatDeepLink) {
+                    newChatCell(width: width, height: height)
+                }
+                .accessibilityLabel(UserText.recentChatsWidgetNewChatAccessibilityLabel)
+            }
+        } else {
+            // Past the end of `cells` (only ever the trailing slots of a partial final row): fill with
+            // surface so the grid keeps a clean rectangular fill.
+            Color(designSystemColor: .surface)
+                .frame(width: width, height: height)
+        }
+    }
+
+    private func imageCell(for image: WidgetImageEntry, width: CGFloat, height: CGFloat) -> some View {
         ZStack {
             Color(designSystemColor: .surface)
             if let thumbnail = entry.thumbnails[image.imageId] {
@@ -128,24 +141,44 @@ struct AIChatImageGalleryWidgetView: View {
                     .resizable()
                     .useFullColorRendering()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: width, height: rowHeight)
+                    .frame(width: width, height: height)
             }
         }
-        .frame(width: width, height: rowHeight)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .frame(width: width, height: height)
+        .clipped()
     }
 
-    private var brandChip: some View {
-        HStack(spacing: 4) {
-            DuckAiLogo(size: 16)
-            Text(UserText.recentChatsWidgetBrandTitle)
-                .daxCaptionMedium()
-                .foregroundStyle(Color(designSystemColor: .textPrimary))
+    private func newChatCell(width: CGFloat, height: CGFloat) -> some View {
+        let iconSize = min(width, height) * 0.4
+        return ZStack {
+            Color(designSystemColor: .accent).opacity(0.12)
+            Image(uiImage: DesignSystemImages.Glyphs.Size24.aiChatAdd)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(Color(designSystemColor: .accent))
+                .frame(width: iconSize, height: iconSize)
         }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 4)
-        .background(.ultraThinMaterial, in: Capsule())
+        .frame(width: width, height: height)
+        .clipped()
     }
+
+    // Small-widget overlay version of the new-chat affordance — a Duck.ai-tinted icon chip.
+    private var newChatChip: some View {
+        Image(uiImage: DesignSystemImages.Glyphs.Size24.aiChatAdd)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(Color(designSystemColor: .accent))
+            .frame(width: 18, height: 18)
+            .padding(8)
+            .background(.ultraThinMaterial, in: Circle())
+    }
+}
+
+private enum GridSlot {
+    case image(WidgetImageEntry)
+    case newChat
 }
 
 // MARK: - Empty state
