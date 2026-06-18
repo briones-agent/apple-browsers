@@ -110,7 +110,7 @@
 "device.synced.sheet.button.get.other.devices" = "Hangi DuckDuckGo teistele seadmetele";
 
 /* Device SyncedSheet - Title */
-"device.synced.sheet.title" = "Sinu andmed on sünkroonitud!";
+"device.synced.sheet.title" = "Seade sünkroonitud!";
 
 /* Standard Buttons - Done Button */
 "done.button" = "Valmis";
@@ -186,6 +186,9 @@
 
 /* Preparing To Sync Sheet - Title */
 "preparing.to.sync.sheet.title" = "Sünkroonimise ja varundamise seadistamine";
+
+/* Preparing to sync title */
+"preparing.to.sync.title" = "Sünkroonimiseks ettevalmistumine";
 
 /* Link label for recovering synced data */
 "recover.synced.data.link" = "Taasta sünkroonitud andmed";

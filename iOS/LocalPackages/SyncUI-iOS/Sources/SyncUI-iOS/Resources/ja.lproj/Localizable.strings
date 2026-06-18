@@ -110,7 +110,7 @@
 "device.synced.sheet.button.get.other.devices" = "他のデバイスでDuckDuckGoを入手";
 
 /* Device SyncedSheet - Title */
-"device.synced.sheet.title" = "データが同期されました！";
+"device.synced.sheet.title" = "デバイスを同期しました！";
 
 /* Standard Buttons - Done Button */
 "done.button" = "完了";
@@ -186,6 +186,9 @@
 
 /* Preparing To Sync Sheet - Title */
 "preparing.to.sync.sheet.title" = "同期とバックアップの設定";
+
+/* Preparing to sync title */
+"preparing.to.sync.title" = "同期の準備中";
 
 /* Link label for recovering synced data */
 "recover.synced.data.link" = "同期データを復元";

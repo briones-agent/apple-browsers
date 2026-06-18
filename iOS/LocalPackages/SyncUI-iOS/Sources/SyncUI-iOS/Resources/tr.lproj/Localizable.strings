@@ -110,7 +110,7 @@
 "device.synced.sheet.button.get.other.devices" = "DuckDuckGo'yu Diğer Cihazlarda Edinin";
 
 /* Device SyncedSheet - Title */
-"device.synced.sheet.title" = "Verileriniz Senkronize Edildi!";
+"device.synced.sheet.title" = "Cihaz senkronize edildi!";
 
 /* Standard Buttons - Done Button */
 "done.button" = "Bitti";
@@ -186,6 +186,9 @@
 
 /* Preparing To Sync Sheet - Title */
 "preparing.to.sync.sheet.title" = "Senkronizasyon ve Yedeklemeyi Ayarlama";
+
+/* Preparing to sync title */
+"preparing.to.sync.title" = "Senkronizasyona hazırlanıyor";
 
 /* Link label for recovering synced data */
 "recover.synced.data.link" = "Senkronize Edilen Verileri Kurtar";

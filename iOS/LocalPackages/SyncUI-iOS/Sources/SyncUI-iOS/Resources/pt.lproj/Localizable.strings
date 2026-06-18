@@ -110,7 +110,7 @@
 "device.synced.sheet.button.get.other.devices" = "Instalar DuckDuckGo noutros dispositivos";
 
 /* Device SyncedSheet - Title */
-"device.synced.sheet.title" = "Os teus dados estão sincronizados!";
+"device.synced.sheet.title" = "Dispositivo sincronizado!";
 
 /* Standard Buttons - Done Button */
 "done.button" = "Feito";
@@ -186,6 +186,9 @@
 
 /* Preparing To Sync Sheet - Title */
 "preparing.to.sync.sheet.title" = "A configurar a sincronização e cópia de segurança";
+
+/* Preparing to sync title */
+"preparing.to.sync.title" = "A preparar para sincronizar";
 
 /* Link label for recovering synced data */
 "recover.synced.data.link" = "Recuperar dados sincronizados";

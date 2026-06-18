@@ -110,7 +110,7 @@
 "device.synced.sheet.button.get.other.devices" = "Získat DuckDuckGo na jiných zařízeních";
 
 /* Device SyncedSheet - Title */
-"device.synced.sheet.title" = "Tvoje data už se zase synchronizují!";
+"device.synced.sheet.title" = "Zařízení synchronizováno!";
 
 /* Standard Buttons - Done Button */
 "done.button" = "Hotovo";
@@ -186,6 +186,9 @@
 
 /* Preparing To Sync Sheet - Title */
 "preparing.to.sync.sheet.title" = "Nastavení synchronizace a zálohování";
+
+/* Preparing to sync title */
+"preparing.to.sync.title" = "Příprava na synchronizaci";
 
 /* Link label for recovering synced data */
 "recover.synced.data.link" = "Obnovit synchronizovaná data";
