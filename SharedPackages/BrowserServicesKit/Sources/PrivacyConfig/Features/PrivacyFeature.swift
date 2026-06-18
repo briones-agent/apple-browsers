@@ -624,6 +624,11 @@ public enum NetworkProtectionSubfeature: String, Equatable, PrivacySubfeature {
     /// https://app.asana.com/0/1204186595873227/1206489252288889
     case riskyDomainsProtection
 
+    /// Surfaces the "Strict routing" VPN toggle so users can disable
+    /// NETunnelProviderProtocol.enforceRoutes if they're having trouble
+    /// reaching local devices or other networks.
+    case strictRoutingToggle
+
     /// Exclude Carrier-Grade NAT (100.64.0.0/10) from the VPN tunnel.
     /// Keeps Wi-Fi calling, Visual Voicemail, and mesh VPNs (Tailscale/ZeroTier) working.
     case excludeCGNAT

@@ -241,7 +241,6 @@ public final class VPNSettings {
 
     public func resetToDefaults() {
         defaults.resetNetworkProtectionSettingConnectOnLogin()
-        defaults.resetNetworkProtectionSettingEnforceRoutes()
         defaults.resetNetworkProtectionSettingExcludeLocalNetworks()
         defaults.resetNetworkProtectionSettingExcludeCGNAT()
         defaults.resetNetworkProtectionSettingExcludeAPNs()
@@ -253,16 +252,17 @@ public final class VPNSettings {
         defaults.resetNetworkProtectionSettingSelectedServer()
         defaults.resetDNSSettings()
         defaults.resetNetworkProtectionSettingShowInMenuBar()
+        defaults.resetVPNSettingEnforceRoutes()
     }
 
     public func resetTunnelFlagsToDefaults() {
-        defaults.resetNetworkProtectionSettingEnforceRoutes()
         defaults.resetNetworkProtectionSettingIncludeAllNetworks()
         defaults.resetNetworkProtectionSettingExcludeLocalNetworks()
         defaults.resetNetworkProtectionSettingExcludeCGNAT()
         defaults.resetNetworkProtectionSettingExcludeAPNs()
         defaults.resetNetworkProtectionSettingExcludeCellularServices()
         defaults.resetNetworkProtectionSettingExcludeDeviceCommunication()
+        defaults.resetVPNSettingEnforceRoutes()
     }
 
     // MARK: - Applying Changes
@@ -339,16 +339,28 @@ public final class VPNSettings {
     // MARK: - Enforce Routes
 
     public var enforceRoutesPublisher: AnyPublisher<Bool, Never> {
-        defaults.networkProtectionSettingEnforceRoutesPublisher
+        defaults.vpnSettingEnforceRoutesPublisher
     }
 
     public var enforceRoutes: Bool {
         get {
-            defaults.networkProtectionSettingEnforceRoutes
+            defaults.vpnSettingEnforceRoutes
         }
 
         set {
-            defaults.networkProtectionSettingEnforceRoutes = newValue
+            defaults.vpnSettingEnforceRoutes = newValue
+        }
+    }
+
+    /// Forces `enforceRoutes` back to its safe default when Strict routing isn't available to this
+    /// user, so a value relaxed while the feature was available can't persist after it's withdrawn.
+    ///
+    /// Callers pass the resolved availability (not a feature flagger) so this stays free of the
+    /// app-side flag system — keeping it usable from contexts that can't evaluate flags.
+    public func resetEnforceRoutesIfUnavailable(strictRoutingAvailable: Bool) {
+        guard strictRoutingAvailable else {
+            defaults.resetVPNSettingEnforceRoutes()
+            return
         }
     }
 

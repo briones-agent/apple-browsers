@@ -57,6 +57,17 @@ final class VPNPreferencesModel: ObservableObject {
         }
     }
 
+    @Published var enforceRoutes: Bool {
+        didSet {
+            guard settings.enforceRoutes != enforceRoutes else {
+                return
+            }
+            settings.enforceRoutes = enforceRoutes
+        }
+    }
+
+    @Published private(set) var isStrictRoutingAvailable: Bool
+
     @Published var excludeCGNAT: Bool {
         didSet {
             guard settings.excludeCGNAT != excludeCGNAT else {
@@ -164,6 +175,8 @@ final class VPNPreferencesModel: ObservableObject {
         excludedAppsCount = proxySettings.excludedAppsMinusDBPAgent.count
         excludedDomainsCount = proxySettings.excludedDomains.count
         excludeLocalNetworks = settings.excludeLocalNetworks
+        enforceRoutes = settings.enforceRoutes
+        isStrictRoutingAvailable = featureFlagger.isFeatureOn(.vpnStrictRoutingToggle)
         excludeCGNAT = settings.excludeCGNAT
         notifyStatusChanges = settings.notifyStatusChanges
         showInMenuBar = settings.showInMenuBar
@@ -181,6 +194,8 @@ final class VPNPreferencesModel: ObservableObject {
         subscribeToConnectOnLoginSettingChanges()
         subscribeToExcludedDomainsCountChanges()
         subscribeToExcludeLocalNetworksSettingChanges()
+        subscribeToEnforceRoutesSettingChanges()
+        subscribeToStrictRoutingAvailabilityChanges()
         subscribeToExcludeCGNATSettingChanges()
         subscribeToShowInMenuBarSettingChanges()
         subscribeToShowInBrowserToolbarSettingsChanges()
@@ -225,6 +240,24 @@ final class VPNPreferencesModel: ObservableObject {
     private func subscribeToExcludeLocalNetworksSettingChanges() {
         settings.excludeLocalNetworksPublisher
             .assign(to: \.excludeLocalNetworks, onWeaklyHeld: self)
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToEnforceRoutesSettingChanges() {
+        settings.enforceRoutesPublisher
+            .assign(to: \.enforceRoutes, onWeaklyHeld: self)
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToStrictRoutingAvailabilityChanges() {
+        // Keep the toggle's availability in sync as the feature flag changes at runtime
+        // (remote config update or a local override), so the row appears/disappears live.
+        featureFlagger.updatesPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                guard let self else { return }
+                self.isStrictRoutingAvailable = self.featureFlagger.isFeatureOn(.vpnStrictRoutingToggle)
+            }
             .store(in: &cancellables)
     }
 

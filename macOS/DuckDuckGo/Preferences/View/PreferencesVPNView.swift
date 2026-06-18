@@ -70,6 +70,17 @@ extension Preferences {
                         )
                     }
 
+                    if model.isStrictRoutingAvailable {
+                        SpacedCheckbox {
+                            ToggleMenuItemWithDescription(
+                                UserText.vpnStrictRoutingSettingTitle,
+                                UserText.vpnStrictRoutingSettingDescription,
+                                isOn: $model.enforceRoutes,
+                                spacing: 12
+                            )
+                        }
+                    }
+
                     if model.isExcludeCGNATAvailable {
                         SpacedCheckbox {
                             ToggleMenuItemWithDescription(
