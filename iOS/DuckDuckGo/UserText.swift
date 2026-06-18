@@ -2283,7 +2283,6 @@ public struct UserText {
     public static let settingsAiFeaturesHideAIGeneratedImagesOff = NSLocalizedString("settings.aifeatures.hide.ai.generated.images.off", value: "Off", comment: "Hide AI-Generated Images option: off (images shown)")
 
     public static let settingsAiFeaturesDisableAIFeatures = NSLocalizedString("settings.aifeatures.disable.all", value: "Disable AI Features", comment: "Button that turns off all AI features")
-    public static let settingsAiFeaturesRestoreDefaultAISettings = NSLocalizedString("settings.aifeatures.restore.default", value: "Restore Default AI Settings", comment: "Button that restores AI features to their default settings")
     public static let settingsAiFeaturesDisableAllFooter = NSLocalizedString("settings.aifeatures.disable.all.footer", value: "Our Private AI Features are all optional and can be customized above.", comment: "Footer text below the disable all AI features button")
 
     public static let settingsDuckAiSectionHeader = NSLocalizedString("settings.aifeatures.duckai.section.header", value: "Duck.ai", comment: "Section header for the Duck.ai settings group on the AI Features screen")

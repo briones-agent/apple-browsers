@@ -133,25 +133,24 @@ private struct SettingsAINativeFeaturesView: AIFeaturesSettingsRowProviding {
             .listRowBackground(Color(designSystemColor: .surface))
         }
 
-        Section {
-            Button {
-                if viewModel.isAllAIDisabled {
-                    viewModel.resetAIToDefault()
-                } else {
+        // Shown only while at least one AI feature is on; hidden once everything is disabled.
+        if !viewModel.isAllAIDisabled {
+            Section {
+                Button {
                     viewModel.disableAllAI()
+                } label: {
+                    Text(UserText.settingsAiFeaturesDisableAIFeatures)
+                        .daxBodyRegular()
+                        .foregroundColor(Color(designSystemColor: .textLink))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            } label: {
-                Text(viewModel.isAllAIDisabled ? UserText.settingsAiFeaturesRestoreDefaultAISettings : UserText.settingsAiFeaturesDisableAIFeatures)
-                    .daxBodyRegular()
-                    .foregroundColor(Color(designSystemColor: .textLink))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("Settings.AIFeatures.DisableAllAIOptions")
+            } footer: {
+                Text(UserText.settingsAiFeaturesDisableAllFooter)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("Settings.AIFeatures.DisableAllAIOptions")
-        } footer: {
-            Text(UserText.settingsAiFeaturesDisableAllFooter)
+            .listRowBackground(Color(designSystemColor: .surface))
         }
-        .listRowBackground(Color(designSystemColor: .surface))
     }
 }
 

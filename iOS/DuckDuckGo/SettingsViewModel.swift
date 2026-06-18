@@ -1963,7 +1963,7 @@ extension SettingsViewModel {
     }
 
     /// True when Duck.ai is off and both SERP AI settings are at their most-restrictive values.
-    /// Drives the "Disable AI Features" / "Restore Default AI Settings" button label.
+    /// Hides the "Disable AI Features" button once everything is already disabled.
     var isAllAIDisabled: Bool {
         !aiChatSettings.isAIChatEnabled
             && serpSettings.searchAssistFrequency == .never
@@ -1975,13 +1975,6 @@ extension SettingsViewModel {
         aiChatSettings.enableAIChat(enable: false)
         serpSettings.searchAssistFrequency = .never
         serpSettings.hideAIGeneratedImages = true
-    }
-
-    func resetAIToDefault() {
-        objectWillChange.send()
-        aiChatSettings.enableAIChat(enable: true)
-        serpSettings.searchAssistFrequency = .sometimes
-        serpSettings.hideAIGeneratedImages = false
     }
 
     var isChatSuggestionsEnabled: Binding<Bool> {
