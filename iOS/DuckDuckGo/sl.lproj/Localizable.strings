@@ -4852,6 +4852,12 @@
 /* No comment provided by engineer. */
 "UIAlert" = "UIAlert";
 
+/* Toast shown when a tapped .vcf contact link can't be parsed (e.g. malformed RFC 6350 content) */
+"vcard.add-contact.parse-failure" = "Ni mogoče dodati stika. Poskusite namesto tega odpreti datoteko s stiki iz mape Prenosi.";
+
+/* Toast shown after the user successfully adds a contact from a .vcf contact link to their Contacts */
+"vcard.contact-added" = "Stik je bil dodan";
+
 /* No comment provided by engineer. */
 "Version: %@" = "Različica: %@";
 

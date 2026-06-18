@@ -4852,6 +4852,12 @@
 /* No comment provided by engineer. */
 "UIAlert" = "UIAlert";
 
+/* Toast shown when a tapped .vcf contact link can't be parsed (e.g. malformed RFC 6350 content) */
+"vcard.add-contact.parse-failure" = "Nem sikerült hozzáadni a névjegyet. Próbálkozz inkább a Letöltések mappában található névjegyfájl megnyitásával.";
+
+/* Toast shown after the user successfully adds a contact from a .vcf contact link to their Contacts */
+"vcard.contact-added" = "Névjegy hozzáadva";
+
 /* No comment provided by engineer. */
 "Version: %@" = "Verzió: %@";
 
