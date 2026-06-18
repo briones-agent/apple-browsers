@@ -359,6 +359,19 @@ struct Launching: LaunchingHandling {
             widgetSyncEngine = nil
         }
 
+        // Siri / Spotlight conversation search: index Duck.ai chats so they're discoverable by
+        // content. iOS 18.4+ (where `@Property(indexingKey:)` is available) and only when native
+        // storage is present.
+        let spotlightIndexer: DuckAiChatIndexing?
+        if #available(iOS 18.4, *), let observableStorage = duckAiNativeStorageHandler as? DuckAiNativeObservableStorage {
+            DuckAiSiriSearchSetup.registerDependencies(storage: observableStorage)
+            spotlightIndexer = DuckAiChatSpotlightIndexer(storage: observableStorage,
+                                                          settings: aiChatSettings,
+                                                          featureFlagger: AppDependencyProvider.shared.featureFlagger)
+        } else {
+            spotlightIndexer = nil
+        }
+
         services = AppServices(contentBlockingService: contentBlockingService,
                                syncService: syncService,
                                vpnService: vpnService,
@@ -377,7 +390,7 @@ struct Launching: LaunchingHandling {
                                systemSettingsPiPTutorialService: systemSettingsPiPTutorialService,
                                inactivityNotificationSchedulerService: inactivityNotificationSchedulerService,
                                wideEventService: wideEventService,
-                               aiChatService: AIChatService(aiChatSettings: aiChatSettings, widgetSyncEngine: widgetSyncEngine)
+                               aiChatService: AIChatService(aiChatSettings: aiChatSettings, widgetSyncEngine: widgetSyncEngine, spotlightIndexer: spotlightIndexer)
         )
 
         // Clean up wide event data at launch

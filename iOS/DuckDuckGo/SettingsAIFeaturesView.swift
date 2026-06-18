@@ -140,6 +140,16 @@ struct SettingsAIFeaturesView: View {
                 }
                 .listRowBackground(Color(designSystemColor: .surface))
 
+                if viewModel.isSiriChatSearchSettingVisible {
+                    Section {
+                        SettingsCellView(label: UserText.settingsSiriChatSearch,
+                                         subtitle: UserText.settingsSiriChatSearchSubtitle,
+                                         accessory: .toggle(isOn: viewModel.isSiriChatSearchEnabledBinding),
+                                         accessoryAccessibilityIdentifier: "Settings.AIFeatures.SiriSearchToggle")
+                    }
+                    .listRowBackground(Color(designSystemColor: .surface))
+                }
+
             }
 
             if !viewModel.openedFromSERPSettingsButton {

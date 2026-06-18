@@ -96,6 +96,7 @@ final class MockAIChatSettingsProvider: AIChatSettingsProvider {
     var isAutomaticContextAttachmentEnabled: Bool = false
     var isChatSuggestionsEnabled: Bool = true
     var defaultOmnibarMode: DefaultOmnibarMode = .search
+    var isSiriChatSearchEnabled: Bool = true
 
     func enableAIChat(enable: Bool) {
         isAIChatEnabled = enable
@@ -114,6 +115,10 @@ final class MockAIChatSettingsProvider: AIChatSettingsProvider {
     func enableChatSuggestions(enable: Bool) {}
     func setDefaultOmnibarMode(_ mode: DefaultOmnibarMode) {
         defaultOmnibarMode = mode
+    }
+
+    func enableSiriChatSearch(enable: Bool) {
+        isSiriChatSearchEnabled = enable
     }
 }
 #endif

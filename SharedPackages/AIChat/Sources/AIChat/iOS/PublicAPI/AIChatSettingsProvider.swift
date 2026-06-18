@@ -113,5 +113,12 @@ public protocol AIChatSettingsProvider {
     /// Updates the user's preferred default omnibar toggle mode.
     func setDefaultOmnibarMode(_ mode: DefaultOmnibarMode)
 
+    /// The user settings state for finding Duck.ai conversations via Siri / Spotlight.
+    /// AND-gated on the global AI Chat toggle.
+    var isSiriChatSearchEnabled: Bool { get }
+
+    /// Updates the user settings state for Siri / Spotlight Duck.ai conversation search.
+    func enableSiriChatSearch(enable: Bool)
+
 }
 #endif

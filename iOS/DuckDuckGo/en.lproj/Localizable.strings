@@ -3520,6 +3520,12 @@ Take back control of your personal information with the browser designed for dat
 /* Settings screen footer text for showing AI Chat in the input box */
 "settings.aichat.shortcuts.input.footer" = "Search the web or ask Duck.ai directly from the Address Bar";
 
+/* Title for the setting that lets the user find their Duck.ai conversations via Siri and Spotlight */
+"settings.aichat.siri.search" = "Find Chats with Siri & Spotlight";
+
+/* Subtitle explaining the Siri and Spotlight Duck.ai conversation search setting */
+"settings.aichat.siri.search.subtitle" = "Let Siri and Spotlight find your Duck.ai conversations by their content. Conversations stay on your device.";
+
 /* Title of search assist settings link */
 "settings.aifeatures.assist" = "Search Assist Settings";
 

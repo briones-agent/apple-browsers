@@ -1606,6 +1606,8 @@ extension Pixel {
 
         case aiChatSettingsVoiceTurnedOff
         case aiChatSettingsVoiceTurnedOn
+        case aiChatSettingsSiriSearchTurnedOff
+        case aiChatSettingsSiriSearchTurnedOn
         case aiChatSettingsAddressBarTurnedOff
         case aiChatSettingsAddressBarTurnedOn
         case aiChatSettingsSearchInputTurnedOff
@@ -3485,6 +3487,8 @@ extension Pixel.Event {
         case .voiceSessionStarted: return "m_aichat_voice_session_started"
         case .aiChatSettingsVoiceTurnedOff: return "m_aichat_settings_voice_turned_off"
         case .aiChatSettingsVoiceTurnedOn: return "m_aichat_settings_voice_turned_on"
+        case .aiChatSettingsSiriSearchTurnedOff: return "m_aichat_settings_siri_search_turned_off"
+        case .aiChatSettingsSiriSearchTurnedOn: return "m_aichat_settings_siri_search_turned_on"
         case .aiChatSettingsAddressBarTurnedOff: return "m_aichat_settings_address_bar_turned_off"
         case .aiChatSettingsAddressBarTurnedOn: return "m_aichat_settings_address_bar_turned_on"
         case .aiChatSettingsBrowserMenuTurnedOff: return "m_aichat_settings_browser_menu_turned_off"

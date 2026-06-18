@@ -96,17 +96,7 @@ extension DuckAiChat {
                                                           firstUserMessageContent: String?,
                                                           lastMessageContent: String?) {
         let blob = try JSONDecoder().decode(ChatBlob.self, from: data)
-
-        let chat = DuckAiChat(
-            chatId: blob.chatId,
-            title: blob.title ?? "Untitled Chat",
-            model: blob.model ?? "",
-            lastEdit: blob.lastEdit ?? "",
-            pinned: blob.pinned ?? false,
-            fileRefs: blob.fileRefs ?? [],
-            reasoningMode: blob.reasoningMode,
-            isImageGeneration: blob.hasGenerateImageUiComponent
-        )
+        let chat = makeChat(from: blob)
 
         let firstUserMessage = blob.messages?
             .first(where: { $0.role == "user" })?
@@ -117,6 +107,32 @@ extension DuckAiChat {
         return (chat: chat,
                 firstUserMessageContent: firstUserMessage,
                 lastMessageContent: lastMessage)
+    }
+
+    /// Decodes a `DuckAiChat` plus the concatenated visible text of *all* its messages, for content
+    /// indexing / search. The text is each message's `effectiveTextContent` joined with blank lines;
+    /// messages without visible text (pure tool-calls, reasoning) are skipped. Throws on invalid JSON.
+    public static func decodeSearchableText(from data: Data) throws -> (chat: DuckAiChat,
+                                                                        searchableText: String) {
+        let blob = try JSONDecoder().decode(ChatBlob.self, from: data)
+        let chat = makeChat(from: blob)
+        let searchableText = (blob.messages ?? [])
+            .compactMap { $0.effectiveTextContent }
+            .joined(separator: "\n\n")
+        return (chat: chat, searchableText: searchableText)
+    }
+
+    private static func makeChat(from blob: ChatBlob) -> DuckAiChat {
+        DuckAiChat(
+            chatId: blob.chatId,
+            title: blob.title ?? "Untitled Chat",
+            model: blob.model ?? "",
+            lastEdit: blob.lastEdit ?? "",
+            pinned: blob.pinned ?? false,
+            fileRefs: blob.fileRefs ?? [],
+            reasoningMode: blob.reasoningMode,
+            isImageGeneration: blob.hasGenerateImageUiComponent
+        )
     }
 }
 

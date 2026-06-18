@@ -412,6 +412,9 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213433942918287?focus=true
     case duckAIVoiceShortcut
 
+    /// Surfaces Duck.ai conversations to Siri / Spotlight via IndexedEntity semantic search.
+    case aiChatSiriSearch
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213813585476250?focus=true
     case screenTimeCleaning
 
@@ -786,6 +789,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.omnibarDefaultPosition))
         case .duckAIVoiceShortcut:
             Config(source: .remoteReleasable(AIChatSubfeature.voiceShortcut))
+        case .aiChatSiriSearch:
+            Config(source: .remoteReleasable(DuckAISiriSearchSubfeature.siriSearch))
         case .screenTimeCleaning:
             Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.screenTimeCleaning))
         case .aiChatContextualFireButton:
@@ -855,4 +860,18 @@ extension FeatureFlagger {
     public func isFeatureOn(_ featureFlag: FeatureFlag) -> Bool {
         isFeatureOn(for: featureFlag)
     }
+}
+
+/// iOS-local subfeature for Duck.ai Siri / Spotlight conversation search.
+///
+/// Defined here (rather than in BSK's `AIChatSubfeature`) to avoid editing the
+/// statically-duplicated BSK `PrivacyConfig` module — an edit there caused intermittent
+/// `EXC_BAD_ACCESS` crashes in `FeatureFlagLocalOverrides.__allocating_init` because
+/// Xcode's incremental linker sometimes left `Core.framework` and `DuckDuckGo.debug.dylib`
+/// with mismatched copies of the rebuilt `PrivacyConfig.o`. Conforming to `PrivacySubfeature`
+/// from the iOS layer with `parent == .aiChat` keeps the remote-config key path identical
+/// (`aiChat.subfeatures.siriSearch`).
+public enum DuckAISiriSearchSubfeature: String, PrivacySubfeature {
+    case siriSearch
+    public var parent: PrivacyFeature { .aiChat }
 }

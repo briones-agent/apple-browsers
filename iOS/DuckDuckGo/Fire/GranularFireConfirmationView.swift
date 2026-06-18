@@ -243,6 +243,7 @@ private final class PreviewAIChatSettings: AIChatSettingsProvider {
     var isAIChatTabBarContextualSheetButtonVisible: Bool { true }
     var isAutomaticContextAttachmentEnabled: Bool { false }
     var isChatSuggestionsEnabled: Bool { false }
+    var isSiriChatSearchEnabled: Bool { true }
     func enableAIChat(enable: Bool) {}
     func enableAIChatRecentChatsWidget(enable: Bool) {}
     func enableAIChatBrowsingMenuUserSettings(enable: Bool) {}
@@ -257,6 +258,7 @@ private final class PreviewAIChatSettings: AIChatSettingsProvider {
     func enableChatSuggestions(enable: Bool) {}
     var defaultOmnibarMode: DefaultOmnibarMode { .search }
     func setDefaultOmnibarMode(_ mode: DefaultOmnibarMode) {}
+    func enableSiriChatSearch(enable: Bool) {}
 }
 
 private final class PreviewThrowingKeyValueStore: ThrowingKeyValueStoring {

@@ -44,8 +44,8 @@ struct MenuControllerView<Content: View>: UIViewControllerRepresentable {
     let onOpen: (() -> Void)?
     let onClose: (() -> Void)?
 
-    func makeCoordinator() -> Coordinator<Content> {
-        Coordinator(title: title, secondaryTitle: secondaryTitle, action: action, secondaryAction: secondaryAction, onOpen: onOpen, onClose: onClose)
+    func makeCoordinator() -> MenuCoordinator<Content> {
+        MenuCoordinator(title: title, secondaryTitle: secondaryTitle, action: action, secondaryAction: secondaryAction, onOpen: onOpen, onClose: onClose)
     }
     
     func makeUIViewController(context: Context) -> UIHostingController<Content> {
@@ -54,7 +54,7 @@ struct MenuControllerView<Content: View>: UIViewControllerRepresentable {
         let hostingController = HostingController(rootView: content, action: action, secondaryAction: secondaryAction)
         coordinator.responder = hostingController
         
-        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap))
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(MenuCoordinator<Content>.tap))
         hostingController.view.addGestureRecognizer(tap)
 
         if #available(iOS 16.0, *) {
@@ -84,7 +84,7 @@ struct MenuControllerView<Content: View>: UIViewControllerRepresentable {
         context.coordinator.onClose = onClose
     }
 
-    class Coordinator<CoordinatorContent: View>: NSObject {
+    class MenuCoordinator<CoordinatorContent: View>: NSObject {
         var responder: UIResponder?
         var observer: Any?
         var title: String

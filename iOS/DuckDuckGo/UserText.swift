@@ -2280,6 +2280,10 @@ public struct UserText {
 
     public static let settingsManageAIChatShortcuts = NSLocalizedString("settings.aichat.manage.shortcuts", value: "Manage Duck.ai Shortcuts", comment: "Top level settings for managing AI Chat shortcuts")
 
+    public static let settingsSiriChatSearch = NSLocalizedString("settings.aichat.siri.search", value: "Find Chats with Siri & Spotlight", comment: "Title for the setting that lets the user find their Duck.ai conversations via Siri and Spotlight")
+
+    public static let settingsSiriChatSearchSubtitle = NSLocalizedString("settings.aichat.siri.search.subtitle", value: "Let Siri and Spotlight find your Duck.ai conversations by their content. Conversations stay on your device.", comment: "Subtitle explaining the Siri and Spotlight Duck.ai conversation search setting")
+
     public static let settingsDuckAISettings = NSLocalizedString("settings.aichat.duckai.settings", value: "Duck.ai Settings", comment: "Settings row that opens Duck.ai in a new tab")
 
     public static let settingsAiChatSearchInputFooter = NSLocalizedString("settings.aichat.shortcuts.input.footer", value: "Search the web or ask Duck.ai directly from the Address Bar", comment: "Settings screen footer text for showing AI Chat in the input box")

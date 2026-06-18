@@ -126,6 +126,11 @@ final class AIChatSettings: AIChatSettingsProvider {
             && isAIChatEnabled
     }
 
+    var isSiriChatSearchEnabled: Bool {
+        keyValueStore.bool(.siriChatSearchKey, defaultValue: .siriChatSearchDefaultValue)
+            && isAIChatEnabled
+    }
+
     var isAIChatBrowsingMenuUserSettingsEnabled: Bool {
         keyValueStore.bool(.showAIChatBrowsingMenuKey, defaultValue: .showAIChatBrowsingMenuDefaultValue)
             && isAIChatEnabled
@@ -206,6 +211,18 @@ final class AIChatSettings: AIChatSettingsProvider {
         keyValueStore.set(enable, forKey: .aiChatRecentChatsWidgetEnabledKey)
         // Posting this lets the widget sync engine react (sync or wipe) to the changed gate.
         triggerSettingsChangedNotification()
+    }
+
+    func enableSiriChatSearch(enable: Bool) {
+        keyValueStore.set(enable, forKey: .siriChatSearchKey)
+        // Posting this lets the Spotlight indexer react (re-index or wipe) to the changed gate.
+        triggerSettingsChangedNotification()
+
+        if enable {
+            DailyPixel.fireDailyAndCount(pixel: .aiChatSettingsSiriSearchTurnedOn)
+        } else {
+            DailyPixel.fireDailyAndCount(pixel: .aiChatSettingsSiriSearchTurnedOff)
+        }
     }
 
     func enableAIChatBrowsingMenuUserSettings(enable: Bool) {
@@ -385,6 +402,7 @@ private extension String {
     static let showChatSuggestionsKey = "aichat.settings.showChatSuggestions"
     static let isAIChatAutomaticContextAttachmentEnabledKey = "aichat.settings.isAIChatAutomaticContextAttachmentEnabled"
     static let defaultOmnibarModeKey = "aichat.settings.defaultOmnibarMode"
+    static let siriChatSearchKey = "aichat.settings.siriChatSearch"
 }
 
 enum LegacyAiChatUserDefaultsKeys {
@@ -417,6 +435,7 @@ private extension Bool {
     static let showAIChatTabBarContextualSheetDefaultValue = true
     static let showAIChatExperimentalSearchInputDefaultValue = false
     static let showChatSuggestionsDefaultValue = true
+    static let siriChatSearchDefaultValue = true
 
 }
 

@@ -25,13 +25,17 @@ final class AIChatService: NSObject {
 
     private let aiChatSettings: AIChatSettingsProvider
     private let widgetSyncEngine: AIChatWidgetSyncEngine?
+    private let spotlightIndexer: DuckAiChatIndexing?
 
     init(aiChatSettings: AIChatSettingsProvider,
-         widgetSyncEngine: AIChatWidgetSyncEngine? = nil) {
+         widgetSyncEngine: AIChatWidgetSyncEngine? = nil,
+         spotlightIndexer: DuckAiChatIndexing? = nil) {
         self.aiChatSettings = aiChatSettings
         self.widgetSyncEngine = widgetSyncEngine
+        self.spotlightIndexer = spotlightIndexer
         super.init()
         widgetSyncEngine?.start()
+        spotlightIndexer?.start()
     }
 
     // MARK: - Resume
@@ -40,6 +44,7 @@ final class AIChatService: NSObject {
     func resume() {
         // Refresh the widget mirror in case chats changed while we were backgrounded.
         widgetSyncEngine?.syncNow()
+        spotlightIndexer?.refresh()
     }
 
     // MARK: - Suspend
@@ -48,6 +53,7 @@ final class AIChatService: NSObject {
         // Sync + reload as the app leaves the foreground so the home-screen widgets show the
         // latest chats/images when the user looks at them.
         widgetSyncEngine?.syncNow()
+        spotlightIndexer?.refresh()
     }
 
     func shortcutItem() -> UIApplicationShortcutItem? {

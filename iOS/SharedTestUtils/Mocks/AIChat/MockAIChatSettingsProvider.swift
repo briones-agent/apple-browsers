@@ -39,6 +39,7 @@ public class MockAIChatSettingsProvider: AIChatSettingsProvider {
     public var isAutomaticContextAttachmentEnabled: Bool
     public var isChatSuggestionsEnabled: Bool
     public var defaultOmnibarMode: DefaultOmnibarMode
+    public var isSiriChatSearchEnabled: Bool
 
     public init(aiChatURL: URL = URL(string: "https://example.com")!,
                 isAIChatEnabled: Bool = false,
@@ -57,6 +58,7 @@ public class MockAIChatSettingsProvider: AIChatSettingsProvider {
                 isAutomaticContextAttachmentEnabled: Bool = false,
                 isChatSuggestionsEnabled: Bool = true,
                 defaultOmnibarMode: DefaultOmnibarMode = .search,
+                isSiriChatSearchEnabled: Bool = true,
                 sessionTimerInMinutes: Int = 60) {
 
         self.aiChatURL = aiChatURL
@@ -75,6 +77,7 @@ public class MockAIChatSettingsProvider: AIChatSettingsProvider {
         self.isAutomaticContextAttachmentEnabled = isAutomaticContextAttachmentEnabled
         self.isChatSuggestionsEnabled = isChatSuggestionsEnabled
         self.defaultOmnibarMode = defaultOmnibarMode
+        self.isSiriChatSearchEnabled = isSiriChatSearchEnabled
         self.sessionTimerInMinutes = sessionTimerInMinutes
     }
     
@@ -128,6 +131,10 @@ public class MockAIChatSettingsProvider: AIChatSettingsProvider {
 
     public func setDefaultOmnibarMode(_ mode: DefaultOmnibarMode) {
         defaultOmnibarMode = mode
+    }
+
+    public func enableSiriChatSearch(enable: Bool) {
+        isSiriChatSearchEnabled = enable
     }
 
 }

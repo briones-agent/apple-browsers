@@ -90,6 +90,26 @@ class AIChatSettingsTests: XCTestCase {
         XCTAssertFalse(settings.isAIChatRecentChatsWidgetUserSettingsEnabled)
     }
 
+    // MARK: - Siri / Spotlight conversation search
+
+    func testWhenSiriChatSearchSettingDefaultsThenEnabled() {
+        let settings = makeSettings()
+        XCTAssertTrue(settings.isSiriChatSearchEnabled)
+    }
+
+    func testWhenSiriChatSearchDisabledThenSettingIsOff() {
+        let settings = makeSettings()
+        settings.enableSiriChatSearch(enable: false)
+        XCTAssertFalse(settings.isSiriChatSearchEnabled)
+    }
+
+    func testWhenAIChatDisabledThenSiriChatSearchSettingIsOffRegardlessOfOwnFlag() {
+        let settings = makeSettings()
+        settings.enableSiriChatSearch(enable: true)
+        settings.enableAIChat(enable: false)
+        XCTAssertFalse(settings.isSiriChatSearchEnabled)
+    }
+
     func testAIChatURLReturnsRemoteSettingWhenAvailable() {
         let settings = AIChatSettings(privacyConfigurationManager: mockPrivacyConfigurationManager,
                                       debugSettings: mockAIChatDebugSettings,

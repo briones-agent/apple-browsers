@@ -1854,6 +1854,21 @@ extension SettingsViewModel {
         )
     }
 
+    var isSiriChatSearchEnabledBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { self.aiChatSettings.isSiriChatSearchEnabled },
+            set: { newValue in
+                self.objectWillChange.send()
+                self.aiChatSettings.enableSiriChatSearch(enable: newValue)
+            }
+        )
+    }
+
+    /// Whether the Siri / Spotlight conversation-search row should be shown (feature flag + iOS 18+).
+    var isSiriChatSearchSettingVisible: Bool {
+        DuckAISiriSearchFeature().isAvailable
+    }
+
     var aiChatBrowsingMenuEnabledBinding: Binding<Bool> {
         Binding<Bool>(
             get: { self.aiChatSettings.isAIChatBrowsingMenuUserSettingsEnabled },
