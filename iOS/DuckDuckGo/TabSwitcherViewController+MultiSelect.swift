@@ -127,6 +127,9 @@ extension TabSwitcherViewController {
     }
 
     func transitionToMultiSelect() {
+        if isSearching {
+            exitSearchMode()
+        }
         self.isEditing = true
         pagingScrollView.isScrollEnabled = false
         activePageController.enterEditingMode()
