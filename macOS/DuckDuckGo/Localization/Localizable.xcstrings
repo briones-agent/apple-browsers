@@ -2481,6 +2481,54 @@
         }
       }
     },
+    "aichat.attach-menu.screenshot" : {
+      "comment" : "Parent item in the AI chat omnibar add-attachment menu. Its submenu lets the user choose between a drag-to-select region, an entire display, or a specific window.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take Screenshot"
+          }
+        }
+      }
+    },
+    "aichat.attach-menu.screenshot.selection" : {
+      "comment" : "First item inside the 'Take Screenshot' submenu. Triggers the drag-to-select region picker (the system overlay with the crosshair cursor). Reads as an action prompt — tells the user what's about to happen.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Drag to Select"
+          }
+        }
+      }
+    },
+    "aichat.attach-menu.screenshot.screens-header" : {
+      "comment" : "Section header inside the 'Take Screenshot' submenu listing each connected display the user can capture in one shot.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Screens"
+          }
+        }
+      }
+    },
+    "aichat.attach-menu.screenshot.windows-header" : {
+      "comment" : "Section header inside the 'Take Screenshot' submenu listing each currently-open application window the user can capture in one shot.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Windows"
+          }
+        }
+      }
+    },
     "aichat.attach-menu.page-content" : {
       "comment" : "Top-level item in the AI chat omnibar add-attachment menu that opens the open-tabs submenu",
       "extractionState" : "extracted_with_value",

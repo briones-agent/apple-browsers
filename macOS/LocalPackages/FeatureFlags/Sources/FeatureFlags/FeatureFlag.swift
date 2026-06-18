@@ -289,6 +289,15 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1214283076614743?focus=true
     case aiChatOmnibarVoiceChatAccess
 
+    /// Enables the "Take Screenshot" attach-menu item in the Duck.ai omnibar
+    /// (Drag to Select / per-display / per-window capture, captured image rides the
+    /// existing image-attachment pipeline). Sparkle / Debug only on first ship —
+    /// gated off in the App Store build at runtime via `AppVersion.isAppStoreBuild`
+    /// because the implementation shells out to `/usr/sbin/screencapture`, which the
+    /// App Store App Sandbox profile blocks. ScreenCaptureKit follow-up will close
+    /// that gap.
+    case aiChatOmnibarScreenshot
+
     /// Enables attaching content from multiple open tabs to the Duck.ai sidebar chat.
     /// https://app.asana.com/1/137249556945/task/1214804748957572?focus=true
     case aiChatSidebarAttachMoreTabs
@@ -614,6 +623,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.omnibarReasoningEffort), category: .duckAI)
         case .aiChatOmnibarVoiceChatAccess:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.omnibarVoiceChatAccess), category: .duckAI)
+        case .aiChatOmnibarScreenshot:
+            Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.omnibarScreenshot), category: .duckAI)
         case .aiChatSidebarAttachMoreTabs:
             Config(source: .remoteReleasable(AIChatSubfeature.sidebarAttachMoreTabs), category: .duckAI)
         case .aiChatOmnibarAttachMoreTabs:

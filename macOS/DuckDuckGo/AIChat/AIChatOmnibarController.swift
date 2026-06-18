@@ -141,6 +141,15 @@ final class AIChatOmnibarController {
         featureFlagger.isFeatureOn(.aiChatOmnibarVoiceChatAccess)
     }
 
+    /// Whether the "Take Screenshot" attach-menu item (region / display / window capture) is
+    /// available. The implementation shells out to `/usr/sbin/screencapture`, which the App
+    /// Sandbox profile blocks — so even with this flag on, the menu item is also gated at the
+    /// render site by `AppVersion.isAppStoreBuild`. ScreenCaptureKit follow-up will let us
+    /// drop the App Store gate.
+    var isOmnibarScreenshotEnabled: Bool {
+        featureFlagger.isFeatureOn(.aiChatOmnibarScreenshot)
+    }
+
     /// Whether the omnibar's tab picker (Attach Page Content) is available.
     /// Requires both `aiChatPageContext` (the underlying extraction pipeline) and
     /// `aiChatOmnibarAttachMoreTabs` (the omnibar surface gate).

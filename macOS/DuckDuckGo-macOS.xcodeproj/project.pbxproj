@@ -4553,6 +4553,10 @@
 		FEE12B412E520E4D00AD9807 /* PromoHistoryRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */; };
 		FEE12B412E520E4D00AD9809 /* PromoHistoryRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */; };
 		FFF6627FC03B410786EF2635 /* RebrandedContextualOnboardingDialogs+SearchCompleted.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E776DE170ED47F4B3E992DF /* RebrandedContextualOnboardingDialogs+SearchCompleted.swift */; };
+		D0DA01D0A1FFFFFFFFFFFF02 /* ScreenshotCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA01D0A1FFFFFFFFFFFF01 /* ScreenshotCapture.swift */; };
+		D0DA01D0A1FFFFFFFFFFFF03 /* ScreenshotCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA01D0A1FFFFFFFFFFFF01 /* ScreenshotCapture.swift */; };
+		D0DA01D0A1FFFFFFFFFFFF05 /* ScreenshotPermissionPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA01D0A1FFFFFFFFFFFF04 /* ScreenshotPermissionPromptView.swift */; };
+		D0DA01D0A1FFFFFFFFFFFF06 /* ScreenshotPermissionPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA01D0A1FFFFFFFFFFFF04 /* ScreenshotPermissionPromptView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -6982,6 +6986,8 @@
 		FD23FD2A28816606007F6985 /* AutoconsentMessageProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AutoconsentMessageProtocolTests.swift; path = UnitTests/Autoconsent/AutoconsentMessageProtocolTests.swift; sourceTree = SOURCE_ROOT; };
 		FD23FD2C2886A81D007F6985 /* AutoconsentManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoconsentManagement.swift; sourceTree = "<group>"; };
 		FEE12B412E520E4D00AD9808 /* PromoHistoryRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoHistoryRecordTests.swift; sourceTree = "<group>"; };
+		D0DA01D0A1FFFFFFFFFFFF01 /* ScreenshotCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotCapture.swift; sourceTree = "<group>"; };
+		D0DA01D0A1FFFFFFFFFFFF04 /* ScreenshotPermissionPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotPermissionPromptView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -7755,6 +7761,8 @@
 				31BFDB692ECA420E00ADFABD /* AIChatOmnibarContainerViewController.swift */,
 				31BFDB782ECA5FCD00ADFABD /* AIChatOmnibarController.swift */,
 				31BFDB6F2ECA46DD00ADFABD /* AIChatOmnibarTextContainerViewController.swift */,
+				D0DA01D0A1FFFFFFFFFFFF01 /* ScreenshotCapture.swift */,
+				D0DA01D0A1FFFFFFFFFFFF04 /* ScreenshotPermissionPromptView.swift */,
 				31E3FD712CE39C4600A392C8 /* Debug */,
 				1E4EDA262DE9ED1C0019B6E8 /* Sidebar */,
 				4773D76F5C4F4B31900F6E7A /* FloatingWindow */,
@@ -15074,6 +15082,8 @@
 				CC82ABB72F5206BE00AD9807 /* PromoHistoryProviding.swift in Sources */,
 				C1935A1C2C88F9ED001AD72D /* SyncPromoViewModel.swift in Sources */,
 				31BFDB7A2ECA5FCD00ADFABD /* AIChatOmnibarController.swift in Sources */,
+				D0DA01D0A1FFFFFFFFFFFF02 /* ScreenshotCapture.swift in Sources */,
+				D0DA01D0A1FFFFFFFFFFFF05 /* ScreenshotPermissionPromptView.swift in Sources */,
 				4D5E6F708192A3B4C5D6E7F8 /* BookmarksBarMenuCustomPopover.swift in Sources */,
 				84F1C8D02C7705B500716446 /* BookmarksBarMenuPopover.swift in Sources */,
 				2B3C4D5E6F708192A3B4C5D6 /* BookmarksBarMenuPopoverPresenting.swift in Sources */,
@@ -17604,6 +17614,8 @@
 				4BE65474271FCD40008D1D63 /* PasswordManagementIdentityItemView.swift in Sources */,
 				566B73692BECBF8400FF1959 /* SyncAlertsPresenter.swift in Sources */,
 				31BFDB792ECA5FCD00ADFABD /* AIChatOmnibarController.swift in Sources */,
+				D0DA01D0A1FFFFFFFFFFFF03 /* ScreenshotCapture.swift in Sources */,
+				D0DA01D0A1FFFFFFFFFFFF06 /* ScreenshotPermissionPromptView.swift in Sources */,
 				BDD13E222D8BD47A00FBC383 /* VPNBypassServiceExtensions.swift in Sources */,
 				EE1886532EB3BA4900A46272 /* NewImportSummaryView.swift in Sources */,
 				B6F41031264D2B23003DA42C /* ProgressExtension.swift in Sources */,

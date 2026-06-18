@@ -543,6 +543,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables 1-click voice-chat access from the Duck.ai omnibar (mic icon shown when input is empty)
     case omnibarVoiceChatAccess
 
+    /// Enables the "Take Screenshot" attach-menu item in the Duck.ai omnibar (region / display / window capture).
+    case omnibarScreenshot
+
     /// Enables querying AI Chat data directly from local storage instead of via webview
     case nativeDataAccess
 
