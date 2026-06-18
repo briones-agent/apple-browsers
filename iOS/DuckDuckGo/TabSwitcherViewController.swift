@@ -462,6 +462,10 @@ class TabSwitcherViewController: UIViewController {
         // On large ipad view don't show the bottom divider
         borderView.isBottomVisible = !interfaceMode.isLarge
         activateLayoutConstraintsBasedOnBarPosition()
+
+        if isSearching {
+            view.bringSubviewToFront(searchContainerView)
+        }
     }
 
     override func viewDidLoad() {
