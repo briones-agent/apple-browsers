@@ -392,10 +392,10 @@
 "sync.simplified.scan-or-view-code.connecting.title" = "V obeh napravah imejte odprto »Sync & Backup«";
 
 /* Message of the reminder shown after the user copies the sync code. */
-"sync.simplified.scan-or-view-code.copy-confirmation.message" = "Po lepljenju kode se vrni na to napravo.";
+"sync.simplified.scan-or-view-code.copy-confirmation.message" = "Po lepljenju kode se vrnite na to napravo.";
 
 /* Title of the reminder shown after the user copies the sync code. */
-"sync.simplified.scan-or-view-code.copy-confirmation.title" = "Prilepi kodo na svojo drugo napravo";
+"sync.simplified.scan-or-view-code.copy-confirmation.title" = "Prilepite kodo na svojo drugo napravo";
 
 /* Button to navigate to manual sync code entry */
 "sync.simplified.scan-or-view-code.manually.enter.code" = "Ročno vnesite kodo";

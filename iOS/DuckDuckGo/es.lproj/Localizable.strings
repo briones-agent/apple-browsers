@@ -4786,6 +4786,12 @@
 /* No comment provided by engineer. */
 "UIAlert" = "UIAlert";
 
+/* Toast shown when a tapped .vcf contact link can't be parsed (e.g. malformed RFC 6350 content) */
+"vcard.add-contact.parse-failure" = "No se puede añadir el contacto. Intenta abrir el archivo de contactos de las descargas en su lugar.";
+
+/* Toast shown after the user successfully adds a contact from a .vcf contact link to their Contacts */
+"vcard.contact-added" = "Contacto añadido";
+
 /* No comment provided by engineer. */
 "Version: %@" = "Versión: %@";
 
