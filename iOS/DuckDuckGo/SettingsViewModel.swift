@@ -1586,8 +1586,8 @@ extension SettingsViewModel {
         case netP
         case dbp
         case itr
-        case subscriptionFlow(redirectURLComponents: URLComponents? = nil)
-        case subscriptionPlanChangeFlow(redirectURLComponents: URLComponents? = nil)
+        case subscriptionFlow(redirectURLComponents: URLComponents?)
+        case subscriptionPlanChangeFlow(redirectURLComponents: URLComponents?)
         case restoreFlow
         case duckPlayer
         case aiChat

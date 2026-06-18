@@ -1360,6 +1360,7 @@ extension Pixel {
         case subscriptionEntryAppMenuSubscriptionClick
         case subscriptionEntrySettingsImpression
         case subscriptionEntrySettingsSubscriptionClick
+        case subscriptionWebSourcedOriginUnknown
 
         // VPN Access-Revoked Alert (subscription expired)
         case vpnAccessRevokedAlertShown
@@ -3225,6 +3226,7 @@ extension Pixel.Event {
         case .subscriptionEntryAppMenuSubscriptionClick: return "m_subscription_appmenu_subscription_click"
         case .subscriptionEntrySettingsImpression: return "m_subscription_settings_impression"
         case .subscriptionEntrySettingsSubscriptionClick: return "m_subscription_settings_subscription_click"
+        case .subscriptionWebSourcedOriginUnknown: return "m_subscription_web_sourced_origin_unknown"
 
         // VPN Access-Revoked Alert
         case .vpnAccessRevokedAlertShown: return "m_vpn_access_revoked_alert_shown"
