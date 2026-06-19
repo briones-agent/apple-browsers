@@ -435,6 +435,56 @@ anchor feel; the inverted-blur shape — `maxBlur`, `minBlurDuringDrag`, `blurEa
 `commitInitialSpringVelocityFactor`/`maxCommitInitialSpringVelocity`; and the flick-scaled snap durations
 (`snapDuration` / `min`/`maxCommitDuration` / `springDamping` for the calm cancel return).
 
+### E. Three landing fixes (overview-visible blur, pixel-perfect commit, card header bar)
+
+Three corrections on top of the free-form engine (§7.D). All three touch
+`SwipeUpToTabSwitcherInteractiveTransition.swift`, `TabSwitcherTransition.swift`, `WebViewTransition.swift`
+and `HomeScreenTransition.swift`; the button-tap and dismissal paths stay untouched.
+
+**E.1 — The overview is visible (blurred) during the drag.** `startInteractiveTransition` previously set
+`toVC.view.alpha = 0` for the whole drag, so the `UIVisualEffectView` blur sampled only the opaque
+`solidBackground` → blurred gray, not the tabs. Fix: set `toVC.view.alpha = 1` in
+`startInteractiveTransition` so the live grid renders during the drag; the card covers it at full size and
+reveals it — blurred by `blurView` (already z-ordered between the overview and the card) — as it shrinks.
+`finish()` keeps alpha 1 + blur → 0 (sharpen); `cancel()` fades alpha → 0 as the page returns; the
+nil-preview fallback now resets alpha → 0 before its fade-in so that path still animates. The inverted-blur
+curve and `Constants` are unchanged (product owner fine-tunes). `interactive.update` / `interactive.start`
+now log `overviewAlpha` next to `blur` so it's confirmable that the real grid is what's blurred.
+
+**E.2 — Commit snaps pixel-perfect on the real cell (no jump).** The overview is presented with the
+tracker-count banner hidden (synchronous present; `initialTrackerCountState: .hidden`). The page controller
+then fetches the count and inserts the "N trackers blocked" banner **as a collection-view section header**
+(`referenceSizeForHeaderInSection` goes from `.zero` to `estimatedHeight`, `invalidateLayout()`), pushing
+every grid cell DOWN — **after** `destinationCellFrame` was captured at gesture start. So the card snapped
+too high and jumped down when the snapshot was removed. Fix: a new `SwipeUpInteractiveTransition` protocol
+method `currentDestinationFrames() -> SwipeUpDestinationFrames?` (returns `cell` + `imageView` + `header`),
+implemented by both `From*` animators by calling `collectionView.layoutIfNeeded()` (to flush a freshly
+inserted banner) then re-querying `layoutAttributesForItem(at:)` and re-running their existing
+`tabSwitcherCellFrame` / `previewFrame` / `headerFrame` math. The controller calls it at the top of
+`finish()` and snaps to the fresh frames (cell + imageView + header), falling back to the stored ones if
+nil; it logs `capturedCell`, `freshCell`, and `cellDeltaY` so the shift is visible (expected `cellDeltaY ≈
++estimatedHeight (50)` in the no-trackers→trackers case; `0` when the banner stays hidden).
+
+**E.3 — The cell's top bar (favicon + title + X) on the dragged card.** The all-tabs cells have a
+`cellHeaderHeight`-tall top bar (favicon, page title, close X) the card lacked → empty space at the top
+when it landed. Fix: a new `SwipeUpCardHeaderView` (in `TabSwitcherTransition.swift`) replicates
+`TabViewGridCell`'s header — favicon (16pt, leading 12, `faviconCornerRadius`), title (`daxFootnoteSemibold`
+/ `.textPrimary`, `FadeOutLabel`), and a decorative `BrowserChromeButton(.tabSwitcher)` X with
+`Size16.close` — laid out frame-based in `layoutSubviews` against the grid cell's metrics. It is populated
+per surface (web favicon+title, Duck.ai icon+"Duck.ai", NTP Dax logo + home-tab title) by a shared
+`makeSwipeUpCardHeader(for:)` factory on `TabSwitcherTransition`. The X is **decorative only** — not wired
+to close anything (the card is transient). The controller adds it as a **sibling above `imageContainer`**
+(not a subview — so the NTP header can sit *above* the preview-only container), starts it at alpha 0,
+**fades it in with `progress` in lockstep with the border/corner ramp**, and rides it on the card's current
+top edge each `.changed` (`headerFrame(forCardRect: currentCardRect(...))`). On commit it snaps to
+`destinationHeaderFrame` (absolute tab-switcher-view space): for web that's the cell's top strip
+(`cellFrame.minY`), for NTP it's the strip directly above the preview-region cell frame
+(`cellFrame.minY - cellHeaderHeight`) — both recomputed from the fresh cell frame in E.2. Content is laid
+out in the 44pt header-stack box pinned to the cell top, so favicon/title/X centre at the same y as the real
+cell's header → pixel-match on handoff (the ±4pt header/preview boundary is the pre-existing 40-vs-44
+transition approximation, unchanged). `cancel()` fades the header back out and returns it to the full-screen
+card's top edge; `tearDown` removes it. Applies to **both** web and NTP.
+
 ## Verification / testing
 
 **Manual (the primary verification — feel is the point of the project).** Build & run on an iPhone sim
@@ -453,6 +503,16 @@ separately on a fresh NTP), from the bottom bar:
   after committing then dismissing the switcher back to the page, the bar is fully visible (alpha 1).
 - **NTP Dax logo (Tweak B):** on a fresh NTP, drag slowly to ~50% — the Dax logo stays circular (no
   vertical squeeze) throughout, and the settled overview cell looks identical to the button-tap result.
+- **Overview visible & blurred (Fix E.1):** during the drag the real tab grid is visible behind the card,
+  heavily frosted near the bottom and clearing as you rise — not a flat blurred gray. On commit it sharpens
+  to a crisp overview; on cancel it fades out as the page returns.
+- **Pixel-perfect commit (Fix E.2):** on a tab with trackers (so the "N trackers blocked" banner appears),
+  release to commit — the card lands exactly on the destination cell with no downward jump when the
+  snapshot is removed. Re-check with the banner absent (no-trackers tab) — still no jump. Web + NTP both.
+- **Card header bar (Fix E.3):** as the card shrinks, the top bar (favicon + page title + X) fades in at
+  the card's top; on landing it coincides exactly with the real cell's header (favicon, title, X all in
+  place, no empty strip, no jump). Verify on a web page (real favicon + title) and on a fresh NTP (Dax logo
+  + home-tab title). The X is inert (tapping it does nothing — the card is removed on commit anyway).
 
 **Unit tests.** Cover the pure `progress(forTranslation:reference:)` and
 `shouldCommit(progress:velocity:)` helpers (flick at low progress commits; below-threshold lift cancels;

@@ -104,7 +104,10 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
 
         let finalFrame = transitionContext.finalFrame(for: toVC)
         toVC.view.frame = finalFrame
-        toVC.view.alpha = 0
+        // Fix 1: render the overview during the whole drag (not just on commit). The card covers it at
+        // full size and reveals it — blurred by `blurView` — as it shrinks, so the blur samples the REAL
+        // grid, not the opaque `solidBackground`. `cancel()` fades it back to 0 as the page returns.
+        toVC.view.alpha = 1
         toVC.prepareForPresentation()
         toView = toVC.view
 
@@ -133,8 +136,10 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
         self.animator = animator
 
         guard let preview = animator.prepareInteractivePreview(finalFrame: finalFrame) else {
-            // No preview/tab/layout — fall back to a plain sharpen-in so we never get stuck mid-transition.
+            // No preview/tab/layout — fall back to a plain fade-in so we never get stuck mid-transition.
+            // (Alpha was set to 1 above for the normal drag path; reset to 0 here so this fade is visible.)
             Logger.swipeUpToTabSwitcher.debug("interactive.start: prepareInteractivePreview returned nil — fading switcher in")
+            toVC.view.alpha = 0
             container.addSubview(toVC.view)
             UIView.animate(withDuration: TabSwitcherTransition.Constants.duration) {
                 toVC.view.alpha = 1
@@ -146,11 +151,13 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
         self.preview = preview
 
         // Z-order, bottom → top: solidBackground (hides the from-VC) under the overview + blur under the
-        // dragged card. The presenting VC's real content sits below the (transparent) container.
+        // dragged card, with the card header on top of the card. The presenting VC's real content sits
+        // below the (transparent) container.
         container.addSubview(preview.solidBackground)
         container.addSubview(toVC.view)
         container.addSubview(blurView)
         container.addSubview(preview.imageContainer)
+        container.addSubview(preview.cardHeader)
 
         // The card is positioned by `initialContainerFrame` and the drag only mutates `transform`
         // (mutating `frame` while transformed is undefined in UIKit). The transform scales the card about
@@ -162,9 +169,13 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
         preview.imageContainer.frame = preview.initialContainerFrame
         preview.imageContainer.transform = .identity
         preview.homeScreenSnapshot?.alpha = 1
+        // Header starts pinned to the card's top edge (full width), invisible — it fades in as the card
+        // shrinks and snaps to the cell's header strip on commit.
+        preview.cardHeader.frame = headerFrame(forCardRect: preview.initialContainerFrame)
+        preview.cardHeader.alpha = 0
         lastTranslation = .zero
         lastScale = 1
-        Logger.swipeUpToTabSwitcher.debug("interactive.start: ready initial=\(String(describing: preview.initialContainerFrame), privacy: .public) cell=\(String(describing: preview.destinationCellFrame), privacy: .public)")
+        Logger.swipeUpToTabSwitcher.debug("interactive.start: ready initial=\(String(describing: preview.initialContainerFrame), privacy: .public) cell=\(String(describing: preview.destinationCellFrame), privacy: .public) header=\(String(describing: preview.destinationHeaderFrame), privacy: .public) overviewAlpha=\(Double(toVC.view.alpha), privacy: .public) blur=\(Double(self.blurAnimator?.fractionComplete ?? 0), privacy: .public)")
     }
 
     // MARK: Driving the drag
@@ -193,6 +204,11 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
         preview.imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius * progress
         preview.imageContainer.layer.borderWidth = TabViewCell.Constants.selectedBorderWidth * progress
 
+        // Card header (favicon + title + X): fade in with progress in lockstep with the border/corner ramp,
+        // riding the card's current top edge so it sits flush above the preview as the card shrinks.
+        preview.cardHeader.alpha = progress
+        preview.cardHeader.frame = headerFrame(forCardRect: currentCardRect(preview))
+
         // NTP cross-fade: snapshot carries the start, the crisp centred logo carries the top of the drag
         // (also dodges the Dax-logo squeeze). No-op for web (homeScreenSnapshot == nil, imageView.alpha
         // already 1 from setup defaults).
@@ -209,7 +225,9 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
         blurAnimator?.fractionComplete = blur
         transitionContext.updateInteractiveTransition(progress)
 
-        Logger.swipeUpToTabSwitcher.debug("interactive.update progress=\(Double(progress), privacy: .public) tx=\(Double(translation.x), privacy: .public) ty=\(Double(translation.y), privacy: .public) scale=\(Double(scale), privacy: .public) blur=\(Double(blur), privacy: .public)")
+        // Log the overview alpha alongside the blur fraction so we can confirm the REAL grid (alpha 1) is
+        // what's being blurred during the drag, not the opaque solid background (Fix 1).
+        Logger.swipeUpToTabSwitcher.debug("interactive.update progress=\(Double(progress), privacy: .public) tx=\(Double(translation.x), privacy: .public) ty=\(Double(translation.y), privacy: .public) scale=\(Double(scale), privacy: .public) blur=\(Double(blur), privacy: .public) overviewAlpha=\(Double(self.toView?.alpha ?? 0), privacy: .public)")
     }
 
     /// Blur fraction for the current drag, inverted and eased: `maxBlur` at the bottom, smoothstepped down
@@ -245,7 +263,21 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
             return
         }
         let duration = commitDuration(verticalVelocity: verticalVelocity)
-        Logger.swipeUpToTabSwitcher.debug("interactive.finish duration=\(Double(duration), privacy: .public) v=\(Double(verticalVelocity), privacy: .public)")
+
+        // Fix 2: recompute the destination frames against the CURRENT layout. The overview is presented with
+        // the tracker banner hidden (synchronous present); the count then arrives and the banner is inserted
+        // as a section header, pushing every cell DOWN — after `destinationCellFrame` was captured at gesture
+        // start. Snapping to the stale frame lands too high and jumps when the snapshot is removed. Re-query
+        // now (the animator calls `layoutIfNeeded()` first), and fall back to the stored frames if nil.
+        let captured = (cell: preview.destinationCellFrame,
+                        imageView: preview.destinationImageViewFrame,
+                        header: preview.destinationHeaderFrame)
+        let fresh = animator?.currentDestinationFrames()
+        let targetCell = fresh?.cell ?? captured.cell
+        let targetImageView = fresh?.imageView ?? captured.imageView
+        let targetHeader = fresh?.header ?? captured.header
+        let cellDeltaY = targetCell.minY - captured.cell.minY
+        Logger.swipeUpToTabSwitcher.debug("interactive.finish duration=\(Double(duration), privacy: .public) v=\(Double(verticalVelocity), privacy: .public) capturedCell=\(String(describing: captured.cell), privacy: .public) freshCell=\(String(describing: targetCell), privacy: .public) cellDeltaY=\(Double(cellDeltaY), privacy: .public) recomputed=\(fresh != nil, privacy: .public)")
 
         // Bake the live transform into the card's frame (flicker-free) so we can animate `frame` to the
         // cell — the cell has a different aspect ratio than the page, which a single transform can't match.
@@ -261,13 +293,17 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
                        usingSpringWithDamping: Constants.commitSpringDamping,
                        initialSpringVelocity: initialSpringVelocity,
                        options: [.curveEaseOut, .allowUserInteraction]) {
-            preview.imageContainer.frame = preview.destinationCellFrame
+            preview.imageContainer.frame = targetCell
             preview.imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius
             preview.imageContainer.layer.borderWidth = TabViewCell.Constants.selectedBorderWidth
-            preview.imageView.frame = preview.destinationImageViewFrame
+            preview.imageView.frame = targetImageView
             preview.imageView.alpha = 1
-            preview.homeScreenSnapshot?.frame = CGRect(origin: .zero, size: preview.destinationCellFrame.size)
+            preview.homeScreenSnapshot?.frame = CGRect(origin: .zero, size: targetCell.size)
             preview.homeScreenSnapshot?.alpha = 0
+            // Fix 3: snap the header to the cell's header strip (full alpha) so when the snapshot is removed
+            // it coincides exactly with the real cell's header — no empty space, no jump.
+            preview.cardHeader.frame = targetHeader
+            preview.cardHeader.alpha = 1
             toView.alpha = 1
             self.blurAnimator?.fractionComplete = 0 // sharpen: land in a crisp overview
         } completion: { _ in
@@ -299,6 +335,9 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
             preview.homeScreenSnapshot?.frame = CGRect(origin: .zero, size: preview.initialContainerFrame.size)
             preview.homeScreenSnapshot?.alpha = 1
             preview.imageView.alpha = preview.homeScreenSnapshot != nil ? 0 : 1
+            // Header fades back out and returns to the (full-screen) card's top edge as the page restores.
+            preview.cardHeader.frame = self.headerFrame(forCardRect: preview.initialContainerFrame)
+            preview.cardHeader.alpha = 0
             toView.alpha = 0
             self.blurAnimator?.fractionComplete = 0
         } completion: { _ in
@@ -317,20 +356,38 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
         return Constants.maxCommitDuration - (Constants.maxCommitDuration - Constants.minCommitDuration) * speedup
     }
 
-    /// Reconstructs the card's exact on-screen rect from the last drag transform (bottom-centre-anchor
-    /// scale + finger translate over `initialContainerFrame`), clears the transform and sets `frame` to
-    /// that rect, and re-pins the image/snapshot to fill the baked card. Visually a no-op (no flicker),
-    /// but it lets the commit/cancel animation drive `frame` to a target with a different aspect ratio.
-    private func bakeCurrentTransformIntoFrame(_ preview: SwipeUpInteractivePreview) {
+    /// The card's exact on-screen rect for the current drag, reconstructed from the last translation+scale
+    /// with the bottom-centre anchor (scale about bottom-centre + finger translate over
+    /// `initialContainerFrame`). Used both to bake the transform into `frame` and to position the header.
+    private func currentCardRect(_ preview: SwipeUpInteractivePreview) -> CGRect {
         let initial = preview.initialContainerFrame
         let size = CGSize(width: initial.width * lastScale, height: initial.height * lastScale)
         // Bottom-centre rides the finger: it sits at the card's original bottom-centre plus the finger's
         // translation. The shrink pulls the top edge down toward it (origin.y = bottomCentre.y - height).
         let bottomCenter = CGPoint(x: initial.midX + lastTranslation.x, y: initial.maxY + lastTranslation.y)
-        let visualRect = CGRect(x: bottomCenter.x - size.width / 2,
-                                y: bottomCenter.y - size.height,
-                                width: size.width,
-                                height: size.height)
+        return CGRect(x: bottomCenter.x - size.width / 2,
+                      y: bottomCenter.y - size.height,
+                      width: size.width,
+                      height: size.height)
+    }
+
+    /// Header rect for a given card rect: pinned to the card's top edge, full card width, `cellHeaderHeight`
+    /// tall. During the drag the header rides the card's top; on commit `cardRect == destinationCellFrame`
+    /// for web (so this equals the cell's top strip) and the controller snaps directly to
+    /// `destinationHeaderFrame` for both surfaces to guarantee a pixel-match.
+    private func headerFrame(forCardRect cardRect: CGRect) -> CGRect {
+        return CGRect(x: cardRect.minX,
+                      y: cardRect.minY,
+                      width: cardRect.width,
+                      height: TabViewCell.Constants.cellHeaderHeight)
+    }
+
+    /// Reconstructs the card's exact on-screen rect from the last drag transform, clears the transform and
+    /// sets `frame` to that rect, and re-pins the image/snapshot to fill the baked card. Visually a no-op
+    /// (no flicker), but it lets the commit/cancel animation drive `frame` to a target with a different
+    /// aspect ratio.
+    private func bakeCurrentTransformIntoFrame(_ preview: SwipeUpInteractivePreview) {
+        let visualRect = currentCardRect(preview)
         preview.imageContainer.transform = .identity
         preview.imageContainer.frame = visualRect
         let bounds = CGRect(origin: .zero, size: visualRect.size)
@@ -341,6 +398,7 @@ final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControlle
     private func tearDown() {
         preview?.solidBackground.removeFromSuperview()
         preview?.imageContainer.removeFromSuperview()
+        preview?.cardHeader.removeFromSuperview()
         blurView?.removeFromSuperview()
         blurAnimator?.stopAnimation(true) // avoid a leaked running property animator
         blurAnimator = nil

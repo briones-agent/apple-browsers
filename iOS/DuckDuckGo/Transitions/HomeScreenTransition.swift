@@ -65,7 +65,17 @@ class HomeScreenTransition: TabSwitcherTransition {
         return CGRect(origin: .zero, size: cellBounds)
             .offsetBy(dx: 0, dy: -TabViewCell.Constants.previewPadding)
     }
-    
+
+    /// Absolute (tab-switcher-view space) frame of the card's header in the settled cell. For the NTP,
+    /// `tabSwitcherCellFrame` already returns the *preview-region* frame (header excluded), so the header
+    /// sits in the `cellHeaderHeight` strip directly ABOVE it.
+    fileprivate func headerFrame(forCellFrame cellFrame: CGRect) -> CGRect {
+        return CGRect(x: cellFrame.minX,
+                      y: cellFrame.minY - TabViewCell.Constants.cellHeaderHeight,
+                      width: cellFrame.width,
+                      height: TabViewCell.Constants.cellHeaderHeight)
+    }
+
 }
 
 class FromHomeScreenTransition: HomeScreenTransition {
@@ -234,13 +244,40 @@ extension FromHomeScreenTransition: SwipeUpInteractiveTransition {
         let cellFrame = tabSwitcherCellFrame(for: layoutAttr)
         let destinationImageViewFrame = previewFrame(for: cellFrame.size)
 
+        // Card header (favicon + title + X). Built here (populated from the NTP tab — Dax logo + title) but
+        // z-ordered/added by the controller as a sibling above `imageContainer`, so it can be animated into
+        // the strip ABOVE the NTP preview-region cell frame. Starts at alpha 0 (controller fades it in).
+        let cardHeader = makeSwipeUpCardHeader(for: tab)
+        cardHeader.alpha = 0
+
         return SwipeUpInteractivePreview(solidBackground: solidBackground,
                                          imageContainer: imageContainer,
                                          imageView: imageView,
                                          homeScreenSnapshot: homeScreenSnapshot,
+                                         cardHeader: cardHeader,
                                          initialContainerFrame: initialFrame,
                                          destinationCellFrame: cellFrame,
-                                         destinationImageViewFrame: destinationImageViewFrame)
+                                         destinationImageViewFrame: destinationImageViewFrame,
+                                         destinationHeaderFrame: headerFrame(forCellFrame: cellFrame))
+    }
+
+    /// Recompute the destination cell / preview / header frames against the CURRENT layout (after the
+    /// tracker banner may have been inserted, pushing cells down). `layoutIfNeeded()` flushes a pending
+    /// banner insertion before we re-query the layout attributes.
+    func currentDestinationFrames() -> SwipeUpDestinationFrames? {
+        guard let tab = mainViewController.tabManager.currentTabsModel.currentTab,
+              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab) else {
+            return nil
+        }
+        let collectionView = tabSwitcherViewController.collectionView
+        collectionView.layoutIfNeeded()
+        guard let layoutAttr = collectionView.layoutAttributesForItem(at: IndexPath(row: rowIndex, section: 0)) else {
+            return nil
+        }
+        let cellFrame = tabSwitcherCellFrame(for: layoutAttr)
+        return SwipeUpDestinationFrames(cell: cellFrame,
+                                        imageView: previewFrame(for: cellFrame.size),
+                                        header: headerFrame(forCellFrame: cellFrame))
     }
 }
 

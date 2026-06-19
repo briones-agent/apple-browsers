@@ -27,6 +27,16 @@ class WebViewTransition: TabSwitcherTransition {
         return self.tabSwitcherViewController.collectionView.convert(attributes.frame,
                                                                      to: self.tabSwitcherViewController.view)
     }
+
+    /// Absolute (tab-switcher-view space) frame of the card's header in the settled cell: the top strip of
+    /// the cell, full width, `cellHeaderHeight` tall — the area `previewFrame` reserves above the preview
+    /// image. For web the container snaps to the full `cellFrame`, so the header is its top strip.
+    fileprivate func headerFrame(forCellFrame cellFrame: CGRect) -> CGRect {
+        return CGRect(x: cellFrame.minX,
+                      y: cellFrame.minY,
+                      width: cellFrame.width,
+                      height: TabViewCell.Constants.cellHeaderHeight)
+    }
     
     fileprivate func previewFrame(for cellBounds: CGSize, preview: UIImage) -> CGRect {
         guard tabSwitcherSettings.isGridViewEnabled else {
@@ -191,13 +201,41 @@ extension FromWebViewTransition: SwipeUpInteractiveTransition {
         let cellFrame = tabSwitcherCellFrame(for: layoutAttr)
         let destinationImageViewFrame = previewFrame(for: cellFrame.size, preview: preview)
 
+        // Card header (favicon + title + X). Built here (populated from `tab`) but z-ordered/added by the
+        // controller as a sibling above `imageContainer`, so it can be animated independently to the cell's
+        // header strip. Starts at alpha 0 (the controller fades it in with progress).
+        let cardHeader = makeSwipeUpCardHeader(for: tab)
+        cardHeader.alpha = 0
+
         return SwipeUpInteractivePreview(solidBackground: solidBackground,
                                          imageContainer: imageContainer,
                                          imageView: imageView,
                                          homeScreenSnapshot: nil,
+                                         cardHeader: cardHeader,
                                          initialContainerFrame: initialFrame,
                                          destinationCellFrame: cellFrame,
-                                         destinationImageViewFrame: destinationImageViewFrame)
+                                         destinationImageViewFrame: destinationImageViewFrame,
+                                         destinationHeaderFrame: headerFrame(forCellFrame: cellFrame))
+    }
+
+    /// Recompute the destination cell / preview / header frames against the CURRENT layout (after the
+    /// tracker banner may have been inserted, pushing cells down). `layoutIfNeeded()` flushes a pending
+    /// banner insertion before we re-query the layout attributes.
+    func currentDestinationFrames() -> SwipeUpDestinationFrames? {
+        guard let tab = mainViewController.tabManager.currentTabsModel.currentTab,
+              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab),
+              let preview = tabSwitcherViewController.previewsSource.preview(for: tab) else {
+            return nil
+        }
+        let collectionView = tabSwitcherViewController.collectionView
+        collectionView.layoutIfNeeded()
+        guard let layoutAttr = collectionView.layoutAttributesForItem(at: IndexPath(row: rowIndex, section: 0)) else {
+            return nil
+        }
+        let cellFrame = tabSwitcherCellFrame(for: layoutAttr)
+        return SwipeUpDestinationFrames(cell: cellFrame,
+                                        imageView: previewFrame(for: cellFrame.size, preview: preview),
+                                        header: headerFrame(forCellFrame: cellFrame))
     }
 }
 
