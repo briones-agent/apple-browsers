@@ -3721,6 +3721,12 @@ Take back control of your personal information with the browser designed for dat
 /* Settings screen cell text for addess bar position */
 "settings.appearance.address.bar" = "Address Bar Position";
 
+/* Settings screen toggle (iPad only) that hides the tab bar and address bar while scrolling */
+"settings.appearance.hide.tab.bar.while.scrolling" = "Hide Tab Bar While Scrolling";
+
+/* Footer (iPad only) shown below the Hide Tab Bar While Scrolling toggle, explaining where the behavior applies */
+"settings.appearance.hide.tab.bar.while.scrolling.footer" = "Available on most websites. Duck.ai, maps, and games may keep the tab bar visible.";
+
 /* Settings screen cell for opening links in associated apps */
 "settings.associated.apps" = "Open Links in Associated Apps";
 
