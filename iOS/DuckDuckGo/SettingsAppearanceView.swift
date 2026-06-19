@@ -90,6 +90,8 @@ struct SettingsAppearanceView: View {
             Section {
                 addressBarPositionSetting()
 
+                keepAddressBarVisibleSetting()
+
                 showFullSiteAddressSetting()
 
                 showReloadButtonSetting()
@@ -210,6 +212,15 @@ struct SettingsAppearanceView: View {
             SettingsPickerCellView(label: UserText.settingsAddressBarPosition,
                                    options: AddressBarPosition.allCases,
                                    selectedOption: viewModel.addressBarPositionBinding)
+        }
+    }
+
+    @ViewBuilder
+    func keepAddressBarVisibleSetting() -> some View {
+        // iPad-only: prevents the address bar and toolbar from hiding when scrolling.
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            SettingsCellView(label: UserText.settingsKeepAddressBarVisible,
+                             accessory: .toggle(isOn: viewModel.keepAddressBarVisibleOnIPadBinding))
         }
     }
 

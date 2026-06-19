@@ -1227,6 +1227,14 @@ class MainViewController: UIViewController {
                                                selector: #selector(refreshViewsBasedOnDuckPlayerPresentation),
                                                name: DuckPlayerNativeUIPresenter.Notifications.duckPlayerPillUpdated,
                                                object: nil)
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(onKeepAddressBarVisibleOnIPadChanged),
+                                               name: AppUserDefaults.Notifications.keepAddressBarVisibleOnIPadChanged,
+                                               object: nil)
+    }
+
+    @objc private func onKeepAddressBarVisibleOnIPadChanged() {
+        revealChromeIfPinned()
     }
 
     private func registerForAppBackgroundNotification() {
@@ -3729,7 +3737,21 @@ extension MainViewController: BrowserChromeDelegate {
     var canHideBars: Bool {
         // Keep bars shown on the error page: the webView is hidden, so scroll can't self-heal a stuck-hidden bar.
         if currentTab?.isError == true { return false }
-        return !daxDialogsManager.shouldShowFireButtonPulse
+        return !shouldPinChrome && !daxDialogsManager.shouldShowFireButtonPulse
+    }
+
+    /// When `true`, the omni bar and toolbar are pinned (never hidden on scroll).
+    /// iPad-only, and only in regular width so narrow Split View / Slide Over keeps phone-like behavior.
+    private var shouldPinChrome: Bool {
+        isPad
+            && traitCollection.horizontalSizeClass == .regular
+            && appSettings.keepAddressBarVisibleOnIPad
+    }
+
+    /// Reveals the chrome immediately if it should now be pinned but is currently hidden.
+    private func revealChromeIfPinned() {
+        guard shouldPinChrome else { return }
+        chromeManager?.reset(animated: true)
     }
 
     var isToolbarHidden: Bool {
@@ -6397,6 +6419,10 @@ extension MainViewController {
             updateStatusBarBackgroundColor()
         }
         updateFindInPage()
+
+        // Size class may have flipped (e.g. iPad Split View -> full screen) making the chrome pinnable.
+        // Reveal immediately so the bars don't stay stuck hidden until the next upward scroll.
+        revealChromeIfPinned()
     }
 
     func refreshStatusBarBackgroundAfterAIChrome() {

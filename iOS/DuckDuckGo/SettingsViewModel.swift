@@ -331,6 +331,18 @@ final class SettingsViewModel: ObservableObject {
         )
     }
 
+    var keepAddressBarVisibleOnIPadBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: {
+                self.state.addressBar.keepVisibleOnIPad
+            },
+            set: {
+                self.appSettings.keepAddressBarVisibleOnIPad = $0
+                self.state.addressBar.keepVisibleOnIPad = $0
+            }
+        )
+    }
+
     var refreshButtonPositionBinding: Binding<RefreshButtonPosition> {
         Binding<RefreshButtonPosition>(
             get: {
@@ -1076,7 +1088,9 @@ extension SettingsViewModel {
             appThemeStyle: appSettings.currentThemeStyle,
             appIcon: AppIconManager.shared.appIcon,
             textZoom: SettingsState.TextZoom(level: appSettings.defaultTextZoomLevel),
-            addressBar: SettingsState.AddressBar(enabled: !isPad, position: appSettings.currentAddressBarPosition),
+            addressBar: SettingsState.AddressBar(enabled: !isPad,
+                                                 position: appSettings.currentAddressBarPosition,
+                                                 keepVisibleOnIPad: appSettings.keepAddressBarVisibleOnIPad),
             showsFullURL: appSettings.showFullSiteAddress,
             showTrackersBlockedAnimation: appSettings.showTrackersBlockedAnimation,
             isExperimentalAIChatEnabled: experimentalAIChatManager.isExperimentalAIChatSettingsEnabled,

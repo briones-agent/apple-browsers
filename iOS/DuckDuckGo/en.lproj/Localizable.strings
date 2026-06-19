@@ -3622,6 +3622,9 @@ Take back control of your personal information with the browser designed for dat
 /* Settings screen cell text for addess bar position */
 "settings.appearance.address.bar" = "Address Bar Position";
 
+/* Settings screen cell text for keeping the address bar and toolbar visible while scrolling on iPad */
+"settings.appearance.keep.address.bar.visible" = "Keep Address Bar Visible";
+
 /* Settings screen cell for opening links in associated apps */
 "settings.associated.apps" = "Open Links in Associated Apps";
 
