@@ -336,6 +336,105 @@ progresses.
   button-tap present, which is fine/desirable since that path already lands on a bordered current-tab
   cell; there is no interactive-only branching.
 
+### D. Free-form finger-tracking transition (engine rework)
+
+**What changed and why.** The first cut (§2) drove the *existing* `From*` keyframe animation with a
+`UIPercentDrivenInteractiveTransition` — it scrubbed a **fixed keyframe path**, so the dragged page
+preview could only interpolate along the pre-baked full-screen→cell trajectory. That cannot let the
+preview *follow the finger freely*. Per the product owner, the interaction model is now: the dragged
+page preview moves in **2D** with the finger, **scales down** as you drag up, can be dragged around
+(not locked to a path), and **snaps** to its destination cell on commit; the overview behind it
+**blurs** more the higher you drag and **sharpens** on release. A percent-driven interactor only scrubs
+a predetermined animation, so the engine moves to a **custom `UIViewControllerInteractiveTransitioning`**
+driven manually. The tab switcher stays a real `present(...)`ed VC (committing lands in the live
+overview); only the interaction controller is swapped — the button-tap and dismissal paths are
+unchanged.
+
+This **supersedes the percent-driven mechanism in §2** (the `completeTransition(!…transitionWasCancelled)`
+edits there remain correct/harmless for the non-interactive button tap, which still runs the `From*`
+`animateTransition` keyframes). Tweaks **A** (bottom-bar fade), **B** (NTP Dax-logo squeeze fix) and
+**C** (border + corner ramp) are all preserved — re-expressed as manual per-frame drives instead of
+keyframes.
+
+**New file — `iOS/DuckDuckGo/Transitions/SwipeUpToTabSwitcherInteractiveTransition.swift`:**
+`final class SwipeUpToTabSwitcherInteractiveTransition: NSObject, UIViewControllerInteractiveTransitioning`.
+- `startInteractiveTransition(_:)`: installs the "to" tab-switcher view full-screen behind everything
+  (alpha 0) and calls `prepareForPresentation()`; adds a `UIVisualEffectView(effect: nil)` over it for
+  the blur; builds the dragged preview card (`solidBackground` + `imageContainer` + `imageView`) at the
+  full-content initial frame and pre-scrolls the collection to the current tab — all via the `From*`
+  animator's shared setup (see below), so geometry is **not duplicated**. Does **not** auto-animate.
+- `update(translation:verticalProgress:)` (called each `.changed`): `imageContainer.transform =
+  T(translation) · T(0,+h/2) · S(s) · T(0,−h/2)` — i.e. scale by `s` about the card's **bottom-centre**
+  (offset `+h/2` from centre, `h = initialContainerFrame.height`) then translate by the finger — where
+  `s` maps 1.0 (progress 0) → `minScale` (~0.5, tunable) at full vertical progress. The **bottom edge of
+  the card rides the finger** (stays at `initialContainerFrame.maxY` and tracks the finger in x/y, top
+  edge comes down as it shrinks) — like lifting the page by its bottom edge (the swipe starts on the
+  bottom bar) — instead of the old centre anchor, where only the centre followed the finger so the card
+  drifted up off the finger as it shrank. At `(translation == .zero, scale == 1)` the transform is
+  identity → no start jump. Also ramps `cornerRadius 0→cellCornerRadius` and
+  `borderWidth 0→selectedBorderWidth` with progress; cross-fades the NTP snapshot out to the crisp
+  `.center` logo (the §B squeeze fix, re-expressed per-frame); scrubs the **inverted** blur (below);
+  calls `context.updateInteractiveTransition(verticalProgress)`.
+- **Inverted blur (Safari-style).** Blur is **heaviest at/near the start** of the drag and **decreases as
+  the finger rises**, so you see more of the overview the higher you go (where you care about where
+  you'll land). It is *not* the saturating card-shrink `verticalProgress`: `currentBlurFraction()` derives
+  a **separate blur progress from `lastTranslation.y` against a near-full-height reference**
+  (`blurView.height * blurProgressReferenceFraction`, bigger than the visual half-height reference) so it
+  keeps easing across the **upper half** of the screen rather than maxing at mid-screen. A `smoothstep`
+  between `blurEaseStart` and `blurEaseEnd` (of blur progress) maps `maxBlur → minBlurDuringDrag`: stays
+  heavy early (grid not really visible ~1/3 up), noticeably less but still very blurry around halfway
+  (grid starting to show), progressively clearer higher. It **never fully clears mid-drag** (floored at
+  `minBlurDuringDrag`); **only commit sharpens to 0** (`finish()`'s `fractionComplete → 0`). The animator
+  starts at `fractionComplete = maxBlur`.
+- `finish(verticalVelocity:)` (commit): bakes the live transform into the card's `frame` (flicker-free,
+  reconstructed from the last translation+scale with the **same bottom-centre anchoring**) — necessary
+  because the destination **cell has a different aspect ratio** than the page, which a single transform
+  can't match — then spring-animates `frame → destinationCellFrame`, `cornerRadius → cellCornerRadius`,
+  `borderWidth → selectedBorderWidth`, `imageView → destinationImageViewFrame`, **sharpens** the blur
+  (`fractionComplete → 0`), fades the switcher fully in; on completion tears down overlays, stops the
+  blur animator (no leak), `finishInteractiveTransition()` + `completeTransition(true)`. Duration is
+  **velocity-scaled** for a flick, and the commit snap uses a **lower spring damping**
+  (`commitSpringDamping ~0.74`, vs the calmer `springDamping 0.86` for cancel) plus a small flick-derived
+  `initialSpringVelocity` (capped) so the card **settles with a tasteful little bounce**.
+- `cancel()`: bakes (bottom-centre anchored), then animates the card back to the full-content frame with
+  the calm `springDamping` (no bounce on the way back), `corner/border → 0`, blur → 0, switcher
+  alpha → 0; on completion tears down, `cancelInteractiveTransition()` + `completeTransition(false)`.
+- **Blur technique:** `UIViewPropertyAnimator(duration: 1, curve: .linear)` toggling
+  `blurView.effect = UIBlurEffect(style: .systemThinMaterial)`, `pausesOnCompletion = true`, scrubbed via
+  `fractionComplete` (now driven by the inverted `currentBlurFraction()`, max at start);
+  `stopAnimation(true)` on teardown. Blur style is a tuning knob (`.systemThinMaterial` vs
+  `.regular`/`.systemMaterial` over the light-gray overview).
+
+**Shared geometry (no duplication).** `FromWebViewTransition` and `FromHomeScreenTransition` adopt a new
+`SwipeUpInteractiveTransition` protocol with `prepareInteractivePreview(in:finalFrame:)`, which reuses
+their existing `tabSwitcherCellFrame` / `previewFrame` / `prepareSnapshots` / logo / border-colour setup
+and returns a `SwipeUpInteractivePreview` (the live subviews + `initialContainerFrame`,
+`destinationCellFrame`, `destinationImageViewFrame`). The snap therefore lands **pixel-identical** to the
+button-tap end state. (`prepareSnapshots` lost its unused `transitionContext` parameter as part of this.)
+
+**Delegate wiring (`TabSwitcherTransition.swift`).** `TabSwitcherTransitionDelegate.activeInteractor`
+(typed `UIPercentDrivenInteractiveTransition`) becomes `activeInteractiveTransition` typed as the broader
+`UIViewControllerInteractiveTransitioning`, returned from `interactionControllerForPresentation(using:)`.
+`animationController(forPresented:)` still returns a `From*` animator (UIKit requires one; its
+`animateTransition` is bypassed while the interaction controller drives, but it still provides
+`transitionDuration` and runs the non-interactive button tap). Button taps leave it nil → unchanged.
+
+**Gesture handler (`MainViewController+SwipeUpToTabSwitcher.swift`).** `tabSwitcherInteractor` is retyped
+to the custom controller. `.began` creates it and hands it to `beginInteractiveTabSwitcherPresentation`.
+`.changed` passes `gesture.translation(in:)` and a **visual** progress to `update(...)`: the commit
+threshold + bar-fade keep the full-content-height reference (unchanged trigger), while the card
+shrink/blur use a **half-height reference** (`visualProgressReferenceFraction = 0.5`) so visuals saturate
+around mid-screen (the product owner's "~100% ≈ mid-screen" model; tunable). `.ended` keeps the existing
+`shouldCommit(progress:verticalVelocity:)` decision + open pixels on commit + bottom-bar restore, calling
+`finish(verticalVelocity:)` / `cancel()`. The commit-path bar restore + interactor release still run in
+the `beginInteractiveTabSwitcherPresentation` transition-coordinator completion (verified).
+
+**Tuning knobs (need on-device feel):** `minScale`, `visualProgressReferenceFraction`, the bottom-centre
+anchor feel; the inverted-blur shape — `maxBlur`, `minBlurDuringDrag`, `blurEaseStart`/`blurEaseEnd`,
+`blurProgressReferenceFraction`, and the blur style/intensity; the commit bounce — `commitSpringDamping`,
+`commitInitialSpringVelocityFactor`/`maxCommitInitialSpringVelocity`; and the flick-scaled snap durations
+(`snapDuration` / `min`/`maxCommitDuration` / `springDamping` for the calm cancel return).
+
 ## Verification / testing
 
 **Manual (the primary verification — feel is the point of the project).** Build & run on an iPhone sim

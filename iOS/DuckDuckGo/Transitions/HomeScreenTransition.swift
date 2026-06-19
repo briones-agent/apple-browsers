@@ -32,7 +32,6 @@ class HomeScreenTransition: TabSwitcherTransition {
     fileprivate let tabSwitcherSettings: TabSwitcherSettings = DefaultTabSwitcherSettings()
     
     fileprivate func prepareSnapshots(with transitionSource: HomeScreenTransitionSource,
-                                      transitionContext: UIViewControllerContextTransitioning,
                                       addressBarPosition: AddressBarPosition,
                                       addressBarHeight: CGFloat) {
 
@@ -107,7 +106,7 @@ class FromHomeScreenTransition: HomeScreenTransition {
         imageContainer.frame = solidBackground.frame
         imageContainer.backgroundColor = theme.backgroundColor
         
-        prepareSnapshots(with: homeScreen, transitionContext: transitionContext, addressBarPosition: mainViewController.appSettings.currentAddressBarPosition, addressBarHeight: mainViewController.omniBar.barView.expectedHeight)
+        prepareSnapshots(with: homeScreen, addressBarPosition: mainViewController.appSettings.currentAddressBarPosition, addressBarHeight: mainViewController.omniBar.barView.expectedHeight)
 
         // The home-screen snapshot is resized from the full-screen aspect ratio down to the cell's
         // aspect ratio. A plain resize stretches its contents (the circular Dax logo) vertically. On
@@ -177,6 +176,74 @@ class FromHomeScreenTransition: HomeScreenTransition {
     }
 }
 
+// MARK: - Free-form interactive swipe-up (New Tab Page)
+
+extension FromHomeScreenTransition: SwipeUpInteractiveTransition {
+
+    /// NTP counterpart of the web setup. Reuses `prepareSnapshots` (with the aspect-fill + clip squeeze
+    /// fix) and the centered Dax logo, leaving the card at its full-content initial frame. The
+    /// interaction controller cross-fades the snapshot out to the `.center` logo as the drag rises, so
+    /// the circular logo never squeezes; the snap lands on the same `tabSwitcherCellFrame` end state.
+    func prepareInteractivePreview(finalFrame: CGRect) -> SwipeUpInteractivePreview? {
+        imageContainer.clipsToBounds = true
+        imageContainer.addSubview(imageView)
+
+        guard let homeScreen = mainViewController.newTabPageViewController,
+              let tab = mainViewController.tabManager.currentTabsModel.currentTab,
+              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab),
+              let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: IndexPath(row: rowIndex, section: 0)) else {
+            Logger.swipeUpToTabSwitcher.debug("interactive(ntp): missing homeScreen/tab/rowIndex/layoutAttr")
+            return nil
+        }
+
+        // Pre-scroll so the destination cell is laid out where the card will snap to.
+        tabSwitcherViewController.collectionView.scrollToItem(at: IndexPath(row: rowIndex, section: 0),
+                                                              at: .centeredVertically, animated: false)
+
+        let theme = ThemeManager.shared.currentTheme
+        let initialFrame = adjustFrame(homeScreen.view.convert(homeScreen.rootContainerView.frame, to: nil),
+                                       forAddressBarPosition: mainViewController.appSettings.currentAddressBarPosition,
+                                       byHeight: -mainViewController.omniBar.barView.expectedHeight)
+
+        solidBackground.frame = initialFrame
+        solidBackground.backgroundColor = theme.backgroundColor
+
+        imageContainer.frame = initialFrame
+        imageContainer.backgroundColor = theme.backgroundColor
+
+        prepareSnapshots(with: homeScreen,
+                         addressBarPosition: mainViewController.appSettings.currentAddressBarPosition,
+                         addressBarHeight: mainViewController.omniBar.barView.expectedHeight)
+
+        // Squeeze fix: keep the snapshot's contents proportional (crop, don't stretch) as the container
+        // morphs toward the cell aspect ratio. Mirrors the keyframe path's fix.
+        homeScreenSnapshot?.contentMode = .scaleAspectFill
+        homeScreenSnapshot?.clipsToBounds = true
+
+        imageView.alpha = 0
+        imageView.frame = imageContainer.bounds
+        imageView.contentMode = .center
+        if tabSwitcherSettings.isGridViewEnabled {
+            imageView.image = TabViewCell.logoImage(for: tab)
+        }
+
+        imageContainer.layer.borderColor = UIColor(designSystemColor: .decorationTertiary).cgColor
+        imageContainer.layer.borderWidth = 0
+        imageContainer.layer.cornerRadius = 0
+
+        let cellFrame = tabSwitcherCellFrame(for: layoutAttr)
+        let destinationImageViewFrame = previewFrame(for: cellFrame.size)
+
+        return SwipeUpInteractivePreview(solidBackground: solidBackground,
+                                         imageContainer: imageContainer,
+                                         imageView: imageView,
+                                         homeScreenSnapshot: homeScreenSnapshot,
+                                         initialContainerFrame: initialFrame,
+                                         destinationCellFrame: cellFrame,
+                                         destinationImageViewFrame: destinationImageViewFrame)
+    }
+}
+
 class ToHomeScreenTransition: HomeScreenTransition {
 
     override func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -211,7 +278,7 @@ class ToHomeScreenTransition: HomeScreenTransition {
         imageContainer.backgroundColor = theme.tabSwitcherCellBackgroundColor
         imageContainer.layer.cornerRadius = TabViewCell.Constants.cellCornerRadius
         
-        prepareSnapshots(with: homeScreen, transitionContext: transitionContext, addressBarPosition: mainViewController.appSettings.currentAddressBarPosition, addressBarHeight: mainViewController.omniBar.barView.expectedHeight)
+        prepareSnapshots(with: homeScreen, addressBarPosition: mainViewController.appSettings.currentAddressBarPosition, addressBarHeight: mainViewController.omniBar.barView.expectedHeight)
         homeScreenSnapshot?.alpha = 0
         settingsButtonSnapshot?.alpha = 0
         

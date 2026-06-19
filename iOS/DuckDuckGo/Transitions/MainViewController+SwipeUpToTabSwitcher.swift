@@ -50,6 +50,13 @@ enum SwipeUpToTabSwitcher {
     /// Duration of the bottom-bar fade in/out during the drag.
     static let barFadeDuration: TimeInterval = 0.2
 
+    /// Fraction of the content height that maps to full *visual* progress (card fully shrunk + overview
+    /// fully blurred). The product owner thinks of ~100% ≈ finger near mid-screen, so the card reaches
+    /// its minimum size / max blur around half the content height rather than the full height. This is
+    /// independent of `commitProgress` (which still uses the full-height reference below) — visuals
+    /// saturate well before the commit threshold needs to be hit. Tune for feel on-device.
+    static let visualProgressReferenceFraction: CGFloat = 0.5
+
     /// Maps an upward drag (negative `translationY`) to 0...1 transition progress.
     static func progress(translationY: CGFloat, referenceDistance: CGFloat) -> CGFloat {
         guard referenceDistance > 0 else { return 0 }
@@ -110,9 +117,15 @@ extension MainViewController {
 
     @objc func handleSwipeUpToTabSwitcherPan(_ gesture: SwipeUpToTabSwitcherPanGestureRecognizer) {
         let translation = gesture.translation(in: gesture.view)
+        // Full-height reference drives the *commit* threshold + bar-fade hysteresis (unchanged trigger).
         let referenceDistance = max(viewCoordinator.contentContainer.bounds.height, 1)
         let progress = SwipeUpToTabSwitcher.progress(translationY: translation.y,
                                                      referenceDistance: referenceDistance)
+        // Half-height reference drives the *visual* progress (card shrink + overview blur): the card
+        // reaches its minimum size / max blur around mid-screen.
+        let visualReference = max(referenceDistance * SwipeUpToTabSwitcher.visualProgressReferenceFraction, 1)
+        let visualProgress = SwipeUpToTabSwitcher.progress(translationY: translation.y,
+                                                           referenceDistance: visualReference)
 
         switch gesture.state {
         case .began:
@@ -120,8 +133,7 @@ extension MainViewController {
             // Ensure the web-view transition has a snapshot to animate even on a never-previewed tab.
             captureCurrentTabPreviewForInteractiveTransitionIfNeeded()
 
-            let interactor = UIPercentDrivenInteractiveTransition()
-            interactor.completionCurve = .easeOut
+            let interactor = SwipeUpToTabSwitcherInteractiveTransition()
             tabSwitcherInteractor = interactor
 
             // Mirror the button-tap path's dismissal of any transient omnibar/suggestion state.
@@ -135,12 +147,13 @@ extension MainViewController {
             }
 
         case .changed:
-            Logger.swipeUpToTabSwitcher.debug("pan .changed progress=\(Double(progress), privacy: .public) hasInteractor=\(self.tabSwitcherInteractor != nil, privacy: .public)")
-            // Only drive the transition + bar fade while an interactor is live. If the present failed
-            // at `.began` (interactor nil), doing nothing here keeps the bottom bar from being faded
-            // out with no settled transition to restore it.
+            Logger.swipeUpToTabSwitcher.debug("pan .changed progress=\(Double(progress), privacy: .public) visual=\(Double(visualProgress), privacy: .public) hasInteractor=\(self.tabSwitcherInteractor != nil, privacy: .public)")
+            // Only drive the transition + bar fade while a controller is live. If the present failed at
+            // `.began` (interactor nil), doing nothing here keeps the bottom bar from being faded out
+            // with no settled transition to restore it.
             guard let interactor = tabSwitcherInteractor else { return }
-            interactor.update(progress)
+            // Card follows the finger in 2D (full translation) and shrinks/blurs with visual progress.
+            interactor.update(translation: translation, verticalProgress: visualProgress)
             updateBottomBarVisibilityForSwipeUp(progress: progress)
 
         case .ended:
@@ -149,16 +162,17 @@ extension MainViewController {
                 return
             }
             let velocity = gesture.velocity(in: gesture.view)
+            // Commit decision unchanged: vertical drag past threshold OR upward flick (independent of
+            // horizontal position).
             let commit = SwipeUpToTabSwitcher.shouldCommit(progress: progress, verticalVelocity: velocity.y)
             Logger.swipeUpToTabSwitcher.debug("pan .ended progress=\(Double(progress), privacy: .public) v.y=\(Double(velocity.y), privacy: .public) commit=\(commit, privacy: .public)")
             if commit {
-                // Finish a touch faster after a flick so the tail feels responsive.
-                interactor.completionSpeed = velocity.y < -SwipeUpToTabSwitcher.flickVelocity ? 1.2 : 1.0
                 fireTabSwitcherOpenedPixels()
                 // Leave the bars hidden through the finish — the switcher takes over the screen. They
                 // are restored (and the flag reset) by the presentation's transition-coordinator
-                // completion in `beginInteractiveTabSwitcherPresentation`.
-                interactor.finish()
+                // completion in `beginInteractiveTabSwitcherPresentation`. The card snaps to its cell;
+                // a faster snap after a flick is handled inside the controller via `verticalVelocity`.
+                interactor.finish(verticalVelocity: velocity.y)
             } else {
                 // Snapping back to the page: fade the chrome back in so it returns with the content.
                 showBottomBarForSwipeUp()

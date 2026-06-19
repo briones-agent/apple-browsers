@@ -1097,6 +1097,7 @@
 		986CD5542DE913EE00AFA98A /* MockFavoritesListInteracting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986CD5502DE913EC00AFA98A /* MockFavoritesListInteracting.swift */; };
 		986DA94A24884B18004A7E39 /* WebViewTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986DA94924884B18004A7E39 /* WebViewTransition.swift */; };
 		AA20000000000000000000A1 /* MainViewController+SwipeUpToTabSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000A1 /* MainViewController+SwipeUpToTabSwitcher.swift */; };
+		3B03EF5FC1B287C7158CFB88 /* SwipeUpToTabSwitcherInteractiveTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91297E24D7707C813F7AE489 /* SwipeUpToTabSwitcherInteractiveTransition.swift */; };
 		987130C4294AAB9F00AB05E0 /* FavoriteListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987130BE294AAB9E00AB05E0 /* FavoriteListViewModelTests.swift */; };
 		987130C5294AAB9F00AB05E0 /* BookmarkEditorViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987130BF294AAB9E00AB05E0 /* BookmarkEditorViewModelTests.swift */; };
 		987130C6294AAB9F00AB05E0 /* BookmarkListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987130C0294AAB9E00AB05E0 /* BookmarkListViewModelTests.swift */; };
@@ -3989,6 +3990,7 @@
 		986CD5502DE913EC00AFA98A /* MockFavoritesListInteracting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFavoritesListInteracting.swift; sourceTree = "<group>"; };
 		986DA94924884B18004A7E39 /* WebViewTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewTransition.swift; sourceTree = "<group>"; };
 		AA10000000000000000000A1 /* MainViewController+SwipeUpToTabSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewController+SwipeUpToTabSwitcher.swift"; sourceTree = "<group>"; };
+		91297E24D7707C813F7AE489 /* SwipeUpToTabSwitcherInteractiveTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeUpToTabSwitcherInteractiveTransition.swift; sourceTree = "<group>"; };
 		987130BE294AAB9E00AB05E0 /* FavoriteListViewModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FavoriteListViewModelTests.swift; sourceTree = "<group>"; };
 		987130BF294AAB9E00AB05E0 /* BookmarkEditorViewModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BookmarkEditorViewModelTests.swift; sourceTree = "<group>"; };
 		987130C0294AAB9E00AB05E0 /* BookmarkListViewModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BookmarkListViewModelTests.swift; sourceTree = "<group>"; };
@@ -7847,6 +7849,7 @@
 				855D914C2063EF6A00C4B448 /* TabSwitcherTransition.swift */,
 				986DA94924884B18004A7E39 /* WebViewTransition.swift */,
 				AA10000000000000000000A1 /* MainViewController+SwipeUpToTabSwitcher.swift */,
+				91297E24D7707C813F7AE489 /* SwipeUpToTabSwitcherInteractiveTransition.swift */,
 			);
 			path = Transitions;
 			sourceTree = "<group>";
@@ -13087,6 +13090,7 @@
 				7BC16BAC2E72550A0016EE8E /* LoggingDebugViewController.swift in Sources */,
 				986DA94A24884B18004A7E39 /* WebViewTransition.swift in Sources */,
 				AA20000000000000000000A1 /* MainViewController+SwipeUpToTabSwitcher.swift in Sources */,
+				3B03EF5FC1B287C7158CFB88 /* SwipeUpToTabSwitcherInteractiveTransition.swift in Sources */,
 				9F0949A72D389F1E0079291B /* MaliciousSiteProtectionAPI.swift in Sources */,
 				C17BDC692E16CDCB0082485E /* AutofillLoginImportState.swift in Sources */,
 				31B524572715BB23002225AB /* WebJSAlert.swift in Sources */,

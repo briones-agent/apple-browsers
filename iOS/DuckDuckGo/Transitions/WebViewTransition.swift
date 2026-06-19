@@ -143,6 +143,64 @@ class FromWebViewTransition: WebViewTransition {
     }
 }
 
+// MARK: - Free-form interactive swipe-up (web page)
+
+extension FromWebViewTransition: SwipeUpInteractiveTransition {
+
+    /// Builds the same page-preview card the keyframe path animates, but leaves it at its full-content
+    /// initial frame for the interaction controller to drag freely. Reuses `adjustFrame` +
+    /// `tabSwitcherCellFrame` + `previewFrame` so the snap on commit lands pixel-identical to the
+    /// button-tap end state.
+    func prepareInteractivePreview(finalFrame: CGRect) -> SwipeUpInteractivePreview? {
+        imageContainer.clipsToBounds = true
+        imageContainer.addSubview(imageView)
+
+        guard let webView = mainViewController.currentTab?.webView,
+              let tab = mainViewController.tabManager.currentTabsModel.currentTab,
+              let rowIndex = tabSwitcherViewController.tabsModel.indexOf(tab: tab) else {
+            Logger.swipeUpToTabSwitcher.debug("interactive(web): missing webView/tab/rowIndex")
+            return nil
+        }
+
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        tabSwitcherViewController.collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
+
+        guard let layoutAttr = tabSwitcherViewController.collectionView.layoutAttributesForItem(at: indexPath),
+              let preview = tabSwitcherViewController.previewsSource.preview(for: tab) else {
+            Logger.swipeUpToTabSwitcher.debug("interactive(web): missing layoutAttr/preview")
+            return nil
+        }
+
+        let theme = ThemeManager.shared.currentTheme
+        let webViewFrame = webView.convert(webView.bounds, to: nil)
+        solidBackground.backgroundColor = theme.backgroundColor
+        solidBackground.frame = webViewFrame
+
+        var initialFrame = mainViewController.viewCoordinator.contentContainer.frame
+        initialFrame = adjustFrame(initialFrame,
+                                   forAddressBarPosition: mainViewController.appSettings.currentAddressBarPosition,
+                                   byHeight: -mainViewController.omniBar.barView.expectedHeight)
+        imageContainer.frame = initialFrame
+        imageView.frame = imageContainer.bounds
+        imageView.image = preview
+
+        imageContainer.layer.borderColor = UIColor(designSystemColor: .decorationTertiary).cgColor
+        imageContainer.layer.borderWidth = 0
+        imageContainer.layer.cornerRadius = 0
+
+        let cellFrame = tabSwitcherCellFrame(for: layoutAttr)
+        let destinationImageViewFrame = previewFrame(for: cellFrame.size, preview: preview)
+
+        return SwipeUpInteractivePreview(solidBackground: solidBackground,
+                                         imageContainer: imageContainer,
+                                         imageView: imageView,
+                                         homeScreenSnapshot: nil,
+                                         initialContainerFrame: initialFrame,
+                                         destinationCellFrame: cellFrame,
+                                         destinationImageViewFrame: destinationImageViewFrame)
+    }
+}
+
 class ToWebViewTransition: WebViewTransition {
 
     override func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {

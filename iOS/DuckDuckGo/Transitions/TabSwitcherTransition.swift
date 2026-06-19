@@ -78,12 +78,45 @@ class TabSwitcherTransition: NSObject, UIViewControllerAnimatedTransitioning {
     }
 }
 
+/// End-state and live references for the free-form swipe-up drag, produced by a `From*` transition's
+/// `prepareInteractivePreview(...)` so `SwipeUpToTabSwitcherInteractiveTransition` can drive the same
+/// page-preview card the button-tap keyframe path uses — sharing the exact destination-cell-frame math.
+struct SwipeUpInteractivePreview {
+    /// Hides the from-VC content; the controller inserts it at the bottom of the container view.
+    let solidBackground: UIView
+    /// The page-preview card the finger drags; transforms freely and snaps to `destinationCellFrame`.
+    let imageContainer: UIView
+    /// The preview image inside the card (web preview, or the NTP `.center` logo).
+    let imageView: UIImageView
+    /// NTP-only resizable snapshot that should fade out early to avoid the Dax-logo squeeze; nil for web.
+    let homeScreenSnapshot: UIView?
+    /// Full-content frame of `imageContainer` at progress 0 (where the page sits, minus the omnibar).
+    let initialContainerFrame: CGRect
+    /// Destination grid-cell frame `imageContainer` snaps to on commit (collection pre-scrolled to it).
+    let destinationCellFrame: CGRect
+    /// `imageView` frame inside the settled cell (web: `previewFrame`; NTP: centered logo frame).
+    let destinationImageViewFrame: CGRect
+}
+
+/// Implemented by the `From*` presentation animators so the interactive swipe-up controller can build
+/// the dragged preview using their existing setup + cell-frame math instead of duplicating it.
+protocol SwipeUpInteractiveTransition: AnyObject {
+    /// Configures `solidBackground` + `imageContainer` (+ image / snapshot / logo) — frames, content,
+    /// border colour — and pre-scrolls the tab switcher's collection to the current tab, returning the
+    /// geometry the interaction controller drives. Does **not** add anything to the view hierarchy: the
+    /// controller owns z-ordering (solidBackground at the bottom, then the overview + blur, then the
+    /// card on top). Returns nil if the required tab/preview/layout isn't available.
+    func prepareInteractivePreview(finalFrame: CGRect) -> SwipeUpInteractivePreview?
+}
+
 class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDelegate {
 
     /// Non-nil only while an interactive swipe-up gesture is driving the presentation. The gesture
-    /// owns the interactor strongly; this weak reference lets ordinary button-tap presentations
-    /// (where it stays nil) fall through to the normal, non-interactive animation unchanged.
-    weak var activeInteractor: UIPercentDrivenInteractiveTransition?
+    /// owns the controller strongly; this weak reference lets ordinary button-tap presentations
+    /// (where it stays nil) fall through to the normal, non-interactive animation unchanged. Typed as
+    /// the base `UIViewControllerInteractiveTransitioning` so it can vend the custom finger-tracking
+    /// controller (not just the old `UIPercentDrivenInteractiveTransition`).
+    weak var activeInteractiveTransition: UIViewControllerInteractiveTransitioning?
 
     func animationController(forPresented presented: UIViewController,
                              presenting: UIViewController,
@@ -94,21 +127,23 @@ class TabSwitcherTransitionDelegate: NSObject, UIViewControllerTransitioningDele
         }
 
         let isNTP = mainVC.newTabPageViewController != nil
-        Logger.swipeUpToTabSwitcher.debug("animationController(forPresented) interactive=\(self.activeInteractor != nil, privacy: .public) ntp=\(isNTP, privacy: .public)")
+        Logger.swipeUpToTabSwitcher.debug("animationController(forPresented) interactive=\(self.activeInteractiveTransition != nil, privacy: .public) ntp=\(isNTP, privacy: .public)")
 
         if isNTP {
             return FromHomeScreenTransition(mainViewController: mainVC,
                                             tabSwitcherViewController: tabSwitcherVC)
         }
-        
+
         return FromWebViewTransition(mainViewController: mainVC,
                                      tabSwitcherViewController: tabSwitcherVC)
     }
 
     func interactionControllerForPresentation(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
-        // nil for button taps → UIKit performs the normal non-interactive present.
-        Logger.swipeUpToTabSwitcher.debug("interactionControllerForPresentation: activeInteractor != nil = \(self.activeInteractor != nil, privacy: .public)")
-        return activeInteractor
+        // nil for button taps → UIKit performs the normal non-interactive present. When a swipe-up
+        // gesture is live, the custom controller takes over and `animator.animateTransition` is bypassed
+        // (the animator is still used for `transitionDuration` and the non-interactive button tap).
+        Logger.swipeUpToTabSwitcher.debug("interactionControllerForPresentation: activeInteractiveTransition != nil = \(self.activeInteractiveTransition != nil, privacy: .public)")
+        return activeInteractiveTransition
     }
 
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {

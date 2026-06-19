@@ -277,7 +277,7 @@ extension MainViewController {
     /// fetch the button-tap path awaits; `TabSwitcherPageViewController` refreshes the real count on
     /// appear. Returns false if a presentation is already active or the controller can't be built.
     @discardableResult
-    func beginInteractiveTabSwitcherPresentation(interactor: UIPercentDrivenInteractiveTransition) -> Bool {
+    func beginInteractiveTabSwitcherPresentation(interactor: SwipeUpToTabSwitcherInteractiveTransition) -> Bool {
         Logger.swipeUpToTabSwitcher.debug("beginInteractive enter alreadyPresenting=\(self.tabSwitcherController != nil, privacy: .public)")
         guard tabSwitcherController == nil else { return false }
         hideAllHighlightsIfNeeded()
@@ -286,16 +286,17 @@ extension MainViewController {
             Logger.swipeUpToTabSwitcher.debug("beginInteractive: makeTabSwitcherController returned nil")
             return false
         }
-        tabSwitcherTransition.activeInteractor = interactor
+        tabSwitcherTransition.activeInteractiveTransition = interactor
         present(controller, animated: true)
         Logger.swipeUpToTabSwitcher.debug("beginInteractive: present called, coordinator=\(controller.transitionCoordinator != nil, privacy: .public)")
 
-        // Release the interactor once the interactive transition settles (whether it finished or was
-        // cancelled), keeping it alive for the whole animation. Clearing it makes the next button-tap
-        // present non-interactive again (the delegate's weak `activeInteractor` then falls back to nil).
+        // Release the interaction controller once the interactive transition settles (whether it finished
+        // or was cancelled), keeping it alive for the whole animation. Clearing it makes the next
+        // button-tap present non-interactive again (the delegate's weak `activeInteractiveTransition`
+        // then falls back to nil).
         controller.transitionCoordinator?.animate(alongsideTransition: nil) { [weak self] context in
             Logger.swipeUpToTabSwitcher.debug("beginInteractive: transition settled cancelled=\(context.isCancelled, privacy: .public)")
-            self?.tabSwitcherTransition.activeInteractor = nil
+            self?.tabSwitcherTransition.activeInteractiveTransition = nil
             self?.tabSwitcherInteractor = nil
             // Restore the bottom bar that the gesture faded out. On commit this runs behind the now-
             // presented switcher (invisible) and guarantees the chrome is correct when the user later

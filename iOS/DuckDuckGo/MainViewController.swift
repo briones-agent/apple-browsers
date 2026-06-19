@@ -251,10 +251,10 @@ class MainViewController: UIViewController {
 
     lazy var tabSwitcherTransition = TabSwitcherTransitionDelegate()
 
-    /// Strong owner of the interactive swipe-up presentation's percent-driven interactor while a
-    /// swipe-up gesture is in flight; released by the presentation's transition coordinator. See
-    /// `MainViewController+SwipeUpToTabSwitcher`.
-    var tabSwitcherInteractor: UIPercentDrivenInteractiveTransition?
+    /// Strong owner of the interactive swipe-up presentation's custom finger-tracking interaction
+    /// controller while a swipe-up gesture is in flight; released by the presentation's transition
+    /// coordinator. See `MainViewController+SwipeUpToTabSwitcher`.
+    var tabSwitcherInteractor: SwipeUpToTabSwitcherInteractiveTransition?
     /// Tracks whether the bottom bar (navigation bar container + toolbar) is currently faded out for
     /// an in-flight swipe-up gesture, so each fade fires only once per hide/show crossing (hysteresis).
     /// See `MainViewController+SwipeUpToTabSwitcher`.
