@@ -1154,6 +1154,7 @@ final class MainMenu: NSMenu {
             if StandardApplicationBuildType().isSparkleBuild {
                 NSMenuItem(title: "Updates").submenu(UpdatesDebugMenu(keyValueStore: UserDefaults.standard, internalUserDecider: internalUserDecider))
             }
+            NSMenuItem(title: "Site Breakage").submenu(SiteBreakageTestingDebugMenu())
             if AppVersion.runType.requiresEnvironment {
                 NSMenuItem(title: "Promo Queue")
                     .submenu(PromoDebugMenu())
