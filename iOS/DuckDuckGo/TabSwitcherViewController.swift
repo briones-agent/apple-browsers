@@ -463,6 +463,10 @@ class TabSwitcherViewController: UIViewController {
         borderView.isBottomVisible = !interfaceMode.isLarge
         activateLayoutConstraintsBasedOnBarPosition()
 
+        searchContainerView.bottomAnchor.constraint(
+            lessThanOrEqualTo: appSettings.currentAddressBarPosition.isBottom ? titleBarView.topAnchor : toolbar.topAnchor
+        ).isActive = true
+
         if isSearching {
             view.bringSubviewToFront(searchContainerView)
         }
@@ -1033,10 +1037,15 @@ extension TabSwitcherViewController {
         searchContainerView.addSubview(searchCancelButton)
         view.addSubview(searchContainerView)
 
+        // High (not required) so it can relax when the keyboard collapses below the bottom
+        // chrome; the required clamp in setupBarsLayout then parks the field above the chrome.
+        let bottomToKeyboard = searchContainerView.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor)
+        bottomToKeyboard.priority = .defaultHigh
+
         NSLayoutConstraint.activate([
             searchContainerView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: Constants.searchContainerPadding),
             searchContainerView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -Constants.searchContainerPadding),
-            searchContainerView.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor, constant: 0),
+            bottomToKeyboard,
 
             searchBar.leadingAnchor.constraint(equalTo: searchContainerView.leadingAnchor),
             searchBar.topAnchor.constraint(equalTo: searchContainerView.topAnchor),
