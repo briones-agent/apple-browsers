@@ -77,6 +77,20 @@ final class PairingInfoTests: XCTestCase {
         }
     }
 
+    func testInit_whenPairingV2URLThenReturnsPairingV2Info() throws {
+        let url = try XCTUnwrap(URL(string: "https://duckduckgo.com/sync/pairing/#&code2=abc"))
+        let pairingInfo = try XCTUnwrap(PairingInfo(url: url))
+
+        XCTAssertEqual(pairingInfo.base64Code, url.absoluteString)
+        XCTAssertEqual(pairingInfo.deviceName, "")
+        XCTAssertTrue(pairingInfo.isPairingV2)
+        if case .pairingV2(let pairingV2URL) = pairingInfo.kind {
+            XCTAssertEqual(pairingV2URL, url)
+        } else {
+            XCTFail("Expected Pairing V2 kind")
+        }
+    }
+
     // MARK: toURL
 
     func testToURL_replacesPlusesWithHyphens() {
