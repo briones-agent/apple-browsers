@@ -21,6 +21,7 @@ import BrowserServicesKit
 import Cocoa
 import Combine
 import Common
+import FoundationExtensions
 import DataBrokerProtection_macOS
 import FeatureFlags
 import Freemium
@@ -33,6 +34,7 @@ import PrivacyConfig
 import Subscription
 import SwiftUI
 import UserScript
+import WebExtensions
 import WebKit
 
 protocol BrowserTabViewControllerDelegate: AnyObject {
@@ -100,8 +102,10 @@ final class BrowserTabViewController: NSViewController {
     private let accessibilityPreferences: AccessibilityPreferences
     private let duckPlayer: DuckPlayer
     private let subscriptionManager: any SubscriptionManager
+    private weak var subscriptionPromoDelegate: FireWindowSubscriptionPromoDelegate?
     private let winBackOfferVisibilityManager: WinBackOfferVisibilityManaging
     private let pinningManager: PinningManager
+    private let adBlockingAvailability: AdBlockingAvailabilityProviding
 
     private let tld: TLD
 
@@ -120,6 +124,7 @@ final class BrowserTabViewController: NSViewController {
     private var lastURL: URL?
     private weak var lastTab: Tab?
     private var wasContextualOnboardingDialogDismissed = false
+    private var presentedContextualOnboardingDialogType: ContextualDialogType?
     private let onboardingPixelReporter: OnboardingPixelReporting
 
     private(set) var transientTabContentViewController: NSViewController?
@@ -175,8 +180,10 @@ final class BrowserTabViewController: NSViewController {
          accessibilityPreferences: AccessibilityPreferences,
          duckPlayer: DuckPlayer,
          subscriptionManager: any SubscriptionManager = NSApp.delegateTyped.subscriptionManager,
+         subscriptionPromoDelegate: FireWindowSubscriptionPromoDelegate? = NSApp.delegateTyped.subscriptionPromoDelegate,
          winBackOfferVisibilityManager: WinBackOfferVisibilityManaging = NSApp.delegateTyped.winBackOfferVisibilityManager,
          pinningManager: PinningManager,
+         adBlockingAvailability: AdBlockingAvailabilityProviding = NSApp.delegateTyped.adBlockingAvailability,
          tld: TLD = NSApp.delegateTyped.tld
     ) {
         self.tabCollectionViewModel = tabCollectionViewModel
@@ -202,8 +209,10 @@ final class BrowserTabViewController: NSViewController {
         self.accessibilityPreferences = accessibilityPreferences
         self.duckPlayer = duckPlayer
         self.subscriptionManager = subscriptionManager
+        self.subscriptionPromoDelegate = subscriptionPromoDelegate
         self.winBackOfferVisibilityManager = winBackOfferVisibilityManager
         self.pinningManager = pinningManager
+        self.adBlockingAvailability = adBlockingAvailability
 
         self.tld = tld
         containerStackView = NSStackView()
@@ -474,10 +483,16 @@ final class BrowserTabViewController: NSViewController {
     }
 
     private func subscribeToTabs() {
-        tabCollectionViewModel.tabCollection.$tabs
-            .sink {  [weak self] tabs in
+        tabCollectionViewModel.tabCollection.loadedTabsPublisher
+            .sink { [weak self] loadedTabs in
                 guard let self else { return }
-                setDelegate(for: tabs)
+                setDelegate(for: loadedTabs)
+            }
+            .store(in: &cancellables)
+
+        tabCollectionViewModel.tabCollection.$tabs
+            .sink { [weak self] tabs in
+                guard let self else { return }
                 removeDataBrokerViewIfNecessary(for: tabs)
             }
             .store(in: &cancellables)
@@ -492,10 +507,10 @@ final class BrowserTabViewController: NSViewController {
     }
 
     private func subscribeToPinnedTabs() {
-        pinnedTabsDelegatesCancellable = tabCollectionViewModel.pinnedTabsCollection?.$tabs
-            .sink(receiveValue: { [weak self] tabs in
+        pinnedTabsDelegatesCancellable = tabCollectionViewModel.pinnedTabsCollection?.loadedTabsPublisher
+            .sink(receiveValue: { [weak self] loadedTabs in
                 guard let self else { return }
-                setDelegate(for: tabs)
+                setDelegate(for: loadedTabs)
             })
     }
 
@@ -547,7 +562,7 @@ final class BrowserTabViewController: NSViewController {
                                                object: nil)
     }
 
-    private func removeDataBrokerViewIfNecessary(for tabs: [Tab]) {
+    private func removeDataBrokerViewIfNecessary(for tabs: [AnyTab]) {
         if let dataBrokerProtectionHomeViewController,
            !tabs.contains(where: { $0.content == .dataBrokerProtection }) {
             dataBrokerProtectionHomeViewController.removeCompletely()
@@ -641,68 +656,61 @@ final class BrowserTabViewController: NSViewController {
             containerStackView.removeArrangedSubview($0)
             $0.removeFromSuperview()
         }
+        presentedContextualOnboardingDialogType = nil
     }
 
     private func presentContextualOnboarding(showLastDialog: Bool = false) {
-        // Before presenting a new dialog, remove any existing ones.
-        removeExistingDialog()
         // Remove any existing highlights animation
         delegate?.dismissViewHighlight()
 
         // Checks if the feature is on
         guard featureFlagger.isFeatureOn(.contextualOnboarding) else {
             onboardingDialogTypeProvider.turnOffFeature()
+            removeExistingDialog()
             return
         }
 
-        guard !isInPopUpWindow else { return }
+        guard !isInPopUpWindow else {
+            removeExistingDialog()
+            return
+        }
 
-        guard let tab = tabViewModel?.tab else { return }
+        guard let tab = tabViewModel?.tab else {
+            removeExistingDialog()
+            return
+        }
 
         // if showLastDialog is true it asks the onboardingDialogTypeProvider for the lastDialog if the last dialog was shown on this tab
         // If there is it will show it
         // This allow seeing the dialog when leaving and coming back to the Window but will avoid reloading the same when opening a new Window
         guard let dialogType = showLastDialog ? onboardingDialogTypeProvider.lastDialogForTab(tab) : onboardingDialogTypeProvider.dialogTypeForTab(tab, privacyInfo: tab.privacyInfo) else {
             delegate?.dismissViewHighlight()
+            removeExistingDialog()
             return
         }
         // once a dialog is presented we reset the is dismissed flag
         self.wasContextualOnboardingDialogDismissed = false
 
-        let onDismissAction: () -> Void = { [weak self] in
-            guard let self else { return }
-            // we mark the flag for dialog dismissed
-            wasContextualOnboardingDialogDismissed = true
-            delegate?.dismissViewHighlight()
-            self.removeChild(in: self.containerStackView, webViewContainer: webViewContainer)
-            if let lastDialog = onboardingDialogTypeProvider.lastDialog {
-                self.onboardingPixelReporter.measureDialogDismissed(dialogType: lastDialog)
-            }
-        }
-
-        let onGotItPressed = { [weak self] in
-            guard let self else { return }
-
-            onboardingDialogTypeProvider.gotItPressed()
-
-            let currentState = onboardingDialogTypeProvider.lastDialog
-
-            // Reset highlight animations
-            delegate?.dismissViewHighlight()
-
-            // Process state
-            if case .tryFireButton = currentState {
-                delegate?.highlightFireButton()
-            }
-        }
+        removeExistingDialog()
+        presentedContextualOnboardingDialogType = dialogType
 
         let daxView = onboardingDialogFactory.makeView(
             for: dialogType,
             delegate: tab,
-            onDismiss: onDismissAction,
-            onGotItPressed: onGotItPressed,
+            onDismiss: { [weak self] in
+                self?.handleContextualOnboardingOnDismiss()
+            },
+            onManualDismiss: { [weak self] in
+                self?.handleContextualOnboardingOnManualDismiss()
+            },
+            onGotItPressed: { [weak self] in
+                self?.handleContextualOnboardingOnGotItPressed(dialogType: dialogType)
+            },
             onFireButtonPressed: { [weak delegate] in
                 delegate?.dismissViewHighlight()
+            },
+            onSuggestionPressed: { [weak onboardingPixelReporter] in
+                onboardingPixelReporter?.measureSuggestionPressed()
             })
         let hostingController = NSHostingController(rootView: AnyView(daxView))
         insertChild(hostingController, in: containerStackView, at: 0)
@@ -720,6 +728,32 @@ final class BrowserTabViewController: NSViewController {
             delegate?.highlightFireButton()
         } else if case .trackers = dialogType {
             delegate?.highlightPrivacyShield()
+        }
+    }
+
+    private func handleContextualOnboardingOnDismiss() {
+        wasContextualOnboardingDialogDismissed = true
+        delegate?.dismissViewHighlight()
+        removeChild(in: containerStackView, webViewContainer: webViewContainer)
+        if let lastDialog = onboardingDialogTypeProvider.lastDialog {
+            onboardingPixelReporter.measureDialogDismissed(dialogType: lastDialog)
+        }
+    }
+
+    private func handleContextualOnboardingOnManualDismiss() {
+        if let lastDialog = onboardingDialogTypeProvider.lastDialog {
+            onboardingPixelReporter.measureDialogManuallyDismissed(dialogType: lastDialog)
+        }
+        handleContextualOnboardingOnDismiss()
+    }
+
+    private func handleContextualOnboardingOnGotItPressed(dialogType: ContextualDialogType) {
+        onboardingDialogTypeProvider.gotItPressed()
+        onboardingPixelReporter.measureGotItPressed(dialogType: dialogType)
+        let currentState = onboardingDialogTypeProvider.lastDialog
+        delegate?.dismissViewHighlight()
+        if case .tryFireButton = currentState {
+            delegate?.highlightFireButton()
         }
     }
 
@@ -1092,7 +1126,11 @@ final class BrowserTabViewController: NSViewController {
             // We only use HTML New Tab Page in regular windows for now
             if tabCollectionViewModel.isBurner {
                 removeAllTabContent()
-                addAndLayoutChildBesideSidebar(burnerHomePageViewControllerCreatingIfNeeded())
+                let burnerHomePage = burnerHomePageViewControllerCreatingIfNeeded()
+                if let tab = tabViewModel?.tab {
+                    burnerHomePage.updatePromoState(for: tab)
+                }
+                addAndLayoutChildBesideSidebar(burnerHomePage)
             } else {
                 updateTabIfNeeded(tabViewModel: tabViewModel)
             }
@@ -1162,7 +1200,7 @@ final class BrowserTabViewController: NSViewController {
         guard let tabViewModel else { return false }
 
         let newWebView = webView(for: tabViewModel)
-        let isPinnedTab = tabCollectionViewModel.pinnedTabsCollection?.tabs.contains(tabViewModel.tab) == true
+        let isPinnedTab = tabCollectionViewModel.pinnedTabsCollection?.contains(tab: tabViewModel.tab) == true
         let isKeyWindow = view.window?.isKeyWindow == true
 
         let tabIsNotOnScreen = webView?.tabContentView.superview == nil
@@ -1177,15 +1215,17 @@ final class BrowserTabViewController: NSViewController {
     func generateNativePreviewIfNeeded() {
         guard let tabViewModel = tabViewModel, !tabViewModel.tab.content.displaysContentInWebView, !tabViewModel.isShowingErrorPage else { return }
 
-        var containsHostingView: Bool
+        let containsHostingView: Bool
         switch tabViewModel.tab.content {
         case .onboarding:
             return
         case .newtab:
-            guard tabCollectionViewModel.isBurner else {
+            guard tabCollectionViewModel.isBurner,
+                  let burnerHomePage = burnerHomePageViewController else {
                 return
             }
-            containsHostingView = false
+            tabViewModel.tab.tabSnapshots?.renderSnapshotSync(from: burnerHomePage.view)
+            return
         case .settings:
             containsHostingView = true
         default:
@@ -1208,10 +1248,31 @@ final class BrowserTabViewController: NSViewController {
     var burnerHomePageViewController: BurnerHomePageViewController?
     private func burnerHomePageViewControllerCreatingIfNeeded() -> BurnerHomePageViewController {
         return burnerHomePageViewController ?? {
-            let burnerHomePageViewController = BurnerHomePageViewController()
+            var dateProvider: () -> Date = Date.init
+            let buildType = StandardApplicationBuildType()
+            if buildType.isDebugBuild || buildType.isReviewBuild {
+                let debugStore = SubscriptionPromoDebugStore(keyValueStore: UserDefaults.standard)
+                dateProvider = { debugStore.simulatedTodayDate }
+            }
+            let burnerHomePageViewController = BurnerHomePageViewController(
+                subscriptionManager: subscriptionManager,
+                promoDelegate: subscriptionPromoDelegate,
+                dateProvider: dateProvider
+            )
+            burnerHomePageViewController.openSubscriptionPage = { [weak self] in
+                self?.openSubscriptionPurchasePage()
+            }
             self.burnerHomePageViewController = burnerHomePageViewController
             return burnerHomePageViewController
         }()
+    }
+
+    private func openSubscriptionPurchasePage() {
+        guard let url = SubscriptionURL.purchaseURLComponentsWithOrigin(
+            SubscriptionFunnelOrigin.fireWindowPromo.rawValue
+        )?.url else { return }
+        let tab = Tab(content: .url(url, source: .link), shouldLoadInBackground: true, burnerMode: tabCollectionViewModel.burnerMode)
+        tabCollectionViewModel.append(tab: tab)
     }
 
     // MARK: - DataBrokerProtection
@@ -1257,10 +1318,11 @@ final class BrowserTabViewController: NSViewController {
                 dockPreferences: dockPreferences,
                 accessibilityPreferences: accessibilityPreferences,
                 duckPlayerPreferences: duckPlayer.preferences,
-                youTubeAdBlockingPreferences: YouTubeAdBlockingPreferences(duckPlayerPreferences: duckPlayer.preferences),
+                youTubeAdBlockingPreferences: YouTubeAdBlockingPreferences(duckPlayerPreferences: duckPlayer.preferences, pixelFiring: PixelKit.shared, adBlockingAvailability: adBlockingAvailability),
                 subscriptionManager: subscriptionManager,
                 winBackOfferVisibilityManager: winBackOfferVisibilityManager,
-                pinningManager: pinningManager
+                pinningManager: pinningManager,
+                adBlockingAvailability: adBlockingAvailability
             )
             preferencesViewController.delegate = self
             self.preferencesViewController = preferencesViewController
@@ -1401,7 +1463,7 @@ extension BrowserTabViewController: TabDelegate {
     }
 
     func closeTab(_ tab: Tab) {
-        guard let index = tabCollectionViewModel.tabCollection.tabs.firstIndex(of: tab) else {
+        guard let index = tabCollectionViewModel.tabCollection.firstIndex(of: tab) else {
             return
         }
         tabCollectionViewModel.remove(at: .unpinned(index))
@@ -1438,7 +1500,17 @@ extension BrowserTabViewController: TabDelegate {
         //  - If the dialog was dismissed it will not reload when leaving and coming back to the Window
         //  - It tells presentContextualOnboarding that should show the lastDialog if possible
         //  - Skip for pop-up windows; contextual onboarding is excluded there
-        if !isInPopUpWindow && !wasContextualOnboardingDialogDismissed && onboardingDialogTypeProvider.state != .onboardingCompleted {
+        //  - Skip if the displayed dialog already matches the expected one; re-creating the
+        //    hosting controller would restart the typewriter animation. If they differ, fall
+        //    through so the stale dialog gets replaced (or cleared if expected is nil).
+        let tab = tabViewModel?.tab
+        let expectedDialogType = tab.flatMap { onboardingDialogTypeProvider.lastDialogForTab($0) }
+        let displayedMatchesExpected = presentedContextualOnboardingDialogType != nil
+            && presentedContextualOnboardingDialogType == expectedDialogType
+        if !isInPopUpWindow
+            && !wasContextualOnboardingDialogDismissed
+            && onboardingDialogTypeProvider.state != .onboardingCompleted
+            && !displayedMatchesExpected {
             presentContextualOnboarding(showLastDialog: true)
         }
     }
@@ -1611,7 +1683,7 @@ extension BrowserTabViewController: TabDelegate {
     }
     func runPrintOperation(with request: PrintDialogRequest) -> ModalSheetCancellable? {
         guard let window = view.window,
-              let webView = tabViewModel?.tab.webView else { return nil }
+              tabViewModel?.tab.webView != nil else { return nil }
 
         let printOperation = request.parameters
         // prevent running already started operation (e.g. when the same pinned tab is open in 2 windows)

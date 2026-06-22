@@ -41,12 +41,12 @@ public protocol WebViewHandler: NSObject {
 }
 
 @MainActor
-final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
+public final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
     private var activeContinuation: CheckedContinuation<Void, Error>?
 
     private let isFakeBroker: Bool
     private let executionConfig: BrokerJobExecutionConfig
-    private var webViewConfiguration: WKWebViewConfiguration?
+    private(set) var webViewConfiguration: WKWebViewConfiguration?
     private var userContentController: DataBrokerUserContentController?
 
     private var webView: WebView?
@@ -62,14 +62,26 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
 
     private var timer: Timer?
 
-    init(privacyConfig: PrivacyConfigurationManaging, prefs: ContentScopeProperties, delegate: CCFCommunicationDelegate, isFakeBroker: Bool = false, executionConfig: BrokerJobExecutionConfig, shouldContinueActionHandler: @escaping () -> Bool, applicationNameForUserAgent: String?) throws {
+    public init(privacyConfig: PrivacyConfigurationManaging,
+                prefs: ContentScopeProperties,
+                delegate: CCFCommunicationDelegate,
+                isFakeBroker: Bool = false,
+                executionConfig: BrokerJobExecutionConfig,
+                shouldContinueActionHandler: @escaping () -> Bool,
+                applicationNameForUserAgentProvider: () -> String?,
+                contentBlocking: DBPWebViewContentBlocking? = nil) throws {
         self.isFakeBroker = isFakeBroker
         self.executionConfig = executionConfig
         let configuration = WKWebViewConfiguration()
-        try configuration.applyDataBrokerConfiguration(privacyConfig: privacyConfig, prefs: prefs, delegate: delegate, executionConfig: executionConfig, shouldContinueActionHandler: shouldContinueActionHandler)
+        try configuration.applyDataBrokerConfiguration(privacyConfig: privacyConfig,
+                                                       prefs: prefs,
+                                                       delegate: delegate,
+                                                       executionConfig: executionConfig,
+                                                       shouldContinueActionHandler: shouldContinueActionHandler,
+                                                       contentBlocking: contentBlocking)
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
-        if let applicationNameForUserAgent {
+        if let applicationNameForUserAgent = applicationNameForUserAgentProvider() {
             configuration.applicationNameForUserAgent = applicationNameForUserAgent
         }
 
@@ -80,7 +92,7 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
         self.userContentController = userContentController
     }
 
-    func initializeWebView(showWebView: Bool) async {
+    public func initializeWebView(showWebView: Bool) async {
         guard let configuration = self.webViewConfiguration else {
             return
         }
@@ -141,13 +153,13 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
         try? await load(url: URL(string: "\(WebViewSchemeHandler.dataBrokerProtectionScheme)://blank")!)
     }
 
-    func load(url: URL) async throws {
+    public func load(url: URL) async throws {
         webView?.load(url)
         Logger.action.log("Loading URL: \(String(describing: url.absoluteString))")
         try await waitForWebViewLoad()
     }
 
-    func setCookies(_ cookies: [HTTPCookie]) async {
+    public func setCookies(_ cookies: [HTTPCookie]) async {
         for cookie in cookies {
             await webView?.configuration.websiteDataStore.httpCookieStore.setCookie(cookie)
         }
@@ -165,7 +177,7 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
         try await webView?.evaluateJavaScript(javaScript)
     }
 
-    func finish() {
+    public func finish() {
         Logger.action.log("WebViewHandler finished")
         webView?.stopLoading()
         userContentController?.cleanUpBeforeClosing()
@@ -189,7 +201,7 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
         Logger.action.log("WebViewHandler Deinit")
     }
 
-    func waitForWebViewLoad() async throws {
+    public func waitForWebViewLoad() async throws {
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 self.activeContinuation = continuation
@@ -207,7 +219,7 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
         continuation?.resume(with: result)
     }
 
-    func execute(action: Action, ofType stepType: StepType?, data: CCFRequestData) {
+    public func execute(action: Action, ofType stepType: StepType?, data: CCFRequestData) {
         Logger.action.log("Executing action: \(String(describing: action.actionType.rawValue), privacy: .public)")
 
         userContentController?.dataBrokerUserScripts?.dataBrokerFeature.pushAction(
@@ -217,11 +229,11 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
         )
     }
 
-    func evaluateJavaScript(_ javaScript: String) async throws {
+    public func evaluateJavaScript(_ javaScript: String) async throws {
         try await webView?.evaluateJavaScript(javaScript) as Void?
     }
 
-    func takeSnaphost(path: String, fileName: String) async throws {
+    public func takeSnaphost(path: String, fileName: String) async throws {
         guard let height: CGFloat = try await webView?.evaluateJavaScript("document.body.scrollHeight") else { return }
 
         webView?.frame = CGRect(origin: .zero, size: CGSize(width: 1024, height: height))
@@ -235,7 +247,7 @@ final class DataBrokerProtectionWebViewHandler: NSObject, WebViewHandler {
 #endif
     }
 
-    func saveHTML(path: String, fileName: String) async throws {
+    public func saveHTML(path: String, fileName: String) async throws {
         guard let htmlString: String = try await webView?.evaluateJavaScript("document.documentElement.outerHTML") else { return }
         let fileManager = FileManager.default
 
@@ -383,7 +395,7 @@ private extension DataBrokerProtectionWebViewHandler {
 }
 
 extension DataBrokerProtectionWebViewHandler: NSWindowDelegate {
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
         sender.orderOut(nil)
         return false
     }
@@ -394,16 +406,17 @@ extension DataBrokerProtectionWebViewHandler: NSToolbarDelegate {
         static let addressBar = NSToolbarItem.Identifier("PIRDebugToolbar.AddressBar")
     }
 
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+    public func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [ToolbarItemIdentifier.addressBar, .flexibleSpace]
     }
 
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+    public func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [ToolbarItemIdentifier.addressBar, .flexibleSpace]
     }
 
-    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
-                 willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+    public func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier
+                        itemIdentifier: NSToolbarItem.Identifier,
+                        willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         guard itemIdentifier == ToolbarItemIdentifier.addressBar else { return nil }
         let item = NSToolbarItem(itemIdentifier: itemIdentifier)
         let view = makeAddressBarView()
@@ -417,10 +430,10 @@ extension DataBrokerProtectionWebViewHandler: NSToolbarDelegate {
 
 extension DataBrokerProtectionWebViewHandler: WKNavigationDelegate {
 
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+    public func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         Logger.action.log("WebViewHandler didFinish")
 #if os(macOS)
         updateAddressBar(with: webView.url)
@@ -429,23 +442,23 @@ extension DataBrokerProtectionWebViewHandler: WKNavigationDelegate {
         resumeActiveContinuation(with: .success(()))
     }
 
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+    public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         Logger.action.error("WebViewHandler didFail: \(error.localizedDescription, privacy: .public)")
         resumeActiveContinuation(with: .failure(error))
     }
 
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+    public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         Logger.action.error("WebViewHandler didFailProvisionalNavigation: \(error.localizedDescription, privacy: .public)")
         resumeActiveContinuation(with: .failure(error))
     }
 
-    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+    public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
 #if os(macOS)
         updateAddressBar(with: webView.url)
 #endif
     }
 
-    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
+    public func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
         guard let statusCode = (navigationResponse.response as? HTTPURLResponse)?.statusCode else {
             // if there's no http status code to act on, exit and allow navigation
             return .allow
@@ -462,13 +475,14 @@ extension DataBrokerProtectionWebViewHandler: WKNavigationDelegate {
         return .allow
     }
 
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+    public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         Logger.action.error("WebViewHandler web content process terminated")
         resumeActiveContinuation(with: .failure(DataBrokerProtectionError.webContentProcessTerminated))
     }
 
-    func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge,
-                 completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+    public func webView(_ webView: WKWebView,
+                        didReceive challenge: URLAuthenticationChallenge,
+                        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         if !isFakeBroker {
             completionHandler(.performDefaultHandling, nil)
             return

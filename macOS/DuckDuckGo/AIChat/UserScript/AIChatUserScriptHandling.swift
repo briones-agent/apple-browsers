@@ -20,6 +20,7 @@ import AIChat
 import AppKit
 import Combine
 import Common
+import FoundationExtensions
 import Foundation
 import PixelKit
 import Subscription
@@ -32,8 +33,63 @@ protocol AIChatMetricReportingHandling {
     func didReportMetric(_ metric: AIChatMetric, completion: (() -> Void)?)
 }
 
+enum AIChatUserScriptErrorFailureReason: String {
+    case keyNotFound = "key_not_found"
+    case typeMismatch = "type_mismatch"
+    case valueNotFound = "value_not_found"
+    case dataCorrupted = "data_corrupted"
+    case unknownDecodingError = "unknown_decoding_error"
+
+    init(error: Error) {
+        switch error {
+        case DecodingError.keyNotFound(_, _):
+            self = .keyNotFound
+        case DecodingError.typeMismatch(_, _):
+            self = .typeMismatch
+        case DecodingError.valueNotFound(_, _):
+            self = .valueNotFound
+        case DecodingError.dataCorrupted(_):
+            self = .dataCorrupted
+        default:
+            self = .unknownDecodingError
+        }
+    }
+}
+
+enum AIChatUserScriptErrorEvent: Equatable {
+    case reportMetricDecodingFailed(error: Error?, failureReason: AIChatUserScriptErrorFailureReason)
+
+    static func == (lhs: AIChatUserScriptErrorEvent, rhs: AIChatUserScriptErrorEvent) -> Bool {
+        switch (lhs, rhs) {
+        case (.reportMetricDecodingFailed, .reportMetricDecodingFailed):
+            return true
+        }
+    }
+}
+
+final class AIChatUserScriptErrorEventMapper: EventMapping<AIChatUserScriptErrorEvent> {
+
+    init(pixelFiring: PixelFiring?) {
+        super.init { event, _, _, _ in
+            switch event {
+            case .reportMetricDecodingFailed(let error, let failureReason):
+                let nsError = error.map { $0 as NSError }
+                pixelFiring?.fire(
+                    AIChatPixel.aiChatReportMetricDecodeError(nsError, failureReason: failureReason),
+                    frequency: .dailyAndCount
+                )
+            }
+        }
+    }
+
+    @available(*, unavailable, message: "Use init(pixelFiring:) instead")
+    override init(mapping: @escaping EventMapping<AIChatUserScriptErrorEvent>.Mapping) {
+        fatalError("Use init(pixelFiring:) instead")
+    }
+}
+
 // swiftlint:disable inclusive_language
-protocol AIChatUserScriptHandling {
+protocol AIChatUserScriptHandling: AnyObject {
     @MainActor func openAIChatSettings(params: Any, message: UserScriptMessage) async -> Encodable?
     func getAIChatNativeConfigValues(params: Any, message: UserScriptMessage) async -> Encodable?
     func closeAIChat(params: Any, message: UserScriptMessage) async -> Encodable?
@@ -57,6 +113,9 @@ protocol AIChatUserScriptHandling {
     var syncStatusPublisher: AnyPublisher<AIChatSyncHandler.SyncStatus, Never> { get }
 
     var messageHandling: AIChatMessageHandling { get }
+
+    var isFireWindowProvider: (() -> Bool)? { get set }
+
     func submitAIChatNativePrompt(_ prompt: AIChatNativePrompt)
     func submitAIChatPageContext(_ pageContext: AIChatPageContextData?)
 
@@ -77,6 +136,18 @@ protocol AIChatUserScriptHandling {
     func sendToSyncSettings(params: Any, message: UserScriptMessage) -> Encodable?
     func sendToSetupSync(params: Any, message: UserScriptMessage) -> Encodable?
     func setAIChatHistoryEnabled(params: Any, message: UserScriptMessage) -> Encodable?
+
+    /// Voice-session lifecycle messages from Duck.ai. Native rebroadcasts them as
+    /// `aiChatVoiceSessionStarted` / `aiChatVoiceSessionEnded` notifications carrying the
+    /// source `WKWebView` as `object`, so observers (`VoiceSessionTracker`) can map back
+    /// to the owning `Tab` and decide whether to focus it instead of opening a new one.
+    @MainActor func voiceSessionStarted(params: Any, message: UserScriptMessage) async -> Encodable?
+    @MainActor func voiceSessionEnded(params: Any, message: UserScriptMessage) async -> Encodable?
+
+    /// Posted by Duck.ai when `getUserMedia()` rejects while starting voice chat. Native uses
+    /// the carried `reason` (the JS error name, e.g. `"NotAllowedError"`) to decide whether
+    /// to surface a system-permission remediation prompt.
+    @MainActor func voiceChatStartFailed(params: Any, message: UserScriptMessage) async -> Encodable?
 }
 
 final class AIChatUserScriptHandler: AIChatUserScriptHandling {
@@ -101,12 +172,16 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
     private let windowControllersManager: WindowControllersManagerProtocol
     private let notificationCenter: NotificationCenter
     private let pixelFiring: PixelFiring?
+    private let aiChatUserScriptErrorEventMapper: EventMapping<AIChatUserScriptErrorEvent>
     private let statisticsLoader: StatisticsLoader?
     private let syncServiceProvider: () -> DDGSyncing?
     private let syncErrorHandler: SyncErrorHandling
     private let featureFlagger: FeatureFlagger
     private let freeTrialConversionService: FreeTrialConversionInstrumentationService
     private let migrationStore = AIChatMigrationStore()
+    private let voiceChatFailureHandler: DuckAiVoiceChatFailureHandling
+
+    var isFireWindowProvider: (() -> Bool)?
 
     init(
         storage: AIChatPreferencesStorage,
@@ -117,19 +192,31 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
         syncServiceProvider: @escaping () -> DDGSyncing?,
         syncErrorHandler: SyncErrorHandling,
         featureFlagger: FeatureFlagger,
+        aiChatUserScriptErrorEventMapper: EventMapping<AIChatUserScriptErrorEvent>? = nil,
         freeTrialConversionService: FreeTrialConversionInstrumentationService = Application.appDelegate.freeTrialConversionService,
-        notificationCenter: NotificationCenter = .default
+        notificationCenter: NotificationCenter = .default,
+        voiceChatFailureHandler: DuckAiVoiceChatFailureHandling? = nil
     ) {
         self.storage = storage
         self.messageHandling = messageHandling
         self.windowControllersManager = windowControllersManager
         self.pixelFiring = pixelFiring
+        self.aiChatUserScriptErrorEventMapper = aiChatUserScriptErrorEventMapper ?? AIChatUserScriptErrorEventMapper(pixelFiring: pixelFiring)
         self.statisticsLoader = statisticsLoader
         self.syncServiceProvider = syncServiceProvider
         self.syncErrorHandler = syncErrorHandler
         self.notificationCenter = notificationCenter
         self.featureFlagger = featureFlagger
         self.freeTrialConversionService = freeTrialConversionService
+        self.voiceChatFailureHandler = voiceChatFailureHandler ?? DuckAiVoiceChatFailureHandler(
+            permissionCenterPresenter: NotificationCenterPermissionCenterPresenter(
+                notificationCenter: notificationCenter,
+                // Posting the notification is enough — the address-bar observer dedupes
+                // against its own popover state. From here we can't see UI state without
+                // pulling AppKit in, so the probe defaults to `false`.
+                isPresentedProvider: { _ in false }
+            )
+        )
         self.aiChatNativePromptPublisher = aiChatNativePromptSubject.eraseToAnyPublisher()
         self.pageContextPublisher = pageContextSubject.eraseToAnyPublisher()
         self.pageContextRequestedPublisher = pageContextRequestedSubject.eraseToAnyPublisher()
@@ -152,7 +239,7 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
     }
 
     public func getAIChatNativeConfigValues(params: Any, message: UserScriptMessage) async -> Encodable? {
-        let isFireWindow = await isFireWindowMessage(message)
+        let isFireWindow = isFireWindowProvider?() ?? false
         return messageHandling.getNativeConfigValues(isFireWindow: isFireWindow)
     }
 
@@ -285,16 +372,24 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
     }
 
     func reportMetric(params: Any, message: UserScriptMessage) async -> Encodable? {
-        if let paramsDict = params as? [String: Any],
-           let jsonData = try? JSONSerialization.data(withJSONObject: paramsDict, options: []) {
+        guard let paramsDict = params as? [String: Any] else {
+            aiChatUserScriptErrorEventMapper.fire(.reportMetricDecodingFailed(
+                error: nil,
+                failureReason: .typeMismatch
+            ))
+            return nil
+        }
 
-            let decoder = JSONDecoder()
-            do {
-                let metric = try decoder.decode(AIChatMetric.self, from: jsonData)
-                didReportMetric(metric, completion: nil)
-            } catch {
-                Logger.aiChat.debug("Failed to decode metric JSON in AIChatUserScript: \(error)")
-            }
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: paramsDict, options: [])
+            let metric = try JSONDecoder().decode(AIChatMetric.self, from: jsonData)
+            didReportMetric(metric, completion: nil)
+        } catch {
+            Logger.aiChat.debug("Failed to decode metric JSON in AIChatUserScript: \(error)")
+            aiChatUserScriptErrorEventMapper.fire(.reportMetricDecodingFailed(
+                error: error,
+                failureReason: AIChatUserScriptErrorFailureReason(error: error)
+            ))
         }
         return nil
     }
@@ -303,17 +398,15 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
 
     @MainActor
     func getAIChatOpenTabs(params: Any, message: UserScriptMessage) async -> Encodable? {
-        guard let mainVC = windowControllersManager.lastKeyMainWindowController?.mainViewController else {
+        // Source tabs from all windows (except Fire Windows) relative to the window the picker was
+        // opened in — see `AIChatTabPickerSource`. A Fire Window only sees its own tabs.
+        guard let origin = AIChatTabPickerSource.originTabCollectionViewModel(for: message.messageWebView, in: windowControllersManager) else {
             return AIChatOpenTabsResponse(tabs: [])
         }
-
-        let tabCollection = mainVC.tabCollectionViewModel.tabCollection
-        let pinnedTabs = mainVC.tabCollectionViewModel.pinnedTabsCollection?.tabs ?? []
-        let allTabs = pinnedTabs + tabCollection.tabs
-        let currentTabId = mainVC.tabCollectionViewModel.selectedTabViewModel?.tab.uuid
+        let currentTabId = origin.selectedTabViewModel?.tab.uuid
 
         let faviconManager = NSApp.delegateTyped.faviconManager
-        let tabMetadata: [AIChatTabMetadata] = allTabs.compactMap { tab in
+        let tabMetadata: [AIChatTabMetadata] = AIChatTabPickerSource.attachableTabs(forOrigin: origin, in: windowControllersManager).compactMap { tab in
             guard case .url(let url, _, _) = tab.content else { return nil }
             let favicon: [AIChatPageContextData.PageContextFavicon]
             if let image = faviconManager.getCachedFavicon(for: url, sizeCategory: .small)?.image,
@@ -340,22 +433,34 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
             return AIChatTabContentResponse(pageContext: nil)
         }
 
-        guard let mainVC = windowControllersManager.lastKeyMainWindowController?.mainViewController else {
+        guard let origin = AIChatTabPickerSource.originTabCollectionViewModel(for: message.messageWebView, in: windowControllersManager) else {
             return AIChatTabContentResponse(pageContext: nil)
         }
 
-        let tabCollection = mainVC.tabCollectionViewModel.tabCollection
-        let pinnedTabs = mainVC.tabCollectionViewModel.pinnedTabsCollection?.tabs ?? []
-        let allTabs = pinnedTabs + tabCollection.tabs
+        // Wakes the tab if it's suspended so its content can be extracted instead of being dropped.
+        // The JS-bridge consumer is always a tab-picker flow (sidebar's `@` picker), so the result
+        // is always a tab-picker context — stamp `tabId` so the duck.ai web app sees the
+        // discriminator and treats it as "additional context", not "current page".
+        let extracted = await Self.extractPageContext(forTabId: params.tabId, origin: origin, in: windowControllersManager)
+        return AIChatTabContentResponse(pageContext: extracted?.withTabId(params.tabId))
+    }
 
-        guard let tab = allTabs.first(where: { $0.uuid == params.tabId }) else {
-            return AIChatTabContentResponse(pageContext: nil)
-        }
-
+    /// Extracts a fresh `AIChatPageContextData` from the given `Tab` by invoking its
+    /// `PageContextUserScript`. Returns `nil` if the user script isn't attached or the
+    /// page-context script's webView has been released (e.g. suspended tab).
+    ///
+    /// The returned page context carries **no `tabId`** — callers stamp it themselves
+    /// (`getAIChatTabContent` always stamps; the omnibar submit path strips for the active
+    /// tab and stamps for the rest).
+    ///
+    /// Shared by the JS-bridge consumer (`getAIChatTabContent`) and the omnibar's submit
+    /// path so both go through the exact same extraction + favicon-enrichment logic.
+    @MainActor
+    static func extractPageContext(from tab: Tab, timeout: TimeInterval = 5) async -> AIChatPageContextData? {
         // Access the tab's PageContextUserScript via its content blocking assets
         guard let userScripts = tab.userContentController?.contentBlockingAssets?.userScripts as? UserScripts,
               let pageContextScript = userScripts.pageContextUserScript else {
-            return AIChatTabContentResponse(pageContext: nil)
+            return nil
         }
 
         // Ensure the webView is set — it may have been released for background tabs
@@ -365,13 +470,13 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
 
         // If webView is still nil (e.g. suspended tab), return immediately instead of waiting for timeout
         guard pageContextScript.webView != nil else {
-            return AIChatTabContentResponse(pageContext: nil)
+            return nil
         }
 
-        let pageContext = await pageContextScript.collectAndWait()
+        let pageContext = await pageContextScript.collectAndWait(timeout: timeout)
 
         // Replace favicon URLs with base64-encoded data to avoid CSP blocking in the sidebar
-        let enrichedContext = pageContext.map { ctx -> AIChatPageContextData in
+        return pageContext.map { ctx -> AIChatPageContextData in
             guard let pageURL = URL(string: ctx.url),
                   let favicon = NSApp.delegateTyped.faviconManager.getCachedFavicon(for: pageURL, sizeCategory: .small)?.image,
                   let base64 = favicon.base64PNGDataURL else {
@@ -388,7 +493,74 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
                 attachable: ctx.attachable
             )
         }
-        return AIChatTabContentResponse(pageContext: enrichedContext)
+    }
+
+    /// Resolves `tabId` to a live `Tab` within the origin scope — **waking a suspended/unloaded tab
+    /// if needed** — then extracts its page context. A freshly-woken tab's page isn't loaded yet, so
+    /// we trigger a load and wait (bounded) for navigation to finish before collecting; an
+    /// already-loaded tab (e.g. the current page) extracts immediately with no wait. Returns `nil`
+    /// if the tab can't be found, the wake fails, or the page doesn't load within the budget.
+    /// Never selects or focuses the tab.
+    @MainActor
+    static func extractPageContext(forTabId tabId: String,
+                                   origin: TabCollectionViewModel,
+                                   in windowControllersManager: WindowControllersManagerProtocol,
+                                   navigationTimeout: TimeInterval = 5,
+                                   collectTimeout: TimeInterval = 5) async -> AIChatPageContextData? {
+        guard let resolved = AIChatTabPickerSource.materializeAttachableTab(withId: tabId, forOrigin: origin, in: windowControllersManager) else {
+            return nil
+        }
+
+        if resolved.wasMaterialized {
+            // Mirror `resumeTab(at:)`: a just-materialized tab won't auto-load, so kick a reload and
+            // wait for navigation to finish before collecting — otherwise an early empty JS response
+            // could win the `collectAndWait` race.
+            let didNavigate = await waitForNavigationFinish(tab: resolved.tab, timeout: navigationTimeout) {
+                resolved.tab.reload()
+            }
+            guard didNavigate else { return nil }
+        }
+
+        return await extractPageContext(from: resolved.tab, timeout: collectTimeout)
+    }
+
+    /// Subscribes to the tab's first finished navigation, runs `start()` (e.g. `reload()`), and
+    /// awaits the navigation bounded by `timeout`. Subscribing before `start()` avoids missing a
+    /// fast-finishing navigation. Returns `true` if navigation finished, `false` on timeout.
+    ///
+    /// The navigation signal is bridged through an `AsyncStream` (not `withCheckedContinuation`) so
+    /// that cancelling the task group on timeout actually tears the waiter down — a bare
+    /// continuation isn't cancellation-aware, so the timeout loser would otherwise hang the group
+    /// forever and leak the continuation. Mirrors `PageContextUserScript.collectAndWait`.
+    @MainActor
+    private static func waitForNavigationFinish(tab: Tab,
+                                                timeout: TimeInterval,
+                                                start: @escaping @MainActor () -> Void) async -> Bool {
+        let navigationFinished = AsyncStream<Void> { continuation in
+            var cancellable: AnyCancellable?
+            cancellable = tab.webViewDidFinishNavigationPublisher
+                .first()
+                .sink { _ in
+                    continuation.yield(())
+                    continuation.finish()
+                }
+            continuation.onTermination = { _ in cancellable?.cancel() }
+            start()
+        }
+
+        return await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                for await _ in navigationFinished { return true }
+                return false
+            }
+            group.addTask {
+                try? await Task.sleep(interval: timeout)
+                return false
+            }
+            let result = await group.next() ?? false
+            group.cancelAll()
+            return result
+        }
     }
 
     func togglePageContextTelemetry(params: Any, message: UserScriptMessage) -> Encodable? {
@@ -614,6 +786,36 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
         return nil
     }
 
+    // MARK: - Voice Session
+
+    @MainActor
+    func voiceSessionStarted(params: Any, message: UserScriptMessage) async -> Encodable? {
+        notificationCenter.post(name: .aiChatVoiceSessionStarted, object: message.messageWebView)
+        return nil
+    }
+
+    @MainActor
+    func voiceSessionEnded(params: Any, message: UserScriptMessage) async -> Encodable? {
+        notificationCenter.post(name: .aiChatVoiceSessionEnded, object: message.messageWebView)
+        return nil
+    }
+
+    @MainActor
+    func voiceChatStartFailed(params: Any, message: UserScriptMessage) async -> Encodable? {
+        // No-op when the feature flag is off — FE should never reach here in that case
+        // (it sees `supportsNativeVoicePermissionHandler: false` and keeps its tooltip),
+        // but stale clients or local-override misuse could fire it. Fail closed.
+        guard featureFlagger.isFeatureOn(.aiChatNativeVoicePermissionFlow) else { return nil }
+        let reason: String = {
+            if let dict = params as? [String: Any], let value = dict["reason"] as? String {
+                return value
+            }
+            return ""
+        }()
+        voiceChatFailureHandler.handleVoiceChatStartFailed(reason: reason, sourceWebView: message.messageWebView)
+        return nil
+    }
+
     private func makeSyncHandler() -> AIChatSyncHandler? {
         guard let sync = syncServiceProvider() else {
             return nil
@@ -623,15 +825,6 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
             return nil
         }
         return AIChatSyncHandler(sync: sync, httpRequestErrorHandler: syncErrorHandler.handleAiChatsError)
-    }
-
-    @MainActor
-    private func isFireWindowMessage(_ message: UserScriptMessage) -> Bool {
-        guard let windowController = message.messageWebView?.window?.windowController as? MainWindowController else {
-            return false
-        }
-
-        return windowController.mainViewController.isBurner
     }
 
     @MainActor

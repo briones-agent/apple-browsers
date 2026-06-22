@@ -20,6 +20,7 @@
 import Foundation
 import Bookmarks
 import Core
+import Onboarding
 import WidgetKit
 
 public class AppUserDefaults: AppSettings {
@@ -108,6 +109,9 @@ public class AppUserDefaults: AppSettings {
         static let autofillDebugScriptEnabledKey = "com.duckduckgo.ios.debug.autofillDebugScriptEnabled"
         static let contentScopeDebugStateEnabledKey = "com.duckduckgo.ios.debug.contentScopeDebugStateEnabled"
         static let onboardingIsNewUserKey = "com.duckduckgo.ios.debug.onboardingIsNewUser"
+        static let onboardingForceRestorePromptEligibleKey = "com.duckduckgo.ios.debug.onboardingForceRestorePromptEligible"
+        static let onboardingFlowTypeKey = "com.duckduckgo.ios.debug.onboardingFlowType"
+        static let shakeToOpenDebugMenuEnabledKey = "com.duckduckgo.ios.debug.shakeToOpenDebugMenuEnabled"
     }
 
     private var userDefaults: UserDefaults? {
@@ -451,6 +455,16 @@ public class AppUserDefaults: AppSettings {
         }
     }
 
+    var shakeToOpenDebugMenuEnabled: Bool {
+        get {
+            return userDefaults?.object(forKey: DebugKeys.shakeToOpenDebugMenuEnabledKey) as? Bool ?? true
+        }
+
+        set {
+            userDefaults?.set(newValue, forKey: DebugKeys.shakeToOpenDebugMenuEnabledKey)
+        }
+    }
+
     var autofillDebugScriptEnabled: Bool {
         get {
             return userDefaults?.object(forKey: DebugKeys.autofillDebugScriptEnabledKey) as? Bool ?? false
@@ -600,6 +614,25 @@ public class AppUserDefaults: AppSettings {
         }
     }
 
+    var onboardingForceRestorePromptEligible: Bool {
+        get {
+            userDefaults?.bool(forKey: DebugKeys.onboardingForceRestorePromptEligibleKey) ?? false
+        }
+        set {
+            userDefaults?.set(newValue, forKey: DebugKeys.onboardingForceRestorePromptEligibleKey)
+        }
+    }
+
+    var onboardingFlowType: OnboardingFlowType? {
+        get {
+            guard let rawValue = userDefaults?.string(forKey: DebugKeys.onboardingFlowTypeKey) else { return nil }
+            return OnboardingFlowType(rawValue: rawValue)
+        }
+        set {
+            userDefaults?.set(newValue?.rawValue, forKey: DebugKeys.onboardingFlowTypeKey)
+        }
+    }
+
    var duckPlayerVariant: DuckPlayerVariant {
         get {
             if let value = userDefaults?.string(forKey: Keys.duckPlayerVariant),
@@ -631,6 +664,7 @@ public class AppUserDefaults: AppSettings {
 
     @UserDefaultsWrapper(key: .autoClearAIChatHistory, defaultValue: false)
     var autoClearAIChatHistory: Bool
+
 }
 
 extension AppUserDefaults: AppConfigurationFetchStatistics {

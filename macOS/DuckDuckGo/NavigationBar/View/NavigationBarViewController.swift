@@ -20,7 +20,10 @@ import BrokenSitePrompt
 import BrowserServicesKit
 import Cocoa
 import Combine
+import CombineExtensions
 import Common
+import FoundationExtensions
+import DesignResourcesKitIcons
 import Freemium
 import History
 import NetworkProtectionIPC
@@ -32,6 +35,7 @@ import PrivacyConfig
 import Subscription
 import SubscriptionUI
 import VPN
+import WebExtensions
 
 final class NavigationBarViewController: NSViewController {
 
@@ -76,6 +80,10 @@ final class NavigationBarViewController: NSViewController {
     @IBOutlet private var backgroundColorView: MouseOverView!
     @IBOutlet private var backgroundBaseColorView: ColorView!
 
+    private var feedbackButton: MouseOverButton?
+    private var feedbackButtonSpacer: NSView?
+    private var feedbackTipController: QuickFeedbackTipController?
+    private var internalUserCancellable: AnyCancellable?
     private var fireWindowBackgroundView: NSImageView?
     @IBOutlet private var goBackButtonWidthConstraint: NSLayoutConstraint!
     @IBOutlet private var goBackButtonHeightConstraint: NSLayoutConstraint!
@@ -159,6 +167,7 @@ final class NavigationBarViewController: NSViewController {
 
     private let brokenSitePromptLimiter: BrokenSitePromptLimiter
     private let featureFlagger: FeatureFlagger
+    private let adBlockingAvailability: AdBlockingAvailabilityProviding
     private let searchPreferences: SearchPreferences
     private let aiChatMenuConfig: AIChatMenuVisibilityConfigurable
     private let aiChatCoordinator: AIChatCoordinating
@@ -227,6 +236,7 @@ final class NavigationBarViewController: NSViewController {
                        autofillPopoverPresenter: AutofillPopoverPresenter,
                        brokenSitePromptLimiter: BrokenSitePromptLimiter,
                        featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger,
+                       adBlockingAvailability: AdBlockingAvailabilityProviding = NSApp.delegateTyped.adBlockingAvailability,
                        searchPreferences: SearchPreferences,
                        webTrackingProtectionPreferences: WebTrackingProtectionPreferences,
                        themeManager: ThemeManaging = NSApp.delegateTyped.themeManager,
@@ -264,6 +274,7 @@ final class NavigationBarViewController: NSViewController {
                 autofillPopoverPresenter: autofillPopoverPresenter,
                 brokenSitePromptLimiter: brokenSitePromptLimiter,
                 featureFlagger: featureFlagger,
+                adBlockingAvailability: adBlockingAvailability,
                 searchPreferences: searchPreferences,
                 webTrackingProtectionPreferences: webTrackingProtectionPreferences,
                 themeManager: themeManager,
@@ -299,6 +310,7 @@ final class NavigationBarViewController: NSViewController {
         autofillPopoverPresenter: AutofillPopoverPresenter,
         brokenSitePromptLimiter: BrokenSitePromptLimiter,
         featureFlagger: FeatureFlagger,
+        adBlockingAvailability: AdBlockingAvailabilityProviding,
         searchPreferences: SearchPreferences,
         webTrackingProtectionPreferences: WebTrackingProtectionPreferences,
         themeManager: ThemeManaging,
@@ -354,6 +366,7 @@ final class NavigationBarViewController: NSViewController {
         self.fireproofDomains = fireproofDomains
         self.brokenSitePromptLimiter = brokenSitePromptLimiter
         self.featureFlagger = featureFlagger
+        self.adBlockingAvailability = adBlockingAvailability
         self.searchPreferences = searchPreferences
         self.themeManager = themeManager
         self.aiChatMenuConfig = aiChatMenuConfig
@@ -434,7 +447,9 @@ final class NavigationBarViewController: NSViewController {
                                                                       accessibilityPreferences: accessibilityPreferences,
                                                                       onboardingPixelReporter: onboardingPixelReporter,
                                                                       aiChatMenuConfig: aiChatMenuConfig,
-                                                                      aiChatCoordinator: aiChatCoordinator) else {
+                                                                      aiChatCoordinator: aiChatCoordinator,
+                                                                      featureFlagger: featureFlagger,
+                                                                      adBlockingAvailability: adBlockingAvailability) else {
             fatalError("NavigationBarViewController: Failed to init AddressBarViewController")
         }
 
@@ -458,6 +473,7 @@ final class NavigationBarViewController: NSViewController {
         setupNavigationButtons()
         setupOverflowMenu()
         setupNetworkProtectionButton()
+        setupQuickFeedbackButton()
 
         subscribeToThemeChanges()
         listenToPasswordManagerNotifications()
@@ -546,7 +562,9 @@ final class NavigationBarViewController: NSViewController {
         let performResize = { [weak self] in
             guard let self else { return }
 
-            let isAddressBarFocused = addressBarViewController?.selectionState.isSelected ?? false
+            /// Use the taller, wider layout whenever there's user-provided input or Duck.ai is active; compact only
+            /// for `.inactive` + `.browsing` (see `AddressBarViewController.shouldUseTallAddressBarLayout`).
+            let isAddressBarFocused = addressBarViewController?.shouldUseTallAddressBarLayout ?? false
 
             let height: NSLayoutConstraint = animated ? navigationBarHeightConstraint.animator() : navigationBarHeightConstraint
             height.constant = addressBarStyleProvider.navigationBarHeight(for: sizeClass, focused: isAddressBarFocused)
@@ -671,7 +689,11 @@ final class NavigationBarViewController: NSViewController {
         if pinningManager.isPinned(.autofill) && !isInPopUpWindow {
             passwordManagementButton.isHidden = false
         } else {
-            passwordManagementButton.isShown = popovers.isPasswordManagementPopoverShown || isAutoFillAutosaveMessageVisible
+            // Keep the button visible while the onboarding popover is anchored to it, otherwise hiding the button
+            // collapses the stack view and the popover detaches to a stray position.
+            passwordManagementButton.isShown = popovers.isPasswordManagementPopoverShown
+                || isAutoFillAutosaveMessageVisible
+                || popovers.isAutofillOnboardingPopoverShown
         }
 
         popovers.passwordManagementDomain = nil
@@ -901,6 +923,8 @@ final class NavigationBarViewController: NSViewController {
                     self.updateDownloadsButton(source: .pinnedViewsNotification)
                 case .homeButton:
                     self.updateHomeButton()
+                case .feedback:
+                    self.updateQuickFeedbackButtonVisibility()
                 case .networkProtection:
                     self.updateNetworkProtectionButton()
                 case .share:
@@ -1061,8 +1085,9 @@ final class NavigationBarViewController: NSViewController {
     private func setupNavigationButtonColors() {
         let allButtons: [MouseOverButton] = [
             goBackButton, goForwardButton, refreshOrStopButton, homeButton,
-            downloadsButton, shareButton, passwordManagementButton, bookmarkListButton, optionsButton
-        ]
+            downloadsButton, shareButton, passwordManagementButton, bookmarkListButton, optionsButton,
+            networkProtectionButton, feedbackButton
+        ].compactMap { $0 }
 
         let colorsProvider = theme.colorsProvider
 
@@ -1455,11 +1480,13 @@ final class NavigationBarViewController: NSViewController {
 
     private func toggleNetworkProtectionPopover() {
         guard Application.appDelegate.subscriptionManager.isUserAuthenticated else {
+            PixelKit.fire(SubscriptionPixel.subscriptionToolbarButtonClicked)
             popovers.toggleVPNUpsellPopover(from: networkProtectionButton)
             vpnUpsellVisibilityManager.dismissNotificationDot()
             return
         }
 
+        PixelKit.fire(SubscriptionPixel.subscriptionToolbarVPNButtonClicked)
         popovers.toggleNetworkProtectionPopover(from: networkProtectionButton, withDelegate: networkProtectionButtonModel)
     }
 
@@ -1559,9 +1586,12 @@ final class NavigationBarViewController: NSViewController {
                   let isCosmetic = sender.userInfo?["isCosmetic"] as? Bool
             else { return }
 
-            guard let self = self, self.tabCollectionViewModel.selectedTabViewModel?.tab.url == topUrl else {
-                return // if the tab is not active, don't show the popup
-            }
+            guard let self = self,
+                  self.tabCollectionViewModel.selectedTabViewModel?.tab.url == topUrl,
+                  self.addressBarViewController?.addressBarButtonsViewController?
+                      .shouldSuppressForAdBlocking(url: topUrl) != true
+            else { return }
+
             let animationType: NavigationBarBadgeAnimationView.AnimationType = isCosmetic ? .cookiePopupHidden : .cookiePopupManaged
             self.addressBarViewController?.addressBarButtonsViewController?.showBadgeNotification(animationType)
         }
@@ -1788,6 +1818,8 @@ final class NavigationBarViewController: NSViewController {
             return [bookmarkListButton]
         case .downloads:
             return [downloadsButton]
+        case .feedback:
+            return [feedbackButton, feedbackButtonSpacer].compactMap { $0 }
         case .share:
             return [shareButton]
         case .homeButton where Self.homeButtonPosition == .left:
@@ -1815,6 +1847,10 @@ final class NavigationBarViewController: NSViewController {
             return NSMenuItem(title: UserText.downloads, action: #selector(overflowMenuRequestedDownloadsPopover), keyEquivalent: "")
                 .targetting(self)
                 .withImage(theme.iconsProvider.navigationToolbarIconsProvider.downloadsButtonImage)
+        case .feedback:
+            return NSMenuItem(title: UserText.feedbackShortcutTooltip, action: #selector(quickFeedbackButtonClicked), keyEquivalent: "")
+                .targetting(self)
+                .withImage(DesignSystemImages.Glyphs.Size16.feedback)
         case .share:
             return NSMenuItem(title: UserText.shareMenuItem, action: #selector(overflowMenuRequestedSharePopover), keyEquivalent: "")
                 .targetting(self)
@@ -1918,19 +1954,30 @@ extension NavigationBarViewController: NSMenuDelegate {
         HomeButtonMenuFactory.addToMenu(menu, prefs: NSApp.delegateTyped.appearancePreferences, pinningManager: pinningManager)
         let shareTitle = pinningManager.shortcutTitle(for: .share)
         menu.addItem(withTitle: shareTitle, action: #selector(toggleSharePanelPinning), keyEquivalent: "")
+            .withImage(DesignSystemImages.Glyphs.Size12.shareApple)
 
         let downloadsTitle = pinningManager.shortcutTitle(for: .downloads)
         menu.addItem(withTitle: downloadsTitle, action: #selector(toggleDownloadsPanelPinning), keyEquivalent: "J")
+            .withImage(DesignSystemImages.Glyphs.Size12.download)
 
         let autofillTitle = pinningManager.shortcutTitle(for: .autofill)
         menu.addItem(withTitle: autofillTitle, action: #selector(toggleAutofillPanelPinning), keyEquivalent: "A")
+            .withImage(DesignSystemImages.Glyphs.Size12.keyLogin)
 
         let bookmarksTitle = pinningManager.shortcutTitle(for: .bookmarks)
         menu.addItem(withTitle: bookmarksTitle, action: #selector(toggleBookmarksPanelPinning), keyEquivalent: "K")
+            .withImage(DesignSystemImages.Glyphs.Size12.bookmarks)
 
         if !isInPopUpWindow && DefaultVPNFeatureGatekeeper(vpnUninstaller: VPNUninstaller(pinningManager: pinningManager), subscriptionManager: subscriptionManager).isVPNVisible() {
             let networkProtectionTitle = pinningManager.shortcutTitle(for: .networkProtection)
             menu.addItem(withTitle: networkProtectionTitle, action: #selector(toggleNetworkProtectionPanelPinning), keyEquivalent: "")
+                .withImage(DesignSystemImages.Glyphs.Size12.vpnUnlock)
+        }
+
+        if !isInPopUpWindow && NSApp.delegateTyped.internalUserDecider.isInternalUser {
+            let feedbackTitle = pinningManager.shortcutTitle(for: .feedback)
+            menu.addItem(withTitle: feedbackTitle, action: #selector(toggleFeedbackPanelPinning), keyEquivalent: "")
+                .withImage(DesignSystemImages.Glyphs.Size12.feedback)
         }
     }
 
@@ -1966,10 +2013,108 @@ extension NavigationBarViewController: NSMenuDelegate {
                                               withDelegate: networkProtectionButtonModel)
     }
 
-    /// Sets up the VPN button.
-    ///
-    /// This method should be run just once during the lifecycle of this view.
-    /// .
+    // MARK: - Quick Feedback Button
+
+    private func setupQuickFeedbackButton() {
+        guard !isInPopUpWindow else { return }
+
+        let internalUserDecider = NSApp.delegateTyped.internalUserDecider
+
+        if internalUserDecider.isInternalUser {
+            pinFeedbackIfNeverToggledBefore()
+            updateQuickFeedbackButtonVisibility()
+        }
+
+        internalUserCancellable = internalUserDecider.isInternalUserPublisher
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isInternal in
+                if isInternal {
+                    self?.pinFeedbackIfNeverToggledBefore()
+                    self?.updateQuickFeedbackButtonVisibility()
+                } else {
+                    self?.removeQuickFeedbackButton()
+                }
+            }
+    }
+
+    private func pinFeedbackIfNeverToggledBefore() {
+        guard !pinningManager.isPinned(.feedback),
+              !pinningManager.wasManuallyToggled(.feedback) else { return }
+        pinningManager.pin(.feedback)
+    }
+
+    private func updateQuickFeedbackButtonVisibility() {
+        let isInternal = NSApp.delegateTyped.internalUserDecider.isInternalUser
+        if isInternal && pinningManager.isPinned(.feedback) {
+            addQuickFeedbackButton()
+        } else {
+            removeQuickFeedbackButton()
+        }
+    }
+
+    private func addQuickFeedbackButton() {
+        guard feedbackButton == nil else { return }
+
+        let button = MouseOverButton(frame: NSRect(x: 0, y: 0, width: 28, height: 28))
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.bezelStyle = .shadowlessSquare
+        button.isBordered = false
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleProportionallyDown
+        button.toolTip = UserText.feedbackShortcutTooltip
+        button.target = self
+        button.action = #selector(quickFeedbackButtonClicked)
+
+        button.image = DesignSystemImages.Glyphs.Size16.feedback
+        let iconsColor = theme.colorsProvider.iconsColor
+        button.contentTintColor = iconsColor
+        button.normalTintColor = iconsColor
+        button.mouseOverColor = theme.colorsProvider.buttonMouseOverColor
+        button.setCornerRadius(theme.toolbarButtonsCornerRadius)
+
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 28),
+            button.heightAnchor.constraint(equalToConstant: 28),
+        ])
+
+        menuButtons.insertArrangedSubview(button, at: 0)
+
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.widthAnchor.constraint(equalToConstant: 6).isActive = true
+        menuButtons.insertArrangedSubview(spacer, at: 1)
+
+        feedbackButton = button
+        feedbackButtonSpacer = spacer
+
+        let tipController = QuickFeedbackTipController()
+        feedbackTipController = tipController
+
+        DispatchQueue.main.async { [weak tipController, weak button] in
+            guard let button else { return }
+            tipController?.scheduleIfNeeded(anchoredTo: button)
+        }
+    }
+
+    private func removeQuickFeedbackButton() {
+        feedbackTipController?.dismissTip()
+        feedbackTipController = nil
+        feedbackButton?.removeFromSuperview()
+        feedbackButton = nil
+        feedbackButtonSpacer?.removeFromSuperview()
+        feedbackButtonSpacer = nil
+    }
+
+    @objc private func quickFeedbackButtonClicked(_ sender: Any?) {
+        feedbackTipController?.recordButtonClick()
+        Application.appDelegate.quickFeedbackService.openFeedbackPopup(from: view.window)
+    }
+
+    @objc private func toggleFeedbackPanelPinning(_ sender: NSMenuItem) {
+        pinningManager.togglePinning(for: .feedback)
+    }
+
     private func setupNetworkProtectionButton() {
         guard !isInPopUpWindow else {
             networkProtectionButton.isHidden = true
@@ -2031,7 +2176,7 @@ extension NavigationBarViewController: OptionsButtonMenuDelegate {
     }
 
     func optionsButtonMenuRequestedBookmarkAllOpenTabs(_ sender: NSMenuItem) {
-        let websitesInfo = tabCollectionViewModel.tabs.compactMap(WebsiteInfo.init)
+        let websitesInfo = tabCollectionViewModel.tabCollection.tabs.compactMap(WebsiteInfo.init)
         BookmarksDialogViewFactory.makeBookmarkAllOpenTabsView(websitesInfo: websitesInfo, bookmarkManager: bookmarkManager).show()
     }
 
@@ -2086,7 +2231,7 @@ extension NavigationBarViewController: OptionsButtonMenuDelegate {
     func optionsButtonMenuRequestedSubscriptionPurchasePage(_ menu: NSMenu) {
         let url = subscriptionManager.url(for: .purchase)
         showTab(.subscription(url.appendingParameter(name: AttributionParameter.origin, value: SubscriptionFunnelOrigin.appMenu.rawValue)))
-        PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression)
+        PixelKit.fire(SubscriptionPixel.subscriptionOfferScreenImpression(origin: SubscriptionFunnelOrigin.appMenu.rawValue))
     }
 
     func optionsButtonMenuRequestedWinBackOfferPurchasePage(_ menu: NSMenu) {
@@ -2206,6 +2351,14 @@ extension NavigationBarViewController: AddressBarViewControllerDelegate {
             // When manually toggling to search mode (!isAIChatMode), keep the address bar selected
             mainViewController.updateAIChatOmnibarContainerVisibility(visible: isAIChatMode, shouldKeepSelection: !isAIChatMode)
         }
+    }
+
+    func addressBarViewControllerDidResignFocusKeepingAIChatMode(_ addressBarViewController: AddressBarViewController) {
+        (parent as? MainViewController)?.hideAIChatOmnibarPanelKeepingTabState()
+    }
+
+    func addressBarViewControllerDidRefocusInAIChatMode(_ addressBarViewController: AddressBarViewController) {
+        (parent as? MainViewController)?.showAIChatOmnibarPanelForRefocus()
     }
 }
 

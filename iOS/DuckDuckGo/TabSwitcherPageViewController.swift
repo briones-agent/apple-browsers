@@ -20,6 +20,7 @@
 
 import UIKit
 import Common
+import FoundationExtensions
 import Core
 import DDGSync
 import WebKit
@@ -72,6 +73,9 @@ class TabSwitcherPageViewController: UIViewController {
     private var lastAppliedTrackerCountState: TabSwitcherTrackerCountViewModel.State?
     private var trackerInfoModel: InfoPanelView.Model?
     private var fireModeEmptyStateHostingController: UIHostingController<FireModeEmptyStateView>?
+    private let duckAIGridContentProvider: DuckAIGridContentProviding?
+
+    var canUpdateCollection = true
 
     var selectedIndexPaths: [IndexPath] {
         collectionView.indexPathsForSelectedItems ?? []
@@ -82,7 +86,8 @@ class TabSwitcherPageViewController: UIViewController {
          previewsSource: TabPreviewsSource,
          tabSwitcherSettings: TabSwitcherSettings,
          trackerCountViewModel: TabSwitcherTrackerCountViewModel?,
-         isFireModeEnabled: Bool) {
+         isFireModeEnabled: Bool,
+         duckAIGridContentProvider: DuckAIGridContentProviding?) {
         self.browsingMode = browsingMode
         self.tabsModel = tabsModel
         self.previewsSource = previewsSource
@@ -90,6 +95,7 @@ class TabSwitcherPageViewController: UIViewController {
         self.trackerCountViewModel = trackerCountViewModel
         self.isFireModeEnabled = isFireModeEnabled
         self.currentSelection = tabsModel.currentIndex
+        self.duckAIGridContentProvider = duckAIGridContentProvider
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -111,6 +117,9 @@ class TabSwitcherPageViewController: UIViewController {
         collectionView.backgroundColor = .clear
         collectionView.clipsToBounds = true
         collectionView.isMultipleTouchEnabled = true
+        if #available(iOS 17.0, *) {
+            collectionView.allowsKeyboardScrolling = false
+        }
         collectionView.dataSource = self
         collectionView.delegate = self
         collectionView.dragDelegate = self
@@ -165,13 +174,15 @@ class TabSwitcherPageViewController: UIViewController {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.reloadData()
+                guard let self, self.canUpdateCollection else { return }
+                self.reloadData()
             }
     }
 
     private func setupFireModeEmptyState() {
         guard browsingMode == .fire, isFireModeEnabled else { return }
         let emptyStateView = FireModeEmptyStateView(type: .tabSwitcher(onNewFireTab: { [weak self] in
+            Pixel.fire(pixel: .fireModeEmptyStateNewTab)
             self?.onNewFireTab?()
         }))
         let hostingController = UIHostingController(rootView: emptyStateView)
@@ -263,6 +274,16 @@ class TabSwitcherPageViewController: UIViewController {
         collectionView.reloadData()
         updateEmptyStateVisibility()
     }
+
+    func refreshCurrentTabIndicators() {
+        guard currentSelection != nil else { return }
+        for cell in collectionView.visibleCells {
+            guard let tabCell = cell as? TabViewCell,
+                  let tab = tabCell.tab else { continue }
+            tabCell.isCurrent = isCurrent(tab: tab)
+            tabCell.updateCurrentTabBorder()
+        }
+    }
     
     func scrollToInitialTab() {
         guard let index = tabsModel.currentIndex,
@@ -301,6 +322,8 @@ class TabSwitcherPageViewController: UIViewController {
             pageDelegate.isProcessingUpdates = true
             pageDelegate.page(self, willDeleteTabs: tabsToClose, allDeleted: allTabsDeleted)
             collectionView.deleteItems(at: indexPaths)
+            currentSelection = tabsModel.currentIndex
+            refreshCurrentTabIndicators()
         } completion: { _ in
             pageDelegate.isProcessingUpdates = false
             pageDelegate.pageDidDeleteTabs(self, allDeleted: allTabsDeleted)
@@ -312,6 +335,14 @@ class TabSwitcherPageViewController: UIViewController {
     @objc private func handleBackgroundTap(gesture: UITapGestureRecognizer) {
         guard gesture.tappedInWhitespaceAtEndOfCollectionView(collectionView) else { return }
         pageDelegate?.pageDidRequestDismiss(self)
+    }
+
+    /// Resolves the rich-card grid item for `tab`, or `nil` for non-AI tabs and
+    /// when no provider is wired in (release builds without an explicit injection).
+    /// `nil` keeps the cell on the existing screenshot path.
+    private func duckAIGridItem(for tab: Tab) -> DuckAIGridItem? {
+        guard tab.isAITab else { return nil }
+        return duckAIGridContentProvider?.gridItem(for: tab)
     }
 }
 
@@ -342,7 +373,9 @@ extension TabSwitcherPageViewController: UICollectionViewDataSource {
             cell.update(withTab: tab,
                         isSelectionModeEnabled: pageDelegate?.isEditing ?? false,
                         preview: previewsSource?.preview(for: tab),
-                        isFireModeEnabled: isFireModeEnabled)
+                        isFireModeEnabled: isFireModeEnabled,
+                        duckAIGridItem: duckAIGridItem(for: tab),
+                        thumbnailLoader: duckAIGridContentProvider)
         }
 
         return cell
@@ -379,7 +412,9 @@ extension TabSwitcherPageViewController: UICollectionViewDelegate {
             pageDelegate?.page(self, didSelectTabAt: indexPath.row)
         } else {
             currentSelection = indexPath.row
-            Pixel.fire(pixel: .tabSwitcherSwitchTabs)
+            Pixel.fire(pixel: .tabSwitcherSwitchTabs, withAdditionalParameters: [
+                PixelParameters.browsingMode: browsingMode.pixelParamValue
+            ])
             if let tab = tabsModel.get(tabAt: indexPath.row) {
                 if tab.isAITab {
                     DailyPixel.fireDailyAndCount(pixel: .tabManagerSwitchToAITab)
@@ -415,8 +450,9 @@ extension TabSwitcherPageViewController: UICollectionViewDelegate {
 
         let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             guard let self else { return nil }
-            Pixel.fire(pixel: .tabSwitcherLongPress)
-            DailyPixel.fire(pixel: .tabSwitcherLongPressDaily)
+            let modeParam = [PixelParameters.browsingMode: self.browsingMode.pixelParamValue]
+            Pixel.fire(pixel: .tabSwitcherLongPress, withAdditionalParameters: modeParam)
+            DailyPixel.fire(pixel: .tabSwitcherLongPressDaily, withAdditionalParameters: modeParam)
             return self.pageDelegate?.page(self, contextMenuForTabsAt: indexPaths)
         }
         return configuration
@@ -505,7 +541,9 @@ extension TabSwitcherPageViewController: TabObserver {
         cell.update(withTab: tab,
                     isSelectionModeEnabled: pageDelegate?.isEditing ?? false,
                     preview: previewsSource?.preview(for: tab),
-                    isFireModeEnabled: isFireModeEnabled)
+                    isFireModeEnabled: isFireModeEnabled,
+                    duckAIGridItem: duckAIGridItem(for: tab),
+                    thumbnailLoader: duckAIGridContentProvider)
     }
 }
 

@@ -18,6 +18,7 @@
 
 import Combine
 import Common
+import FoundationExtensions
 import Foundation
 
 /// Handles feature flag changes for web extensions.
@@ -29,68 +30,71 @@ import Foundation
 /// When the embedded extension feature flag is disabled, only embedded extensions are uninstalled.
 /// When enabled, it calls the provided callback for installation.
 ///
-/// Usage:
-/// ```swift
-/// let webExtensionsPublisher = featureFlagPublisher
-///     .filter { $0.0 == .webExtensions }
-///     .map { $0.1 }
-///     .eraseToAnyPublisher()
+/// When the ad blocking extension feature flag is disabled, the ad blocking extension is uninstalled.
+/// When enabled, it calls the provided callback for installation.
 ///
-/// let embeddedPublisher = featureFlagPublisher
-///     .filter { $0.0 == .embeddedExtension }
-///     .map { $0.1 }
-///     .eraseToAnyPublisher()
-///
-/// handler = WebExtensionFeatureFlagHandler(
-///     webExtensionManagerProvider: { [weak self] in self?.webExtensionManager },
-///     featureFlagPublisher: webExtensionsPublisher,
-///     embeddedExtensionFlagPublisher: embeddedPublisher,
-///     onFeatureFlagEnabled: { [weak self] in
-///         await self?.initializeWebExtensions()
-///     },
-///     onFeatureFlagDisabled: { [weak self] in
-///         self?.cleanupReferences()
-///     },
-///     onEmbeddedExtensionFlagEnabled: { [weak self] in
-///         await self?.syncEmbeddedExtensions()
-///     }
-/// )
-/// ```
+/// When the ad blocking defaults rollout flag flips in either direction, the change callback is
+/// invoked so the host can re-sync embedded extensions — this flag controls the default user
+/// preference (not a kill switch), so both transitions just trigger reconciliation rather than a
+/// targeted install or uninstall.
 @available(macOS 15.4, iOS 18.4, *)
 public final class WebExtensionFeatureFlagHandler {
 
     private var webExtensionsCancellable: AnyCancellable?
     private var embeddedExtensionCancellable: AnyCancellable?
+    private var adBlockingExtensionCancellable: AnyCancellable?
+    private var adBlockingDefaultsCancellable: AnyCancellable?
     private let webExtensionManagerProvider: () -> WebExtensionManaging?
     private let onFeatureFlagEnabled: (() async -> Void)?
     private let onFeatureFlagDisabled: () -> Void
     private let onEmbeddedExtensionFlagEnabled: (() async -> Void)?
+    private let onAdBlockingExtensionFlagEnabled: (() async -> Void)?
+    private let onAdBlockingDefaultsFlagChanged: (() async -> Void)?
 
     private var isWebExtensionsFlagEnabled = false
     private var isEmbeddedExtensionFlagEnabled = false
+    private var isAdBlockingExtensionFlagEnabled = false
     private var webExtensionsEnableTask: Task<Void, Never>?
     private var embeddedExtensionEnableTask: Task<Void, Never>?
+    private var adBlockingExtensionEnableTask: Task<Void, Never>?
+    private var adBlockingDefaultsChangedTask: Task<Void, Never>?
 
     /// Creates a feature flag handler.
     /// - Parameters:
     ///   - webExtensionManagerProvider: A closure that returns the current web extension manager. Called when uninstalling extensions.
     ///   - featureFlagPublisher: A publisher that emits `true` when the main webExtensions feature is enabled.
     ///   - embeddedExtensionFlagPublisher: A publisher that emits `true` when the embedded extension feature is enabled.
+    ///   - adBlockingExtensionFlagPublisher: A publisher that emits `true` when the ad blocking extension feature is enabled.
+    ///   - adBlockingDefaultsFlagPublisher: A publisher that emits the current value of the ad
+    ///     blocking defaults rollout flag whenever it changes. Both transitions trigger the change
+    ///     callback because this flag drives the default user preference, not extension lifecycle.
     ///   - onFeatureFlagEnabled: Callback invoked when the main feature flag is enabled. Use this to load/initialize extensions.
     ///   - onFeatureFlagDisabled: Callback invoked when the main feature flag is disabled, after uninstalling extensions.
     ///   - onEmbeddedExtensionFlagEnabled: Callback invoked when the embedded extension feature flag is enabled. Use this to sync/install embedded extensions.
+    ///   - onAdBlockingExtensionFlagEnabled: Callback invoked when the ad blocking extension feature flag is enabled. Use this to sync/install the ad blocking extension.
+    ///   - onAdBlockingDefaultsFlagChanged: Callback invoked when the ad blocking defaults rollout
+    ///     flag flips in either direction. Use this to re-sync embedded extensions so users with no
+    ///     stored YouTube Ad Block preference pick up the new default mid-session.
     public init(webExtensionManagerProvider: @escaping () -> WebExtensionManaging?,
                 featureFlagPublisher: AnyPublisher<Bool, Never>?,
                 embeddedExtensionFlagPublisher: AnyPublisher<Bool, Never>? = nil,
+                adBlockingExtensionFlagPublisher: AnyPublisher<Bool, Never>? = nil,
+                adBlockingDefaultsFlagPublisher: AnyPublisher<Bool, Never>? = nil,
                 onFeatureFlagEnabled: (() async -> Void)? = nil,
                 onFeatureFlagDisabled: @escaping () -> Void,
-                onEmbeddedExtensionFlagEnabled: (() async -> Void)? = nil) {
+                onEmbeddedExtensionFlagEnabled: (() async -> Void)? = nil,
+                onAdBlockingExtensionFlagEnabled: (() async -> Void)? = nil,
+                onAdBlockingDefaultsFlagChanged: (() async -> Void)? = nil) {
         self.webExtensionManagerProvider = webExtensionManagerProvider
         self.onFeatureFlagEnabled = onFeatureFlagEnabled
         self.onFeatureFlagDisabled = onFeatureFlagDisabled
         self.onEmbeddedExtensionFlagEnabled = onEmbeddedExtensionFlagEnabled
+        self.onAdBlockingExtensionFlagEnabled = onAdBlockingExtensionFlagEnabled
+        self.onAdBlockingDefaultsFlagChanged = onAdBlockingDefaultsFlagChanged
         subscribeToWebExtensionsFlagChanges(featureFlagPublisher)
         subscribeToEmbeddedExtensionFlagChanges(embeddedExtensionFlagPublisher)
+        subscribeToAdBlockingExtensionFlagChanges(adBlockingExtensionFlagPublisher)
+        subscribeToAdBlockingDefaultsFlagChanges(adBlockingDefaultsFlagPublisher)
     }
 
     private func subscribeToWebExtensionsFlagChanges(_ publisher: AnyPublisher<Bool, Never>?) {
@@ -162,5 +166,62 @@ public final class WebExtensionFeatureFlagHandler {
         embeddedExtensionEnableTask?.cancel()
         embeddedExtensionEnableTask = nil
         webExtensionManagerProvider()?.uninstallEmbeddedExtension(type: .embedded)
+    }
+
+    private func subscribeToAdBlockingExtensionFlagChanges(_ publisher: AnyPublisher<Bool, Never>?) {
+        guard let publisher else { return }
+
+        adBlockingExtensionCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                Task { @MainActor in
+                    if enabled {
+                        self?.handleAdBlockingExtensionFlagEnabled()
+                    } else {
+                        self?.handleAdBlockingExtensionFlagDisabled()
+                    }
+                }
+            }
+    }
+
+    @MainActor
+    private func handleAdBlockingExtensionFlagEnabled() {
+        guard let onAdBlockingExtensionFlagEnabled else { return }
+        isAdBlockingExtensionFlagEnabled = true
+        adBlockingExtensionEnableTask?.cancel()
+        adBlockingExtensionEnableTask = Task { @MainActor [weak self] in
+            guard !Task.isCancelled, self?.isAdBlockingExtensionFlagEnabled == true else { return }
+            await onAdBlockingExtensionFlagEnabled()
+        }
+    }
+
+    @MainActor
+    private func handleAdBlockingExtensionFlagDisabled() {
+        isAdBlockingExtensionFlagEnabled = false
+        adBlockingExtensionEnableTask?.cancel()
+        adBlockingExtensionEnableTask = nil
+        webExtensionManagerProvider()?.uninstallEmbeddedExtension(type: .adBlockingExtension)
+    }
+
+    private func subscribeToAdBlockingDefaultsFlagChanges(_ publisher: AnyPublisher<Bool, Never>?) {
+        guard let publisher else { return }
+
+        adBlockingDefaultsCancellable = publisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.handleAdBlockingDefaultsFlagChanged()
+                }
+            }
+    }
+
+    @MainActor
+    private func handleAdBlockingDefaultsFlagChanged() {
+        guard let onAdBlockingDefaultsFlagChanged else { return }
+        adBlockingDefaultsChangedTask?.cancel()
+        adBlockingDefaultsChangedTask = Task { @MainActor in
+            guard !Task.isCancelled else { return }
+            await onAdBlockingDefaultsFlagChanged()
+        }
     }
 }

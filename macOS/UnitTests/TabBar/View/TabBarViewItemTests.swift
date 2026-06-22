@@ -364,6 +364,7 @@ final class TabBarViewItemTests: XCTestCase {
 }
 
 private class TabBarViewModelMock: TabBarViewModel {
+    let uuid: TabIdentifier = UUID().uuidString
     var width: CGFloat
     var isSelected: Bool
     var isPinned: Bool
@@ -404,9 +405,6 @@ private class TabBarViewModelMock: TabBarViewModel {
 
     @Published
     var isSuspended: Bool = false
-    var isSuspendedPublisher: AnyPublisher<Bool, Never> {
-        $isSuspended.eraseToAnyPublisher()
-    }
 
     var canBeSuspended: Bool = false
 

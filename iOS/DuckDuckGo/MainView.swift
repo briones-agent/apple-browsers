@@ -57,6 +57,7 @@ class MainViewFactory {
 
     static func createViewHierarchy(_ parentController: UIViewController,
                                     aiChatSettings: AIChatSettingsProvider,
+                                    aiChatSyncCleaner: AIChatSyncCleaning? = nil,
                                     aiChatAddressBarExperience: AIChatAddressBarExperienceProviding,
                                     voiceSearchHelper: VoiceSearchHelperProtocol,
                                     featureFlagger: FeatureFlagger,
@@ -64,18 +65,21 @@ class MainViewFactory {
                                     appSettings: AppSettings,
                                     daxEasterEggLogoStore: DaxEasterEggLogoStoring = DaxEasterEggLogoStore(),
                                     daxEasterEggPresenter: DaxEasterEggPresenting? = nil,
-                                    mobileCustomization: MobileCustomization) -> MainViewCoordinator {
+                                    mobileCustomization: MobileCustomization,
+                                    duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil) -> MainViewCoordinator {
 
         let presenter = daxEasterEggPresenter ?? DaxEasterEggPresenter(logoStore: daxEasterEggLogoStore, featureFlagger: featureFlagger)
         let omnibarDependencies = OmnibarDependencies(voiceSearchHelper: voiceSearchHelper,
                                                       featureFlagger: featureFlagger,
                                                       aichatIPadTabFeature: AIChatIPadTabFeature(featureFlagger: featureFlagger),
                                                       aiChatSettings: aiChatSettings,
+                                                      aiChatSyncCleaner: aiChatSyncCleaner,
                                                       aiChatAddressBarExperience: aiChatAddressBarExperience,
                                                       suggestionTrayDependencies: suggestionTrayDependencies,
                                                       appSettings: appSettings,
                                                       daxEasterEggPresenter: presenter,
-                                                      mobileCustomization: mobileCustomization)
+                                                      mobileCustomization: mobileCustomization,
+                                                      duckAiNativeStorageHandler: duckAiNativeStorageHandler)
 
         let factory = MainViewFactory(parentController: parentController,
                                       omnibarDependencies: omnibarDependencies,
@@ -110,6 +114,7 @@ extension MainViewFactory {
         createNavigationBarContainer()
         createNavigationBarCollectionView()
         createUnifiedToggleInputContainer()
+        createAITabCollapsedTopSeparator()
         createAIChatTabChatHeaderContainer()
         createProgressView()
     }
@@ -325,6 +330,16 @@ extension MainViewFactory {
         coordinator.navigationBarContainer.addSubview(coordinator.unifiedToggleInputContainer)
     }
 
+    private func createAITabCollapsedTopSeparator() {
+        let separator = UIView()
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        separator.backgroundColor = UIColor(designSystemColor: .lines)
+        separator.isHidden = true
+        separator.isUserInteractionEnabled = false
+        coordinator.aiTabCollapsedTopSeparator = separator
+        superview.addSubview(separator)
+    }
+
     final class AIChatTabChatHeaderContainer: UIView {}
     private func createAIChatTabChatHeaderContainer() {
         coordinator.aiChatTabChatHeaderContainer = AIChatTabChatHeaderContainer()
@@ -349,6 +364,7 @@ extension MainViewFactory {
         constrainNavigationBarContainer()
         constrainToolbar()
         constrainUnifiedToggleInputContainer()
+        constrainAITabCollapsedTopSeparator()
         constrainAIChatTabChatHeaderContainer()
     }
     
@@ -421,7 +437,6 @@ extension MainViewFactory {
     private func constrainContentContainer() {
         let contentContainer = coordinator.contentContainer!
         let toolbar = coordinator.toolbar!
-        let navigationBarContainer = coordinator.navigationBarContainer!
 
         coordinator.constraints.contentContainerTop = contentContainer.constrainView(coordinator.topSlideContainer!, by: .top, to: .bottom)
         coordinator.constraints.contentContainerTopToSafeArea = contentContainer.topAnchor.constraint(equalTo: superview.safeAreaLayoutGuide.topAnchor)
@@ -444,10 +459,11 @@ extension MainViewFactory {
 
         let toolbar = coordinator.toolbar!
         coordinator.constraints.toolbarBottom = toolbar.constrainView(superview.safeAreaLayoutGuide, by: .bottom)
+        coordinator.constraints.toolbarHeightConstraint = toolbar.constrainAttribute(.height, to: 49)
         NSLayoutConstraint.activate([
             toolbar.constrainView(superview, by: .width, constant: toolbarWidthMod),
             toolbar.constrainView(superview, by: .centerX),
-            toolbar.constrainAttribute(.height, to: 49),
+            coordinator.constraints.toolbarHeightConstraint,
             coordinator.constraints.toolbarBottom,
         ])
     }
@@ -461,6 +477,18 @@ extension MainViewFactory {
             container.leadingAnchor.constraint(equalTo: navigationBarContainer.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: navigationBarContainer.trailingAnchor),
             container.bottomAnchor.constraint(equalTo: navigationBarContainer.bottomAnchor),
+        ])
+    }
+
+    private func constrainAITabCollapsedTopSeparator() {
+        let separator = coordinator.aiTabCollapsedTopSeparator!
+
+        NSLayoutConstraint.activate([
+            separator.leadingAnchor.constraint(equalTo: superview.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: superview.trailingAnchor),
+            separator.topAnchor.constraint(equalTo: superview.safeAreaLayoutGuide.bottomAnchor,
+                                           constant: -UnifiedToggleInputView.aiTabCollapsedFooterHeight),
+            separator.heightAnchor.constraint(equalToConstant: 1.0 / UIScreen.main.scale),
         ])
     }
 

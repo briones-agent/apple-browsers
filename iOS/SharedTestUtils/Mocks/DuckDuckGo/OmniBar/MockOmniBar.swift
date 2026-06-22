@@ -58,6 +58,7 @@ final class MockOmniBar: OmniBar {
     func removeTextSelection() { }
     func selectTextToEnd(_ offset: Int) { }
     func showOrScheduleCookiesManagedNotification(isCosmetic: Bool) { }
+    func showYouTubeAdBlockNotification() { }
     func showOrScheduleOnboardingPrivacyIconAnimation() { }
     func dismissOnboardingPrivacyIconAnimation() { }
     func startTrackersAnimation(_ privacyInfo: PrivacyDashboard.PrivacyInfo, forDaxDialog: Bool) { }
@@ -72,9 +73,11 @@ final class MockOmniBar: OmniBar {
     func setSelectedTextEntryMode(_ mode: TextEntryMode) { }
     func setDaxEasterEggLogoURL(_ logoURL: String?) { }
     func refreshFireMode(fireMode: Bool) { }
+    func prepareForMoveTransition() { }
+    func moveTransitionCompleted() { }
+    func setEditingStateLogoHidden(_ hidden: Bool) { }
 
     final class MockOmniBarView: UIView, OmniBarView {
-        
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
@@ -116,6 +119,12 @@ final class MockOmniBar: OmniBar {
         func revealButtons() { }
         func setBookmarksPosition(leading: Bool, hidden: Bool) { }
         func refreshFireMode(fireMode: Bool) { }
+        func refreshLongPressMenuAvailability() { }
+        func prepareForMoveTransition() { }
+        func moveTransitionCompleted() { }
+        func setIconContainersAlpha(_ alpha: CGFloat) { }
+        func hideBarChrome() { }
+        func restoreBarChrome() { }
 
         var progressView: DuckDuckGo.ProgressView?
         var privacyIconView: UIView?
@@ -126,6 +135,7 @@ final class MockOmniBar: OmniBar {
         var onClearButtonPressed: (() -> Void)?
         var onPrivacyIconPressed: (() -> Void)?
         var onMenuButtonPressed: (() -> Void)?
+        var onMenuButtonLongPressed: (() -> Void)?
         var onTrackersViewPressed: (() -> Void)?
         var onSettingsButtonPressed: (() -> Void)?
         var onCancelPressed: (() -> Void)?
@@ -137,10 +147,12 @@ final class MockOmniBar: OmniBar {
         var onDismissPressed: (() -> Void)?
         var onFirePressed: (() -> Void)?
         var onPasswordsPressed: (() -> Void)?
-        var onSettingsLongPress: (() -> Void)?
+        var onSettingsButtonLongPressed: (() -> Void)?
         var onCustomizableButtonPressed: (() -> Void)?
         var onAIChatLeftButtonPressed: (() -> Void)?
         var onAIChatBrandingPressed: (() -> Void)?
+        var longPressMenuProvider: (() -> UIMenu?)?
+        var onLongPressMenuDisplayed: (() -> Void)?
 
         static func create() -> Self {
             Self.init()

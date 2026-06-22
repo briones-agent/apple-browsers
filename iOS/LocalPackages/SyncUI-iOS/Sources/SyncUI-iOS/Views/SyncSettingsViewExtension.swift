@@ -44,7 +44,7 @@ extension SyncSettingsView {
             HStack {
                 Spacer()
                 VStack(alignment: .center, spacing: 8) {
-                    Image("Sync-Pair-96")
+                    Image(rebrandable: "Sync-Pair-96")
                     Text(UserText.syncWithAnotherDeviceTitle)
                         .daxTitle3()
                     Text(syncWithAnotherDeviceMessage)
@@ -76,23 +76,25 @@ extension SyncSettingsView {
     func otherOptions() -> some View {
         Section {
             Button {
+                model.delegate?.fireSyncSetupPixel(event: .backUpThisDeviceTapped)
                 model.beginBackupFlow()
             } label: {
                 Text(UserText.syncAndBackUpThisDeviceLink)
-                    .foregroundColor(Color(designSystemColor: .accent))
+                    .foregroundColor(Color(designSystemColor: .accentPrimary))
             }
-            .sheet(isPresented: $model.isSyncWithSetUpSheetVisible, content: {
+            .sheet(isPresented: $model.isSyncWithSetUpSheetVisible, onDismiss: model.syncWithSetUpSheetDidDismiss, content: {
                 SyncWithServerView(model: model, onCancel: {
-                    model.isSyncWithSetUpSheetVisible = false
+                    model.dismissSyncWithSetUpSheet()
                 })
             })
             .disabled(!model.isAccountCreationAvailable)
 
             Button {
+                model.delegate?.fireSyncSetupPixel(event: .recoverSyncedDataTapped)
                 model.beginRecoverFlow()
             } label: {
                 Text(UserText.recoverSyncedDataLink)
-                    .foregroundColor(Color(designSystemColor: .accent))
+                    .foregroundColor(Color(designSystemColor: .accentPrimary))
             }
             .sheet(isPresented: $model.isRecoverSyncedDataSheetVisible, content: {
                 RecoverSyncedDataView(model: model, onCancel: {

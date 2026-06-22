@@ -20,6 +20,7 @@ import NewTabPage
 import AppKit
 import Suggestions
 import Common
+import FoundationExtensions
 import AIChat
 import os.log
 import PixelKit
@@ -72,11 +73,12 @@ extension NewTabPageDataModel.Tabs {
     init(from mainWindowController: MainWindowController) {
         // Gather tab IDs that are currently showing a New Tab Page
         let tabIDs: [String] = mainWindowController.mainViewController.tabCollectionViewModel.tabViewModels.values
-            .compactMap { viewModel in
-                guard case .newtab = viewModel.tab.content else {
+            .compactMap { viewModel -> String? in
+                guard let tabVM = viewModel as? TabViewModel,
+                      case .newtab = tabVM.tab.content else {
                     return nil
                 }
-                return viewModel.tab.uuid
+                return tabVM.tab.uuid
             }
 
         // Get the selected tab, only if it's a new tab page

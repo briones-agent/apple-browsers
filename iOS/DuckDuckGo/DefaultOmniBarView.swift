@@ -254,8 +254,8 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         largeSizeSpacingConstraint?.isActive = showButtons
 
         let isExpandedPhone = newMode == .expandedPhone
-        leadingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : 0
-        trailingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : 0
+        leadingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : Metrics.iPadButtonSpacing
+        trailingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : Metrics.iPadButtonSpacing
         stackView.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeSpacing : Metrics.expandedPadSizeSpacing
         stackViewLeadingConstraint?.constant = isExpandedPhone ? Metrics.expandedPhoneSizeMargins.leading : Metrics.textAreaHorizontalPadding
         stackViewTrailingConstraint?.constant = isExpandedPhone ? -Metrics.expandedPhoneSizeMargins.trailing : -Metrics.textAreaHorizontalPadding
@@ -290,6 +290,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
     var onMenuButtonLongPressed: (() -> Void)?
     var onTrackersViewPressed: (() -> Void)?
     var onSettingsButtonPressed: (() -> Void)?
+    var onSettingsButtonLongPressed: (() -> Void)?
     var onCancelPressed: (() -> Void)?
     var onRefreshPressed: (() -> Void)?
     var onCustomizableButtonPressed: (() -> Void)?
@@ -308,6 +309,12 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     /// Callback fired when the omnibar branding area is tapped while in AI Chat mode
     var onAIChatBrandingPressed: (() -> Void)?
+    var longPressMenuProvider: (() -> UIMenu?)? {
+        didSet {
+            refreshLongPressMenuAvailability()
+        }
+    }
+    var onLongPressMenuDisplayed: (() -> Void)?
 
     // MARK: - Properties
 
@@ -398,6 +405,10 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     private let searchAreaView = DefaultOmniBarSearchView()
     private let searchAreaContainerView = CompositeShadowView.defaultShadowView()
+    private var omniBarLongPressInteraction: UIContextMenuInteraction?
+    private let defaultBackgroundColor = UIColor(designSystemColor: .background)
+    fileprivate var savedBarChromeBackgroundColor: UIColor?
+    fileprivate var savedBarViewBackgroundColor: UIColor?
 
     /// Spans to available width of the omni bar and allows the input field to center horizontally
     private let searchAreaAlignmentView = UIView()
@@ -516,7 +527,6 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
             searchAreaView.trailingAnchor.constraint(equalTo: searchAreaContainerView.trailingAnchor),
 
             searchAreaContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            readableSearchAreaWidth,
 
             activeOutlineView.leadingAnchor.constraint(equalTo: searchAreaContainerView.leadingAnchor, constant: -Metrics.activeBorderWidth),
             activeOutlineView.trailingAnchor.constraint(equalTo: searchAreaContainerView.trailingAnchor, constant: Metrics.activeBorderWidth),
@@ -580,7 +590,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
         setContentHuggingPriority(.defaultLow, for: .horizontal)
 
-        backgroundColor = UIColor(designSystemColor: .background)
+        backgroundColor = defaultBackgroundColor
 
         searchAreaAlignmentView.setContentHuggingPriority(.defaultLow, for: .horizontal)
         searchAreaAlignmentView.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -590,7 +600,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         searchAreaContainerView.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         searchAreaContainerView.setContentHuggingPriority(.defaultLow, for: .vertical)
 
-        searchAreaContainerView.backgroundColor = UIColor(designSystemColor: .urlBar)
+        searchAreaContainerView.backgroundColor = UIColor(designSystemColor: .backgroundTertiary)
         searchAreaContainerView.layer.cornerRadius = Metrics.cornerRadius
         searchAreaContainerView.layer.cornerCurve = .continuous
 
@@ -599,7 +609,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
         activeOutlineView.isUserInteractionEnabled = false
         activeOutlineView.translatesAutoresizingMaskIntoConstraints = false
-        activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accent).cgColor
+        activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accentPrimary).cgColor
         activeOutlineView.layer.borderWidth = Metrics.activeBorderWidth
         activeOutlineView.layer.cornerRadius = Metrics.activeBorderRadius
         activeOutlineView.layer.cornerCurve = .continuous
@@ -695,6 +705,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         searchAreaView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(searchAreaPressed)))
 
         menuButton.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(menuButtonLongPress)))
+        settingsButtonView.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(settingsButtonLongPress)))
 
         aiChatLeftButton.addTarget(self, action: #selector(aiChatLeftButtonTap), for: .touchUpInside)
         aiChatSendButton.addTarget(self, action: #selector(aiChatSendButtonTap), for: .primaryActionTriggered)
@@ -702,11 +713,11 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     private func updateFireModeAppearance() {
         if fireMode {
-            searchAreaContainerView.backgroundColor = UIColor(singleUseColor: .fireModeBackground)
+            searchAreaContainerView.backgroundColor = UIColor(singleUseColor: .fireModeCardBackground)
             activeOutlineView.layer.borderColor = UIColor(singleUseColor: .fireModeAccent).cgColor
         } else {
-            searchAreaContainerView.backgroundColor = UIColor(designSystemColor: .urlBar)
-            activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accent).cgColor
+            searchAreaContainerView.backgroundColor = UIColor(designSystemColor: .backgroundTertiary)
+            activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accentPrimary).cgColor
         }
         let style: UIUserInterfaceStyle = fireMode ? .dark : .unspecified
         searchAreaContainerView.subviews.forEach { $0.overrideUserInterfaceStyle = style }
@@ -816,6 +827,37 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         textAreaBottomPaddingConstraint?.constant = -(isUsingSmallTopSpacing ? Metrics.textAreaBottomPaddingAdjustedSpacing : Metrics.textAreaVerticalPaddingRegularSpacing)
     }
 
+    func refreshLongPressMenuAvailability() {
+        guard longPressMenuProvider != nil else {
+            removeOmniBarLongPressInteraction()
+            return
+        }
+
+        addOmniBarLongPressInteractionIfNeeded()
+    }
+
+    func prepareForMoveTransition() {
+        backgroundColor = .clear
+    }
+
+    func moveTransitionCompleted() {
+        backgroundColor = defaultBackgroundColor
+    }
+
+    private func addOmniBarLongPressInteractionIfNeeded() {
+        guard omniBarLongPressInteraction == nil else { return }
+
+        let interaction = UIContextMenuInteraction(delegate: self)
+        searchContainer.addInteraction(interaction)
+        omniBarLongPressInteraction = interaction
+    }
+
+    private func removeOmniBarLongPressInteraction() {
+        guard let omniBarLongPressInteraction else { return }
+        searchContainer.removeInteraction(omniBarLongPressInteraction)
+        self.omniBarLongPressInteraction = nil
+    }
+
     /// Returns the expanded-area subview (text view or send button) at the given point.
     /// When expanded, these views overflow beyond this view's bounds so we must claim them explicitly.
     private func overflowTarget(at point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -875,6 +917,11 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         onSettingsButtonPressed?()
     }
 
+    @objc private func settingsButtonLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard sender.state == .began else { return }
+        onSettingsButtonLongPressed?()
+    }
+
     @objc private func bookmarksButtonTap() {
         onBookmarksPressed?()
     }
@@ -887,7 +934,8 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         onMenuButtonPressed?()
     }
 
-    @objc private func menuButtonLongPress() {
+    @objc private func menuButtonLongPress(_ sender: UILongPressGestureRecognizer) {
+        guard sender.state == .began else { return }
         onMenuButtonLongPressed?()
     }
 
@@ -946,10 +994,10 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
     private struct Metrics {
         static let itemSize: CGFloat = 44
         static let height: CGFloat = 60
+        static var cornerRadius: CGFloat { OmniBarMetrics.cornerRadius }
 
-        static let cornerRadius: CGFloat = 16
-
-        static let activeBorderRadius: CGFloat = 18
+        /// Sits 2pt outside `cornerRadius` so the active outline stays concentric with the field.
+        static var activeBorderRadius: CGFloat { OmniBarMetrics.cornerRadius + 2 }
         static let activeBorderWidth: CGFloat = 2
 
         static let textAreaHorizontalPadding: CGFloat = 16
@@ -975,6 +1023,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
             trailing: expandedPadSizeSpacing
         )
 
+        static let iPadButtonSpacing: CGFloat = 12.0
         static let expandedPhoneSizeSpacing: CGFloat = 16.0
         static let expandedPhoneSizeButtonSpacing: CGFloat = 10.0
         static let expandedPhoneSizeMargins = NSDirectionalEdgeInsets(
@@ -987,6 +1036,68 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
     private struct Constant {
         static let accessibilityPrefix = "Browser.OmniBar"
+    }
+}
+
+extension DefaultOmniBarView: UIContextMenuInteractionDelegate {
+
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+        guard let menu = longPressMenuProvider?() else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: { [weak self] in
+            self?.makeLongPressMenuPreviewController()
+        }) { _ in
+            menu
+        }
+    }
+
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
+                                willDisplayMenuFor configuration: UIContextMenuConfiguration,
+                                animator: UIContextMenuInteractionAnimating?) {
+        onLongPressMenuDisplayed?()
+    }
+
+    private func makeLongPressMenuPreviewController() -> UIViewController? {
+        OmniBarLongPressPreviewViewController(sourceView: searchContainer)
+    }
+}
+
+private final class OmniBarLongPressPreviewViewController: UIViewController {
+
+    private let sourceView: UIView
+
+    init(sourceView: UIView) {
+        self.sourceView = sourceView
+        super.init(nibName: nil, bundle: nil)
+        preferredContentSize = sourceView.bounds.size
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func loadView() {
+        let containerView = UIView(frame: CGRect(origin: .zero, size: preferredContentSize))
+        containerView.backgroundColor = .clear
+        containerView.clipsToBounds = false
+        view = containerView
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        guard let snapshotView = sourceView.snapshotView(afterScreenUpdates: false) else { return }
+
+        snapshotView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(snapshotView)
+
+        NSLayoutConstraint.activate([
+            snapshotView.topAnchor.constraint(equalTo: view.topAnchor),
+            snapshotView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            snapshotView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            snapshotView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 }
 
@@ -1043,6 +1154,34 @@ extension DefaultOmniBarView {
     func revealButtons() {
         privacyInfoContainer.alpha = 1
         searchAreaView.revealButtons()
+    }
+
+    func setIconContainersAlpha(_ alpha: CGFloat) { searchAreaView.setIconContainersAlpha(alpha) }
+
+    func hideBarChrome() {
+        if savedBarChromeBackgroundColor == nil {
+            savedBarChromeBackgroundColor = searchAreaContainerView.backgroundColor
+        }
+        if savedBarViewBackgroundColor == nil {
+            savedBarViewBackgroundColor = backgroundColor
+        }
+        searchAreaContainerView.backgroundColor = .clear
+        searchAreaContainerView.applyShadowOpacityMultiplier(0)
+        backgroundColor = .clear
+        textField.alpha = 0
+    }
+
+    func restoreBarChrome() {
+        if let saved = savedBarChromeBackgroundColor {
+            searchAreaContainerView.backgroundColor = saved
+            savedBarChromeBackgroundColor = nil
+        }
+        if let saved = savedBarViewBackgroundColor {
+            backgroundColor = saved
+            savedBarViewBackgroundColor = nil
+        }
+        searchAreaContainerView.applyShadowOpacityMultiplier(1)
+        textField.alpha = 1
     }
 
     /// Configures the omnibar UI for AI Chat mode. Shows AI Chat buttons, hides search elements.
@@ -1153,7 +1292,7 @@ extension DefaultOmniBarView {
     func setUpExpandedTextViewProperties() {
         aiChatTextView.font = UIFont.daxBodyRegular()
         aiChatTextView.textColor = UIColor(designSystemColor: .textPrimary)
-        aiChatTextView.tintColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accent)
+        aiChatTextView.tintColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accentPrimary)
         aiChatTextView.autocapitalizationType = .none
         aiChatTextView.autocorrectionType = .no
         aiChatTextView.spellCheckingType = .no
@@ -1163,7 +1302,6 @@ extension DefaultOmniBarView {
 
     func updateSearchAreaExpansion(animated: Bool) {
         applyTextViewVisibility()
-        onSearchAreaExpandedStateChanged?(isSearchAreaExpanded)
 
         guard animated else {
             searchAreaContainerView.applyShadowOpacityMultiplier(1)
@@ -1174,10 +1312,19 @@ extension DefaultOmniBarView {
             applyExpansionConstraints()
             applyExpansionClipping()
             layoutIfNeeded()
+            // After layout so observers (the popover) anchor against the final frame.
+            onSearchAreaExpandedStateChanged?(isSearchAreaExpanded)
             if isSearchAreaExpanded, !aiChatTextView.isFirstResponder {
                 aiChatTextView.becomeFirstResponder()
             }
             return
+        }
+
+        // Collapsing: notify now so the popover hides as the bar shrinks. Expanding: notify on completion
+        // (below), once the expanded frame is laid out, so the popover anchors at the right Y instead of
+        // sliding from the collapsed position.
+        if !isSearchAreaExpanded {
+            onSearchAreaExpandedStateChanged?(false)
         }
 
         layoutIfNeeded()
@@ -1207,6 +1354,7 @@ extension DefaultOmniBarView {
                 self.onCollapseAnimationCompleted = nil
             } else {
                 self.searchAreaContainerView.applyShadowOpacityMultiplier(1)
+                self.onSearchAreaExpandedStateChanged?(true)
             }
             if self.isSearchAreaExpanded {
                 self.aiChatTextView.becomeFirstResponder()
@@ -1246,7 +1394,7 @@ extension DefaultOmniBarView {
     }
 
     func updateAIChatSendButton(hasText: Bool) {
-        let accentColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accent)
+        let accentColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accentPrimary)
         if hasText {
             aiChatSendButton.setImage(DesignSystemImages.Glyphs.Size24.arrowRightSmall, for: .normal)
             aiChatSendButton.backgroundColor = accentColor
@@ -1307,3 +1455,63 @@ extension DefaultOmniBarView {
         }
     }
 }
+
+#if DEBUG
+final class RebrandPreviewOverride: ObservableObject {
+    private let isRebranded: Bool
+    private let previousAppRebrand: () -> Bool
+    private let previousDesignSystemRebrand: () -> Bool
+    private let previousPalette: ColorPalette
+
+    init(isRebranded: Bool) {
+        self.isRebranded = isRebranded
+        previousAppRebrand = AppRebrand.isAppRebranded
+        previousDesignSystemRebrand = DesignSystemRebrand.isAppRebranded
+        previousPalette = DesignSystemPalette.current
+        apply()
+    }
+
+    func apply() {
+        AppRebrand.isAppRebranded = { [isRebranded] in isRebranded }
+        DesignSystemRebrand.isAppRebranded = { [isRebranded] in isRebranded }
+        DesignSystemPalette.current = isRebranded ? .rebranded : .default
+    }
+
+    deinit {
+        AppRebrand.isAppRebranded = previousAppRebrand
+        DesignSystemRebrand.isAppRebranded = previousDesignSystemRebrand
+        DesignSystemPalette.current = previousPalette
+    }
+}
+
+/// Bridges the UIKit ``DefaultOmniBarView`` into SwiftUI so it can be shown in a `#Preview`.
+private struct DefaultOmniBarViewRepresentable: UIViewRepresentable {
+    let omniBarView: DefaultOmniBarView
+
+    func makeUIView(context: Context) -> DefaultOmniBarView { omniBarView }
+    func updateUIView(_ uiView: DefaultOmniBarView, context: Context) {}
+}
+
+private struct DefaultOmniBarViewGallery: View {
+    @StateObject private var rebrandOverride: RebrandPreviewOverride
+
+    init(isRebranded: Bool) {
+        _rebrandOverride = StateObject(wrappedValue: RebrandPreviewOverride(isRebranded: isRebranded))
+    }
+
+    var body: some View {
+        rebrandOverride.apply()
+        return DefaultOmniBarViewRepresentable(omniBarView: DefaultOmniBarView())
+            .frame(width: 360, height: 60)
+            .padding()
+    }
+}
+
+#Preview("Address bar / Legacy") {
+    DefaultOmniBarViewGallery(isRebranded: false)
+}
+
+#Preview("Address bar / Rebranded") {
+    DefaultOmniBarViewGallery(isRebranded: true)
+}
+#endif

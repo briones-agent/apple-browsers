@@ -18,26 +18,47 @@
 //
 
 import Foundation
-import PrivacyConfig
 import Common
-import UIKit
+import FoundationExtensions
+import Core
+import PrivacyConfig
 
 protocol UnifiedToggleInputFeatureProviding {
     var isAvailable: Bool { get }
+    /// When true, the UTI hides the Search↔Duck.ai toggle on Duck.ai tabs regardless of the
+    /// user's toggle-enabled setting. Backed by `FeatureFlag.aiChatTabHideToggle`.
+    ///
+    /// No protocol-extension default: every conformer (including test mocks) must declare an
+    /// explicit value so test coverage isn't silently masked by a convenient fallback.
+    var isToggleHiddenOnDuckAITab: Bool { get }
 }
 
 struct UnifiedToggleInputFeature: UnifiedToggleInputFeatureProviding {
 
-    private let featureFlagger: any FeatureFlagger
+    private static let isFeatureFlagEnabledKey = "com.duckduckgo.unifiedToggleInput.session.enabled"
+    private static let isToggleHiddenOnDuckAITabKey = "com.duckduckgo.unifiedToggleInput.aiChatTabHideToggle.session.enabled"
+
+    /// Snapshot the feature flags once per session. Call early at launch, before any consumer reads `isAvailable` / `isToggleHiddenOnDuckAITab`.
+    static func resolve(using featureFlagger: FeatureFlagger) {
+        UserDefaults.app.set(featureFlagger.isFeatureOn(.unifiedToggleInput), forKey: isFeatureFlagEnabledKey)
+        UserDefaults.app.set(featureFlagger.isFeatureOn(.aiChatTabHideToggle), forKey: isToggleHiddenOnDuckAITabKey)
+    }
+
     private let devicePlatform: DevicePlatformProviding.Type
 
-    init(featureFlagger: any FeatureFlagger = AppDependencyProvider.shared.featureFlagger,
-         devicePlatform: DevicePlatformProviding.Type = DevicePlatform.self) {
-        self.featureFlagger = featureFlagger
+    init(devicePlatform: DevicePlatformProviding.Type = DevicePlatform.self) {
         self.devicePlatform = devicePlatform
     }
 
+    private var isFeatureFlagEnabled: Bool {
+        UserDefaults.app.bool(forKey: Self.isFeatureFlagEnabledKey)
+    }
+
     var isAvailable: Bool {
-        featureFlagger.isFeatureOn(.unifiedToggleInput) && devicePlatform.isIphone
+        isFeatureFlagEnabled && devicePlatform.isIphone
+    }
+
+    var isToggleHiddenOnDuckAITab: Bool {
+        UserDefaults.app.bool(forKey: Self.isToggleHiddenOnDuckAITabKey)
     }
 }

@@ -19,13 +19,16 @@
 import BrowserServicesKit
 import Cocoa
 import Combine
+import CombineExtensions
 import Common
+import FoundationExtensions
 import FeatureFlags
 import MaliciousSiteProtection
 import PrivacyConfig
 import PrivacyDashboard
 import WebKit
 import DesignResourcesKitIcons
+import WebExtensions
 
 final class TabViewModel: NSObject {
 
@@ -33,13 +36,19 @@ final class TabViewModel: NSObject {
     private let appearancePreferences: AppearancePreferences
     private let accessibilityPreferences: AccessibilityPreferences
     private let featureFlagger: FeatureFlagger
+    private let adBlockingAvailability: AdBlockingAvailabilityProviding
+    private lazy var adBlockingNavigationHandler: AdBlockingNavigationHandling = AdBlockingNavigationHandler(
+        availability: adBlockingAvailability,
+        onShouldShowAdBlockingAnimation: { [weak self] in
+            self?.youtubeAdBlockAnimationTriggerPublisher.send()
+        }
+    )
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var canGoForward: Bool = false
     @Published private(set) var canGoBack: Bool = false
 
     @Published private(set) var canReload: Bool = false
-    @Published private(set) var isSuspended: Bool = false
     @Published private(set) var canBeBookmarked: Bool = false
     @Published private(set) var canShare: Bool = false
     @Published var isLoading: Bool = false {
@@ -64,8 +73,9 @@ final class TabViewModel: NSObject {
 
     var lastAddressBarTextFieldValue: AddressBarTextField.Value?
 
-    /// Shared text state for the address bar and AI Chat omnibar for this tab
-    let addressBarSharedTextState = AddressBarSharedTextState()
+    /// Shared text state for the address bar and AI Chat omnibar for this tab.
+    /// Owned by `Tab` so it survives TabViewModel recreation on cross-window moves.
+    var addressBarSharedTextState: AddressBarSharedTextState { tab.addressBarSharedTextState }
 
     @Published private(set) var title: String = UserText.tabHomeTitle
     @Published private(set) var favicon: NSImage?
@@ -136,11 +146,13 @@ final class TabViewModel: NSObject {
     init(tab: Tab,
          appearancePreferences: AppearancePreferences = NSApp.delegateTyped.appearancePreferences,
          accessibilityPreferences: AccessibilityPreferences = NSApp.delegateTyped.accessibilityPreferences,
-         featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger) {
+         featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger,
+         adBlockingAvailability: AdBlockingAvailabilityProviding = NSApp.delegateTyped.adBlockingAvailability) {
         self.tab = tab
         self.appearancePreferences = appearancePreferences
         self.accessibilityPreferences = accessibilityPreferences
         self.featureFlagger = featureFlagger
+        self.adBlockingAvailability = adBlockingAvailability
         zoomLevel = accessibilityPreferences.defaultPageZoom
 
         super.init()
@@ -152,14 +164,12 @@ final class TabViewModel: NSObject {
         subscribeToPermissions()
         subscribeToPreferences()
         subscribeToWebViewDidFinishNavigation()
+        subscribeToYouTubeAdBlockAnimationTrigger()
         tab.$isLoading
             .assign(to: \.isLoading, onWeaklyHeld: self)
             .store(in: &cancellables)
         tab.$loadingProgress
             .assign(to: \.progress, onWeaklyHeld: self)
-            .store(in: &cancellables)
-        tab.$isSuspended
-            .assign(to: \.isSuspended, onWeaklyHeld: self)
             .store(in: &cancellables)
         if case .url(_, credential: _, source: .pendingStateRestoration) = tab.content {
             updateAddressBarStrings()
@@ -307,7 +317,7 @@ final class TabViewModel: NSObject {
     }
 
     private func subscribeToPreferences() {
-        self.tab.webView.zoomLevelDelegate = self
+        tab.webView.zoomLevelDelegate = self
         appearancePreferences.$showFullURL.dropFirst().sink { [weak self] showFullURL in
             self?.updatePassiveAddressBarString(showFullURL: showFullURL)
         }.store(in: &cancellables)
@@ -339,8 +349,8 @@ final class TabViewModel: NSObject {
     }
 
     private func subscribeToWebViewDidFinishNavigation() {
-        // When a web page finishes loading, wait when the `ContentBlockerRulesUserScript` detects trackers
-        // and adds them to `PrivacyDashboardTabExtension.$privacyInfo.$trackerInfo`.
+        // When a web page finishes loading, wait for tracker detection
+        // and additions to `PrivacyDashboardTabExtension.$privacyInfo.$trackerInfo`.
         // Map the `$trackerInfo` into a debounced Publisher and play trackers animations
         // if there were any trackers detected.
         tab.webViewDidFinishNavigationPublisher.map { [weak tab] in
@@ -448,48 +458,23 @@ final class TabViewModel: NSObject {
 
     private func updateTitle() {
         var title: String
-        switch tab.content {
-            // keep an old tab title for web page terminated page, display "Failed to open page" for loading errors
-        case _ where isShowingErrorPage && (tab.error?.isWebContentProcessTerminated != true || tab.title == nil):
+
+        // keep an old tab title for web page terminated page, display "Failed to open page" for loading errors
+        if isShowingErrorPage && (tab.error?.isWebContentProcessTerminated != true || tab.title == nil) {
             switch tab.error as NSError? {
             case is URLError where tab.error?.isServerCertificateUntrusted == true:
                 title = UserText.sslErrorPageTabTitle
-            case .some( _ as MaliciousSiteError):
+            case .some(_ as MaliciousSiteError):
                 title = UserText.maliciousSiteErrorPageTabTitle
             default:
                 title = UserText.tabErrorTitle
             }
+        } else if case .newtab = tab.content, tab.burnerMode.isBurner {
+            title = UserText.burnerTabHomeTitle
+        } else {
+            title = tab.content.displayTitle(pageTitle: tab.title, pageURL: tab.url)
+        }
 
-        case .dataBrokerProtection:
-            title = UserText.tabDataBrokerProtectionTitle
-        case .settings:
-            title = UserText.tabPreferencesTitle
-        case .bookmarks:
-            title = UserText.tabBookmarksTitle
-        case .history:
-            title = UserText.mainMenuHistory
-        case .newtab:
-            if tab.burnerMode.isBurner {
-                title = UserText.burnerTabHomeTitle
-            } else {
-                title = UserText.tabHomeTitle
-            }
-        case .url, .none, .subscription, .identityTheftRestoration, .onboarding, .webExtensionUrl, .aiChat:
-            if let tabTitle = tab.title?.trimmingWhitespace(), !tabTitle.isEmpty {
-                title = tabTitle
-            } else if let host = tab.url?.suggestedTitlePlaceholder {
-                title = host
-            } else if let url = tab.url, url.isFileURL {
-                title = url.lastPathComponent
-            } else {
-                title = addressBarString
-            }
-        case .releaseNotes:
-            title = UserText.releaseNotesTitle
-        }
-        if title.isEmpty {
-            title = UserText.tabUntitledTitle
-        }
         if self.title != title {
             self.title = title
         }
@@ -505,6 +490,7 @@ final class TabViewModel: NSObject {
     }
 
     func reload() {
+        adBlockingNavigationHandler.handleReload()
         tab.reload()
         updateAddressBarStrings()
         self.updateZoomForWebsite()
@@ -514,6 +500,7 @@ final class TabViewModel: NSObject {
 
     let trackersAnimationTriggerPublisher = PassthroughSubject<Void, Never>()
     let privacyEntryPointIconUpdateTrigger = PassthroughSubject<Void, Never>()
+    let youtubeAdBlockAnimationTriggerPublisher = PassthroughSubject<Void, Never>()
 
     private var trackerAnimationTimer: Timer?
 
@@ -524,6 +511,27 @@ final class TabViewModel: NSObject {
         }
     }
 
+    private func subscribeToYouTubeAdBlockAnimationTrigger() {
+        let contentURLChanges = tab.$content
+            .compactMap { content -> URL? in
+                guard case .url(let url, _, source: .webViewUpdated) = content else { return nil }
+                return url
+            }
+            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+
+        let navigationFinished = tab.webViewDidFinishNavigationPublisher
+            .compactMap { [weak tab] _ -> URL? in
+                guard let tab, case .url(let url, _, _) = tab.content else { return nil }
+                return url
+            }
+
+        contentURLChanges.merge(with: navigationFinished)
+            .throttle(for: .milliseconds(500), scheduler: RunLoop.main, latest: true)
+            .sink { [weak self] url in
+                self?.adBlockingNavigationHandler.handleURLChange(previousURL: nil, newURL: url)
+            }
+            .store(in: &cancellables)
+    }
 }
 
 extension TabViewModel {
@@ -563,6 +571,42 @@ extension TabViewModel: WebViewZoomLevelDelegate {
         if accessibilityPreferences.zoomPerWebsite(url: urlString) != level {
             accessibilityPreferences.updateZoomPerWebsite(zoomLevel: level, url: urlString)
         }
+    }
+}
+
+// MARK: - Zoom actions
+
+extension TabViewModel {
+
+    /// Performs a zoom-in on the underlying WebView and fires the zoom pixel
+    /// only when the zoom level actually changes.
+    func zoomIn(entryPoint: WebViewZoomEntryPoint) {
+        let before = tab.webView.zoomLevel
+        tab.webView.zoomIn()
+        guard tab.webView.zoomLevel != before else { return }
+        WebViewZoomPixel.fire(entryPoint: entryPoint)
+    }
+
+    /// Performs a zoom-out on the underlying WebView and fires the zoom pixel
+    /// only when the zoom level actually changes.
+    func zoomOut(entryPoint: WebViewZoomEntryPoint) {
+        let before = tab.webView.zoomLevel
+        tab.webView.zoomOut()
+        guard tab.webView.zoomLevel != before else { return }
+        WebViewZoomPixel.fire(entryPoint: entryPoint)
+    }
+
+    /// Resets the underlying WebView zoom to the default value and fires the
+    /// zoom pixel only when the user-visible zoom state actually changes — i.e.
+    /// the page zoom level was non-default OR pinch magnification was non-1.
+    func resetZoom(entryPoint: WebViewZoomEntryPoint) {
+        let zoomLevelBefore = tab.webView.zoomLevel
+        let magnificationBefore = tab.webView.magnification
+        tab.webView.resetZoomLevel()
+        let zoomLevelChanged = tab.webView.zoomLevel != zoomLevelBefore
+        let magnificationChanged = magnificationBefore != 1
+        guard zoomLevelChanged || magnificationChanged else { return }
+        WebViewZoomPixel.fire(entryPoint: entryPoint)
     }
 }
 

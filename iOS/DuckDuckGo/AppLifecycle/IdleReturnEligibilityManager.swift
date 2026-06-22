@@ -23,8 +23,15 @@ import Persistence
 import PrivacyConfig
 
 protocol IdleReturnEligibilityManaging {
+    /// True when the feature flag is on and onboarding is complete, regardless
+    /// of which treatment (NTP / LUT) the user's setting selects.
+    func isFeatureAvailable() -> Bool
+
+    /// `isFeatureAvailable() && effectiveAfterInactivityOption() == .newTab`.
     func isEligibleForNTPAfterIdle() -> Bool
+
     func effectiveAfterInactivityOption() -> AfterInactivityOption
+
     func idleThresholdSeconds() -> Int
 }
 
@@ -46,10 +53,11 @@ final class IdleReturnEligibilityManager: IdleReturnEligibilityManaging {
         self.tutorialSettings = tutorialSettings
         self.isStillOnboarding = isStillOnboarding
         let storage: any ThrowingKeyedStoring<AfterInactivitySettingKeys> = keyValueStore.throwingKeyedStoring()
-        self.effectiveOptionResolver = AfterInactivityEffectiveOptionResolver(storage: storage)
+        self.effectiveOptionResolver = AfterInactivityEffectiveOptionResolver(storage: storage, featureFlagger: featureFlagger)
         self.thresholdResolver = IdleReturnThresholdResolver(
             privacyConfigurationManager: privacyConfigurationManager,
-            debugOverridesStorage: debugOverridesStorage
+            debugOverridesStorage: debugOverridesStorage,
+            userPreferenceStorage: storage
         )
     }
 
@@ -65,13 +73,14 @@ final class IdleReturnEligibilityManager: IdleReturnEligibilityManaging {
         self.isStillOnboarding = isStillOnboarding
     }
 
-    /// Gates NTP-after-idle on linear onboarding completion and contextual
-    /// onboarding not actively showing NTP dialogs.
-    func isEligibleForNTPAfterIdle() -> Bool {
+    func isFeatureAvailable() -> Bool {
         tutorialSettings.hasSeenOnboarding
             && !isStillOnboarding()
             && featureFlagger.isFeatureOn(.showNTPAfterIdleReturn)
-            && effectiveAfterInactivityOption() == .newTab
+    }
+
+    func isEligibleForNTPAfterIdle() -> Bool {
+        isFeatureAvailable() && effectiveAfterInactivityOption() == .newTab
     }
 
     func effectiveAfterInactivityOption() -> AfterInactivityOption {

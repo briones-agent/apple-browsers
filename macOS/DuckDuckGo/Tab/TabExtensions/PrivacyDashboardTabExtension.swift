@@ -19,6 +19,7 @@
 import BrowserServicesKit
 import Combine
 import Common
+import FoundationExtensions
 import ContentBlocking
 import Foundation
 import MaliciousSiteProtection
@@ -81,7 +82,6 @@ final class PrivacyDashboardTabExtension {
                 self.privacyInfo?.trackerInfo.add(detectedThirdPartyRequest: tracker.request)
             case .trackerWithSurrogate(host: let host):
                 self.privacyInfo?.trackerInfo.addInstalledSurrogateHost(host, for: tracker.request, onPageWithURL: url)
-                self.privacyInfo?.trackerInfo.addDetectedTracker(tracker.request, onPageWithURL: url)
             }
         }.store(in: &cancellables)
 
@@ -109,12 +109,12 @@ final class PrivacyDashboardTabExtension {
 
     @available(macOS 15.4, *)
     private func handleWebExtensionDashboardStateRefresh(_ notification: Notification) {
-        guard let domain = notification.userInfo?[AutoconsentNotification.UserInfoKeys.domain] as? String,
-              let consentStatus = notification.userInfo?[AutoconsentNotification.UserInfoKeys.consentStatus] as? ConsentStatusInfo,
-              privacyInfo?.url.host == domain else {
+        guard let url = notification.userInfo?[AutoconsentNotification.UserInfoKeys.url] as? URL,
+              let consentStatus = notification.userInfo?[AutoconsentNotification.UserInfoKeys.consentStatus] as? ConsentStatusInfo else {
             return
         }
-        privacyInfo?.cookieConsentManaged = consentStatus.toCookieConsentInfo()
+
+        privacyInfo?.updateCookieConsentManagedForWebExtensionDashboardState(url: url, consentStatus: consentStatus)
     }
 
     @MainActor
@@ -278,6 +278,22 @@ extension TabExtensions {
 }
 
 // MARK: - ConsentStatusInfo to CookieConsentInfo Conversion
+
+@available(macOS 15.4, *)
+extension PrivacyInfo {
+    func updateCookieConsentManagedForWebExtensionDashboardState(url refreshURL: URL, consentStatus: ConsentStatusInfo) {
+        guard url.host == refreshURL.host,
+              normalizedPath(url.path) == normalizedPath(refreshURL.path) else {
+            return
+        }
+
+        cookieConsentManaged = consentStatus.toCookieConsentInfo()
+    }
+
+    private func normalizedPath(_ path: String) -> String {
+        path.isEmpty ? "/" : path
+    }
+}
 
 @available(macOS 15.4, *)
 extension ConsentStatusInfo {

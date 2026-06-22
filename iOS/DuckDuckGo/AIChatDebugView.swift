@@ -21,19 +21,20 @@
 import SwiftUI
 import Combine
 import AIChat
-#if DEBUG
 import AIChatDebugServer
 import DebugServer
-#endif
 
 struct AIChatDebugView: View {
     @StateObject private var viewModel = AIChatDebugViewModel()
+    private let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+
+    init(duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil) {
+        self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
+    }
 
     var body: some View {
         List {
-            #if DEBUG
-            AIChatStorageServerSection()
-            #endif
+            AIChatStorageServerSection(duckAiNativeStorageHandler: duckAiNativeStorageHandler)
 
             Section(footer: Text("Stored Hostname: \(viewModel.enteredHostname)")) {
                 NavigationLink(destination: AIChatDebugHostnameEntryView(viewModel: viewModel)) {
@@ -302,32 +303,36 @@ private struct AIChatDebugSessionTimerEntryView: View {
     }
 }
 
-#if DEBUG
 private struct AIChatStorageServerSection: View {
+    let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
     @StateObject private var serverState = StorageServerState()
 
     var body: some View {
-        Section(header: Text("Native Storage Server")) {
+        Section(header: Text(verbatim: "Native Storage Server")) {
             if serverState.isRunning {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Server running")
+                    Text(verbatim: "Server running")
                         .foregroundColor(.green)
                     if let ip = serverState.localIPAddress {
-                        Text("http://\(ip):8080")
+                        Text(verbatim: "http://\(ip):8473")
                             .font(.system(.body, design: .monospaced))
                             .textSelection(.enabled)
                     }
                 }
-                Button("Stop Server") {
+                Button {
                     serverState.stop()
+                } label: {
+                    Text(verbatim: "Stop Server")
                 }
                 .foregroundColor(.red)
             } else {
                 if let error = serverState.errorMessage {
                     Text(error).foregroundColor(.red).font(.caption)
                 }
-                Button("Start Server") {
-                    serverState.start()
+                Button {
+                    serverState.start(handler: duckAiNativeStorageHandler)
+                } label: {
+                    Text(verbatim: "Start Server")
                 }
             }
         }
@@ -348,8 +353,8 @@ private final class StorageServerState: ObservableObject {
         serverForDeinit?.stop()
     }
 
-    func start() {
-        guard let handler = AppDependencyProvider.shared.duckAiNativeStorageHandler else {
+    func start(handler: DuckAiNativeStorageHandling?) {
+        guard let handler else {
             errorMessage = "Native storage is not available (feature flag may be disabled)"
             return
         }
@@ -412,7 +417,6 @@ private final class StorageServerState: ObservableObject {
         return address
     }
 }
-#endif
 
 #Preview {
     AIChatDebugView()

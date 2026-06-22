@@ -72,16 +72,17 @@ public final class BrokerProfileOptOutSubJobWebRunner: SubJobWebRunning, BrokerP
     public var extractedProfile: ExtractedProfile?
     private let operationAwaitTime: TimeInterval
     public let shouldRunNextStep: () -> Bool
-    public lazy var clickAwaitTime: TimeInterval = {
-        featureFlagger.isClickActionDelayReductionOptimizationOn ?
-        executionConfig.optimizedClickAwaitTimeForOptOut :
-        executionConfig.legacyClickAwaitTimeForOptOut
-    }()
+    public var clickAwaitTime: TimeInterval {
+        executionConfig.clickAwaitTimeForOptOut
+    }
     public let pixelHandler: EventMapping<DataBrokerProtectionSharedPixels>
     public var postLoadingSiteStartTime: Date?
     public let executionConfig: BrokerJobExecutionConfig
     public let featureFlagger: DBPFeatureFlagging
-    public let applicationNameForUserAgent: String?
+    public let applicationNameForUserAgentProvider: () -> String?
+    public let contentBlocking: DBPWebViewContentBlocking?
+    public var fetchedEmail: String?
+    public var emailData: ExtractedEmailData = [:]
     private let actionsHandlerMode: ActionsHandlerMode
 
     public var retriesCountOnError: Int = 0
@@ -93,13 +94,14 @@ public final class BrokerProfileOptOutSubJobWebRunner: SubJobWebRunning, BrokerP
                 emailConfirmationDataService: EmailConfirmationDataServiceProvider,
                 captchaService: CaptchaServiceProtocol,
                 featureFlagger: DBPFeatureFlagging,
-                applicationNameForUserAgent: String?,
+                applicationNameForUserAgentProvider: @escaping () -> String?,
                 cookieHandler: CookieHandler = BrokerCookieHandler(),
                 operationAwaitTime: TimeInterval = 3,
                 stageCalculator: StageDurationCalculator,
                 pixelHandler: EventMapping<DataBrokerProtectionSharedPixels>,
                 executionConfig: BrokerJobExecutionConfig,
                 actionsHandlerMode: ActionsHandlerMode,
+                contentBlocking: DBPWebViewContentBlocking? = nil,
                 shouldRunNextStep: @escaping () -> Bool) {
         self.privacyConfig = privacyConfig
         self.prefs = prefs
@@ -114,7 +116,8 @@ public final class BrokerProfileOptOutSubJobWebRunner: SubJobWebRunning, BrokerP
         self.executionConfig = executionConfig
         self.actionsHandlerMode = actionsHandlerMode
         self.featureFlagger = featureFlagger
-        self.applicationNameForUserAgent = applicationNameForUserAgent
+        self.applicationNameForUserAgentProvider = applicationNameForUserAgentProvider
+        self.contentBlocking = contentBlocking
     }
 
     public func optOut(profileQuery: BrokerProfileQueryData,

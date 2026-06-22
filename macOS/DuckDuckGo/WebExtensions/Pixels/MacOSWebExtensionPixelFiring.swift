@@ -57,6 +57,43 @@ enum WebExtensionPixel: PixelKitEvent {
     case adBlockingExtensionInstalled
     case adBlockingExtensionUpgraded(fromVersion: String?, toVersion: String?)
     case adBlockingExtensionInstallError(error: Error)
+    case adBlockingExtensionEnabled
+    case adBlockingExtensionDisabled
+
+    case adBlockingExtensionAddressBarActiveClicked
+    case adBlockingExtensionAddressBarInactiveClicked
+    case adBlockingExtensionPopoverAlwaysOn
+    case adBlockingExtensionPopoverAlwaysOff
+    case adBlockingExtensionPopoverDisableUntilRelaunch
+    case adBlockingExtensionBreakageReportEntered
+
+    // MARK: - Scriptlet Lifecycle
+
+    case scriptletFetchSuccess(extensionType: String, version: String, count: Int)
+    case scriptletFetchError(extensionType: String, error: Error)
+    case scriptletValidationError(extensionType: String, error: Error)
+    case scriptletInstalled(extensionType: String, version: String)
+    case scriptletInstallError(extensionType: String, error: Error)
+
+    // MARK: - State Monitor
+
+    case stateChecked
+    case embeddedNotLoaded
+    case darkReaderNotLoaded
+    case adBlockingExtensionNotLoaded
+    case adBlockingScriptletsNotFetched(extensionLoaded: Bool)
+
+    // MARK: - Daily State
+
+    case dailyAdBlockingState(isEnabled: Bool, analyticsEnabled: Bool)
+
+    // MARK: - Ad Blocking Detection Events
+
+    case adBlockingDetectedAdBlocker(loginState: String)
+    case adBlockingDetectedPlayabilityError(loginState: String)
+    case adBlockingDetectedVideoAd(loginState: String)
+    case adBlockingDetectedStaticAd(loginState: String)
+    case adBlockingDetectedBuffering(loginState: String)
 
     // MARK: - PixelKitEvent
 
@@ -100,6 +137,54 @@ enum WebExtensionPixel: PixelKitEvent {
             return "m_mac_web_extension_ad_blocking_upgraded"
         case .adBlockingExtensionInstallError:
             return "m_mac_web_extension_ad_blocking_install_error"
+        case .adBlockingExtensionEnabled:
+            return "m_mac_web_extension_ad_blocking_enabled"
+        case .adBlockingExtensionDisabled:
+            return "m_mac_web_extension_ad_blocking_disabled"
+        case .adBlockingExtensionAddressBarActiveClicked:
+            return "m_mac_web_extension_ad_blocking_addressbar_active_clicked"
+        case .adBlockingExtensionAddressBarInactiveClicked:
+            return "m_mac_web_extension_ad_blocking_addressbar_inactive_clicked"
+        case .adBlockingExtensionPopoverAlwaysOn:
+            return "m_mac_web_extension_ad_blocking_popover_always_on"
+        case .adBlockingExtensionPopoverAlwaysOff:
+            return "m_mac_web_extension_ad_blocking_popover_always_off"
+        case .adBlockingExtensionPopoverDisableUntilRelaunch:
+            return "m_mac_web_extension_ad_blocking_popover_disable_until_relaunch"
+        case .adBlockingExtensionBreakageReportEntered:
+            return "m_mac_web_extension_ad_blocking_breakage_report_entered"
+        case .scriptletFetchSuccess:
+            return "m_mac_web_extension_scriptlet_fetch_success"
+        case .scriptletFetchError:
+            return "m_mac_web_extension_scriptlet_fetch_error"
+        case .scriptletValidationError:
+            return "m_mac_web_extension_scriptlet_validation_error"
+        case .scriptletInstalled:
+            return "m_mac_web_extension_scriptlet_installed"
+        case .scriptletInstallError:
+            return "m_mac_web_extension_scriptlet_install_error"
+        case .dailyAdBlockingState:
+            return "m_mac_web_extension_daily_ad_blocking_state"
+        case .adBlockingDetectedAdBlocker:
+            return "m_mac_web_extension_adblocking_detected_ad_blocker"
+        case .adBlockingDetectedPlayabilityError:
+            return "m_mac_web_extension_adblocking_detected_playability_error"
+        case .adBlockingDetectedVideoAd:
+            return "m_mac_web_extension_adblocking_detected_video_ad"
+        case .adBlockingDetectedStaticAd:
+            return "m_mac_web_extension_adblocking_detected_static_ad"
+        case .adBlockingDetectedBuffering:
+            return "m_mac_web_extension_adblocking_detected_buffering"
+        case .stateChecked:
+            return "web_extension_state_checked_macos"
+        case .embeddedNotLoaded:
+            return "web_extension_embedded_not_loaded_macos"
+        case .darkReaderNotLoaded:
+            return "web_extension_dark_reader_not_loaded_macos"
+        case .adBlockingExtensionNotLoaded:
+            return "web_extension_ad_blocking_not_loaded_macos"
+        case .adBlockingScriptletsNotFetched:
+            return "web_extension_ad_blocking_scriptlets_not_fetched_macos"
         }
     }
 
@@ -116,6 +201,27 @@ enum WebExtensionPixel: PixelKitEvent {
                 params["to_version"] = toVersion
             }
             return params.isEmpty ? nil : params
+        case .scriptletFetchSuccess(let extensionType, let version, let count):
+            return ["extension_type": extensionType, "version": version, "count": "\(count)"]
+        case .scriptletFetchError(let extensionType, _),
+             .scriptletValidationError(let extensionType, _),
+             .scriptletInstallError(let extensionType, _):
+            return ["extension_type": extensionType]
+        case .scriptletInstalled(let extensionType, let version):
+            return ["extension_type": extensionType, "version": version]
+        case .dailyAdBlockingState(let isEnabled, let analyticsEnabled):
+            return [
+                "is_enabled": isEnabled ? "true" : "false",
+                "analytics_enabled": analyticsEnabled ? "true" : "false"
+            ]
+        case .adBlockingDetectedAdBlocker(let loginState),
+             .adBlockingDetectedPlayabilityError(let loginState),
+             .adBlockingDetectedVideoAd(let loginState),
+             .adBlockingDetectedStaticAd(let loginState),
+             .adBlockingDetectedBuffering(let loginState):
+            return ["loginState": loginState]
+        case .adBlockingScriptletsNotFetched(let extensionLoaded):
+            return ["extension_loaded": extensionLoaded ? "true" : "false"]
         default:
             return nil
         }
@@ -123,6 +229,19 @@ enum WebExtensionPixel: PixelKitEvent {
 
     var standardParameters: [PixelKitStandardParameter]? {
         return [.pixelSource]
+    }
+
+    /// Maps a C-S-S `webEvent` `type` string to the matching pixel case.
+    /// Returns `nil` for unknown types so the caller can no-op.
+    static func adBlockingDetectedEvent(type: String, loginState: String) -> WebExtensionPixel? {
+        switch type {
+        case "youtube_adBlocker": return .adBlockingDetectedAdBlocker(loginState: loginState)
+        case "youtube_playabilityError": return .adBlockingDetectedPlayabilityError(loginState: loginState)
+        case "youtube_videoAd": return .adBlockingDetectedVideoAd(loginState: loginState)
+        case "youtube_staticAd": return .adBlockingDetectedStaticAd(loginState: loginState)
+        case "youtube_buffering": return .adBlockingDetectedBuffering(loginState: loginState)
+        default: return nil
+        }
     }
 }
 
@@ -150,6 +269,14 @@ private extension DuckDuckGoWebExtensionType {
         case .embedded: return .embeddedInstallError(error: error)
         case .darkReader: return .darkReaderInstallError(error: error)
         case .adBlockingExtension: return .adBlockingExtensionInstallError(error: error)
+        }
+    }
+
+    var notLoadedPixel: WebExtensionPixel? {
+        switch self {
+        case .embedded: return .embeddedNotLoaded
+        case .darkReader: return .darkReaderNotLoaded
+        case .adBlockingExtension: return .adBlockingExtensionNotLoaded
         }
     }
 }
@@ -187,6 +314,23 @@ struct MacOSWebExtensionPixelFiring: WebExtensionPixelFiring {
         case .embeddedInstallError(let type, let error):
             guard let macPixel = type.installErrorPixel(error: error) else { return }
             pixel = macPixel
+        case .scriptletFetchSuccess(let type, let version, let count):
+            pixel = .scriptletFetchSuccess(extensionType: type.rawValue, version: version, count: count)
+        case .scriptletFetchError(let type, let error):
+            pixel = .scriptletFetchError(extensionType: type.rawValue, error: error)
+        case .scriptletValidationError(let type, let error):
+            pixel = .scriptletValidationError(extensionType: type.rawValue, error: error)
+        case .scriptletInstalled(let type, let version):
+            pixel = .scriptletInstalled(extensionType: type.rawValue, version: version)
+        case .scriptletInstallError(let type, let error):
+            pixel = .scriptletInstallError(extensionType: type.rawValue, error: error)
+        case .stateChecked:
+            pixel = .stateChecked
+        case .expectedExtensionNotLoaded(let type):
+            guard let macPixel = type.notLoadedPixel else { return }
+            pixel = macPixel
+        case .adBlockingScriptletsNotFetched(let extensionLoaded):
+            pixel = .adBlockingScriptletsNotFetched(extensionLoaded: extensionLoaded)
         }
         PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }

@@ -505,164 +505,326 @@
         }
       }
     },
-    "onboarding.highlights.browsers.features.duckplayer.title" : {
-      "comment" : "Message to highlight browser capability of watching YouTube videos without targeted ads",
+    "onboarding.highlights.browsers.features.duckAI.title" : {
+      "comment" : "Message to highlight browser capability of chatting with ChatGPT without sharing data with third parties",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Гледайте YouTube без насочени реклами"
+            "value" : "Използвайте ChatGPT поверително с вграден Duck.ai"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přehrávej YouTube bez cílených reklam"
+            "value" : "Používej ChatGPT diskrétně s integrovaným Duck.ai"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afspil YouTube uden målrettede annoncer"
+            "value" : "Brug ChatGPT privat med indbygget Duck.ai"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YouTube ohne gezielte Werbung abspielen"
+            "value" : "Nutze ChatGPT privat mit integriertem Duck.ai"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Αναπαράγετε στο YouTube χωρίς στοχευμένες διαφημίσεις"
+            "value" : "Χρησιμοποιήστε το ChatGPT ιδιωτικά με ενσωματωμένο το Duck.ai"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Play YouTube without targeted ads"
+            "value" : "Use ChatGPT privately with Duck.ai built in"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reproduce YouTube sin anuncios segmentados"
+            "value" : "Usa ChatGPT de forma privada con Duck.ai integrado"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esita YouTube’i ilma sihitud reklaamideta"
+            "value" : "Kasuta ChatGPT-d privaatselt sisseehitatud Duck.ai abil"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toista YouTubea ilman kohdennettuja mainoksia"
+            "value" : "Käytä ChatGPT:tä yksityisesti sisäänrakennetulla Duck.ai:lla"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Profitez de YouTube sans publicités ciblées"
+            "value" : "Utilisez ChatGPT en toute confidentialité grâce à l'intégration de Duck.ai"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reproduciraj YouTube bez ciljanih oglasa"
+            "value" : "Koristi ChatGPT privatno s ugrađenim Duck.ai-jem"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nézd a YouTube-ot célzott hirdetések nélkül"
+            "value" : "Használd a ChatGPT-t privát módon a beépített Duck.ai segítségével"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Guarda YouTube senza annunci mirati"
+            "value" : "Utilizza ChatGPT in privato con Duck.ai integrato"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ターゲティング広告なしでYouTubeを再生"
+            "value" : "Duck.aiが組み込まれた状態でChatGPTをプライベートに使用"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Žiūrėkite „YouTube“ be tikslinių skelbimų"
+            "value" : "Naudok „ChatGPT“ privačiai su integruotu „Duck.ai“."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skaties YouTube bez mērķētām reklāmām"
+            "value" : "Izmanto ChatGPT privāti ar iebūvēto Duck.ai"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se YouTube uten målrettede annonser"
+            "value" : "Bruk ChatGPT privat med innebygd Duck.ai"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Speel YouTube af zonder gerichte advertentie"
+            "value" : "Gebruik ChatGPT privé met Duck.ai ingebouwd"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Odtwarzanie treści w serwisie YouTube bez spersonalizowanych reklam"
+            "value" : "Używaj ChatGPT prywatnie z wbudowanym Duck.ai"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vê YouTube sem anúncios segmentados"
+            "value" : "Utilizar o ChatGPT em privado com Duck.ai incorporado"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Redă YouTube fără reclame direcționate"
+            "value" : "Folosește ChatGPT în privat cu Duck.ai încorporat"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Позволяет смотреть YouTube без целевой рекламы"
+            "value" : "Встроенный Duck.ai и приватные беседы с ChatGPT"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sleduj YouTube bez cielených reklám"
+            "value" : "Používaj ChatGPT súkromne s integrovaným Duck.ai."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Predvajajte YouTube brez ciljanih oglasov"
+            "value" : "Zasebno uporabljajte ChatGPT z vgrajenim Duck.ai"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Titta på YouTube utan riktade annonser"
+            "value" : "Använd ChatGPT privat med Duck.ai inbyggt"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "YouTube videolarını hedeflenmiş reklamlar olmadan izleyin"
+            "value" : "Duck.ai entegrasyonu ile ChatGPT'yi özel olarak kullanın."
+          }
+        }
+      }
+    },
+    "onboarding.highlights.browsers.features.duckplayer.title" : {
+      "comment" : "Message to highlight browser capability of watching YouTube videos without ads",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Гледай видеоклипове в YouTube без реклами"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přehrávání videí na YouTube bez reklam"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afspil YouTube-videoer uden annoncer"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube-Videos ohne Werbung abspielen"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Δες βίντεο στο YouTube χωρίς διαφημίσεις"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Play YouTube videos without ads"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reproduce vídeos de YouTube sin anuncios"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esita YouTube'i videoid ilma reklaamideta"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toistaa YouTube-videoita ilman mainoksia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture de vidéos YouTube sans publicités"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reproduciraj YouTube videozapise bez oglasa"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube-videók megtekintése hirdetések nélkül"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riproduci video di YouTube senza annunci"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "広告なしでYouTube動画を再生"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žiūrėkite „YouTube“ vaizdo įrašus be reklamų"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atskaņo YouTube videoklipus bez reklāmām"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spill av YouTube-videoer uten annonser"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speel YouTube-video's af zonder advertenties"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odtwarzaj filmy w serwisie YouTube bez reklam"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reproduz vídeos do YouTube sem anúncios"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redă videoclipuri YouTube fără reclame"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Смотрите видео на YouTube без рекламы"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prehrávajte videá z YouTube bez reklám"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Predvajanje videoposnetkov na YouTubu brez oglasov"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spela upp YouTube-videor utan annonser"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube videolarını reklamsız oynatın"
           }
         }
       }

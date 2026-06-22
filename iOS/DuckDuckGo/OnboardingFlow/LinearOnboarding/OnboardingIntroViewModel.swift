@@ -19,12 +19,14 @@
 
 import class UIKit.UIApplication
 import Common
+import FoundationExtensions
 import Core
 import Foundation
 import Onboarding
-import SystemSettingsPiPTutorial
+import Persistence
+import PrivacyConfig
 import SetDefaultBrowserCore
-import AIChat
+import SystemSettingsPiPTutorial
 
 @MainActor
 final class OnboardingIntroViewModel: ObservableObject {
@@ -73,7 +75,7 @@ final class OnboardingIntroViewModel: ObservableObject {
         var isAnimating = true
     }
 
-    @Published private(set) var state: OnboardingView.ViewState = .landing {
+    @Published private(set) var state: OnboardingView.ViewState {
         didSet {
             measureScreenImpression()
         }
@@ -91,11 +93,12 @@ final class OnboardingIntroViewModel: ObservableObject {
     /// Set to true when the view controller is tapped
     @Published var isSkipped = false
 
-    let copy: Copy
     var onCompletingOnboardingIntro: (() -> Void)?
-    private var introSteps: [OnboardingIntroStep] {
-        onboardingManager.onboardingSteps
-    }
+    var onOpenAIChatFromOnboarding: ((String?, Bool) -> Void)?
+    var onSearchFromOnboarding: ((String) -> Void)?
+    /// Invoked when the flow reaches an `OnboardingIntroStep.interlude(_)` step. The host is expected to dismiss the onboarding UI, run its own experience, and call `resumeOnboardingFromInterlude()` once finished.
+    var onOnboardingInterlude: ((OnboardingIntroStep.Interlude) -> Void)?
+    private var introSteps: [OnboardingIntroStep]
     private var currentIntroStep: OnboardingIntroStep
 
     private let defaultBrowserManager: DefaultBrowserManaging
@@ -106,17 +109,25 @@ final class OnboardingIntroViewModel: ObservableObject {
     private let onboardingSearchExperienceProvider: OnboardingSearchExperienceProvider
     private let appIconProvider: () -> AppIcon
     private let addressBarPositionProvider: () -> AddressBarPosition
+    private let featureFlagger: FeatureFlagger
     private let restorePromptHandler: OnboardingRestorePromptHandling
     private let tutorialSettings: TutorialSettings
+    private let onboardingResumeStepStore: any KeyedStoring<OnboardingStoringKeys>
+    private let contentProvider: OnboardingIntroContentProviding
+
+    private var pendingOnboardingIntroActions: (() -> Void)?
 
     convenience init(pixelReporter: LinearOnboardingPixelReporting,
                      systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging,
                      daxDialogsManager: ContextualDaxDialogDisabling,
-                     restorePromptHandler: OnboardingRestorePromptHandling) {
-        let onboardingManager = OnboardingManager()
+                     restorePromptHandler: OnboardingRestorePromptHandling,
+                     onboardingManager: OnboardingManaging,
+                     onboardingResumeStepStore: (any KeyedStoring<OnboardingStoringKeys>)? = nil) {
         let defaultBrowserInfoStore = DefaultBrowserInfoStore()
         let defaultBrowserEventMapper = DefaultBrowserPromptManagerDebugPixelHandler()
         let onboardingSearchExperienceProvider = OnboardingSearchExperience()
+        let featureFlagger = AppDependencyProvider.shared.featureFlagger
+        let tutorialSettings = DefaultTutorialSettings()
         self.init(
             defaultBrowserManager: DefaultBrowserManager(defaultBrowserInfoStore: defaultBrowserInfoStore,
                                                          defaultBrowserEventMapper: defaultBrowserEventMapper, defaultBrowserChecker: SystemCheckDefaultBrowserService(application: UIApplication.shared)),
@@ -128,8 +139,14 @@ final class OnboardingIntroViewModel: ObservableObject {
             onboardingSearchExperienceProvider: onboardingSearchExperienceProvider,
             appIconProvider: { AppIconManager.shared.appIcon },
             addressBarPositionProvider: { AppUserDefaults().currentAddressBarPosition },
+            featureFlagger: featureFlagger,
             restorePromptHandler: restorePromptHandler,
-            tutorialSettings: DefaultTutorialSettings()
+            tutorialSettings: tutorialSettings,
+            contentProvider: OnboardingIntroContentProvider(
+                flowType: onboardingManager.currentOnboardingFlow,
+                featureFlagger: featureFlagger
+            ),
+            onboardingResumeStepStore: onboardingResumeStepStore
         )
     }
 
@@ -143,8 +160,11 @@ final class OnboardingIntroViewModel: ObservableObject {
         onboardingSearchExperienceProvider: OnboardingSearchExperienceProvider,
         appIconProvider: @escaping () -> AppIcon,
         addressBarPositionProvider: @escaping () -> AddressBarPosition,
+        featureFlagger: FeatureFlagger,
         restorePromptHandler: OnboardingRestorePromptHandling,
-        tutorialSettings: TutorialSettings = DefaultTutorialSettings()
+        tutorialSettings: TutorialSettings,
+        contentProvider: OnboardingIntroContentProviding,
+        onboardingResumeStepStore: (any KeyedStoring<OnboardingStoringKeys>)? = nil
     ) {
         self.defaultBrowserManager = defaultBrowserManager
         self.contextualDaxDialogs = contextualDaxDialogs
@@ -154,11 +174,16 @@ final class OnboardingIntroViewModel: ObservableObject {
         self.onboardingSearchExperienceProvider = onboardingSearchExperienceProvider
         self.appIconProvider = appIconProvider
         self.addressBarPositionProvider = addressBarPositionProvider
+        self.featureFlagger = featureFlagger
         self.restorePromptHandler = restorePromptHandler
         self.tutorialSettings = tutorialSettings
+        self.contentProvider = contentProvider
+        self.onboardingResumeStepStore = if let onboardingResumeStepStore { onboardingResumeStepStore } else { UserDefaults.app.keyedStoring() }
 
+        introSteps = onboardingManager.onboardingSteps
+        state = .landing(contentProvider.landingContent)
         currentIntroStep = currentOnboardingStep
-        copy = .default
+        restorePendingOnboardingStepIfNeeded()
     }
 
     func onAppear() {
@@ -168,6 +193,8 @@ final class OnboardingIntroViewModel: ObservableObject {
     func startOnboardingAction(isResumingOnboarding: Bool = false) {
         if isResumingOnboarding {
             pixelReporter.measureResumeOnboardingCTAAction()
+        } else {
+            pixelReporter.measureStartOnboardingCTAAction()
         }
         makeNextViewState()
     }
@@ -176,10 +203,15 @@ final class OnboardingIntroViewModel: ObservableObject {
         pixelReporter.measureSkipOnboardingCTAAction()
     }
 
+    func skipOnboardingPresented() {
+        pixelReporter.measureSkipOnboardingScreenImpression()
+    }
+
     func confirmSkipOnboardingAction() {
         pixelReporter.measureConfirmSkipOnboardingCTAAction()
         onboardingSearchExperienceProvider.storeAIChatSearchInputDuringOnboardingChoice(enable: true)
         tutorialSettings.hasSkippedOnboarding = true
+        OnboardingResumeCheckpointStore.clearAll(in: onboardingResumeStepStore)
         contextualDaxDialogs.disableContextualDaxDialogs()
         onCompletingOnboardingIntro?()
     }
@@ -191,6 +223,12 @@ final class OnboardingIntroViewModel: ObservableObject {
     }
 
     func cancelSetDefaultBrowserAction() {
+        pixelReporter.measureSetDefaultBrowserSkipped()
+        makeNextViewState()
+    }
+
+    func aiComparisonAction() {
+        pixelReporter.measureAiComparisonCTAAction()
         makeNextViewState()
     }
 
@@ -209,25 +247,31 @@ final class OnboardingIntroViewModel: ObservableObject {
     }
 
     func appIconPickerContinueAction() {
-        if appIconProvider() != .defaultAppIcon {
-            pixelReporter.measureChooseCustomAppIconColor()
-        }
-
+        pixelReporter.measureChooseAppIconColor(appIconProvider())
         makeNextViewState()
     }
 
     func selectAddressBarPositionAction() {
-        if addressBarPositionProvider() == .bottom {
-            pixelReporter.measureChooseBottomAddressBarPosition()
-        }
+        pixelReporter.measureChooseAddressBarPosition(addressBarPositionProvider())
         makeNextViewState()
     }
 
     func selectSearchExperienceAction() {
         if onboardingSearchExperienceProvider.didEnableAIChatSearchInputDuringOnboarding {
             pixelReporter.measureChooseAIChat()
+            insertDuckAIQuerySelectionStepIfNeeded()
         } else {
             pixelReporter.measureChooseSearchOnly()
+        }
+        makeNextViewState()
+    }
+
+    func selectDuckAIQueryAction(selection: DuckAIQueryMode) {
+        switch selection {
+        case .duckAI:
+            pixelReporter.measureDuckAIQueryChooseAIChat()
+        case .search:
+            pixelReporter.measureDuckAIQueryChooseSearchOnly()
         }
         makeNextViewState()
     }
@@ -236,14 +280,42 @@ final class OnboardingIntroViewModel: ObservableObject {
         isSkipped = true
     }
 
+    func openAIChatFromOnboarding(prompt: String?, autoSend: Bool) {
+        onOpenAIChatFromOnboarding?(prompt, autoSend)
+    }
+
+    func searchFromOnboarding(query: String) {
+        onSearchFromOnboarding?(query)
+    }
+
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource) {
+        pixelReporter.measureDuckAIQuerySubmission(
+            selection: selection,
+            promptSource: promptSource
+        )
+    }
+
     func restoreSyncAccountAction() {
         pixelReporter.measureAutoRestoreOnboardingRestoreCTAAction()
         restorePromptHandler.restoreSyncAccount()
-        contextualDaxDialogs.disableContextualDaxDialogs()
+        pendingOnboardingIntroActions = { [weak self] in
+            self?.contextualDaxDialogs.disableContextualDaxDialogs()
+        }
     }
 
     func restorePromptSkipAction() {
         pixelReporter.measureAutoRestoreOnboardingSkipCTAAction()
+    }
+
+    /// Resumes the linear onboarding after the host has finished an interlude.
+    ///
+    /// Call this once the host's interlude experience completes. The view model will advance to the step immediately after the current interlude in `introSteps`.
+    func resumeOnboardingFromInterlude() {
+        guard case .interlude = currentIntroStep else {
+            assertionFailure("resumeOnboardingFromInterlude() called outside an interlude step (current: \(currentIntroStep))")
+            return
+        }
+        makeNextViewState()
     }
 
 #if DEBUG || ALPHA
@@ -267,34 +339,96 @@ private extension OnboardingIntroViewModel {
 
     func setViewState(introStep: OnboardingIntroStep) {
         func stepInfo() -> OnboardingView.ViewState.Intro.StepInfo {
-            guard let currentStepIndex = introSteps.firstIndex(of: introStep) else { return .hidden }
+            // Remove interlude steps from counting the total number of steps as they're not rendered
+            let stepsWithoutInterludes = introSteps.filter { !$0.isInterlude }
+
+            guard let currentStepIndex = stepsWithoutInterludes.firstIndex(of: introStep) else { return .hidden }
 
             // Remove startOnboardingDialog from the count of total steps since we don't show the progress for that step.
-            return OnboardingView.ViewState.Intro.StepInfo(currentStep: currentStepIndex, totalSteps: introSteps.count - 1)
+            return OnboardingView.ViewState.Intro.StepInfo(currentStep: currentStepIndex, totalSteps: stepsWithoutInterludes.count - 1)
         }
 
-        let viewState = switch introStep {
-        case .introDialog(let isReturningUser):
-            OnboardingView.ViewState.onboarding(.init(type: .startOnboardingDialog(type: introDialogType(isReturningUser: isReturningUser)), step: .hidden))
-        case .browserComparison:
-            OnboardingView.ViewState.onboarding(.init(type: .browsersComparisonDialog, step: stepInfo()))
-        case .addToDockPromo:
-            OnboardingView.ViewState.onboarding(.init(type: .addToDockPromoDialog, step: stepInfo()))
-        case .appIconSelection:
-            OnboardingView.ViewState.onboarding(.init(type: .chooseAppIconDialog, step: stepInfo()))
-        case .addressBarPositionSelection:
-            OnboardingView.ViewState.onboarding(.init(type: .chooseAddressBarPositionDialog, step: stepInfo()))
-        case .searchExperienceSelection:
-            OnboardingView.ViewState.onboarding(.init(type: .chooseSearchExperienceDialog, step: stepInfo()))
+        func mapToViewState(renderableStep: OnboardingIntroStep.RenderableStep) -> OnboardingView.ViewState {
+            switch renderableStep {
+            case .introDialog(let isReturningUser):
+                return .onboarding(
+                    .init(
+                        type: .startOnboardingDialog(content: contentProvider.introStepContent, type: introDialogType(isReturningUser: isReturningUser)),
+                        step: .hidden
+                    )
+                )
+            case .browserComparison:
+                return .onboarding(
+                    .init(
+                        type: .browsersComparisonDialog(content: contentProvider.browserComparisonContent),
+                        step: stepInfo()
+                    )
+                )
+            case .aiComparison:
+                return .onboarding(
+                    .init(
+                        type: .aiComparisonDialog(content: contentProvider.aiComparisonContent),
+                        step: stepInfo()
+                    )
+                )
+            case .addToDockPromo:
+                return .onboarding(
+                    .init(
+                        type: .addToDockPromoDialog(content: contentProvider.addToDockContent),
+                        step: stepInfo()
+                    )
+                )
+            case .appIconSelection:
+                return .onboarding(
+                    .init(
+                        type: .chooseAppIconDialog(content: contentProvider.appIconColorContent),
+                        step: stepInfo()
+                    )
+                )
+            case .addressBarPositionSelection:
+                return .onboarding(
+                    .init(
+                        type: .chooseAddressBarPositionDialog(content: contentProvider.addressBarPositionContent),
+                        step: stepInfo()
+                    )
+                )
+            case .searchExperienceSelection:
+                return .onboarding(
+                    .init(
+                        type: .chooseSearchExperienceDialog(content: contentProvider.searchExperienceContent),
+                        step: stepInfo()
+                    )
+                )
+            case .duckAIQuerySelection:
+                let isDuckAiTailoredFlow = onboardingManager.currentOnboardingFlow == .duckAI
+                // Duck.ai Tailored flow pre-selects Duck.ai; the default flow always pre-selects Search.
+                let duckAIQueryMode: DuckAIQueryMode = isDuckAiTailoredFlow ? .duckAI : .search
+                // Duck.ai Tailored flow shows step counter; the default flow hides it.
+                let progressStep: OnboardingView.ViewState.Intro.StepInfo = isDuckAiTailoredFlow ? stepInfo() : .hidden
+                return .onboarding(
+                    .init(
+                        type: .duckAIQueryExperimentDialog(content: contentProvider.duckAIQueryContent, defaultMode: duckAIQueryMode),
+                        step: progressStep
+                    )
+                )
+            }
         }
 
-        state = viewState
+        switch introStep {
+        case let .interlude(interlude):
+            // Interlude steps don't render a view state. They inform the delegate that an interlude is starting.
+            // The delegate will resume the onboarding by calling `resumeOnboardingFromInterlude()` when finished.
+            onOnboardingInterlude?(interlude)
+        case let .renderable(renderable):
+            state = mapToViewState(renderableStep: renderable)
+        }
     }
 
     func makeNextViewState() {
         guard let currentStepIndex = introSteps.firstIndex(of: currentIntroStep) else {
             assertionFailure("Onboarding Step index not found.")
-            onCompletingOnboardingIntro?()
+            OnboardingResumeCheckpointStore.clearAll(in: onboardingResumeStepStore)
+            completeOnboardingIntro()
             return
         }
 
@@ -303,24 +437,81 @@ private extension OnboardingIntroViewModel {
 
         // If the flow does not have any step remaining dismiss it
         guard let nextIntroStep = introSteps[safe: nextStepIndex] else {
-            onCompletingOnboardingIntro?()
+            if currentIntroStep != .duckAIQuerySelection {
+                OnboardingResumeCheckpointStore.clearAll(in: onboardingResumeStepStore)
+            }
+            completeOnboardingIntro()
             return
         }
 
         // Otherwise advance to the next onboarding step
         isSkipped = false
         currentIntroStep = nextIntroStep
+        persistPendingOnboardingStep(for: currentIntroStep)
         setViewState(introStep: currentIntroStep)
+    }
+
+    func completeOnboardingIntro() {
+        performPendingOnboardingIntroActions()
+        onCompletingOnboardingIntro?()
+    }
+
+    func performPendingOnboardingIntroActions() {
+        pendingOnboardingIntroActions?()
+        pendingOnboardingIntroActions = nil
+    }
+
+    func restorePendingOnboardingStepIfNeeded() {
+        guard let resumeStep = onboardingResumeStepStore.resumeStep else { return }
+
+        switch resumeStep {
+        case .duckAIQuerySelection:
+            if !introSteps.contains(.duckAIQuerySelection) {
+                let insertIndex = introSteps.firstIndex(of: .searchExperienceSelection).map { $0 + 1 } ?? introSteps.count
+                introSteps.insert(.duckAIQuerySelection, at: insertIndex)
+            }
+            currentIntroStep = .duckAIQuerySelection
+
+        case .browserComparison where introSteps.contains(.browserComparison):
+            currentIntroStep = .browserComparison
+        case .aiComparison where introSteps.contains(.aiComparison):
+            currentIntroStep = .aiComparison
+        case .addToDockPromo where introSteps.contains(.addToDockPromo):
+            currentIntroStep = .addToDockPromo
+        case .appIconSelection where introSteps.contains(.appIconSelection):
+            currentIntroStep = .appIconSelection
+        case .addressBarPositionSelection where introSteps.contains(.addressBarPositionSelection):
+            currentIntroStep = .addressBarPositionSelection
+        case .searchExperienceSelection where introSteps.contains(.searchExperienceSelection):
+            currentIntroStep = .searchExperienceSelection
+        case .duckAIAnswerStep:
+            break // handled separately by restorePendingDuckAIAnswerStepIfNeeded in MainViewController
+        case .interludeDuckAI where introSteps.contains(.interlude(.duckAI)):
+            currentIntroStep = .interlude(.duckAI)
+
+        default:
+            // Stored step is not available in the current flow — clear and start from the beginning.
+            OnboardingResumeCheckpointStore.clearAll(in: onboardingResumeStepStore)
+        }
+    }
+
+    func persistPendingOnboardingStep(for step: OnboardingIntroStep) {
+        if step == .duckAIQuerySelection {
+            onboardingResumeStepStore.resumeExperimentPrompt = nil
+        }
+        onboardingResumeStepStore.resumeStep = step.resumeStep
     }
 
     func measureScreenImpression() {
         guard let intro = state.intro else { return }
         switch intro.type {
-        case .startOnboardingDialog(let dialogType):
+        case .startOnboardingDialog(_, let dialogType):
             pixelReporter.measureOnboardingIntroImpression()
             measureAutoRestorePromptImpressionIfNeeded(dialogType: dialogType)
         case .browsersComparisonDialog:
             pixelReporter.measureBrowserComparisonImpression()
+        case .aiComparisonDialog:
+            pixelReporter.measureAiComparisonImpression()
         case .addToDockPromoDialog:
             pixelReporter.measureAddToDockPromoImpression()
         case .chooseAppIconDialog:
@@ -329,12 +520,32 @@ private extension OnboardingIntroViewModel {
             pixelReporter.measureAddressBarPositionSelectionImpression()
         case .chooseSearchExperienceDialog:
             pixelReporter.measureSearchExperienceSelectionImpression()
+        case .duckAIQueryExperimentDialog:
+            pixelReporter.measureDuckAIQuerySelectionImpression()
         }
+    }
+
+    func insertDuckAIQuerySelectionStepIfNeeded() {
+        guard let currentStepIndex = introSteps.firstIndex(of: currentIntroStep),
+              onboardingManager.currentOnboardingFlow == .default,
+              !introSteps.contains(.duckAIQuerySelection) else {
+            return
+        }
+        introSteps.insert(.duckAIQuerySelection, at: currentStepIndex + 1)
     }
 
     func introDialogType(isReturningUser: Bool) -> OnboardingView.ViewState.Intro.IntroDialogType {
         guard isReturningUser else {
             return .default
+        }
+        // Restore-data prompt is suppressed in the Duck.ai tailored flow.
+        guard onboardingManager.currentOnboardingFlow != .duckAI else {
+            // Fire a pixel to measure the volume of re‑installers who previously synced their device and would normally see the restore-data flow but instead experience the CPP onboarding (honouring the CPP install context).
+            // Consider deleting this pixel ini the future if the information is no longer needed
+            if restorePromptHandler.isEligibleForRestorePrompt() {
+                DailyPixel.fireDailyAndCount(pixel: .onboardingSyncAutoRestoreUserFromDuckAiFlow)
+            }
+            return .skipTutorial
         }
         return restorePromptHandler.isEligibleForRestorePrompt() ? .restoreData : .skipTutorial
     }

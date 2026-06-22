@@ -92,14 +92,16 @@ struct SettingsRootView: View {
         .accentColor(Color(designSystemColor: .textPrimary))
         .environmentObject(viewModel)
         .conditionalInsetGroupedListStyle()
-        .onAppear {
-            viewModel.onAppear()
+        .onFirstAppear {
+            viewModel.onFirstAppear()
+        } subsequently: {
+            viewModel.onSubsequentAppear()
         }
 
         // MARK: Deeplink Modifiers
 
         .sheet(isPresented: $shouldDisplayDeepLinkSheet, onDismiss: {
-            viewModel.onAppear()
+            viewModel.onSubsequentAppear()
             shouldDisplayDeepLinkSheet = false
         }, content: {
             if let target = deepLinkTarget {
@@ -253,6 +255,8 @@ struct SettingsRootView: View {
             PrivateSearchView().environmentObject(viewModel)
         case .appearance, .customizeAddressBarButton, .customizeToolbarButton:
             SettingsAppearanceView().environmentObject(viewModel)
+        case .general:
+            SettingsGeneralView().environmentObject(viewModel)
         case .subscriptionSettings:
             if let configuration = subscriptionSettingsConfiguration() {
                 let model = SubscriptionSettingsViewModel(userScriptsDependencies: viewModel.userScriptsDependencies)

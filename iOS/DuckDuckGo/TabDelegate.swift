@@ -34,7 +34,9 @@ protocol TabDelegate: AnyObject {
     func tabWillRequestNewTab(_ tab: TabViewController) -> UIKeyModifierFlags?
 
     func tabDidRequestNewTab(_ tab: TabViewController)
-    
+
+    func tabDidRequestNewVoiceChat(_ tab: TabViewController)
+
     func newTab(reuseExisting: Bool)
 
     func tabDidRequestActivate(_ tab: TabViewController)
@@ -62,6 +64,12 @@ protocol TabDelegate: AnyObject {
              inheritingAttribution: AdClickAttributionLogic.State?)
 
     func tabLoadingStateDidChange(tab: TabViewController)
+
+    /// Called once per settled navigation: WKNavigationDelegate didFinish or didFail.
+    /// Fired regardless of whether the tab is current. Use this to persist tab state
+    /// after a navigation resolves, not on every loading-state tick.
+    func tabDidFinishNavigation(_ tab: TabViewController)
+
     func tab(_ tab: TabViewController, didUpdatePreview preview: UIImage)
 
     func tab(_ tab: TabViewController, didChangePrivacyInfo privacyInfo: PrivacyInfo?)
@@ -85,6 +93,8 @@ protocol TabDelegate: AnyObject {
     func tabDidRequestDownloads(tab: TabViewController)
 
     func tabDidRequestAIChat(tab: TabViewController)
+
+    func tabDidRequestAIChatHistory(tab: TabViewController, source: AIChatHistorySource)
 
     func tab(_ tab: TabViewController,
              didRequestAutofillLogins account: SecureVaultModels.WebsiteAccount?,
@@ -119,12 +129,13 @@ protocol TabDelegate: AnyObject {
     func closeFindInPage(tab: TabViewController)
 
     func tabContentProcessDidTerminate(tab: TabViewController)
+
+    /// User activated an in-page link in this tab.
+    func tabDidEngageWithPage(_ tab: TabViewController)
     
     func tabDidRequestFireButtonPulse(tab: TabViewController)
 
     func tabDidRequestDeleteContextualChat(tab: TabViewController, chatID: String)
-
-    func tabDidRequestToggleSidebarOnCurrentTab(_ tab: TabViewController)
 
     func tabDidRequestPrivacyDashboardButtonPulse(tab: TabViewController, animated: Bool)
 
@@ -133,7 +144,9 @@ protocol TabDelegate: AnyObject {
     func tab(_ tab: TabViewController,
              didRequestPresentingTrackerAnimation privacyInfo: PrivacyInfo,
              isCollapsing: Bool)
-    
+
+    func tabDidRequestPresentingYouTubeAdBlockAnimation(tab: TabViewController)
+
     func tabDidRequestShowingMenuHighlighter(tab: TabViewController)
     
     func tab(_ tab: TabViewController, didRequestPresentingAlert alert: UIAlertController)
@@ -154,6 +167,14 @@ protocol TabDelegate: AnyObject {
     func tabDidRequestNewPrivateEmailAddress(tab: TabViewController)
 
     func tabDidRequestFireMode(tab: TabViewController)
+
+    func tab(_ tab: TabViewController, didFailDuckAINavigationFor url: URL, error: Error)
+
+    func tabDidRequestYouTubeAdBlockPicker(tab: TabViewController)
+
+    func tabDidRequestSetYouTubeAdBlockingEnabled(_ enabled: Bool, tab: TabViewController)
+
+    func tabDidRequestYouTubeAdBlockUnavailableDialog(tab: TabViewController)
 }
 
 extension TabDelegate {
@@ -161,5 +182,11 @@ extension TabDelegate {
     func tabDidRequestClose(_ tab: TabViewController) {
         tabDidRequestClose(tab.tabModel, behavior: .onlyClose, clearTabHistory: true)
     }
-    
+
+    func tabDidFinishNavigation(_ tab: TabViewController) {}
+
+    func tabDidRequestNewVoiceChat(_ tab: TabViewController) {}
+
+    func tab(_ tab: TabViewController, didFailDuckAINavigationFor url: URL, error: Error) {}
+
 }

@@ -18,6 +18,7 @@
 //
 
 import Common
+import FoundationExtensions
 import Foundation
 
 // Inspired by https://swiftsenpai.com/swift/create-the-perfect-userdefaults-wrapper-using-property-wrapper/
@@ -57,7 +58,6 @@ public struct UserDefaultsWrapper<T> {
         case privacyButtonPulseShown = "com.duckduckgo.ios.privacyButtonPulseShown"
         case daxBrowsingFinalDialogShown = "com.duckduckgo.ios.daxOnboardingFinalDialogSeen"
         case daxSubscriptionPromotionDialogShown = "com.duckduckgo.ios.daxPrivacyProPromotionDialogShown"
-
         case notFoundCache = "com.duckduckgo.ios.favicons.notFoundCache"
         case faviconTabsCacheNeedsCleanup = "com.duckduckgo.ios.favicons.tabsCacheNeedsCleanup"
 
@@ -167,9 +167,6 @@ public struct UserDefaultsWrapper<T> {
         case pixelExperimentCohort = "com.duckduckgo.ios.pixel.experiment.cohort"
         case pixelExperimentEnrollmentDate = "com.duckduckgo.ios.pixel.experiment.enrollment.date"
 
-        case historyMessageDisplayCount = "com.duckduckgo.ios.historyMessage.displayCount"
-        case historyMessageDismissed = "com.duckduckgo.ios.historyMessage.dismissed"
-        
         // Legacy DuckPlayer
         case duckPlayerMode = "com.duckduckgo.ios.duckPlayerMode"
         case duckPlayerAskModeOverlayHidden = "com.duckduckgo.ios.duckPlayerAskModeOverlayHidden"

@@ -36,8 +36,9 @@ final class NewTabPageMessagesModel: ObservableObject {
     private let imageLoader: RemoteMessagingImageLoading
     private let pixelReporter: RemoteMessagingPixelReporting?
     private let fireModePromotionEligibility: FireModePromotionCoordinating?
+    private let isOpenedAfterIdle: () -> Bool
 
-    var onFireModeRequested: (() -> Void)?
+    var onTryFireModeRequested: (() -> Void)?
 
     init(homePageMessagesConfiguration: HomePageMessagesConfiguration,
          notificationCenter: NotificationCenter = .default,
@@ -46,7 +47,8 @@ final class NewTabPageMessagesModel: ObservableObject {
          messageActionHandler: RemoteMessagingActionHandling,
          imageLoader: RemoteMessagingImageLoading,
          pixelReporter: RemoteMessagingPixelReporting? = nil,
-         fireModePromotionEligibility: FireModePromotionCoordinating? = nil) {
+         fireModePromotionEligibility: FireModePromotionCoordinating? = nil,
+         isOpenedAfterIdle: @escaping () -> Bool = { false }) {
         self.homePageMessagesConfiguration = homePageMessagesConfiguration
         self.notificationCenter = notificationCenter
         self.pixelFiring = pixelFiring
@@ -55,6 +57,7 @@ final class NewTabPageMessagesModel: ObservableObject {
         self.imageLoader = imageLoader
         self.pixelReporter = pixelReporter
         self.fireModePromotionEligibility = fireModePromotionEligibility
+        self.isOpenedAfterIdle = isOpenedAfterIdle
     }
 
     func load() {
@@ -81,7 +84,7 @@ final class NewTabPageMessagesModel: ObservableObject {
     // MARK: - Private
 
     func refresh() {
-        homePageMessagesConfiguration.refresh()
+        homePageMessagesConfiguration.refresh(openedAfterIdle: isOpenedAfterIdle())
         updateHomeMessageViewModel()
     }
 
@@ -94,7 +97,6 @@ final class NewTabPageMessagesModel: ObservableObject {
     // MARK: - Fire Mode Promotion Actions
 
     func firePromotionDidAppear() {
-        // TODO: fire promotion shown pixel
         fireModePromotionEligibility?.markNTPPromotionShown()
     }
 
@@ -102,7 +104,7 @@ final class NewTabPageMessagesModel: ObservableObject {
     func firePromotionTryFireTabsTapped() async {
         fireModePromotionEligibility?.markNTPPromotionEngaged()
         await dismissHomeMessage(.firePromotion)
-        onFireModeRequested?()
+        onTryFireModeRequested?()
     }
 
     @MainActor

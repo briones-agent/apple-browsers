@@ -30,10 +30,12 @@ struct MockOmnibarDependency: OmnibarDependencyProvider {
     var featureFlagger: FeatureFlagger
     var aichatIPadTabFeature: AIChatIPadTabFeatureProviding
     var aiChatSettings: AIChatSettingsProvider
+    var aiChatSyncCleaner: AIChatSyncCleaning?
     var aiChatAddressBarExperience: AIChatAddressBarExperienceProviding
     var appSettings: any AppSettings
     var daxEasterEggPresenter: DaxEasterEggPresenting
     var mobileCustomization: DuckDuckGo.MobileCustomization
+    var duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
 
     init(voiceSearchHelper: VoiceSearchHelperProtocol = MockVoiceSearchHelper(),
          featureFlagger: FeatureFlagger = MockFeatureFlagger(),

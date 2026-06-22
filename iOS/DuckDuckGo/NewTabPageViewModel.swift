@@ -28,7 +28,10 @@ final class NewTabPageViewModel: ObservableObject {
     @Published private(set) var isOnboarding: Bool
     @Published var escapeHatch: EscapeHatchModel?
     @Published var sectionTitle: String?
-    var onEscapeHatchTap: (() -> Void)?
+    @Published var isLogoHidden: Bool = false
+    /// Hides the favorites grid (without removing it) so the UTI defocus handoff can keep the embedded
+    /// favorites visible during the collapse and reveal these — aligned — only at completion.
+    @Published var isFavoritesHidden: Bool = false
     private(set) var fireTab: Bool
 
     private(set) var isDragging: Bool = false

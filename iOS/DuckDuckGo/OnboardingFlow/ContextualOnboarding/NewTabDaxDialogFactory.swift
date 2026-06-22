@@ -22,6 +22,7 @@ import SwiftUI
 import Onboarding
 import Subscription
 import Common
+import FoundationExtensions
 
 typealias DaxDialogsFlowCoordinator = ContextualOnboardingLogic & SubscriptionPromotionCoordinating
 
@@ -38,6 +39,15 @@ protocol NewTabDaxDialogProviding {
     ///
     /// - Returns: A view conforming to `DaxDialog` that represents the Dax dialog.
     func createDaxDialog(for homeDialog: DaxDialogs.HomeScreenSpec, onCompletion: @escaping (_ activateSearch: Bool) -> Void, onManualDismiss: @escaping () -> Void) -> DaxDialog
+
+    /// Creates an experiment completion dialog shown after Duck.ai fire onboarding.
+    ///
+    /// - Parameters:
+    ///   - message: Completion message to display.
+    ///   - onDismiss: Closure called when the dialog is dismissed.
+    ///
+    /// - Returns: Type-erased completion dialog view.
+    func createExperimentCompletionDialog(message: String, onDismiss: @escaping () -> Void) -> AnyView
 }
 
 final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
@@ -45,17 +55,21 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
     private var daxDialogsFlowCoordinator: DaxDialogsFlowCoordinator
     private let onboardingPixelReporter: OnboardingPixelReporting
     private let onboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHelping
+    private let onboardingFlowProvider: OnboardingFlowProviding
 
     init(
         delegate: OnboardingNavigationDelegate?,
         daxDialogsFlowCoordinator: DaxDialogsFlowCoordinator,
         onboardingPixelReporter: OnboardingPixelReporting,
-        onboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHelping = OnboardingSubscriptionPromotionHelper()
+        onboardingSubscriptionPromotionHelper: OnboardingSubscriptionPromotionHelping = OnboardingSubscriptionPromotionHelper(),
+        onboardingFlowProvider: OnboardingFlowProviding = OnboardingManager()
+
     ) {
         self.delegate = delegate
         self.daxDialogsFlowCoordinator = daxDialogsFlowCoordinator
         self.onboardingPixelReporter = onboardingPixelReporter
         self.onboardingSubscriptionPromotionHelper = onboardingSubscriptionPromotionHelper
+        self.onboardingFlowProvider = onboardingFlowProvider
     }
 
     @ViewBuilder
@@ -78,7 +92,10 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
     private func createInitialDialog(onManualDismiss: @escaping () -> Void) -> some View {
         let viewModel = OnboardingSearchSuggestionsViewModel(
             suggestedSearchesProvider: OnboardingSuggestedSearchesProvider(),
-            delegate: delegate
+            delegate: delegate,
+            onSuggestionPressed: { [weak self] in
+                self?.onboardingPixelReporter.measureTrySearchDialogSuggestedSearchTapped()
+            }
         )
         let message = UserText.Onboarding.ContextualOnboarding.onboardingTryASearchMessage
 
@@ -95,14 +112,20 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
         .onFirstAppear { [weak self] in
             self?.daxDialogsFlowCoordinator.setTryAnonymousSearchMessageSeen()
             self?.onboardingPixelReporter.measureScreenImpression(event: .onboardingContextualTrySearchUnique)
+            self?.onboardingPixelReporter.measureScreenImpression(.search(.shown))
         }
     }
 
     private func createSubsequentDialog(onManualDismiss: @escaping () -> Void) -> some View {
+        let isChatPath = daxDialogsFlowCoordinator.chatPathPhase == .visitSite
+
         let viewModel = OnboardingSiteSuggestionsViewModel(
             title: UserText.Onboarding.ContextualOnboarding.onboardingTryASiteNTPTitle,
             suggestedSitesProvider: OnboardingSuggestedSitesProvider(surpriseItemTitle: UserText.Onboarding.ContextualOnboarding.tryASearchOptionSurpriseMeTitle),
-            delegate: delegate
+            delegate: delegate,
+            onSuggestionPressed: { [weak self] in
+                self?.onboardingPixelReporter.measureTryVisitSiteDialogSuggestedSiteTapped()
+            }
         )
 
         let manualDismissAction = { [weak self] in
@@ -116,8 +139,14 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
         }
         .onboardingContextualBackgroundStyle(background: .illustratedGradient)
         .onFirstAppear { [weak self] in
-            self?.daxDialogsFlowCoordinator.setTryVisitSiteMessageSeen()
-            self?.onboardingPixelReporter.measureScreenImpression(event: .onboardingContextualTryVisitSiteUnique)
+            if isChatPath {
+                self?.daxDialogsFlowCoordinator.setChatPathVisitSiteSeen()
+                self?.onboardingPixelReporter.measureScreenImpression(event: .onboardingChatPathTryVisitSiteUnique)
+            } else {
+                self?.daxDialogsFlowCoordinator.setTryVisitSiteMessageSeen()
+                self?.onboardingPixelReporter.measureScreenImpression(event: .onboardingContextualTryVisitSiteUnique)
+            }
+            self?.onboardingPixelReporter.measureScreenImpression(.visitSite(.shown))
         }
     }
 
@@ -155,13 +184,35 @@ final class NewTabDaxDialogFactory: NewTabDaxDialogProviding {
         .onFirstAppear { [weak self] in
             self?.daxDialogsFlowCoordinator.setFinalOnboardingDialogSeen()
             self?.onboardingPixelReporter.measureScreenImpression(event: .daxDialogsEndOfJourneyNewTabUnique)
+            self?.onboardingPixelReporter.measureScreenImpression(.end(.shown))
         }
+    }
+
+    func createExperimentCompletionDialog(message: String, onDismiss: @escaping () -> Void) -> AnyView {
+        let onDismiss = { [weak self] in
+            self?.onboardingPixelReporter.measureDuckAIFinalDialogCTAAction()
+            onDismiss()
+        }
+
+        return AnyView(
+            OnboardingFinalDialog(
+                logoPosition: .top,
+                message: message,
+                cta: UserText.Onboarding.ContextualOnboarding.onboardingFinalScreenButton,
+                dismissAction: onDismiss
+            )
+            .onboardingDaxDialogStyle()
+            .onboardingContextualBackgroundStyle(background: .illustratedGradient)
+            .onFirstAppear { [weak self] in
+                self?.daxDialogsFlowCoordinator.setFinalOnboardingDialogSeen()
+                self?.onboardingPixelReporter.measureDuckAIFinalDialogImpression()
+            }
+        )
     }
 }
 
 private extension NewTabDaxDialogFactory {
     private func createSubscriptionPromoDialog(proceedButtonText: String, onDismiss: @escaping (_ activateSearch: Bool) -> Void) -> some View {
-
         return FadeInView {
             SubscriptionPromotionView(
                 title: UserText.SubscriptionPromotionOnboarding.Promo.title,
@@ -170,8 +221,10 @@ private extension NewTabDaxDialogFactory {
                 proceedText: proceedButtonText,
                 dismissText: UserText.SubscriptionPromotionOnboarding.Buttons.skip,
                 proceedAction: { [weak self] in
+                    self?.onboardingPixelReporter.measureSubscriptionPromoEngageCTAAction()
                     self?.onboardingSubscriptionPromotionHelper.fireTapPixel()
-                    let urlComponents = self?.onboardingSubscriptionPromotionHelper.redirectURLComponents()
+                    let featurePage: OnboardingSubscriptionPromotionPage? = self?.onboardingFlowProvider.currentOnboardingFlow == .duckAI ? .duckAI : nil
+                    let urlComponents = self?.onboardingSubscriptionPromotionHelper.redirectURLComponents(featurePage: featurePage)
                     NotificationCenter.default.post(
                         name: .settingsDeepLinkNotification,
                         object: SettingsViewModel.SettingsDeepLinkSection.subscriptionFlow(redirectURLComponents: urlComponents),
@@ -190,6 +243,7 @@ private extension NewTabDaxDialogFactory {
         .onboardingContextualBackgroundStyle(background: .illustratedGradient)
         .onFirstAppear { [weak self] in
             self?.onboardingSubscriptionPromotionHelper.fireImpressionPixel()
+            self?.onboardingPixelReporter.measureSubscriptionPromoDialogShown()
             self?.daxDialogsFlowCoordinator.subscriptionPromotionDialogSeen = true
         }
     }

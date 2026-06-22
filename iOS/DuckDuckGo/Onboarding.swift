@@ -17,7 +17,10 @@
 //  limitations under the License.
 //
 
-import UIKit
+import Foundation
+import Core
+import UserNotifications
+import AIChat
 
 protocol Onboarding: UIViewController {
     
@@ -27,6 +30,9 @@ protocol Onboarding: UIViewController {
 
 protocol OnboardingDelegate: NSObjectProtocol {
 
+    func didStartOnboardingInterlude(_ interlude: OnboardingIntroStep.Interlude)
     func onboardingCompleted(controller: UIViewController)
+    func openAIChatFromOnboarding(_ query: String?, autoSend: Bool, flowType: AIChatOnboardingFlowType)
+    func searchFromOnboarding(for query: String)
 
 }

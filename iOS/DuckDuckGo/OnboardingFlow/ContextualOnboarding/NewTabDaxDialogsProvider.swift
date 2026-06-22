@@ -23,6 +23,7 @@ import SwiftUI
 import Onboarding
 import Subscription
 import Common
+import FoundationExtensions
 
 final class NewTabDaxDialogsProvider: NewTabDaxDialogProviding {
     private let featureFlagger: FeatureFlagger
@@ -70,6 +71,14 @@ final class NewTabDaxDialogsProvider: NewTabDaxDialogProviding {
             rebrandedDaxDialogsFactory.createDaxDialog(for: homeDialog, onCompletion: onCompletion, onManualDismiss: onManualDismiss)
         } else {
             legacyDaxDialogsFactory.createDaxDialog(for: homeDialog, onCompletion: onCompletion, onManualDismiss: onManualDismiss)
+        }
+    }
+
+    func createExperimentCompletionDialog(message: String, onDismiss: @escaping () -> Void) -> AnyView {
+        if featureFlagger.isFeatureOn(.onboardingRebranding) {
+            rebrandedDaxDialogsFactory.createExperimentCompletionDialog(message: message, onDismiss: onDismiss)
+        } else {
+            legacyDaxDialogsFactory.createExperimentCompletionDialog(message: message, onDismiss: onDismiss)
         }
     }
 

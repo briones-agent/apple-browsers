@@ -19,6 +19,7 @@
 import AIChat
 import AppKit
 import Common
+import FoundationExtensions
 import DesignResourcesKitIcons
 import OSLog
 import PixelKit
@@ -50,28 +51,37 @@ final class AIChatMenu: NSMenu {
             item.keyEquivalentModifierMask = [.option, .command]
         }
         item.target = self
-        item.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.duckAi : DesignSystemImages.Glyphs.Size12.duckAi
+        item.image = DesignSystemImages.Glyphs.Size12.duckAi
         return item
     }()
 
     private lazy var newChatItem: NSMenuItem = {
         let item = NSMenuItem(title: UserText.aiChatMenuNewChat, action: #selector(newChatTapped), keyEquivalent: "")
         item.target = self
-        item.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.compose : DesignSystemImages.Glyphs.Size12.compose
+        item.image = DesignSystemImages.Glyphs.Size12.compose
         return item
     }()
 
     private lazy var newVoiceChatItem: NSMenuItem = {
-        let item = NSMenuItem(title: UserText.aiChatMenuNewVoiceChat, action: #selector(newVoiceChatTapped), keyEquivalent: "")
+        // Shortcut on the main menu only — More Options popups don't bind global keys.
+        // ⌥⌘V groups with Open Duck.ai's ⌥⌘N under the same modifier family.
+        let item = NSMenuItem(title: UserText.aiChatMenuNewVoiceChat, action: #selector(newVoiceChatTapped), keyEquivalent: origin == .mainMenu ? "v" : "")
+        if origin == .mainMenu {
+            item.keyEquivalentModifierMask = [.option, .command]
+        }
         item.target = self
-        item.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.voice : DesignSystemImages.Glyphs.Size12.voice
+        item.image = DesignSystemImages.Glyphs.Size12.voice
         return item
     }()
 
     private lazy var newImageChatItem: NSMenuItem = {
-        let item = NSMenuItem(title: UserText.aiChatMenuNewImageChat, action: #selector(newImageChatTapped), keyEquivalent: "")
+        // ⌥⌘G — G for "Generate" image; ⌥⌘I and ⌥⌘C are taken by Web Inspector / JS Console.
+        let item = NSMenuItem(title: UserText.aiChatMenuNewImageChat, action: #selector(newImageChatTapped), keyEquivalent: origin == .mainMenu ? "g" : "")
+        if origin == .mainMenu {
+            item.keyEquivalentModifierMask = [.option, .command]
+        }
         item.target = self
-        item.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.images : DesignSystemImages.Glyphs.Size12.images
+        item.image = DesignSystemImages.Glyphs.Size12.images
         return item
     }()
 
@@ -84,7 +94,7 @@ final class AIChatMenu: NSMenu {
     private lazy var deleteAllChatsItem: NSMenuItem = {
         let item = NSMenuItem(title: UserText.aiChatMenuDeleteAllChats, action: #selector(deleteAllChatsTapped), keyEquivalent: "")
         item.target = self
-        item.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.fire : DesignSystemImages.Glyphs.Size12.fire
+        item.image = DesignSystemImages.Glyphs.Size12.fire
         return item
     }()
 
@@ -141,13 +151,17 @@ final class AIChatMenu: NSMenu {
         fetchTask?.cancel()
         fetchTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let maxChats = maxChatItems ?? .max
-            let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: nil, maxChats: maxChats)
+            // Fetch one extra item to detect whether there are more chats than we display,
+            // which determines whether to show "View All Chats...".
+            let fetchLimit = maxChatItems.map { $0 + 1 } ?? .max
+            let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: nil, maxChats: fetchLimit)
             guard !Task.isCancelled else { return }
             let sorted = (pinned + recent)
                 .sorted { ($0.timestamp ?? .distantPast) > ($1.timestamp ?? .distantPast) }
+            let hasMore = maxChatItems.map { sorted.count > $0 } ?? false
+            let visible = maxChatItems.map { Array(sorted.prefix($0)) } ?? sorted
             clearChatItems()
-            insertChatItems(sorted)
+            insertChatItems(visible, hasMore: hasMore)
         }
     }
 
@@ -158,7 +172,7 @@ final class AIChatMenu: NSMenu {
         chatItems.removeAll()
     }
 
-    private func insertChatItems(_ chats: [AIChatSuggestion]) {
+    private func insertChatItems(_ chats: [AIChatSuggestion], hasMore: Bool) {
         let labelIndex = index(of: recentChatsLabel)
         guard labelIndex != -1 else { return }
         for (offset, chat) in chats.enumerated() {
@@ -170,6 +184,17 @@ final class AIChatMenu: NSMenu {
                 : (origin == .moreOptionsMenu ? DesignSystemImages.Color.Size16.chat : DesignSystemImages.Color.Size12.chat)
             insertItem(item, at: labelIndex + 1 + offset)
             chatItems.append(item)
+        }
+        if hasMore {
+            let separator = NSMenuItem.separator()
+            let viewAllItem = NSMenuItem(title: UserText.aiChatMenuViewAllChats, action: #selector(viewAllChatsTapped), keyEquivalent: "")
+            viewAllItem.target = self
+            viewAllItem.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.aiChatHistory : DesignSystemImages.Glyphs.Size12.aiChatHistory
+            let insertIndex = labelIndex + 1 + chats.count
+            insertItem(separator, at: insertIndex)
+            insertItem(viewAllItem, at: insertIndex + 1)
+            chatItems.append(separator)
+            chatItems.append(viewAllItem)
         }
     }
 
@@ -206,14 +231,21 @@ final class AIChatMenu: NSMenu {
         PixelKit.fire(pixel, frequency: .dailyAndStandard)
     }
 
+    @objc private func viewAllChatsTapped() {
+        actions.openNewChat()
+        let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatViewAllChatsMoreOptionsMenu : .aiChatViewAllChatsMainMenu
+        PixelKit.fire(pixel, frequency: .dailyAndStandard)
+    }
+
     @objc private func deleteAllChatsTapped() {
         var dialog = AIChatDeleteChatsDialog()
-        dialog.confirmed = { [weak self] in
-            guard let self else { return }
+        let actions = self.actions
+        let origin = self.origin
+        dialog.confirmed = {
             let pixel: AIChatPixel = origin == .moreOptionsMenu ? .aiChatDeleteAllChatsMoreOptionsMenu : .aiChatDeleteAllChatsMainMenu
             PixelKit.fire(pixel, frequency: .dailyAndStandard)
             Task { @MainActor in
-                await self.actions.deleteAllChats()
+                await actions.deleteAllChats()
             }
         }
         dialog.show()
@@ -229,15 +261,17 @@ extension AIChatMenu.Actions {
         remoteSettings: AIChatRemoteSettings,
         tabOpener: AIChatTabOpening,
         historyCleaner: AIChatHistoryCleaning,
-        windowControllersManager: WindowControllersManager
+        windowControllersManager: WindowControllersManagerProtocol,
+        aiChatSyncCleaner: @escaping () -> AIChatSyncCleaning?
     ) -> AIChatMenu.Actions {
         AIChatMenu.Actions(
             openNewChat: {
                 tabOpener.openAIChatTab(with: .newChat, behavior: .newTab(selected: true))
             },
             openNewVoiceChat: {
-                let url = AIChatURLParameters.voiceModeURL(from: remoteSettings.aiChatURL)
-                tabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
+                let sourceCollection = windowControllersManager.lastKeyMainWindowController?
+                    .mainViewController.tabCollectionViewModel
+                tabOpener.openVoiceSession(inSourceCollection: sourceCollection, behavior: .newTab(selected: true))
             },
             openNewImageChat: {
                 let url = AIChatURLParameters.imageModeURL(from: remoteSettings.aiChatURL)
@@ -251,6 +285,7 @@ extension AIChatMenu.Actions {
                     Logger.aiChat.error("Failed to delete all Duck.ai chats: \(error.localizedDescription)")
                     return
                 }
+                await aiChatSyncCleaner()?.recordLocalClear(date: Date())
                 for windowController in windowControllersManager.mainWindowControllers {
                     for tab in windowController.mainViewController.tabCollectionViewModel.tabs where tab.url?.isDuckAIURL == true {
                         tab.reload()

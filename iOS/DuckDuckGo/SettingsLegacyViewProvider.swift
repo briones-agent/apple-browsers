@@ -25,8 +25,10 @@ import BrowserServicesKit
 import SyncUI_iOS
 import Persistence
 import Common
+import FoundationExtensions
 import Configuration
 import SystemSettingsPiPTutorial
+import AIChat
 import DataBrokerProtection_iOS
 import Subscription
 import WebExtensions
@@ -58,6 +60,9 @@ class SettingsLegacyViewProvider: ObservableObject {
     let remoteMessagingDebugHandler: RemoteMessagingDebugHandling
     let webExtensionManager: WebExtensionManaging?
     let syncAutoRestoreHandler: SyncAutoRestoreHandling
+    let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+    let freemiumPIRDebugSettings: FreemiumPIRDebugSettings
+    let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
 
     init(syncService: any DDGSyncing,
          syncDataProviders: SyncDataProviders,
@@ -77,7 +82,10 @@ class SettingsLegacyViewProvider: ObservableObject {
          remoteMessagingDebugHandler: RemoteMessagingDebugHandling,
          productSurfaceTelemetry: ProductSurfaceTelemetry,
          webExtensionManager: WebExtensionManaging?,
-         syncAutoRestoreHandler: SyncAutoRestoreHandling) {
+         syncAutoRestoreHandler: SyncAutoRestoreHandling,
+         freemiumPIRDebugSettings: FreemiumPIRDebugSettings,
+         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
+         duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil) {
         self.syncService = syncService
         self.syncDataProviders = syncDataProviders
         self.appSettings = appSettings
@@ -97,6 +105,9 @@ class SettingsLegacyViewProvider: ObservableObject {
         self.productSurfaceTelemetry = productSurfaceTelemetry
         self.webExtensionManager = webExtensionManager
         self.syncAutoRestoreHandler = syncAutoRestoreHandler
+        self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
+        self.freemiumPIRDebugSettings = freemiumPIRDebugSettings
+        self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
     }
     
     enum LegacyView {
@@ -149,9 +160,12 @@ class SettingsLegacyViewProvider: ObservableObject {
             databaseDelegate: self.dbpIOSPublicInterface,
             debuggingDelegate: self.dbpIOSPublicInterface,
             runPrequisitesDelegate: self.dbpIOSPublicInterface,
+            freemiumPIRDebugSettings: self.freemiumPIRDebugSettings,
+            freemiumDBPUserStateManager: self.freemiumDBPUserStateManager,
             subscriptionDataReporter: self.subscriptionDataReporter,
             remoteMessagingDebugHandler: self.remoteMessagingDebugHandler,
-            webExtensionManager: self.webExtensionManager))
+            webExtensionManager: self.webExtensionManager,
+            duckAiNativeStorageHandler: self.duckAiNativeStorageHandler))
     }
 
     // Legacy UIKit Views (Pushed unmodified)
@@ -203,17 +217,35 @@ class SettingsLegacyViewProvider: ObservableObject {
                                               productSurfaceTelemetry: self.productSurfaceTelemetry)
     }
 
-    func importPasswords(delegate: DataImportViewControllerDelegate) -> DataImportViewController {
+    private func makeDataImportViewController(importScreen: DataImportViewModel.ImportScreen,
+                                              delegate: DataImportViewControllerDelegate) -> DataImportViewController {
         let dataImportManager = DataImportManager(reporter: SecureVaultReporter(),
                                                   bookmarksDatabase: bookmarksDatabase,
                                                   favoritesDisplayMode: self.appSettings.favoritesDisplayMode,
                                                   tld: AppDependencyProvider.shared.storageCache.tld)
         let viewController = DataImportViewController(importManager: dataImportManager,
-                                                      importScreen: DataImportViewModel.ImportScreen.settings,
+                                                      importScreen: importScreen,
                                                       syncService: syncService,
                                                       keyValueStore: keyValueStore)
         viewController.delegate = delegate
         return viewController
+    }
+
+    func importPasswords(importScreen: DataImportViewModel.ImportScreen = .settings,
+                         delegate: DataImportViewControllerDelegate,
+                         onFinished: (() -> Void)? = nil) -> UIViewController {
+        switch DataImportEntryPointHandler().destination(for: importScreen) {
+        case .legacy(let importScreen):
+            return makeDataImportViewController(importScreen: importScreen, delegate: delegate)
+        case .hub:
+            Pixel.fire(pixel: .importHubEntryTapped, withAdditionalParameters: importScreen.importHubEntryPointParameters)
+            return DataImportHubViewController(syncService: syncService,
+                                                keyValueStore: keyValueStore,
+                                                bookmarksDatabase: bookmarksDatabase,
+                                                favoritesDisplayMode: appSettings.favoritesDisplayMode,
+                                                entryPoint: importScreen,
+                                                onFinished: onFinished)
+        }
     }
 
 }

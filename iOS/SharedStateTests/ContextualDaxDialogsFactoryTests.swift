@@ -177,7 +177,7 @@ final class ContextualDaxDialogsFactoryTests: XCTestCase {
     // MARK: - Fire
     func test_WhenMakeViewFire_ThenReturnViewOnboardingFireDialog() throws {
         // GIVEN
-        let spec = DaxDialogs.BrowsingSpec(type: .fire, pixelName: .onboardingIntroShownUnique)
+        let spec = DaxDialogs.BrowsingSpec(type: .fire(.standard), pixelName: .onboardingIntroShownUnique)
 
         // WHEN
         let result = sut.makeView(for: spec, delegate: delegate, onSizeUpdate: {})
@@ -303,13 +303,18 @@ final class ContextualDaxDialogsFactoryTests: XCTestCase {
             let view = try XCTUnwrap(find(OnboardingTrackersDoneDialog.self, in: result))
             XCTAssertFalse(pixelReporterMock.didCallMeasureScreenImpressionCalled)
             XCTAssertNil(pixelReporterMock.capturedScreenImpression)
+            XCTAssertFalse(pixelReporterMock.didCallMeasureSharedOnboardingScreenImpression)
+            XCTAssertNil(pixelReporterMock.capturedSharedOnboardingScreenImpression)
 
             // WHEN
             view.blockedTrackersCTAAction()
 
             // THEN
+            XCTAssertTrue(pixelReporterMock.didCallMeasureTrackersDialogGotItAction)
             XCTAssertTrue(pixelReporterMock.didCallMeasureScreenImpressionCalled)
             XCTAssertEqual(pixelReporterMock.capturedScreenImpression, .daxDialogsFireEducationShownUnique)
+            XCTAssertTrue(pixelReporterMock.didCallMeasureSharedOnboardingScreenImpression)
+            XCTAssertEqual(pixelReporterMock.capturedSharedOnboardingScreenImpression, .fireButton(.shown))
         }
     }
 
@@ -320,13 +325,18 @@ final class ContextualDaxDialogsFactoryTests: XCTestCase {
         let view = try XCTUnwrap(find(OnboardingFirstSearchDoneDialog.self, in: result))
         XCTAssertFalse(pixelReporterMock.didCallMeasureScreenImpressionCalled)
         XCTAssertNil(pixelReporterMock.capturedScreenImpression)
+        XCTAssertFalse(pixelReporterMock.didCallMeasureSharedOnboardingScreenImpression)
+        XCTAssertNil(pixelReporterMock.capturedSharedOnboardingScreenImpression)
 
         // WHEN
         view.gotItAction()
 
         // THEN
+        XCTAssertTrue(pixelReporterMock.didCallMeasureSearchResultsDialogGotItAction)
         XCTAssertTrue(pixelReporterMock.didCallMeasureScreenImpressionCalled)
         XCTAssertEqual(pixelReporterMock.capturedScreenImpression, .onboardingContextualTryVisitSiteUnique)
+        XCTAssertTrue(pixelReporterMock.didCallMeasureSharedOnboardingScreenImpression)
+        XCTAssertEqual(pixelReporterMock.capturedSharedOnboardingScreenImpression, .visitSite(.shown))
     }
 
     func testWhenEndOfJourneyDialogCTAIsTappedThenExpectedPixelFires() throws {
@@ -406,7 +416,7 @@ final class ContextualDaxDialogsFactoryTests: XCTestCase {
         XCTAssertFalse(delegate.didCallDidTapDismissContextualOnboardingAction)
 
         // WHEN
-        view.onManualDismiss()
+        view.onManualDismiss!()
 
         // THEN
         XCTAssertTrue(pixelReporterMock.didCallMeasureFireDialogDismissButtonTapped)
@@ -478,7 +488,7 @@ final class ContextualDaxDialogsFactoryTests: XCTestCase {
         XCTAssertFalse(delegate.didCallDidTapDismissContextualOnboardingAction)
 
         // WHEN
-        view.onManualDismiss()
+        view.onManualDismiss!()
 
         // THEN
         XCTAssertTrue(pixelReporterMock.didCallMeasureEndOfJourneyDialogDismissButtonTapped)
@@ -494,6 +504,26 @@ extension ContextualDaxDialogsFactoryTests {
             // THEN
             XCTAssertTrue(self.pixelReporterMock.didCallMeasureScreenImpressionCalled)
             XCTAssertEqual(self.pixelReporterMock.capturedScreenImpression, event)
+            XCTAssertTrue(self.pixelReporterMock.didCallMeasureSharedOnboardingScreenImpression)
+            XCTAssertEqual(self.pixelReporterMock.capturedSharedOnboardingScreenImpression, Self.expectedSharedScreenImpression(forLegacyPixel: event))
+        }
+    }
+
+    private static func expectedSharedScreenImpression(forLegacyPixel event: Pixel.Event) -> OnboardingSharedPixelEvent {
+        switch event {
+        case .daxDialogsSerpUnique:
+            return .searchResults(.shown)
+        case .onboardingContextualTryVisitSiteUnique:
+            return .visitSite(.shown)
+        case .daxDialogsWithoutTrackersUnique, .daxDialogsWithTrackersUnique, .daxDialogsSiteIsMajorUnique, .daxDialogsSiteOwnedByMajorUnique:
+            return .trackersBlocked(.shown)
+        case .daxDialogsFireEducationShownUnique:
+            return .fireButton(.shown)
+        case .daxDialogsEndOfJourneyTabUnique:
+            return .end(.shown)
+        default:
+            XCTFail("Update expectedSharedScreenImpression mapping for \(event)")
+            return .searchResults(.shown)
         }
     }
 
@@ -502,6 +532,8 @@ extension ContextualDaxDialogsFactoryTests {
         let expectation = self.expectation(description: #function)
         XCTAssertFalse(pixelReporterMock.didCallMeasureScreenImpressionCalled)
         XCTAssertNil(pixelReporterMock.capturedScreenImpression)
+        XCTAssertFalse(pixelReporterMock.didCallMeasureSharedOnboardingScreenImpression)
+        XCTAssertNil(pixelReporterMock.capturedSharedOnboardingScreenImpression)
 
         // WHEN
         let view = sut.makeView(for: spec, delegate: ContextualOnboardingDelegateMock(), onSizeUpdate: {}).rootView
@@ -521,4 +553,5 @@ final class ContextualOnboardingSettingsMock: ContextualOnboardingSettings {
     var userHasSeenTrackersDialog: Bool = false
     var userHasSeenFireDialog: Bool = false
     var userHasSeenTryVisitSiteDialog: Bool = false
+    var chatPathPhase: DaxDialogs.ChatPathPhase = .none
 }

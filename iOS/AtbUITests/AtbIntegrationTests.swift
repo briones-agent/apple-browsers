@@ -39,7 +39,7 @@ class AtbIntegrationTests: XCTestCase {
     override func setUp() {
         super.setUp()
         continueAfterFailure = false
-        
+
         app.launchEnvironment = [
             "BASE_URL": "http://localhost:8080",
             "BASE_PIXEL_URL": "http://localhost:8080",
@@ -47,7 +47,11 @@ class AtbIntegrationTests: XCTestCase {
             // usually just has to match an existing variant to prevent one being allocated
             "VARIANT": "sc"
         ]
-        
+
+        if ProcessInfo.processInfo.environment["INTERNAL_USER_MODE"] == "true" {
+            app.launchArguments += ["-isInternalUser", "true"]
+        }
+
         addRequestHandlers()
         
         do {
@@ -91,7 +95,7 @@ class AtbIntegrationTests: XCTestCase {
 
     private func search(forText text: String) {
 
-        let searchentrySearchField = app.searchFields.element
+        let searchentrySearchField = app.descendants(matching: .any)["searchEntry"]
         XCTAssertTrue(searchentrySearchField.waitForExistence(timeout: Constants.defaultTimeout))
         searchentrySearchField.tap()
         searchentrySearchField.typeText("\(text)\r")

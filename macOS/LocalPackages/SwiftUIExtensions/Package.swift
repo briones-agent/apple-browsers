@@ -5,18 +5,22 @@ import PackageDescription
 
 let package = Package(
     name: "SwiftUIExtensions",
-    platforms: [ .macOS("11.4") ],
+    platforms: [ .macOS("12.3") ],
     products: [
         .library(name: "SwiftUIExtensions", targets: ["SwiftUIExtensions"]),
     ],
     dependencies: [
-        .package(path: "../Infrastructure/DesignResourcesKit")
+        .package(path: "../../../SharedPackages/Infrastructure/DesignResourcesKit"),
+        .package(path: "../../../SharedPackages/UIComponents"),
+        .package(path: "../../../SharedPackages/BrowserServicesKit"),
     ],
     targets: [
         .target(
             name: "SwiftUIExtensions",
             dependencies: [
-                "DesignResourcesKit"
+                "DesignResourcesKit",
+                "UIComponents",
+                .product(name: "Common", package: "BrowserServicesKit"),
             ],
             swiftSettings: [
                 .define("DEBUG", .when(configuration: .debug))

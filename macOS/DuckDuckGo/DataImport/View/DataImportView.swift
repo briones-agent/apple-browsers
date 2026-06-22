@@ -17,13 +17,13 @@
 //
 
 import AppKit
-import SwiftUI
 import BrowserServicesKit
+import DesignResourcesKitIcons
 import PixelKit
 import PrivacyConfig
-import DesignResourcesKitIcons
+import SwiftUI
+import UIComponents
 import UniformTypeIdentifiers
-import SwiftUIExtensions
 
 @MainActor
 struct DataImportView: ModalView {
@@ -302,11 +302,7 @@ struct DataImportView: ModalView {
                     ForEach(model.errors.indices, id: \.self) { i in
                         ForEach(Array(model.errors[i].keys), id: \.self) { key in
                             if let value = model.errors[i][key] {
-                                if #available(macOS 12.0, *) {
-                                    Text(verbatim: "\(key.rawValue.uppercased()): \(value)").textSelection(.enabled)
-                                } else {
-                                    Text(verbatim: "\(key.rawValue.uppercased()): \(value)")
-                                }
+                                Text(verbatim: "\(key.rawValue.uppercased()): \(value)").textSelection(.enabled)
                             }
                         }
                     }

@@ -22,16 +22,27 @@ import FeatureFlags
 import PrivacyConfig
 import Foundation
 import NewTabPage
+import os.log
 
 final class NewTabPageOmnibarAiChatsProvider: NewTabPageOmnibarAiChatsProviding {
 
     private let featureFlagger: FeatureFlagger
     private let suggestionsReader: AIChatSuggestionsReading
+    private let searchPreferences: SearchPreferences
     private var cancellables = Set<AnyCancellable>()
+    @Published private var hasExcessChats = false
 
-    init(featureFlagger: FeatureFlagger, configProvider: NewTabPageOmnibarConfigProviding, suggestionsReader: AIChatSuggestionsReading) {
+    var hasExcessChatsPublisher: AnyPublisher<Bool, Never> {
+        $hasExcessChats.eraseToAnyPublisher()
+    }
+
+    init(featureFlagger: FeatureFlagger,
+         configProvider: NewTabPageOmnibarConfigProviding,
+         suggestionsReader: AIChatSuggestionsReading,
+         searchPreferences: SearchPreferences) {
         self.featureFlagger = featureFlagger
         self.suggestionsReader = suggestionsReader
+        self.searchPreferences = searchPreferences
 
         // configProvider is not stored — Combine keeps the publisher pipeline alive
         // as long as the cancellables are retained. If configProvider is deallocated,
@@ -63,11 +74,17 @@ final class NewTabPageOmnibarAiChatsProvider: NewTabPageOmnibarAiChatsProviding 
         guard featureFlagger.isFeatureOn(.aiChatNtpRecentChats) else {
             return .empty
         }
+        guard searchPreferences.showAutocompleteSuggestions else {
+            return .empty
+        }
         let effectiveQuery = query
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .flatMap { $0.isEmpty ? nil : $0 }
-        let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: effectiveQuery)
-        let viewModel = AIChatSuggestionsViewModel(maxSuggestions: suggestionsReader.maxHistoryCount)
+        let maxCount = suggestionsReader.maxHistoryCount
+        let (pinned, recent) = await suggestionsReader.fetchSuggestions(query: effectiveQuery, maxChats: maxCount + 1)
+        let totalFetched = pinned.count + recent.count
+        hasExcessChats = totalFetched > maxCount
+        let viewModel = AIChatSuggestionsViewModel(maxSuggestions: maxCount)
         viewModel.setChats(pinned: pinned, recent: recent)
         let chats = viewModel.filteredSuggestions.map { $0.asNewTabPageAiChat }
         return NewTabPageDataModel.AiChatsData(chats: chats)
@@ -82,7 +99,8 @@ private extension AIChatSuggestion {
             title: title,
             pinned: isPinned,
             lastEdit: Self.formatISO8601Date(timestamp),
-            firstUserMessageContent: firstUserMessageContent
+            firstUserMessageContent: firstUserMessageContent,
+            model: model
         )
     }
 

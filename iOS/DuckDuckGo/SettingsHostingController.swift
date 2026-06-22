@@ -60,8 +60,6 @@ class SettingsHostingController: UIHostingController<AnyView> {
         }
 
         self.rootView = AnyView(SettingsRootView(viewModel: viewModel))
-
-        decorateNavigationBar()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -70,9 +68,10 @@ class SettingsHostingController: UIHostingController<AnyView> {
         // We only want to call this once per instanciation
         productSurfaceTelemetry?.settingsUsed()
         productSurfaceTelemetry = nil
+    }
 
-        // If this is not called, settings navigation bar (UIKIt) is going wild with colors after reopening settings (?!)
-        // Root cause will be investigated later as part of https://app.asana.com/0/414235014887631/1207098219526666/f
+    override func viewDidLoad() {
+        super.viewDidLoad()
         decorateNavigationBar()
     }
 
@@ -99,7 +98,7 @@ class SettingsHostingController: UIHostingController<AnyView> {
             sourceRect: sourceRect,
             tabViewModel: nil,
             pixelSource: .settings,
-            daxDialogsManager: viewProvider.daxDialogsManager,
+            fireContext: .default(daxDialogsManager: viewProvider.daxDialogsManager),
             browsingMode: .normal, // Fire button in settings should always burn everything, so we pass .normal regardless of the current mode.
             onConfirm: onConfirm,
             onCancel: onCancel

@@ -19,6 +19,7 @@
 
 import Foundation
 import struct UIKit.UIKeyModifierFlags
+import WebExtensions
 import WebKit
 import BrowserServicesKit
 import BrowserServicesKitTestsUtils
@@ -86,6 +87,8 @@ final class MockTabDelegate: TabDelegate {
 
     func tabDidRequestAIChat(tab: TabViewController) {}
 
+    func tabDidRequestAIChatHistory(tab: TabViewController, source: AIChatHistorySource) {}
+
     func tabDidRequestNewPrivateEmailAddress(tab: TabViewController) {}
 
     func tabDidRequestSettings(tab: DuckDuckGo.TabViewController) {}
@@ -110,13 +113,13 @@ final class MockTabDelegate: TabDelegate {
 
     func tabContentProcessDidTerminate(tab: DuckDuckGo.TabViewController) {}
 
+    func tabDidEngageWithPage(_ tab: DuckDuckGo.TabViewController) {}
+
     func tabDidRequestFireButtonPulse(tab: DuckDuckGo.TabViewController) {
         didRequestFireButtonPulseCalled = true
     }
 
     func tabDidRequestDeleteContextualChat(tab: DuckDuckGo.TabViewController, chatID: String) {}
-
-    func tabDidRequestToggleSidebarOnCurrentTab(_ tab: DuckDuckGo.TabViewController) {}
 
     func tabDidRequestPrivacyDashboardButtonPulse(tab: DuckDuckGo.TabViewController, animated: Bool) {
         tabDidRequestPrivacyDashboardButtonPulseCalled = true
@@ -126,6 +129,8 @@ final class MockTabDelegate: TabDelegate {
     func tabDidRequestSearchBarRect(tab: DuckDuckGo.TabViewController) -> CGRect { .zero }
 
     func tab(_ tab: DuckDuckGo.TabViewController, didRequestPresentingTrackerAnimation privacyInfo: PrivacyDashboard.PrivacyInfo, isCollapsing: Bool) {}
+
+    func tabDidRequestPresentingYouTubeAdBlockAnimation(tab: DuckDuckGo.TabViewController) {}
 
     func tabDidRequestShowingMenuHighlighter(tab: DuckDuckGo.TabViewController) {}
 
@@ -152,6 +157,12 @@ final class MockTabDelegate: TabDelegate {
     func tab(_ tab: DuckDuckGo.TabViewController, didExtractDaxEasterEggLogoURL logoURL: String?) {}
 
     func tabDidRequestFireMode(tab: DuckDuckGo.TabViewController) {}
+
+    func tabDidRequestYouTubeAdBlockPicker(tab: DuckDuckGo.TabViewController) {}
+
+    func tabDidRequestSetYouTubeAdBlockingEnabled(_ enabled: Bool, tab: DuckDuckGo.TabViewController) {}
+
+    func tabDidRequestYouTubeAdBlockUnavailableDialog(tab: DuckDuckGo.TabViewController) {}
 }
 
 extension TabViewController {
@@ -187,13 +198,14 @@ extension TabViewController {
             specialErrorPageNavigationHandler: DummySpecialErrorPageNavigationHandler(),
             featureDiscovery: MockFeatureDiscovery(),
             keyValueStore: MockKeyValueFileStore(),
-            daxDialogsManager: DummyDaxDialogsManager(),
+            daxDialogsManager: MockDaxDialogsManager(),
             aiChatSettings: MockAIChatSettingsProvider(),
             productSurfaceTelemetry: MockProductSurfaceTelemetry(),
             privacyStats: MockPrivacyStats(),
             voiceSearchHelper: MockVoiceSearchHelper(),
             darkReaderFeatureSettings: MockDarkReaderFeatureSettings(),
-            autoplaySettings: MockAutoplaySettings()
+            autoplaySettings: MockAutoplaySettings(),
+            adBlockingAvailability: StubAdBlockingAvailability()
         )
         tab.attachWebView(configuration: WKWebViewConfiguration.nonPersistent(), andLoadRequest: nil as URLRequest?, consumeCookies: false, customWebView: customWebView)
         return tab
@@ -276,4 +288,10 @@ struct MockDarkReaderFeatureSettings: DarkReaderFeatureSettings {
 
 final class MockAutoplaySettings: AutoplaySettings {
     var currentAutoplayBlockingMode: AutoplayBlockingMode = .blockAudio
+}
+
+final class StubAdBlockingAvailability: AdBlockingAvailabilityProviding {
+    var isFeatureSupported: Bool = false
+    var isEnabledByUser: Bool = false
+    func shouldShowAnimation(for url: URL) -> Bool { false }
 }

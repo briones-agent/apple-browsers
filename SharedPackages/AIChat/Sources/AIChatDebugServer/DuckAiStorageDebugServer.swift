@@ -25,7 +25,6 @@ import os
 /// A local HTTP server exposing Duck.ai native storage for inspection and manipulation.
 ///
 /// Serves a web dashboard plus REST API for chats, files, and settings.
-/// Intended for debug builds only — consumers should gate usage with `#if DEBUG`.
 public final class DuckAiStorageDebugServer {
 
     private let server: DebugHTTPServer
@@ -44,7 +43,7 @@ public final class DuckAiStorageDebugServer {
 
     private let port: UInt16
 
-    public init(storageHandler: DuckAiNativeStorageHandling, port: UInt16 = 8080) {
+    public init(storageHandler: DuckAiNativeStorageHandling, port: UInt16 = 8473) {
         self.port = port
         self.server = DebugHTTPServer(port: port)
         self.storageHandler = storageHandler
@@ -177,12 +176,23 @@ public final class DuckAiStorageDebugServer {
 
     private func registerSettingsRoutes() {
         server.addRoute("/api/settings", method: .GET) { [storageHandler] _ in
-            let settings = try storageHandler.getAllSettings()
-            return .json(try JSONSerialization.data(withJSONObject: settings))
+            var result: [String: Any] = [:]
+
+            let entries = try storageHandler.getAllEntries()
+            result["entries"] = entries
+
+            let migrationKeys = [DuckAiMigrationKey.chats, DuckAiMigrationKey.files]
+            var migration: [String: Bool] = [:]
+            for key in migrationKeys {
+                migration[key] = (try? storageHandler.isMigrationDone(key: key)) ?? false
+            }
+            result["migration"] = migration
+
+            return .json(try JSONSerialization.data(withJSONObject: result))
         }
 
         server.addRoute("/api/settings", method: .DELETE) { [storageHandler] _ in
-            try storageHandler.deleteAllSettings()
+            try storageHandler.deleteAllEntries()
             return .json(try JSONSerialization.data(withJSONObject: ["deleted": true]))
         }
     }

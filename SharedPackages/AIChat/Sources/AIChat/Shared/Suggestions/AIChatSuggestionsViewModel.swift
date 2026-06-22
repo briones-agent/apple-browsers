@@ -31,6 +31,8 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
 
     public let maxSuggestions: Int
 
+    private var suggestionIDsPendingRemoval = Set<String>()
+
     // MARK: - Published Properties
 
     /// The suggestions to display (merged, sorted by recency, limited to max count).
@@ -43,6 +45,9 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
     /// Indicates whether keyboard navigation is currently active.
     /// Used to suppress mouse hover while navigating with keyboard.
     @Published public private(set) var isKeyboardNavigating: Bool = false
+
+    /// Controls visibility of the virtual "view all chats" row at the bottom of the list.
+    @Published public private(set) var showViewAllChats: Bool = false
 
     // MARK: - Computed Properties
 
@@ -57,6 +62,11 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
             return nil
         }
         return filteredSuggestions[index]
+    }
+
+    /// True when the "view all" virtual row is selected (index one past the last suggestion).
+    public var isViewAllChatsSelected: Bool {
+        showViewAllChats && selectedIndex == filteredSuggestions.count
     }
 
     // MARK: - Initialization
@@ -75,12 +85,23 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
     /// - Parameters:
     ///   - pinned: The list of pinned chats.
     ///   - recent: The list of recent chats.
-    public func setChats(pinned: [AIChatSuggestion], recent: [AIChatSuggestion]) {
+    public func setChats(pinned: [AIChatSuggestion], recent: [AIChatSuggestion], showViewAllChats: Bool = false) {
+        self.showViewAllChats = showViewAllChats
+
         // Merge pinned and recent chats
         var allChats = pinned + recent
 
-        // Sort by recency (most recent first)
+        // Remove Pending Removal: Prevent re-entrant flickers
+        allChats.removeAll { suggestion in
+            suggestionIDsPendingRemoval.contains(suggestion.id)
+        }
+
+        // Sort by recency (most recent first). Plus: Pinned Suggestions will always go first.
         allChats.sort { lhs, rhs in
+            if lhs.isPinned != rhs.isPinned {
+                return lhs.isPinned && !rhs.isPinned
+            }
+
             let lhsDate = lhs.timestamp ?? .distantPast
             let rhsDate = rhs.timestamp ?? .distantPast
             return lhsDate > rhsDate
@@ -89,9 +110,14 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
         // Limit to max suggestions
         filteredSuggestions = Array(allChats.prefix(maxSuggestions))
 
+        if filteredSuggestions.isEmpty {
+            self.showViewAllChats = false
+        }
+
         // Reset selection if it's now out of bounds
         if let index = selectedIndex, index >= filteredSuggestions.count {
-            selectedIndex = filteredSuggestions.isEmpty ? nil : filteredSuggestions.count - 1
+            let maxValidIndex = self.showViewAllChats ? filteredSuggestions.count : filteredSuggestions.count - 1
+            selectedIndex = filteredSuggestions.isEmpty && !self.showViewAllChats ? nil : maxValidIndex
         }
     }
 
@@ -109,6 +135,9 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
             let nextIndex = currentIndex + 1
             if nextIndex < filteredSuggestions.count {
                 selectedIndex = nextIndex
+                return true
+            } else if showViewAllChats && nextIndex == filteredSuggestions.count {
+                selectedIndex = nextIndex   // virtual "view all" row
                 return true
             }
             return false
@@ -137,8 +166,8 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
                 return true
             }
         } else {
-            // No selection, select last item (bottom of list)
-            selectedIndex = filteredSuggestions.count - 1
+            // No selection, select last item (bottom of list), including virtual "view all" row
+            selectedIndex = showViewAllChats ? filteredSuggestions.count : filteredSuggestions.count - 1
             return true
         }
     }
@@ -150,6 +179,12 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
         if !keepMouseSuppressed {
             isKeyboardNavigating = false
         }
+    }
+
+    /// Selects the virtual "view all chats" row via mouse hover.
+    public func selectViewAllChats() {
+        guard showViewAllChats else { return }
+        selectedIndex = filteredSuggestions.count
     }
 
     /// Selects a suggestion at the given index (from mouse interaction).
@@ -177,15 +212,29 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
 
     /// Removes a suggestion from the filtered list.
     /// - Parameter suggestion: The suggestion to remove.
+    /// - Note:
+    ///     Once removed, the Suggestion ID is also tracked in a `Pending Removal` collection. Our goal is to prevent re-entrant flows that might cause recently deleted Suggestions from flickering
     public func removeSuggestion(_ suggestion: AIChatSuggestion) {
         filteredSuggestions.removeAll { $0.id == suggestion.id }
+
+        suggestionIDsPendingRemoval.insert(suggestion.id)
+
+        if filteredSuggestions.isEmpty {
+            showViewAllChats = false
+        }
 
         // Adjust selection after removal
         if let index = selectedIndex {
             if index >= filteredSuggestions.count {
-                selectedIndex = filteredSuggestions.isEmpty ? nil : filteredSuggestions.count - 1
+                let maxValidIndex = showViewAllChats ? filteredSuggestions.count : filteredSuggestions.count - 1
+                selectedIndex = filteredSuggestions.isEmpty && !showViewAllChats ? nil : maxValidIndex
             }
         }
+    }
+
+    /// Unmarks a Suggestion as `Pending Removal`: required if the actual underlying storage fails
+    public func cancelPendingRemoval(_ suggestion: AIChatSuggestion) {
+        suggestionIDsPendingRemoval.remove(suggestion.id)
     }
 
     // MARK: - Reset
@@ -195,5 +244,7 @@ public final class AIChatSuggestionsViewModel: ObservableObject {
         selectedIndex = nil
         isKeyboardNavigating = false
         filteredSuggestions = []
+        showViewAllChats = false
+        suggestionIDsPendingRemoval.removeAll()
     }
 }

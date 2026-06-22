@@ -25,6 +25,7 @@ import BrowserServicesKit
 import PrivacyConfig
 import PrivacyDashboard
 import Common
+import FoundationExtensions
 import os.log
 import PixelExperimentKit
 
@@ -305,6 +306,8 @@ extension PrivacyDashboardViewController {
         let isForceDarkModeEnabled: Bool?
         let autoplayBlockingMode: String?
         let isAfterSuppressedXSafariRedirect: Bool
+        let loadedWebExtensions: String?
+        let adBlockingExtensionScriptletsVersion: String?
     }
     
     enum BrokenSiteReportError: Error {
@@ -365,7 +368,6 @@ extension PrivacyDashboardViewController {
                                 protectionsState: protectionsState,
                                 reportFlow: source,
                                 siteType: breakageAdditionalInfo.isDesktop ? .desktop : .mobile,
-                                atb: StatisticsUserDefaults().atb ?? "",
                                 model: UIDevice.current.model,
                                 errors: errors,
                                 httpStatusCodes: statusCodes,
@@ -382,7 +384,9 @@ extension PrivacyDashboardViewController {
                                 isForceDarkModeEnabled: breakageAdditionalInfo.isForceDarkModeEnabled,
                                 autoplayBlockingMode: breakageAdditionalInfo.autoplayBlockingMode,
                                 isAfterSuppressedXSafariRedirect: breakageAdditionalInfo.isAfterSuppressedXSafariRedirect,
-                                breakageData: breakageData)
+                                breakageData: breakageData,
+                                loadedWebExtensions: breakageAdditionalInfo.loadedWebExtensions,
+                                adBlockingExtensionScriptletsVersion: breakageAdditionalInfo.adBlockingExtensionScriptletsVersion)
     }
 
 }

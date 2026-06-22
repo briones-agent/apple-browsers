@@ -47,10 +47,10 @@ final class WindowsManager {
     }
 
     /// finds window to position newly opened (or popup) windows against
-    private class func findPositioningSourceWindow(for tab: Tab?) -> NSWindow? {
+    private class func findPositioningSourceWindow(for tab: AnyTab?) -> NSWindow? {
         if let parentTab = tab?.parentTab,
            let sourceWindowController = Application.appDelegate.windowControllersManager.mainWindowControllers.first(where: {
-               $0.mainViewController.tabCollectionViewModel.tabs.contains(parentTab)
+               $0.mainViewController.tabCollectionViewModel.tabCollection.contains(tab: parentTab)
            }) {
             // window that initiated the new window opening
             return sourceWindowController.window
@@ -65,6 +65,7 @@ final class WindowsManager {
                              aiChatSessionStore: AIChatSessionStoring = Application.appDelegate.aiChatSessionStore,
                              fireCoordinator: FireCoordinator = Application.appDelegate.fireCoordinator,
                              burnerMode: BurnerMode? = nil,
+                             isOpenedAutomatically: Bool = false, // `true` when the window is opened by app logic rather than a direct user gesture
                              droppingPoint: NSPoint? = nil,
                              contentSize: NSSize? = nil,
                              showWindow: Bool = true,
@@ -76,9 +77,15 @@ final class WindowsManager {
         // Determine effective burner mode based on user preference
         let effectiveBurnerMode = burnerModeForNewWindow(burnerMode: burnerMode)
         assert(tabCollectionViewModel == nil || tabCollectionViewModel!.isPopup == popUp)
+        let fireWindowOpenTrigger = Self.fireWindowOpenTrigger(
+            isBurner: effectiveBurnerMode.isBurner,
+            burnerModeWasExplicitlyProvided: burnerMode != nil,
+            isOpenedAutomatically: isOpenedAutomatically
+        )
         let mainWindowController = makeNewWindow(tabCollectionViewModel: tabCollectionViewModel,
                                                  popUp: popUp,
                                                  burnerMode: effectiveBurnerMode,
+                                                 fireWindowOpenTrigger: fireWindowOpenTrigger,
                                                  autofillPopoverPresenter: autofillPopoverPresenter,
                                                  fireCoordinator: fireCoordinator,
                                                  aiChatSessionStore: aiChatSessionStore)
@@ -103,7 +110,7 @@ final class WindowsManager {
 
         if let droppingPoint {
             mainWindowController.window?.setFrameOrigin(droppingPoint: droppingPoint)
-        } else if let sourceWindow = self.findPositioningSourceWindow(for: tabCollectionViewModel?.tabs.first) {
+        } else if let sourceWindow = self.findPositioningSourceWindow(for: tabCollectionViewModel?.tabCollection.tabs.first) {
             mainWindowController.window?.setFrameOrigin(cascadedFrom: sourceWindow)
         }
 
@@ -206,7 +213,7 @@ final class WindowsManager {
     ///   - contentSize: The requested popup content size
     /// - Returns: A tuple containing the dropping point (top-center) and final content size
     private class func calculatePopupFrame(for tab: Tab, origin: NSPoint?, contentSize: NSSize?) -> (droppingPoint: NSPoint?, contentSize: NSSize) {
-        let sourceWindow = findPositioningSourceWindow(for: tab)
+        let sourceWindow = findPositioningSourceWindow(for: .loaded(tab))
         // Use visibleFrame to ensure popup doesn't go behind dock or menu bar
         let screenFrame = (sourceWindow?.screen ?? .main)?.visibleFrame ?? NSScreen.fallbackHeadlessScreenFrame
         return calculatePopupFrame(screenFrame: screenFrame, origin: origin, contentSize: contentSize)
@@ -251,6 +258,7 @@ final class WindowsManager {
     private class func makeNewWindow(tabCollectionViewModel: TabCollectionViewModel? = nil,
                                      popUp: Bool = false,
                                      burnerMode: BurnerMode,
+                                     fireWindowOpenTrigger: FireWindowOpenTrigger?,
                                      autofillPopoverPresenter: AutofillPopoverPresenter,
                                      fireCoordinator: FireCoordinator,
                                      aiChatSessionStore: AIChatSessionStoring) -> MainWindowController {
@@ -262,18 +270,53 @@ final class WindowsManager {
             fireCoordinator: fireCoordinator
         )
 
-        let fireWindowSession = if case .burner = burnerMode {
-            Application.appDelegate.windowControllersManager.mainWindowControllers.first(where: {
+        let fireWindowSession: FireWindowSession?
+        if case .burner(let dataStore) = burnerMode {
+            if let existing = Application.appDelegate.windowControllersManager.mainWindowControllers.first(where: {
                 $0.mainViewController.tabCollectionViewModel.burnerMode == burnerMode
-            })?.fireWindowSession ?? FireWindowSession()
-        } else { FireWindowSession?.none }
+            })?.fireWindowSession {
+                fireWindowSession = existing
+            } else {
+                let newSession = FireWindowSession()
+                if let registry = Application.appDelegate.burnerDuckAiStorageRegistry {
+                    let dataStoreKey = ObjectIdentifier(dataStore)
+                    newSession.onDeinit { [weak registry] in
+                        registry?.unregister(dataStoreKey)
+                    }
+                }
+                fireWindowSession = newSession
+            }
+        } else {
+            fireWindowSession = nil
+        }
         return MainWindowController(
             mainViewController: mainViewController,
             fireWindowSession: fireWindowSession,
+            fireWindowOpenTrigger: fireWindowOpenTrigger,
             fireViewModel: fireCoordinator.fireViewModel,
             themeManager: NSApp.delegateTyped.themeManager,
             featureFlagger: NSApp.delegateTyped.featureFlagger
         )
+    }
+
+    /// Classifies how a Fire Window was opened given inputs available at `openNewWindow`'s call site.
+    /// - Returns:
+    ///   - `nil` when the open is not for a Fire Window.
+    ///   - `.manual` for explicit user actions that requested a burner mode.
+    ///   - `.automatic` when the open was driven by app logic (`isOpenedAutomatically == true`, e.g.
+    ///     startup or a ⌘N press promoted by the "Open Fire Window by default" preference) or when the
+    ///     caller didn't pass a burner mode (preference fallback).
+    static func fireWindowOpenTrigger(
+        isBurner: Bool,
+        burnerModeWasExplicitlyProvided: Bool,
+        isOpenedAutomatically: Bool
+    ) -> FireWindowOpenTrigger? {
+        guard isBurner else { return nil }
+
+        if isOpenedAutomatically || !burnerModeWasExplicitlyProvided {
+            return .automatic
+        }
+        return .manual
     }
 
 }
