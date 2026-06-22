@@ -422,8 +422,10 @@ private struct StrictRoutingReminderView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(nsImage: DesignSystemImages.Glyphs.Size24.shield)
                     .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
                     .foregroundColor(.accentColor)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 32, height: 32)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(UserText.networkProtectionStrictRoutingTipTitle)
@@ -448,6 +450,8 @@ private struct StrictRoutingReminderView: View {
 
             Button(action: onEnable) {
                 Text(UserText.networkProtectionStrictRoutingTipAction)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

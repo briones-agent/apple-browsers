@@ -512,6 +512,8 @@ private struct StrictRoutingReminderView: View {
         HStack(alignment: .top, spacing: 12) {
             Image(uiImage: DesignSystemImages.Glyphs.Size24.shield)
                 .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
                 .foregroundColor(Color(designSystemColor: .accentPrimary))
                 .frame(width: 32, height: 32)
 
@@ -527,7 +529,11 @@ private struct StrictRoutingReminderView: View {
                 Button(action: onEnable) {
                     Text(UserText.networkProtectionStrictRoutingTipAction)
                         .daxBodyBold()
-                        .foregroundColor(Color(designSystemColor: .accentPrimary))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color(designSystemColor: .accentPrimary))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 2)
@@ -536,7 +542,8 @@ private struct StrictRoutingReminderView: View {
             Spacer(minLength: 0)
 
             Button(action: onDismiss) {
-                Image(systemName: "xmark")
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
                     .foregroundColor(Color(designSystemColor: .textSecondary))
             }
             .buttonStyle(.plain)
