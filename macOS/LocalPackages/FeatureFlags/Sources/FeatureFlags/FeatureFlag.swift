@@ -66,6 +66,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215509351454309
     case vpnOrphanProxyBypassKillSwitch
 
+    /// Toggle for the Copy VPN Diagnostics button in VPN settings.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215794369750045
+    case vpnShowCopyDiagnosticsButton
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866615719736
     case autoUpdateInDEBUG
 
@@ -493,6 +497,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(NetworkProtectionSubfeature.orphanProxyDetectionKillSwitch), category: .vpn)
         case .vpnOrphanProxyBypassKillSwitch:
             Config(source: .remoteReleasable(NetworkProtectionSubfeature.orphanProxyBypassKillSwitch), category: .vpn)
+        case .vpnShowCopyDiagnosticsButton:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(NetworkProtectionSubfeature.showCopyDiagnosticsButton), category: .vpn)
         case .autoUpdateInDEBUG:
             Config(source: .disabled, category: .updates)
         case .autoUpdateInREVIEW:
