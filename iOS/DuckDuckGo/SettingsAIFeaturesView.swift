@@ -127,30 +127,29 @@ private struct SettingsAINativeFeaturesView: AIFeaturesSettingsRowProviding {
                 duckAISettingsRow
             } header: {
                 Text(UserText.settingsDuckAiSectionHeader)
-            } footer: {
-                aiChatFeedbackFooter
             }
             .listRowBackground(Color(designSystemColor: .surface))
         }
 
-        // Shown only while at least one AI feature is on; hidden once everything is disabled.
-        if !viewModel.isAllAIDisabled {
-            Section {
-                Button {
-                    viewModel.disableAllAI()
-                } label: {
-                    Text(UserText.settingsAiFeaturesDisableAIFeatures)
-                        .daxBodyRegular()
-                        .foregroundColor(Color(designSystemColor: .textLink))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("Settings.AIFeatures.DisableAllAIOptions")
-            } footer: {
-                Text(UserText.settingsAiFeaturesDisableAllFooter)
+        // Always shown: the button disables all AI while any is on, then greys out
+        // once everything is disabled, with the footer reinforcing the no-AI state.
+        Section {
+            Button {
+                viewModel.disableAllAI()
+            } label: {
+                Text(UserText.settingsAiFeaturesDisableAIFeatures)
+                    .daxBodyRegular()
+                    .foregroundColor(Color(designSystemColor: .textLink))
+                    .opacity(viewModel.isAllAIDisabled ? 0.4 : 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .listRowBackground(Color(designSystemColor: .surface))
+            .buttonStyle(.plain)
+            .disabled(viewModel.isAllAIDisabled)
+            .accessibilityIdentifier("Settings.AIFeatures.DisableAllAIOptions")
+        } footer: {
+            Text(viewModel.isAllAIDisabled ? UserText.settingsAiFeaturesDisableAllFooterDisabled : UserText.settingsAiFeaturesDisableAllFooter)
         }
+        .listRowBackground(Color(designSystemColor: .surface))
     }
 }
 

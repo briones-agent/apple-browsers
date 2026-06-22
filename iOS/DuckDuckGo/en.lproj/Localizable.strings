@@ -3581,10 +3581,13 @@ Take back control of your personal information with the browser designed for dat
 "settings.aifeatures.chat.suggestions.title" = "Chat Suggestions";
 
 /* Button that turns off all AI features */
-"settings.aifeatures.disable.all" = "Disable AI Features";
+"settings.aifeatures.disable.all" = "Use DuckDuckGo Without AI";
 
 /* Footer text below the disable all AI features button */
-"settings.aifeatures.disable.all.footer" = "Our Private AI Features are all optional and can be customized above.";
+"settings.aifeatures.disable.all.footer" = "Disables Duck.ai, hides AI-assisted answers in search, and hides AI-Generated images.";
+
+/* Footer text shown once all AI features are already disabled */
+"settings.aifeatures.disable.all.footer.disabled" = "AI is currently disabled in the Browser so you’ll no longer see AI-assisted answers or AI-Generated images in search results.";
 
 /* Section header for the Duck.ai settings group on the AI Features screen */
 "settings.aifeatures.duckai.section.header" = "Duck.ai";
