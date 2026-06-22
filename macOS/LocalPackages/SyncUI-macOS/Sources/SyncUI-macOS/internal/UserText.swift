@@ -52,16 +52,6 @@ enum UserText {
     static let preparingToSyncDialogSubTitle = NSLocalizedString("preferences.preparing-to-sync.dialog-subtitle", bundle: Bundle.module, value: "We're setting up the connection to synchronize your bookmarks and autofill data with the other device.", comment: "Preparing to sync dialog subtitle during sync set up")
     static let preparingToSyncDialogSubTitleUpdated = NSLocalizedString("preferences.preparing-to-sync.dialog-subtitle-updated", bundle: Bundle.module, value: "We're setting up the connection to synchronize your bookmarks, autofill data, and Duck.ai chats with the other device.", comment: "Preparing to sync dialog subtitle during sync set up")
     static let preparingToSyncTwoDeviceDialogTitle = NSLocalizedString("preferences.preparing-to-sync.two-device.dialog-title", bundle: Bundle.module, value: "Keep “Sync & Backup” open on both devices", comment: "Preparing to sync dialog title during two-device sync set up. The curly quotes around 'Sync & Backup' refer to the name of the settings section and should be preserved.")
-    static let preparingToSyncWaitingForNativeConfirmationTitle = NSLocalizedString(
-        "preferences.preparing-to-sync.waiting-for-native-confirmation.dialog-title",
-        bundle: Bundle.module,
-        value: "Confirm on your other device.",
-        comment: "Preparing to sync dialog title shown after confirming sync setup while waiting for another DuckDuckGo browser to confirm")
-    static let preparingToSyncWaitingForThirdPartyConfirmationTitle = NSLocalizedString(
-        "preferences.preparing-to-sync.waiting-for-third-party-confirmation.dialog-title",
-        bundle: Bundle.module,
-        value: "Check your other device to finish.",
-        comment: "Preparing to sync dialog title shown after confirming sync setup while waiting for a third-party device to finish confirming")
     static let preparingToSyncDialogAction = NSLocalizedString("preferences.preparing-to-sync.dialog-action", bundle: Bundle.module, value: "Connecting…", comment: "Sync preparing to sync dialog action")
 
     // Enter recovery code dialog

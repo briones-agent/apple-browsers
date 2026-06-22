@@ -525,9 +525,6 @@ extension SyncDialogController: ManagementDialogModelDelegate {
                                                                              reason: SyncSetupPixelKitEvent.ParameterValue.scanningCancelled),
                               doNotEnforcePrefix: true)
             }
-        case .prepareToSync(.waitingForNativeConfirmation), .prepareToSync(.waitingForThirdPartyConfirmation):
-            sendSetupEndedAbandonedPixel(setupRole: .receiver(.exchange, .qrCode),
-                                         reason: SyncSetupPixelKitEvent.ParameterValue.syncConfirmationDenied)
         default:
             break
         }
@@ -656,17 +653,8 @@ extension SyncDialogController: SyncConnectionControllerDelegate {
             managementDialogModel.endFlow()
         } else {
             pairingV2PeerKind = peerKind
-            if case .receiver = setupRole {
-                presentDialog(for: .prepareToSync(pairingV2WaitingMode(peerKind: peerKind)))
-            }
         }
         return isConfirmed
-    }
-
-    private func pairingV2WaitingMode(peerKind: PairingV2DeviceKind) -> PreparingToSyncMode {
-        peerKind == .thirdParty
-        ? .waitingForThirdPartyConfirmation
-        : .waitingForNativeConfirmation
     }
 
     private func pairingV2DisplayName(for peerName: String?) -> String {

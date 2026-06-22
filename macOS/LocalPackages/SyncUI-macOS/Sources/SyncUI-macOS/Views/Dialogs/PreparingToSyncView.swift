@@ -41,39 +41,13 @@ struct PreparingToSyncView: View {
                     SyncUIViews.TextHeader(text: UserText.preparingToSyncTwoDeviceDialogTitle)
                         .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.center)
-                case .waitingForNativeConfirmation:
-                    SyncUIViews.TextHeader(text: UserText.preparingToSyncWaitingForNativeConfirmationTitle)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.center)
-                case .waitingForThirdPartyConfirmation:
-                    SyncUIViews.TextHeader(text: UserText.preparingToSyncWaitingForThirdPartyConfirmationTitle)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.center)
                 }
             }
             .frame(width: 320)
         } buttons: {
-            if mode.showsCancelButton {
-                Button(UserText.cancel) {
-                    model.cancelPressed()
-                }
-                .buttonStyle(DismissActionButtonStyle())
-            }
         }
     }
 
-}
-
-private extension PreparingToSyncMode {
-
-    var showsCancelButton: Bool {
-        switch self {
-        case .waitingForNativeConfirmation, .waitingForThirdPartyConfirmation:
-            return true
-        case .singleDeviceOrRecovery, .twoDevicePairing:
-            return false
-        }
-    }
 }
 
 struct RecoverSyncedDataView: View {

@@ -755,9 +755,6 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             dismissPairingV2UIAfterDeniedConfirmation()
         } else {
             pairingV2PeerKind = peerKind
-            if case .receiver = setupRole {
-                presentPairingV2WaitingAlert(peerKind: peerKind, setupRole: setupRole)
-            }
         }
         return isConfirmed
     }
@@ -777,32 +774,6 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             let viewControllerToPresentFrom = navigationController?.presentedViewController ?? presentedViewController ?? self
             viewControllerToPresentFrom.present(alert, animated: true)
         }
-    }
-
-    private func presentPairingV2WaitingAlert(peerKind: PairingV2DeviceKind, setupRole: SyncSetupRole) {
-        let alert = UIAlertController(title: pairingV2WaitingAlertTitle(peerKind: peerKind), message: nil, preferredStyle: .alert)
-        if peerKind == .thirdParty {
-            alert.addAction(UIAlertAction(title: UserText.syncPairingV2WaitingForThirdPartyConfirmationAction, style: .default))
-        } else {
-            alert.addAction(UIAlertAction(title: UserText.actionCancel, style: .cancel) { [weak self] _ in
-                self?.sendSyncConfirmationDeniedSetupEndedAbandonedPixel(setupRole: setupRole)
-                self?.syncSetupExperimentPixels.fireSetupEndedAbandoned()
-                self?.dismissPairingV2UIAfterDeniedConfirmation()
-                self?.endConnectMode()
-            })
-        }
-
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            let viewControllerToPresentFrom = navigationController?.presentedViewController ?? presentedViewController ?? self
-            viewControllerToPresentFrom.present(alert, animated: true)
-        }
-    }
-
-    private func pairingV2WaitingAlertTitle(peerKind: PairingV2DeviceKind) -> String {
-        peerKind == .thirdParty
-        ? UserText.syncPairingV2WaitingForThirdPartyConfirmationTitle
-        : UserText.syncPairingV2WaitingForNativeConfirmationTitle
     }
 
     private func pairingV2DisplayName(for peerName: String?) -> String {

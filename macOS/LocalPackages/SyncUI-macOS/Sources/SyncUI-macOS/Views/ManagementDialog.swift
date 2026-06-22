@@ -21,8 +21,6 @@ import SwiftUI
 public enum PreparingToSyncMode: Equatable {
     case singleDeviceOrRecovery
     case twoDevicePairing
-    case waitingForNativeConfirmation
-    case waitingForThirdPartyConfirmation
 }
 
 public enum ManagementDialogKind: Equatable {
