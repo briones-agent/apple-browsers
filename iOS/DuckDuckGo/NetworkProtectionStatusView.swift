@@ -514,7 +514,7 @@ private struct StrictRoutingReminderView: View {
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .foregroundColor(Color(designSystemColor: .accentPrimary))
+                .foregroundColor(.accentColor)
                 .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -532,8 +532,8 @@ private struct StrictRoutingReminderView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
-                        .background(Color(designSystemColor: .accentPrimary))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .background(Color.accentColor)
+                        .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 2)
