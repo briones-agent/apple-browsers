@@ -347,7 +347,7 @@ private enum FooterAction {
     }
 }
 
-extension DefaultOmnibarMode: CustomStringConvertible {
+extension DefaultOmnibarMode: @retroactive CustomStringConvertible {
     public var description: String {
         switch self {
         case .search: return UserText.settingsDefaultOmnibarModeSearch
@@ -357,7 +357,7 @@ extension DefaultOmnibarMode: CustomStringConvertible {
     }
 }
 
-extension SearchAssistFrequency: CustomStringConvertible {
+extension SearchAssistFrequency: @retroactive CustomStringConvertible {
     public var description: String {
         switch self {
         case .never: return UserText.settingsAiFeaturesSearchAssistNever
