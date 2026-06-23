@@ -26,11 +26,21 @@ import DesignResourcesKitIcons
 final class AIChatHistoryViewController: UIViewController {
 
     private let viewModel: AIChatHistoryViewModel
+    private let fireButtonAnimator: FireButtonAnimator
     private var cancellables: Set<AnyCancellable> = []
 
     /// Set while a swipe-driven animation is in flight to suppress reactive reloads that
     /// would otherwise cancel the slide.
     private var isApplyingLocalUpdate = false
+
+    private var isEditingChats = false
+    private weak var fireBarButtonItem: UIBarButtonItem?
+
+    /// Fire ("Delete All") is offered only over the full list: disabled in edit mode and while a
+    /// search filter is active, since the action clears every chat, not just the visible matches.
+    private var isFireAllEnabled: Bool {
+        !isEditingChats && viewModel.effectiveQuery.isEmpty
+    }
 
     private lazy var tableView: UITableView = {
         let table = UITableView(frame: .zero, style: .insetGrouped)
@@ -44,6 +54,8 @@ final class AIChatHistoryViewController: UIViewController {
         // row stable across trailing swipe-action animations — match Bookmarks' storyboard.
         table.clipsToBounds = true
         table.sectionFooterHeight = 18
+        // Dismiss the keyboard when the list is dragged, matching system search screens.
+        table.keyboardDismissMode = .onDrag
         return table
     }()
 
@@ -68,8 +80,9 @@ final class AIChatHistoryViewController: UIViewController {
         viewModel.isEmpty && !viewModel.effectiveQuery.isEmpty && !viewModel.loadFailed
     }
 
-    init(viewModel: AIChatHistoryViewModel) {
+    init(viewModel: AIChatHistoryViewModel, fireButtonAnimator: FireButtonAnimator) {
         self.viewModel = viewModel
+        self.fireButtonAnimator = fireButtonAnimator
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -81,21 +94,20 @@ final class AIChatHistoryViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let backgroundColor: UIColor = .systemGroupedBackground
+        let backgroundColor = UIColor(designSystemColor: .background)
         view.backgroundColor = backgroundColor
         navigationController?.view.backgroundColor = backgroundColor
+        tableView.backgroundColor = backgroundColor
 
         title = UserText.actionChats
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            title: UserText.navigationTitleDone,
-            style: .plain,
-            target: self,
-            action: #selector(doneButtonTapped)
-        )
+        configureNavigationButtons()
 
         setupViews()
         configureToolbar()
+        decorateBarsIfNeeded()
         bindViewModel()
+
+        viewModel.screenDidLoad()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -118,38 +130,70 @@ final class AIChatHistoryViewController: UIViewController {
         let headerView = UIView(frame: CGRect(x: 0, y: 0, width: view.bounds.width, height: headerHeight))
         searchBar.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(searchBar)
+        // The table imposes a transient width==0 on the header before it gets its real
+        // width; let trailing yield during that pass instead of logging a conflict.
+        let searchBarTrailing = searchBar.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -12)
+        searchBarTrailing.priority = .required - 1
         NSLayoutConstraint.activate([
             searchBar.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 12),
-            searchBar.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -12),
+            searchBarTrailing,
             searchBar.topAnchor.constraint(equalTo: headerView.topAnchor),
             searchBar.bottomAnchor.constraint(equalTo: headerView.bottomAnchor)
         ])
         tableView.tableHeaderView = headerView
     }
 
+    private lazy var closeBarButtonItem: UIBarButtonItem = {
+        let item = UIBarButtonItem(
+            image: DesignSystemImages.Glyphs.Size24.close,
+            style: .plain,
+            target: self,
+            action: #selector(doneButtonTapped)
+        )
+        item.accessibilityLabel = UserText.keyCommandClose
+        return item
+    }()
+
+    /// Left: X closes the sheet. Right: Edit toggles edit mode (showing Done while editing).
+    private func configureNavigationButtons() {
+        navigationItem.leftBarButtonItem = closeBarButtonItem
+        let edit = UIBarButtonItem(
+            title: isEditingChats ? UserText.navigationTitleDone : UserText.actionGenericEdit,
+            style: isEditingChats ? .done : .plain,
+            target: self,
+            action: #selector(editButtonTapped)
+        )
+        if #available(iOS 26, *) {
+            edit.style = .plain
+        }
+        navigationItem.rightBarButtonItem = edit
+    }
+
+    /// Pre-iOS 26 sheets default bar button items to the system accent (blue). Match Bookmarks
+    /// by applying theme tints; iOS 26 liquid-glass toolbar styling is left to the system.
+    private func decorateBarsIfNeeded() {
+        if #available(iOS 26, *) { return }
+        decorateNavigationBar()
+        decorateToolbar()
+    }
+
     private func configureToolbar() {
         let fire = UIBarButtonItem(
             image: DesignSystemImages.Glyphs.Size24.fire,
             style: .plain,
-            target: nil,
-            action: nil
+            target: self,
+            action: #selector(fireButtonTapped)
         )
+        fire.isEnabled = isFireAllEnabled
         let compose = UIBarButtonItem(
             image: DesignSystemImages.Glyphs.Size24.compose,
             style: .plain,
             target: self,
             action: #selector(composeButtonTapped)
         )
-        let gap = UIBarButtonItem(systemItem: .fixedSpace)
-        gap.width = 12
+        compose.isEnabled = !isEditingChats
         let spacer = UIBarButtonItem(systemItem: .flexibleSpace)
-        let edit = UIBarButtonItem(
-            title: UserText.actionGenericEdit,
-            style: .plain,
-            target: nil,
-            action: nil
-        )
-        toolbarItems = [fire, gap, compose, spacer, edit]
+        toolbarItems = [fire, spacer, compose]
     }
 
     private func bindViewModel() {
@@ -169,6 +213,16 @@ final class AIChatHistoryViewController: UIViewController {
             .sink { [weak self] failed in
                 guard failed else { return }
                 self?.presentLoadErrorAlert()
+            }
+            .store(in: &cancellables)
+
+        // Toggle the fire button only when the search transitions empty↔active, not per keystroke.
+        viewModel.$effectiveQuery
+            .map(\.isEmpty)
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.configureToolbar()
             }
             .store(in: &cancellables)
     }
@@ -232,6 +286,53 @@ final class AIChatHistoryViewController: UIViewController {
     @objc private func composeButtonTapped() {
         viewModel.newChatTapped()
     }
+
+    @objc private func fireButtonTapped(_ sender: UIBarButtonItem) {
+        let count = viewModel.totalChatCount
+        guard count > 0 else { return }
+        viewModel.fireAllTapped()
+        let presenter = FireConfirmationPresenter()
+        presenter.presentFireConfirmation(
+            on: self,
+            attachPopoverTo: sender,
+            tabViewModel: nil,
+            pixelSource: .browsing,
+            fireContext: .deleteAllChats(count: count, onDelete: { [weak self] in
+                self?.dismiss(animated: true) {
+                    self?.burnAllChats()
+                }
+            }),
+            browsingMode: .normal,
+            onConfirm: { _ in },
+            onCancel: {}
+        )
+    }
+
+    /// Plays the fire animation while the view model burns all chats; the list then
+    /// reactively falls through to its empty state without dismissing the sheet.
+    private func burnAllChats() {
+        let viewModel = self.viewModel
+        fireButtonAnimator.animate {
+            await viewModel.burnAllChats()
+        } onTransitionCompleted: {
+        } completion: {
+        }
+    }
+
+    @objc private func editButtonTapped() {
+        if isEditingChats {
+            tableView.setEditing(false, animated: true)
+            isEditingChats = false
+        } else {
+            tableView.isEditing = false
+            tableView.setEditing(true, animated: true)
+            isEditingChats = true
+            viewModel.editModeEntered()
+        }
+        configureToolbar()
+        configureNavigationButtons()
+    }
+
 }
 
 // MARK: - UITableViewDataSource
@@ -251,17 +352,17 @@ extension AIChatHistoryViewController: UITableViewDataSource {
         guard let title = viewModel.title(forSection: section) else { return nil }
         let label = UILabel()
         label.text = title
-        label.font = .systemFont(ofSize: 13, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.font = .systemFont(ofSize: 17, weight: .semibold)
+        label.textColor = UIColor(designSystemColor: .textSecondary)
         label.translatesAutoresizingMaskIntoConstraints = false
 
         let container = UIView()
         container.addSubview(label)
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
-            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -4)
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 24),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6)
         ])
         return container
     }
@@ -317,7 +418,7 @@ extension AIChatHistoryViewController: UITableViewDelegate {
                 completion(true)
             })
         }
-        action.image = DesignSystemImages.Glyphs.Size24.pin
+        action.image = wasPinned ? DesignSystemImages.Glyphs.Size24.unpin : DesignSystemImages.Glyphs.Size24.pin
         action.accessibilityLabel = wasPinned
             ? UserText.aiChatHistoryUnpinSwipeAccessibilityLabel
             : UserText.aiChatHistoryPinSwipeAccessibilityLabel
@@ -350,7 +451,27 @@ extension AIChatHistoryViewController: UITableViewDelegate {
 
 extension AIChatHistoryViewController: UISearchBarDelegate {
 
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)
+        viewModel.searchActivated()
+    }
+
+    func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(false, animated: true)
+    }
+
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         viewModel.updateQuery(searchText)
+    }
+
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.text = nil
+        searchBar.setShowsCancelButton(false, animated: true)
+        searchBar.resignFirstResponder()
+        viewModel.updateQuery("")
     }
 }
