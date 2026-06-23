@@ -14,6 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle.git", exact: "2.8.1"),
+        .package(url: "https://github.com/scinfu/SwiftSoup.git", exact: "2.13.5"),
         .package(path: "../../../SharedPackages/BrowserServicesKit"),
         .package(path: "../../../SharedPackages/Infrastructure/SystemFrameworksExtensions"),
         .package(path: "../FeatureFlags"),
@@ -32,6 +33,7 @@ let package = Package(
                 .product(name: "Persistence", package: "BrowserServicesKit"),
                 .product(name: "PixelKit", package: "BrowserServicesKit"),
                 .product(name: "Subscription", package: "BrowserServicesKit"),
+                .product(name: "SwiftSoup", package: "SwiftSoup"),
             ],
             swiftSettings: [
                 .define("DEBUG", .when(configuration: .debug))

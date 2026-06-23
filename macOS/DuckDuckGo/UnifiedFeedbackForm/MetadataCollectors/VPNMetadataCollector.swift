@@ -170,7 +170,7 @@ final class DefaultVPNMetadataCollector: VPNMetadataCollector {
         let networkInfoMetadata = await collectNetworkInformation()
         let vpnState = await collectVPNState()
         let vpnSettingsState = collectVPNSettingsState()
-        let loginItemState = collectLoginItemState()
+        let loginItemState = await collectLoginItemState()
         let subscriptionInfo = await collectSubscriptionInfo()
 
         return VPNMetadata(
@@ -279,8 +279,8 @@ final class DefaultVPNMetadataCollector: VPNMetadataCollector {
                      connectedServerIP: connectedServerIP)
     }
 
-    func collectLoginItemState() -> VPNMetadata.LoginItemState {
-        let vpnMenuState = String(describing: LoginItem.vpnMenu.status)
+    func collectLoginItemState() async -> VPNMetadata.LoginItemState {
+        let vpnMenuState = await String(describing: LoginItem.vpnMenu.status())
         let vpnMenuIsRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: LoginItem.vpnMenu.agentBundleID).isEmpty
 
         return .init(
