@@ -1962,8 +1962,6 @@ extension SettingsViewModel {
         )
     }
 
-    /// True when Duck.ai is off and both SERP AI settings are at their most-restrictive values.
-    /// Hides the "Disable AI Features" button once everything is already disabled.
     var isAllAIDisabled: Bool {
         !aiChatSettings.isAIChatEnabled
             && serpSettings.searchAssistFrequency == .never
