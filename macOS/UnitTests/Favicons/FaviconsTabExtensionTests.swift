@@ -308,8 +308,15 @@ final class FaviconsTabExtensionTests: XCTestCase {
     func testCacheUpdateReResolvesOnlyForThisTabsSite() async {
         // Regression: re-resolving every tab on every `.faviconCacheUpdated` post ran an O(N) `URL.host`
         // scan per tab and pegged the main thread. The observer must use the notification payload and
-        // skip tabs whose site isn't among the favicons that just became available.
+        // re-resolve only for tabs whose site is among the favicons that just became available.
+        //
+        // Observed through the published `favicon`: a decoded image is available in the cache, so the
+        // tab picks it up only when it actually re-resolves — which must happen for its own site's
+        // update but not for an unrelated site's.
         let documentUrl = URL(string: "https://example.com")!
+        let faviconUrl = URL(string: "https://example.com/favicon.ico")!
+        let image = NSImage(size: NSSize(width: 16, height: 16))
+
         let faviconScript = FaviconUserScript()
         let provider = MockFaviconUserScriptProvider(faviconScript: faviconScript)
         let extension_ = FaviconsTabExtension(
@@ -321,22 +328,22 @@ final class FaviconsTabExtensionTests: XCTestCase {
         contentSubject.send(.url(documentUrl, credential: nil, source: .userEntered("")))
         scriptsSubject.send(provider)
         try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertNil(extension_.favicon)
 
-        // An unrelated site's favicon became available → this tab must NOT re-resolve.
-        mockFaviconManagement.getCachedFaviconForDocumentCallCount = 0
+        // A decoded favicon for this tab's site is now available in the cache.
+        mockFaviconManagement.getCachedFaviconResult = Favicon(identifier: UUID(), url: faviconUrl, image: image, relation: .icon, documentUrl: documentUrl, dateCreated: Date())
+
+        // An unrelated site's favicon became available → this tab must NOT re-resolve, so it keeps
+        // showing nothing despite the cached image being available.
         NotificationCenter.default.postFaviconCacheUpdated(faviconURLs: [URL(string: "https://other.com/favicon.ico")!],
                                                            documentURLs: [URL(string: "https://other.com")!])
         try? await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertEqual(mockFaviconManagement.getCachedFaviconForDocumentCallCount, 0,
-                       "Re-resolved favicon for an unrelated cache update")
+        XCTAssertNil(extension_.favicon, "Re-resolved and showed a favicon for an unrelated cache update")
 
-        // This tab's own site updated → it should re-resolve.
-        mockFaviconManagement.getCachedFaviconForDocumentCallCount = 0
-        NotificationCenter.default.postFaviconCacheUpdated(faviconURLs: [URL(string: "https://example.com/favicon.ico")!],
-                                                           documentURLs: [documentUrl])
+        // This tab's own site updated → it should re-resolve and pick up the now-available image.
+        NotificationCenter.default.postFaviconCacheUpdated(faviconURLs: [faviconUrl], documentURLs: [documentUrl])
         try? await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertGreaterThan(mockFaviconManagement.getCachedFaviconForDocumentCallCount, 0,
-                             "Did not re-resolve favicon for this tab's own cache update")
+        XCTAssertEqual(extension_.favicon, image, "Did not re-resolve favicon for this tab's own cache update")
     }
 }
 
@@ -353,11 +360,10 @@ private final class MockFaviconManagement: FaviconManagement {
     var handleFaviconLinksCalls: [(links: [FaviconUserScript.FaviconLink], documentUrl: URL)] = []
     var faviconToReturn: Favicon?
 
-    /// Favicon returned by the cached lookups (a `nil` image simulates the lazy off-main decode window).
+    /// Favicon returned by the cached lookups; a `nil` value (or one with a `nil` image) simulates the
+    /// lazy off-main decode window before an image is available. `getCachedFavicon(forUrlOrAnySubdomain:)`
+    /// is a protocol-extension method (not a requirement), so it routes through `getCachedFavicon(for:)`.
     var getCachedFaviconResult: Favicon?
-    /// Number of times the document-URL cached lookup ran — used to assert a tab re-resolves only when
-    /// the cache update actually concerns its site.
-    var getCachedFaviconForDocumentCallCount = 0
 
     func handleFaviconLinks(_ faviconLinks: [FaviconUserScript.FaviconLink], documentUrl: URL, webView: WebKit.WKWebView?) async -> Favicon? {
         handleFaviconLinksCalls.append((links: faviconLinks, documentUrl: documentUrl))
@@ -371,10 +377,8 @@ private final class MockFaviconManagement: FaviconManagement {
     func populateFaviconCache(bookmarkManager: BookmarkManager, waitFor timeout: TimeInterval) async {}
 
     func getCachedFavicon(for documentURL: URL, sizeCategory: Favicon.SizeCategory, fallBackToSmaller: Bool) -> Favicon? {
-        getCachedFaviconForDocumentCallCount += 1
-        return getCachedFaviconResult
+        getCachedFaviconResult
     }
-    func getCachedFavicon(forUrlOrAnySubdomain url: URL, sizeCategory: Favicon.SizeCategory, fallBackToSmaller: Bool) -> Favicon? { nil }
     func getCachedFavicon(forDomainOrAnySubdomain baseDomain: String, sizeCategory: Favicon.SizeCategory, fallBackToSmaller: Bool) -> Favicon? { nil }
     func getCachedFaviconURL(for documentURL: URL, sizeCategory: Favicon.SizeCategory, fallBackToSmaller: Bool) -> URL? { nil }
     func getFaviconURLForDomainMatch(documentUrl: URL, sizeCategory: Favicon.SizeCategory, fallBackToSmaller: Bool) -> URL? { nil }
