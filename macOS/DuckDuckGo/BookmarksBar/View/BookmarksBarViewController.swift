@@ -345,7 +345,13 @@ final class BookmarksBarViewController: NSViewController {
 
     private func refreshFavicons() {
         dispatchPrecondition(condition: .onQueue(.main))
-        bookmarksBarCollectionView.reloadData()
+        // Update favicons in place on the existing cells rather than `reloadData()`. Rebuilding every
+        // cell on each favicon-cache update flashed the cells and re-resolved favicons that were still
+        // decoding (or had been evicted), downgrading shown icons to the placeholder — that was the
+        // bar's flicker. In-place refresh only upgrades placeholder → image and never downgrades.
+        for case let item as BookmarksBarCollectionViewItem in bookmarksBarCollectionView.visibleItems() {
+            item.refreshDisplayedFavicon()
+        }
     }
 
     @IBAction func importBookmarksClicked(_ sender: Any) {
