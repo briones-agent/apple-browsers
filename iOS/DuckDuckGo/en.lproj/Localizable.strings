@@ -3626,10 +3626,10 @@ Take back control of your personal information with the browser designed for dat
 "settings.aifeatures.disable.all" = "Use DuckDuckGo Without AI";
 
 /* Footer text below the disable all AI features button */
-"settings.aifeatures.disable.all.footer" = "Disables Duck.ai, hides AI-assisted answers in search, and hides AI-generated images in image search results.";
+"settings.aifeatures.disable.all.footer" = "Disables Duck.ai, hides AI-assisted answers in search, and filters known AI spam sites in image search results.";
 
 /* Footer text shown once all AI features are already disabled */
-"settings.aifeatures.disable.all.footer.disabled" = "AI is currently disabled in the Browser so you’ll no longer see AI-assisted answers or AI-generated images in image search results.";
+"settings.aifeatures.disable.all.footer.disabled" = "AI is currently disabled in the Browser so you’ll no longer see AI-assisted answers and see fewer AI-generated images in image search results.";
 
 /* Section header for the Duck.ai settings group on the AI Features screen */
 "settings.aifeatures.duckai.section.header" = "Duck.ai";
@@ -3643,8 +3643,8 @@ Take back control of your personal information with the browser designed for dat
 /* Hide AI-Generated Images option: on (images hidden) */
 "settings.aifeatures.hide.ai.generated.images.on" = "On";
 
-/* Description of what the hide AI-generated images feature does */
-"settings.aifeatures.hide.ai.generated.images.subtitle" = "Filters out AI-generated images from image search results";
+/* Footnote for the hide AI-generated images setting; ends with a Learn more link to the help page (do not remove the link) */
+"settings.aifeatures.hide.ai.generated.images.subtitle" = "Filters out known AI spam sites from image search results. [Learn more](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/results/how-to-filter-out-ai-images-in-duckduckgo-search-results)";
 
 /* Label describing a feature which is turned on always */
 "settings.always.on" = "Always On";

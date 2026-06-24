@@ -117,6 +117,7 @@ private struct SettingsAINativeFeaturesView: AIFeaturesSettingsRowProviding {
             SettingsPickerCellView(
                 label: UserText.settingsAiFeaturesHideAIGeneratedImages,
                 subtitle: UserText.settingsAiFeaturesHideAIGeneratedImagesSubtitle,
+                renderSubtitleAsMarkdown: true,
                 image: Image(uiImage: DesignSystemImages.Glyphs.Size24.imageAIHide),
                 options: HideAIImagesOption.allCases.map { Optional($0) },
                 selectedOption: viewModel.hideAIImagesBinding
@@ -215,6 +216,7 @@ private struct SettingsAILegacyFeaturesView: AIFeaturesSettingsRowProviding {
                 ) {
                     SettingsCellView(label: UserText.settingsAiFeaturesHideAIGeneratedImages,
                                      subtitle: UserText.settingsAiFeaturesHideAIGeneratedImagesSubtitle,
+                                     renderSubtitleAsMarkdown: true,
                                      image: Image(uiImage: DesignSystemImages.Glyphs.Size24.imageAIHide))
                 }
                 .listRowBackground(Color(designSystemColor: .surface))
