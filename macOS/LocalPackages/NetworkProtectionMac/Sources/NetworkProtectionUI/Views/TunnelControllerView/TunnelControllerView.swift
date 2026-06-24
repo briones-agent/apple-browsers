@@ -144,9 +144,6 @@ public struct TunnelControllerView: View {
     @ViewBuilder
     private func securityView() -> some View {
         if model.isStrictRoutingAvailable {
-            Divider()
-                .padding(EdgeInsets(top: 5, leading: 9, bottom: 5, trailing: 9))
-
             VStack(alignment: .leading) {
                 Text(UserText.networkProtectionStatusViewSecuritySectionTitle)
                     .applySectionHeaderAttributes(colorScheme: colorScheme)
@@ -164,6 +161,8 @@ public struct TunnelControllerView: View {
                 }
                 .padding(.horizontal, 9)
             }
+
+            dividerRow()
         }
     }
 

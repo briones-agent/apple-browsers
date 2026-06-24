@@ -117,7 +117,7 @@ final class UserText {
     // MARK: Security
 
     static let networkProtectionStatusViewSecuritySectionTitle = NSLocalizedString("network.protection.status.view.security.section.title", bundle: Bundle.module, value: "Security", comment: "Title for the Security section in the VPN status view")
-    static let networkProtectionStrictRoutingToggleTitle = NSLocalizedString("network.protection.status.view.strict.routing.toggle.title", bundle: Bundle.module, value: "Strict routing", comment: "Title for the Strict routing toggle in the VPN status view")
+    static let networkProtectionStrictRoutingToggleTitle = NSLocalizedString("network.protection.status.view.strict.routing.toggle.title", bundle: Bundle.module, value: "Strict Routing", comment: "Title for the Strict routing toggle in the VPN status view")
 
     // MARK: Updating Appex to Sysex for App Store builds
 
