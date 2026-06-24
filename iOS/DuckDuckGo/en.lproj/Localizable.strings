@@ -3644,7 +3644,7 @@ Take back control of your personal information with the browser designed for dat
 "settings.aifeatures.hide.ai.generated.images.on" = "On";
 
 /* Description of what the hide AI-generated images feature does */
-"settings.aifeatures.hide.ai.generated.images.subtitle" = "Hides AI-generated images from image search results";
+"settings.aifeatures.hide.ai.generated.images.subtitle" = "Filters out AI-generated images from image search results";
 
 /* Label describing a feature which is turned on always */
 "settings.always.on" = "Always On";

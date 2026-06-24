@@ -2276,7 +2276,7 @@ public struct UserText {
 
     public static let settingsAiFeaturesHideAIGeneratedImages = NSLocalizedString("settings.aifeatures.hide.ai.generated.images", value: "Hide AI-Generated Images", comment: "Title of hide AI-generated images settings link")
 
-    public static let settingsAiFeaturesHideAIGeneratedImagesSubtitle = NSLocalizedString("settings.aifeatures.hide.ai.generated.images.subtitle", value: "Hides AI-generated images from image search results", comment: "Description of what the hide AI-generated images feature does")
+    public static let settingsAiFeaturesHideAIGeneratedImagesSubtitle = NSLocalizedString("settings.aifeatures.hide.ai.generated.images.subtitle", value: "Filters out AI-generated images from image search results", comment: "Description of what the hide AI-generated images feature does")
 
     public static let settingsAiFeaturesSearchAssistTitle = NSLocalizedString("settings.aifeatures.assist.title", value: "Search Assist", comment: "Title of the native Search Assist setting control")
 
