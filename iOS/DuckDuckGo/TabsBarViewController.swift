@@ -161,6 +161,17 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
         leadingConstraint.isActive = true
         collectionViewLeadingConstraint = leadingConstraint
 
+        // The selected tab's left flare draws `bottomFlareRadius` points past the first cell's leading
+        // edge (see `SelectedTabShape`/`TabsBarCell`). The collection view clips to its bounds (so
+        // off-screen cells recycle without spilling), which would cut that flare off for the first
+        // tab. A matching leading section inset starts the first cell `bottomFlareRadius` in, so its
+        // flare lands at the collection view's leading edge — inside the non-clipped region — instead
+        // of past it. `updateWindowControlsInsetIfNeeded()` pulls the strip back by the same amount so
+        // the tab body stays put and the flare fills the gap, mirroring the trailing side.
+        if let flowLayout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            flowLayout.sectionInset.left = TabsBarCell.Metrics.bottomFlareRadius
+        }
+
         addTabButton.setImage(DesignSystemImages.Glyphs.Size24.add, for: .normal)
         fireButton.setImage(DesignSystemImages.Glyphs.Size24.fireSolid, for: .normal)
 
@@ -596,6 +607,11 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
             let margins = view.directionalEdgeInsets(for: .margins(cornerAdaptation: .horizontal))
             leadingInset += max(0, margins.leading)
         }
+
+        // Pull the strip back by the leading section inset so the first tab's body still starts at
+        // `leadingInset`; the freed-up space is exactly where its left flare now draws (see
+        // `setUpSubviews`). Clamp so we never produce a negative leading constraint.
+        leadingInset = max(0, leadingInset - TabsBarCell.Metrics.bottomFlareRadius)
 
         guard collectionViewLeadingConstraint.constant != leadingInset else { return }
         collectionViewLeadingConstraint.constant = leadingInset
