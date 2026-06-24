@@ -1295,7 +1295,7 @@ class TabViewController: UIViewController {
         dismissContextualOnboardingIfNeeded()
     }
 
-    func presentExperimentContextualDaxFireDialog() {
+    func presentDuckAIOnboardingFireDialog() {
         contextualOnboardingLogic.setLastShownDialog(type: .fire(.duckAIOnboarding))
         let fireSpec = DaxDialogs.BrowsingSpec.fireDuckAIOnboarding
         presentContextualOnboarding(for: fireSpec)
