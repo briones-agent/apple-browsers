@@ -553,6 +553,11 @@ struct UserText {
     public static let webTrackingProtectionSubtitle = NSLocalizedString("settings.web.tracking.protection.subtitle", value: "How We Protect You", comment: "The subtitle of the web tracking protection grid section")
     static let webTrackingProtectionExplenation = NSLocalizedString("web.tracking.protection.subtitle", value: "DuckDuckGo automatically blocks hidden trackers as you browse the web.", comment: "Privacy feature explanation in the browser settings")
     static let autoconsentCheckboxTitle = NSLocalizedString("autoconsent.checkbox.title", value: "Automatically handle cookie pop-ups", comment: "Autoconsent settings checkbox title")
+    static let cookiePopupPreferenceTitle = NSLocalizedString("cookie.popup.preference.title", value: "Pop-up Setting", comment: "Title for cookie pop-up preference picker in settings")
+    static let cookiePopupPreferenceBlockAll = NSLocalizedString("cookie.popup.preference.block-all", value: "Reject, Hide, or Accept", comment: "Cookie pop-up preference option")
+    static let cookiePopupPreferenceBlockStandard = NSLocalizedString("cookie.popup.preference.block-standard", value: "Reject or Hide", comment: "Cookie pop-up preference option")
+    static let cookiePopupPreferenceDoNotBlock = NSLocalizedString("cookie.popup.preference.do-not-block", value: "Off", comment: "Cookie pop-up preference option")
+    static let cookiePopupPreferenceExplanation = NSLocalizedString("cookie.popup.preference.explanation", value: "Some cookie pop-ups don't have a 'reject' option. By default, we won't block them. Choose **Reject, Hide, or Accept** to let us handle these — we may need to accept some cookies when necessary.", comment: "Explanation below cookie pop-up preference picker in settings")
     static let autoconsentExplanation = NSLocalizedString("autoconsent.explanation", value: "DuckDuckGo will try to select the most private settings available and hide these pop-ups for you.", comment: "Autoconsent feature explanation in settings")
     static let privateSearchExplanation = NSLocalizedString("private.search.explenation", value: "DuckDuckGo Private Search is your default search engine, so you can search the web without being tracked.", comment: "feature explanation in settings")
     static let webTrackingProtectionExplanation = NSLocalizedString("web.tracking.protection.explanation", value: "DuckDuckGo automatically blocks hidden trackers as you browse the web.", comment: "feature explanation in settings")
@@ -620,6 +625,8 @@ struct UserText {
 
     static let aiChatSummarize = NSLocalizedString("duckai.summarize.context-menu-action", value: "Summarize with Duck.ai", comment: "Context menu option that triggers Duck.ai-assisted summarization of selected text")
     static let aiChatTranslate = NSLocalizedString("duckai.translate.context-menu-action", value: "Translate with Duck.ai", comment: "Context menu option that triggers Duck.ai-assisted translation of selected text")
+    static let aiChatAttachSelection = NSLocalizedString("duckai.attach-selection.context-menu-action", value: "Ask Duck.ai About Selected Content", comment: "Context menu option that attaches the selected text to Duck.ai as page context")
+    static let aiChatTextSelection = NSLocalizedString("duckai.text-selection.context-title", value: "Text selection", comment: "Generic title shown on the Duck.ai sidebar attachment chip when the attached content is a user text selection rather than a full web page")
 
     static let aiChatOpenNewTabButton = NSLocalizedString("aichat.address-bar.open-new-tab-button", value: "Open new Duck.ai tab", comment: "Button to open Duck.ai in a new tab")
     static let aiChatToggleSidebarButton = NSLocalizedString("aichat.address-bar.toggle-sidebar-button", value: "Toggle Duck.ai Sidebar", comment: "Button to toggle Duck.ai sidebar")

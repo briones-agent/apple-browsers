@@ -437,16 +437,17 @@ class TabViewController: UIViewController {
     private var canDisplayJavaScriptAlert: Bool {
         return presentedViewController == nil
             && delegate?.tabCheckIfItsBeingCurrentlyPresented(self) ?? false
-            && !self.jsAlertController.isShown
+            && !(jsAlertController?.isShown ?? false)
     }
 
     func present(_ alert: WebJSAlert) {
-        self.jsAlertController.present(alert)
+        setupJSAlertControllerIfNeeded()
+        jsAlertController.present(alert)
     }
 
     private func dismissJSAlertIfNeeded() {
-        if jsAlertController.isShown {
-            jsAlertController.dismiss(animated: false)
+        if jsAlertController?.isShown == true {
+            jsAlertController?.dismiss(animated: false)
         }
     }
 
@@ -751,7 +752,10 @@ class TabViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupJSAlertController()
+        // Note: JSAlertController is intentionally NOT set up here. Instantiating its
+        // storyboard eagerly triggers a first-time UIVisualEffectView/CoreMaterial bundle
+        // scan on the cold-launch critical path, which can trip the scene-create watchdog
+        // (0x8BADF00D). It is now lazily created on first use via setupJSAlertControllerIfNeeded().
 
         fireproofingWorker = FireproofingWorking(controller: self, fireproofing: fireproofing, favicons: favicons)
         initAttributionLogic()
@@ -1009,19 +1013,7 @@ class TabViewController: UIViewController {
             self?.handlePullToRefresh()
         })
 
-        // Symptom detection + pixels ship to production behind the `webScrollFreezeObservability` kill switch
-        // (on by default). The heavy on-device freeze capture is injected only when `webScrollFreezeCapture`
-        // (internal-only) is on — in production `captureFreeze` is a no-op.
-        if webScrollObserver == nil, featureFlagger.isFeatureOn(.webScrollFreezeObservability) {
-            let captureEnabled = featureFlagger.isFeatureOn(.webScrollFreezeCapture)
-            webScrollObserver = WebScrollObserver(container: webViewContainer,
-                                                  scrollView: { [weak self] in self?.webView?.scrollView },
-                                                  currentURL: { [weak self] in self?.webView?.url },
-                                                  captureFreeze: captureEnabled
-                                                    ? { FreezeCaptureStore.save(WebScrollFreezeProbe.captureNow()) }
-                                                    : {})
-            webScrollObserver?.install()
-        }
+        attachScrollFreezeDiagnosticsIfNeeded()
 
         if isAITab {
             pullToRefreshViewAdapter?.setRefreshControlEnabled(false)
@@ -1080,6 +1072,31 @@ class TabViewController: UIViewController {
 
         borderView.insertSelf(into: webView)
         borderView.updateForAddressBarPosition(appSettings.currentAddressBarPosition)
+    }
+
+    // Symptom detection + pixels ship to production behind the `webScrollFreezeObservability` kill switch
+    // (on by default). The heavy on-device freeze capture is injected only when `webScrollFreezeCapture`
+    // (internal-only) is on — in production `captureFreeze` is a no-op.
+    private func attachScrollFreezeDiagnosticsIfNeeded() {
+        guard webScrollObserver == nil, featureFlagger.isFeatureOn(.webScrollFreezeObservability) else { return }
+        let captureEnabled = featureFlagger.isFeatureOn(.webScrollFreezeCapture)
+        webScrollObserver = WebScrollObserver(container: webViewContainer,
+                                              scrollView: { [weak self] in self?.webView?.scrollView },
+                                              currentURL: { [weak self] in self?.webView?.url },
+                                              captureFreeze: captureEnabled
+                                                ? { WebScrollFreezeDebugCaptureStore.save(WebScrollFreezeDebugProbe.captureNow()) }
+                                                : {},
+                                              autoRecover: featureFlagger.isFeatureOn(.webScrollFreezeAutoRecovery)
+                                                ? { [weak self] in
+                                                    let ran = WebScrollFreezeRecovery.autoRecover(scrollView: self?.webView?.scrollView)
+                                                    if ran { DailyPixel.fireDailyAndCount(pixel: .debugInteractionRecoveryAttempted, withAdditionalParameters: [:]) }
+                                                    return ran
+                                                }
+                                                : { false })
+        webScrollObserver?.install()
+        if captureEnabled, let window = WebScrollFreezeDebugProbe.keyWindow() {
+            WebScrollFreezeDebugActiveTouchProbe.installIfNeeded(on: window)
+        }
     }
 
     private func addObservers() {
@@ -1295,7 +1312,7 @@ class TabViewController: UIViewController {
         dismissContextualOnboardingIfNeeded()
     }
 
-    func presentExperimentContextualDaxFireDialog() {
+    func presentDuckAIOnboardingFireDialog() {
         contextualOnboardingLogic.setLastShownDialog(type: .fire(.duckAIOnboarding))
         let fireSpec = DaxDialogs.BrowsingSpec.fireDuckAIOnboarding
         presentContextualOnboarding(for: fireSpec)
@@ -1627,6 +1644,7 @@ class TabViewController: UIViewController {
                                       malicousSiteThreatKind: specialErrorPageNavigationHandler.currentThreatKind,
                                       shouldCheckServerTrust: shouldCheckServerTrust,
                                       allActiveContentScopeExperiments: contentScopeExperimentsManager.allActiveContentScopeExperiments)
+        privacyInfo.cookieConsentManaged = CookieConsentInfo.initialCPMDiagnostics
         let isCertificateInvalid = certificateTrustEvaluator
             .evaluateCertificateTrust(trust: webView.serverTrust)
             .map { !$0 }
@@ -1732,9 +1750,13 @@ class TabViewController: UIViewController {
 
         var loadedWebExtensions: String?
         var adBlockingScriptletsVersion: String?
+        var cpmExtensionLoaded = false
+        var cpmExtensionDroppedCallbacks = 0
         if #available(iOS 18.4, *), let webExtensionManager {
             loadedWebExtensions = webExtensionManager.loadedWebExtensionsString()
             adBlockingScriptletsVersion = webExtensionManager.adBlockingScriptletsVersion()
+            cpmExtensionLoaded = webExtensionManager.isAutoconsentExtensionLoaded
+            cpmExtensionDroppedCallbacks = webExtensionManager.eventsListener.droppedCallbacksCount
         }
 
         return PrivacyDashboardViewController.BreakageAdditionalInfo(currentURL: currentURL,
@@ -1752,7 +1774,9 @@ class TabViewController: UIViewController {
                                                                      autoplayBlockingMode: autoplaySettings.currentAutoplayBlockingMode.rawValue,
                                                                      isAfterSuppressedXSafariRedirect: safariRedirectHandler.isAfterSuppressedXSafariRedirect(for: currentURL),
                                                                      loadedWebExtensions: loadedWebExtensions,
-                                                                     adBlockingExtensionScriptletsVersion: adBlockingScriptletsVersion)
+                                                                     adBlockingExtensionScriptletsVersion: adBlockingScriptletsVersion,
+                                                                     cpmExtensionLoaded: cpmExtensionLoaded,
+                                                                     cpmExtensionDroppedCallbacks: cpmExtensionDroppedCallbacks)
     }
 
     public func print() {
@@ -2403,12 +2427,11 @@ extension TabViewController: WKNavigationDelegate {
         linkProtection.setMainFrameUrl(nil)
         referrerTrimming.onFailedNavigation()
 
-        // Skip the site-loading failure pixel for download handoffs (WebKit error 102) and user
-        // cancellations (NSURLErrorCancelled) — same exclusions as `didFailProvisionalNavigation`.
+        // Skip the site-loading failure pixel for download handoffs (WebKit error 102) — same exclusion
+        // as `didFailProvisionalNavigation`.
         let nsError = error as NSError
         let isDownloadHandoff = nsError.code == 102 && nsError.domain == "WebKitErrorDomain"
-        let isCancellation = nsError.code == NSURLErrorCancelled && nsError.domain == NSURLErrorDomain
-        if !isDownloadHandoff && !isCancellation {
+        if !isDownloadHandoff {
             navigationPixelResponder.didFail(navigation, error: error)
         }
 
@@ -2456,6 +2479,10 @@ extension TabViewController: WKNavigationDelegate {
             self.url = webView.url
         }
 
+        // Fire the site-loading failure pixel after the download-handoff guard above so WebKit error 102
+        // isn't miscounted as a failure. User cancellations are counted intentionally.
+        navigationPixelResponder.didFail(navigation, error: error)
+
         // Bail out before showing error when navigation was cancelled by the user
         if error.code == NSURLErrorCancelled && error.domain == NSURLErrorDomain {
             webpageDidFailToLoad()
@@ -2464,10 +2491,6 @@ extension TabViewController: WKNavigationDelegate {
             self.url = webView.url
             return
         }
-
-        // Fire the site-loading failure pixel after the early-return guards above so download handoffs
-        // (WebKit error 102) and user cancellations (NSURLErrorCancelled) aren't miscounted as failures.
-        navigationPixelResponder.didFail(navigation, error: error)
 
         // wait before showing errors in case they recover automatically
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -3927,7 +3950,12 @@ extension ConsentStatusInfo {
             selftestFailed: selftestFailed,
             consentReloadLoop: consentReloadLoop,
             consentRule: consentRule,
-            consentHeuristicEnabled: consentHeuristicEnabled
+            consentHeuristicEnabled: consentHeuristicEnabled,
+            cpmDashboardState: .applied,
+            cpmStage: cpmStage.flatMap(CookieConsentCPMStage.init(rawValue:)),
+            cpmErrors: cpmErrors,
+            cpmQueueSize: cpmQueueSize,
+            cpmConfigVersion: cpmConfigVersion
         )
     }
 }
