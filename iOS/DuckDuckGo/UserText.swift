@@ -941,7 +941,7 @@ public struct UserText {
         let unit = daysUntilTrialEnds == 1 ? "day" : "days"
         return "Your free trial ends in \(daysUntilTrialEnds) \(unit)"
     }
-    public static let subscriptionExpirationReminderNotificationBody = NotLocalizedString("subscription.expiration-reminder.notification.body", value: "Try all your new protections before your trial ends!", comment: "Body for the Privacy Pro free-trial expiration reminder notification. Used for en_US locale only.")
+    public static let subscriptionExpirationReminderNotificationBody = NotLocalizedString("subscription.expiration-reminder.notification.body", value: "Try all your new premium protections before your trial ends!", comment: "Body for the Privacy Pro free-trial expiration reminder notification. Used for en_US locale only.")
 
     // MARK: Settings Screen
 
