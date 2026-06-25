@@ -3851,11 +3851,11 @@ extension Pixel.Event {
         // MARK: Push Notification
         case .inactiveUserProvisionalPushNotificationTapped: return "m_push-notification_local-provisional_inactive-user-tap"
         case .userNotificationAuthorizationStatusDaily: return "m_push-notification_user-notification-authorization-status"
-        case .subscriptionExpirationReminderScheduled: return "m_push-notification_subscription-expiration-reminder_scheduled"
-        case .subscriptionExpirationReminderNotificationTapped: return "m_push-notification_subscription-expiration-reminder_tapped"
-        case .subscriptionExpirationReminderNotificationDismissed: return "m_push-notification_subscription-expiration-reminder_dismissed"
-        case .subscriptionExpirationReminderCancelled: return "m_push-notification_subscription-expiration-reminder_cancelled"
-        case .subscriptionExpirationReminderSchedulingError: return "m_push-notification_subscription-expiration-reminder_scheduling-error"
+        case .subscriptionExpirationReminderScheduled: return "push-notification_subscription-expiration-reminder_scheduled"
+        case .subscriptionExpirationReminderNotificationTapped: return "push-notification_subscription-expiration-reminder_tapped"
+        case .subscriptionExpirationReminderNotificationDismissed: return "push-notification_subscription-expiration-reminder_dismissed"
+        case .subscriptionExpirationReminderCancelled: return "push-notification_subscription-expiration-reminder_cancelled"
+        case .subscriptionExpirationReminderSchedulingError: return "push-notification_subscription-expiration-reminder_scheduling-error"
 
         // MARK: Freemium Personal Information Removal
         case .freemiumPIRSettingsEntryPointClicked: return "m_dbp_freemium_settings_entry_point_clicked"
