@@ -96,5 +96,19 @@
         "triggers": ["other"],
         "suffixes": ["daily_standard"],
         "parameters": ["appVersion", "pixelSource", "channel"]
+    },
+    "m_mac_aichat_open_settings_main_menu": {
+        "description": "Fired when user opens AI Settings from the main menu",
+        "owners": ["jotaemepereira"],
+        "triggers": ["other"],
+        "suffixes": ["daily_standard"],
+        "parameters": ["appVersion", "pixelSource", "channel"]
+    },
+    "m_mac_aichat_open_settings_more_options_menu": {
+        "description": "Fired when user opens AI Settings from the more options menu",
+        "owners": ["jotaemepereira"],
+        "triggers": ["other"],
+        "suffixes": ["daily_standard"],
+        "parameters": ["appVersion", "pixelSource", "channel"]
     }
 }
