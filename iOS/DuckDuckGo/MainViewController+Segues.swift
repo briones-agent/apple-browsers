@@ -146,8 +146,10 @@ extension MainViewController {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()
 
+        // Reuse the tab's live PrivacyInfo (with its accumulated tracker/protection state) as the
+        // dashboard flow does; only build a fresh one if the tab has none yet.
         guard let currentURL = currentTab?.url,
-              let privacyInfo = currentTab?.makePrivacyInfo(url: currentURL) else {
+              let privacyInfo = currentTab?.privacyInfo ?? currentTab?.makePrivacyInfo(url: currentURL) else {
             assertionFailure("Missing fundamental data")
             return
         }
@@ -219,6 +221,11 @@ extension MainViewController {
             return
         }
 
+        let duckAIGridContentProvider = DuckAIGridContentResolver(
+            featureFlagger: featureFlagger,
+            storageHandler: duckAiNativeStorageHandler
+        )
+
         let storyboard = UIStoryboard(name: "TabSwitcher", bundle: nil)
         guard let controller = storyboard.instantiateInitialViewController(creator: { coder in
             TabSwitcherViewController(coder: coder,
@@ -235,7 +242,9 @@ extension MainViewController {
                                       fireproofing: self.fireproofing,
                                       keyValueStore: self.keyValueStore,
                                       daxDialogsManager: self.daxDialogsManager,
-                                      initialTrackerCountState: initialTrackerCountState)
+                                      initialTrackerCountState: initialTrackerCountState,
+                                      duckAIGridContentProvider: duckAIGridContentProvider,
+                                      duckAIVoiceSessionTracker: self.duckAIVoiceSessionTracker)
         }) else {
             assertionFailure()
             return
@@ -488,8 +497,10 @@ extension MainViewController {
                                                   experimentalAIChatManager: ExperimentalAIChatManager(featureFlagger: featureFlagger),
                                                   privacyConfigurationManager: privacyConfigurationManager,
                                                   keyValueStore: keyValueStore,
+                                                  contentBlockingAssetsPublisher: contentBlockingAssetsPublisher,
                                                   idleReturnEligibilityManager: idleReturnEligibilityManager,
                                                   afterInactivityOptionAdapter: afterInactivityOptionAdapter,
+                                                  lastTabShortcutAdapter: lastTabShortcutAdapter,
                                                   systemSettingsPiPTutorialManager: systemSettingsPiPTutorialManager,
                                                   runPrerequisitesDelegate: dbpIOSPublicInterface,
                                                   dataBrokerProtectionViewControllerProvider: dbpIOSPublicInterface,
@@ -502,6 +513,11 @@ extension MainViewController {
                                                   adBlockingAvailability: adBlockingAvailability)
 
         settingsViewModel.autoClearActionDelegate = self
+        settingsViewModel.onRequestOpenDuckAIChat = { [weak self] in
+            self?.dismiss(animated: true) {
+                self?.loadUrlInNewTab(.duckAiSettings, inheritedAttribution: nil)
+            }
+        }
         Pixel.fire(pixel: .settingsPresented)
 
         func doLaunch() {

@@ -17,8 +17,6 @@
 //  limitations under the License.
 //
 
-#if DEBUG
-
 import SwiftUI
 import DesignResourcesKit
 
@@ -27,19 +25,19 @@ import DesignResourcesKit
 /// relies on each style's `pressed: Bool` init parameter so the press state can be
 /// rendered statically (SwiftUI doesn't let us synthesize a pressed
 /// `ButtonStyleConfiguration` from outside).
-private struct IOSButtonsDebugView: View {
+public struct IOSButtonsDebugView: View {
     @StateObject private var override: RebrandPreviewOverride
 
-    init() {
+    public init() {
         _override = StateObject(wrappedValue: RebrandPreviewOverride(isRebranded: true))
     }
 
     private let iconName = "face.smiling"
 
-    var body: some View {
+    public var body: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading, spacing: 56) {
-                Text("iOS Buttons")
+                Text(verbatim: "iOS Buttons")
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(Color(designSystemColor: .textPrimary))
 
@@ -59,7 +57,7 @@ private struct IOSButtonsDebugView: View {
 
     private func columnHeader(_ title: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
+            Text(verbatim: title)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(Color(designSystemColor: .textPrimary))
             Rectangle()
@@ -70,7 +68,7 @@ private struct IOSButtonsDebugView: View {
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text)
+        Text(verbatim: text)
             .font(.system(size: 14))
             .foregroundColor(Color(designSystemColor: .textPrimary))
             .fixedSize(horizontal: false, vertical: true)
@@ -92,35 +90,48 @@ private struct IOSButtonsDebugView: View {
         .frame(width: 280, alignment: .leading)
     }
 
-    // MARK: Type column (compact / small height)
+    // MARK: Type column (compact + large, paired)
 
     private var typeColumn: some View {
         VStack(alignment: .leading, spacing: 12) {
             columnHeader("Type")
-            caption("Available in 4 active levels")
+            caption("Available in 4 active levels (compact + large)")
 
-            Button("Brand") {}
-                .buttonStyle(BrandButtonStyle(compact: true, fullWidth: false))
-            Button("Default") {}
-                .buttonStyle(PrimaryButtonStyle(compact: true, fullWidth: false))
-            Button("Secondary") {}
-                .buttonStyle(SecondaryFillButtonStyle(compact: true, fullWidth: false))
-            Button("Ghost") {}
-                .buttonStyle(GhostButtonStyle(compact: true))
-                .fixedSize(horizontal: true, vertical: false)
+            sizePairRow { compact in
+                Button("Brand") {}
+                    .buttonStyle(BrandButtonStyle(compact: compact, fullWidth: false))
+            }
+            sizePairRow { compact in
+                Button("Default") {}
+                    .buttonStyle(PrimaryButtonStyle(compact: compact, fullWidth: false))
+            }
+            sizePairRow { compact in
+                Button("Secondary") {}
+                    .buttonStyle(SecondaryFillButtonStyle(compact: compact, fullWidth: false))
+            }
+            sizePairRow { compact in
+                Button("Ghost") {}
+                    .buttonStyle(GhostButtonStyle(compact: compact))
+                    .fixedSize(horizontal: true, vertical: false)
+            }
 
             Spacer().frame(height: 16)
-            caption("3 destructive levels")
+            caption("3 destructive levels (compact + large)")
 
-            Button("Destructive") {}
-                .buttonStyle(PrimaryDestructiveButtonStyle(compact: true, fullWidth: false))
-            Button("Destructive Secondary") {}
-                .buttonStyle(SecondaryDestructiveButtonStyle(compact: true, fullWidth: false))
-            Button("Destructive Ghost") {}
-                .buttonStyle(DestructiveGhostButtonStyle(compact: true))
-                .fixedSize(horizontal: true, vertical: false)
+            sizePairRow { compact in
+                Button("Destructive") {}
+                    .buttonStyle(PrimaryDestructiveButtonStyle(compact: compact, fullWidth: false))
+            }
+            sizePairRow { compact in
+                Button("Destructive Secondary") {}
+                    .buttonStyle(SecondaryDestructiveButtonStyle(compact: compact, fullWidth: false))
+            }
+            sizePairRow { compact in
+                Button("Destructive Ghost") {}
+                    .buttonStyle(DestructiveGhostButtonStyle(compact: compact))
+                    .fixedSize(horizontal: true, vertical: false)
+            }
         }
-        .frame(width: 280, alignment: .leading)
     }
 
     // MARK: Icon column (small + large paired per row)
@@ -130,19 +141,19 @@ private struct IOSButtonsDebugView: View {
             columnHeader("Icon")
             caption("All variants can have an icon on the left.")
 
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Brand", compact: compact) }
                     .buttonStyle(BrandButtonStyle(compact: compact, fullWidth: false))
             }
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Default", compact: compact) }
                     .buttonStyle(PrimaryButtonStyle(compact: compact, fullWidth: false))
             }
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Secondary", compact: compact) }
                     .buttonStyle(SecondaryFillButtonStyle(compact: compact, fullWidth: false))
             }
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Ghost", compact: compact) }
                     .buttonStyle(GhostButtonStyle(compact: compact))
                     .fixedSize(horizontal: true, vertical: false)
@@ -150,15 +161,15 @@ private struct IOSButtonsDebugView: View {
 
             Spacer().frame(height: 16)
 
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Destructive", compact: compact) }
                     .buttonStyle(PrimaryDestructiveButtonStyle(compact: compact, fullWidth: false))
             }
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Destructive", compact: compact) }
                     .buttonStyle(SecondaryDestructiveButtonStyle(compact: compact, fullWidth: false))
             }
-            iconRow { compact in
+            sizePairRow { compact in
                 Button {} label: { iconLabel("Destructive", compact: compact) }
                     .buttonStyle(DestructiveGhostButtonStyle(compact: compact))
                     .fixedSize(horizontal: true, vertical: false)
@@ -171,13 +182,13 @@ private struct IOSButtonsDebugView: View {
         HStack(spacing: 8) {
             Image(systemName: iconName)
                 .font(.system(size: compact ? 16 : 24))
-            Text(text)
+            Text(verbatim: text)
         }
     }
 
-    /// Renders a row of two button samples (compact on the left, large on the right)
-    /// so the small/large pair shares a Y baseline like the Figma "Icon" column.
-    private func iconRow<Content: View>(@ViewBuilder content: @escaping (_ compact: Bool) -> Content) -> some View {
+    /// Renders a row of two button samples — compact (≈40pt) on the left, large (≈50pt) on the
+    /// right — so both sizes share a Y baseline for easy comparison.
+    private func sizePairRow<Content: View>(@ViewBuilder content: @escaping (_ compact: Bool) -> Content) -> some View {
         HStack(alignment: .top, spacing: 12) {
             content(true)
             content(false)
@@ -198,40 +209,44 @@ private struct IOSButtonsDebugView: View {
 
     @ViewBuilder
     private func statesStack(label: String, inactive: Bool) -> some View {
+        let title = inactive ? "Inactive" : "Pressed"
         VStack(alignment: .leading, spacing: 12) {
             caption(label)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(BrandButtonStyle(disabled: inactive, fullWidth: false, pressed: !inactive))
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(PrimaryButtonStyle(disabled: inactive, fullWidth: false, pressed: !inactive))
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(SecondaryFillButtonStyle(disabled: inactive, fullWidth: false, pressed: !inactive))
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(GhostButtonStyle(disabled: inactive, pressed: !inactive))
                 .fixedSize(horizontal: true, vertical: false)
 
             Spacer().frame(height: 16)
 
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(PrimaryDestructiveButtonStyle(disabled: inactive, fullWidth: false, pressed: !inactive))
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(SecondaryDestructiveButtonStyle(disabled: inactive, fullWidth: false, pressed: !inactive))
-            Button("Pressed") {}
+            Button(title) {}
                 .buttonStyle(DestructiveGhostButtonStyle(disabled: inactive, pressed: !inactive))
                 .fixedSize(horizontal: true, vertical: false)
         }
     }
 }
 
+#if DEBUG
 #Preview("iOS Buttons (Figma) / Light") {
     IOSButtonsDebugView()
+        .environment(\.colorScheme, .light)
         .preferredColorScheme(.light)
 }
 
 #Preview("iOS Buttons (Figma) / Dark") {
     IOSButtonsDebugView()
+        .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)
 }
 

@@ -47,6 +47,25 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866473771128
     case networkProtectionAppStoreSysexMessage
 
+    /// Gates the "Strict routing" VPN toggle.
+    case vpnStrictRoutingToggle
+
+    /// Gates the "Exclude Carrier-Grade NAT" VPN toggle.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214946884020610?focus=true
+    case vpnExcludeCGNATToggle
+
+    /// Kill switch: enable remotely to disable orphaned-proxy detection (tunnel heartbeat + proxy detection loop + pixel).
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215509351454304
+    case vpnOrphanProxyDetectionKillSwitch
+
+    /// Kill switch: enable remotely to disable the orphaned-proxy full-bypass behavior.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215509351454309
+    case vpnOrphanProxyBypassKillSwitch
+
+    /// Toggle for the Copy VPN Diagnostics button in VPN settings.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215794369750045
+    case vpnShowCopyDiagnosticsButton
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866615719736
     case autoUpdateInDEBUG
 
@@ -58,6 +77,11 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866474376005
     case webExtensions
+
+    /// Failsafe kill switch for the lightweight web-extension reload on data clear (fire). On by
+    /// default; disable remotely to fall back to the full reload (`loadInstalledExtensions()`).
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215451266423288
+    case webExtensionLightweightReload
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213380159275576
     case embeddedExtension
@@ -107,6 +131,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866615582950
     case aiChatPageContext
 
+    /// Enables the "Attach to Duck.ai" context-menu item that attaches selected text as the sidebar's page context
+    case aiChatSelectionContext
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866617328244
     case aiChatKeepSession
 
@@ -124,6 +151,9 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212710873113687
     case aiChatOmnibarOnboarding
+
+    /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1215385527516382?focus=true
+    case aiChatOnboardingToggleAffectsNtpAndDdg
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866476152134
     case osSupportForceUnsupportedMessage
@@ -233,6 +263,16 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/72649045549333/task/1212762049862432?focus=true
     case memoryUsageReporting
 
+    /// Lazy favicon image loading (default-ON kill switch; off reverts to the legacy eager full-image cache).
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215720761295352
+    case faviconLazyImageLoading
+
+    /// Favicon storing improvements: store only the favicons the browser displays — drop favicons larger than the
+    /// max display size (64 px), downscaling the single kept larger one — instead of storing every fetched favicon.
+    /// Off follows the pre-existing path: every fetched favicon is stored at its original resolution.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215720760576164
+    case faviconStoringImprovements
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212901927858518?focus=true
     case aiChatSync
 
@@ -240,9 +280,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214554020534812?focus=true
     case heuristicAction
 
-    /// Enables Next Steps List widget with a single card displayed at a time on New Tab page
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212634388261605?focus=true
-    case nextStepsListWidget
+    /// Cookie Pop-up Preference picker in settings
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215960699028461?focus=true
+    case cookiePopupPreferenceSetting
 
     /// Enables advanced card ordering for the Next Steps List widget
     /// This flag is disabled by default to allow testing the new widget design with current ordering logic
@@ -298,6 +338,9 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1213083312441631/task/1213493672373295?focus=true
     case aiChatNtpWebSearch
+
+    /// Enables attaching content from multiple open tabs (and files) to the New Tab Page omnibar Duck.ai chat.
+    case aiChatNtpAttachMoreTabs
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213279513677422
     case aiChatSidebarFloating
@@ -360,6 +403,12 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214025222413375
     case aiChatNativeDataAccess
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215798415697847
+    /// Replaces the web-link Search Assist and Hide AI-Generated Images rows on the AI Features
+    /// settings screen with native controls, regroups the main AI settings at the top, and adds the
+    /// "Disable All AI Options" / Reset button. Off keeps today's web-link rows.
+    case aiFeaturesNativeControls
+
     /// macOS only. Gates the native-driven Duck.ai voice-chat microphone permission flow
     /// (auto-grant at launch, locked Permission Center row, system-disabled warning UI,
     /// FE→native failure handler that surfaces the popover).
@@ -379,6 +428,16 @@ public enum FeatureFlag: String, CaseIterable {
     /// Shows a link in Settings → AI Features that opens the Duck.ai Settings modal.
     /// https://app.asana.com/1/137249556945/task/1214533186882448
     case aiChatSettingsLinkInAiFeatures
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215597855114757?focus=true
+    case syncScopedAccessCredentials
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215597855114763?focus=true
+    case syncCanUseV2ConnectFlow
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215597855114765?focus=true
+    case syncCanShowV2ConnectCode
+
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -431,6 +490,16 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(NetworkProtectionSubfeature.appStoreSystemExtension), category: .vpn)
         case .networkProtectionAppStoreSysexMessage:
             Config(source: .remoteReleasable(NetworkProtectionSubfeature.appStoreSystemExtensionMessage), category: .vpn)
+        case .vpnStrictRoutingToggle:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(NetworkProtectionSubfeature.strictRoutingToggle), category: .vpn)
+        case .vpnExcludeCGNATToggle:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(NetworkProtectionSubfeature.excludeCGNAT), category: .vpn)
+        case .vpnOrphanProxyDetectionKillSwitch:
+            Config(source: .remoteReleasable(NetworkProtectionSubfeature.orphanProxyDetectionKillSwitch), category: .vpn)
+        case .vpnOrphanProxyBypassKillSwitch:
+            Config(source: .remoteReleasable(NetworkProtectionSubfeature.orphanProxyBypassKillSwitch), category: .vpn)
+        case .vpnShowCopyDiagnosticsButton:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(NetworkProtectionSubfeature.showCopyDiagnosticsButton), category: .vpn)
         case .autoUpdateInDEBUG:
             Config(source: .disabled, category: .updates)
         case .autoUpdateInREVIEW:
@@ -439,6 +508,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(AutofillSubfeature.partialFormSaves))
         case .webExtensions:
             Config(defaultValue: .enabled, source: .remoteReleasable(WebExtensionsSubfeature.featureEnabled), category: .webExtensions)
+        case .webExtensionLightweightReload:
+            Config(defaultValue: .enabled, source: .remoteReleasable(WebExtensionsSubfeature.lightweightReloadOnDataClear), category: .webExtensions)
         case .embeddedExtension:
             Config(source: .remoteReleasable(WebExtensionsSubfeature.embeddedExtension), category: .webExtensions)
         case .adBlockingExtension:
@@ -458,7 +529,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .dbpEmailConfirmationDecoupling:
             Config(source: .remoteReleasable(DBPSubfeature.emailConfirmationDecoupling), category: .dbp)
         case .dbpWebViewUserAgent:
-            Config(source: .remoteReleasable(DBPSubfeature.webViewUserAgent), category: .dbp)
+            Config(source: .remoteReleasable(DBPSubfeature.webViewUserAgent), supportsLocalOverriding: true, category: .dbp)
         case .syncSetupBarcodeIsUrlBased:
             Config(source: .remoteReleasable(SyncSubfeature.syncSetupBarcodeIsUrlBased), category: .sync)
         case .allowSingleDeviceOnConnectScreen:
@@ -471,6 +542,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(PrivacyProSubfeature.paidAIChat), category: .subscription)
         case .aiChatPageContext:
             Config(source: .remoteReleasable(AIChatSubfeature.pageContext), category: .duckAI)
+        case .aiChatSelectionContext:
+            Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.selectionContext), category: .duckAI)
         case .aiChatKeepSession:
             Config(source: .remoteReleasable(AIChatSubfeature.keepSession), category: .duckAI)
         case .aiChatOmnibarToggle:
@@ -483,6 +556,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(AIChatSubfeature.omnibarTools), category: .duckAI)
         case .aiChatOmnibarOnboarding:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.omnibarOnboarding), category: .duckAI)
+        case .aiChatOnboardingToggleAffectsNtpAndDdg:
+            Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.onboardingToggleAffectsNtpAndDdg), category: .duckAI)
         case .osSupportForceUnsupportedMessage:
             Config(source: .disabled, category: .osSupportWarnings)
         case .osSupportWarning:
@@ -547,12 +622,16 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .disabled)
         case .memoryUsageReporting:
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.memoryUsageReporting))
+        case .faviconLazyImageLoading:
+            Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.faviconLazyImageLoading))
+        case .faviconStoringImprovements:
+            Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.faviconStoringImprovements))
         case .aiChatSync:
             Config(source: .remoteReleasable(SyncSubfeature.aiChatSync))
         case .heuristicAction:
             Config(source: .remoteReleasable(AutoconsentSubfeature.heuristicAction), cohortType: HeuristicActionCohort.self)
-        case .nextStepsListWidget:
-            Config(defaultValue: .enabled, source: .remoteReleasable(HtmlNewTabPageSubfeature.nextStepsListWidget))
+        case .cookiePopupPreferenceSetting:
+            Config(source: .remoteReleasable(AutoconsentSubfeature.cookiePopupPreferenceSetting), category: .popupBlocking)
         case .nextStepsListAdvancedCardOrdering:
             Config(source: .disabled)
         case .crashCollectionLimitCallStackTreeDepth:
@@ -587,6 +666,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.ntpImageGeneration), category: .duckAI)
         case .aiChatNtpWebSearch:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.ntpWebSearch), category: .duckAI)
+        case .aiChatNtpAttachMoreTabs:
+            Config(source: .remoteReleasable(AIChatSubfeature.ntpAttachMoreTabs), category: .duckAI)
         case .aiChatSidebarFloating:
             Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.sidebarFloating), category: .duckAI)
         case .aiChatChromeSidebar:
@@ -623,6 +704,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(AIChatSubfeature.nativeStorage), category: .duckAI)
         case .aiChatNativeDataAccess:
             Config(source: .remoteReleasable(AIChatSubfeature.nativeDataAccess), category: .duckAI)
+        case .aiFeaturesNativeControls:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.aiFeaturesNativeControls), category: .duckAI)
         case .aiChatNativeVoicePermissionFlow:
             Config(defaultValue: .enabled,
                    source: .remoteReleasable(AIChatSubfeature.nativeVoicePermissionFlow),
@@ -636,6 +719,12 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.newErrorPageReload))
         case .aiChatSettingsLinkInAiFeatures:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.settingsLinkInAiFeatures), category: .duckAI)
+        case .syncScopedAccessCredentials:
+            Config(source: .remoteReleasable(SyncSubfeature.scopedAccessCredentials), category: .sync)
+        case .syncCanUseV2ConnectFlow:
+            Config(source: .remoteReleasable(SyncSubfeature.canUseV2ConnectFlow), category: .sync)
+        case .syncCanShowV2ConnectCode:
+            Config(source: .remoteReleasable(SyncSubfeature.canShowV2ConnectCode), category: .sync)
         }
     }
 

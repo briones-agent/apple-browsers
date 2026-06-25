@@ -612,6 +612,7 @@ private final class MockWebExtensionManaging: WebExtensionManaging {
     var extensionUpdates: AsyncStream<Void> { AsyncStream { _ in } }
 
     func loadInstalledExtensions() async {}
+    func reloadInstalledExtensions() async {}
     func installExtension(from sourceURL: URL) async throws {}
     @MainActor func uninstallExtension(identifier: String) throws {}
 
@@ -656,6 +657,7 @@ private final class MockWebExtensionManaging: WebExtensionManaging {
 @available(macOS 15.4, iOS 18.4, *)
 private final class MockEventsListener: WebExtensionEventsListening {
     var controller: WKWebExtensionController?
+    var droppedCallbacksCount = 0
 
     func didOpenWindow(_ window: WKWebExtensionWindow) {}
     func didCloseWindow(_ window: WKWebExtensionWindow) {}

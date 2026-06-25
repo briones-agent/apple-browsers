@@ -159,7 +159,12 @@ extension TabViewController {
             // Settings lives in the header tiles; Zoom/Find/Print and site-utility items are omitted.
             entries.append(buildNewAIChatEntry(withSmallIcon: useSmallIcon))
             entries.append(buildAINewVoiceChatEntry(useSmallIcon: useSmallIcon))
-            entries.append(buildAIChatsEntry(useSmallIcon: useSmallIcon))
+            // Native sheet on iPhone when the flag is on; Duck.ai web sidebar otherwise.
+            if isNativeChatHistoryAvailable {
+                entries.append(buildDuckAiChatsEntry(withSmallIcon: useSmallIcon))
+            } else {
+                entries.append(buildAIChatsEntry(useSmallIcon: useSmallIcon))
+            }
             entries.append(buildAIChatSettingsEntry(useSmallIcon: useSmallIcon, useAIGlyph: true))
 
             entries.append(.separator)
@@ -296,7 +301,7 @@ extension TabViewController {
             entries.append(.separator)
         }
 
-        if featureFlagger.isFeatureOn(.aiChatNativeChatHistory) {
+        if isNativeChatHistoryAvailable {
             entries.append(buildDuckAiChatsEntry())
         }
 
@@ -554,10 +559,15 @@ extension TabViewController {
     }
 
     private func buildDuckAiChatsEntry(withSmallIcon smallIcon: Bool = true) -> BrowsingMenuEntry {
-        .regular(name: UserText.actionChats,
-                 accessibilityLabel: UserText.actionChats,
-                 image: smallIcon ? DesignSystemImages.Glyphs.Size16.aiChatHistory : DesignSystemImages.Glyphs.Size24.aiChatHistory,
-                 action: { [weak self] in
+        // Size24 `chats` forced to `.alwaysTemplate` so it tints in dark mode; Size16 falls back
+        // to `aiChatHistory` (no `chats` glyph at 16px).
+        let image = smallIcon
+            ? DesignSystemImages.Glyphs.Size16.aiChatHistory
+            : DesignSystemImages.Glyphs.Size24.chats.withRenderingMode(.alwaysTemplate)
+        return .regular(name: UserText.actionChats,
+                        accessibilityLabel: UserText.actionChats,
+                        image: image,
+                        action: { [weak self] in
             self?.openAIChatHistory()
         })
     }
@@ -621,6 +631,21 @@ extension TabViewController {
                  action: { [weak self] in
             DailyPixel.fireDailyAndCount(pixel: .aiChatSettingsMenuAIChatSettingsTapped)
             self?.submitOpenSettingsAction()
+        })
+    }
+
+    /// Website app-menu "Duck.ai Settings": opens Duck.ai in a new tab on its settings view.
+    /// Used off a Duck.ai tab, where the in-page `submitOpenSettingsAction` isn't available.
+    private func buildOpenSettingsEntry(useSmallIcon: Bool = true) -> BrowsingMenuEntry {
+        let image = useSmallIcon
+            ? DesignSystemImages.Glyphs.Size16.aiChatSettings
+            : DesignSystemImages.Glyphs.Size24.aiChatSettings
+        return .regular(name: UserText.actionAIChatSettings,
+                        accessibilityLabel: UserText.actionAIChatSettings,
+                        image: image,
+                        action: { [weak self] in
+            DailyPixel.fireDailyAndCount(pixel: .aiChatSettingsMenuAIChatSettingsTapped)
+            self?.openSettingsInNewTab()
         })
     }
 
@@ -823,7 +848,7 @@ extension TabViewController {
     }
 
     private func openAIChatHistory() {
-        delegate?.tabDidRequestAIChatHistory(tab: self)
+        delegate?.tabDidRequestAIChatHistory(tab: self, source: .browserMenu)
     }
 
     private func buildToggleProtectionEntry(forDomain domain: String, useSmallIcon: Bool = true) -> BrowsingMenuEntry {
@@ -1014,8 +1039,13 @@ extension TabViewController: BrowsingMenuEntryBuilding {
         }
     }
 
+    /// The native AI chat history sheet is an iPhone-only experience; iPad keeps the existing Duck.ai web entrypoints.
+    private var isNativeChatHistoryAvailable: Bool {
+        UIDevice.current.userInterfaceIdiom != .pad && featureFlagger.isFeatureOn(.aiChatNativeChatHistory)
+    }
+
     func makeDuckAiChatsEntry() -> BrowsingMenuEntry? {
-        guard featureFlagger.isFeatureOn(.aiChatNativeChatHistory) else { return nil }
+        guard isNativeChatHistoryAvailable else { return nil }
         return buildDuckAiChatsEntry(withSmallIcon: false)
     }
 
@@ -1025,13 +1055,15 @@ extension TabViewController: BrowsingMenuEntryBuilding {
     func makeDuckAIMenuItems() -> [BrowsingMenuEntry] {
         guard unifiedToggleInputFeature.isAvailable, shouldShowAIChatInMenu else { return [] }
 
-        // Duck.ai Settings is intentionally omitted here for now: there's no settings-open Duck.ai URL,
-        // and the in-page submitOpenSettingsAction is a no-op off a Duck.ai tab. It will return once the
-        // frontend exposes a settings-open URL (scoped as a follow-up), wired like Chats below.
+        // Native sheet on iPhone when the flag is on; Duck.ai web sidebar on iPad or when the flag is off.
+        let chatsEntry: BrowsingMenuEntry = isNativeChatHistoryAvailable
+            ? buildDuckAiChatsEntry(withSmallIcon: false)
+            : buildOpenChatListEntry(useSmallIcon: false)
         return [
             buildNewAIChatEntry(withSmallIcon: false),
             buildAINewVoiceChatEntry(useSmallIcon: false),
-            buildOpenChatListEntry(useSmallIcon: false)
+            chatsEntry,
+            buildOpenSettingsEntry(useSmallIcon: false)
         ]
     }
 

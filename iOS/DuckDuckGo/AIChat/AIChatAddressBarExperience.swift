@@ -64,7 +64,6 @@ struct AIChatAddressBarExperience: AIChatAddressBarExperienceProviding {
 
     var isIPadAIToggleExperienceEnabled: Bool {
         userInterfaceIdiomProvider.userInterfaceIdiom == .pad
-            && featureFlagger.isFeatureOn(.iPadAIToggle)
     }
 
     private var isIPadChromeShortcutInPlay: Bool {
@@ -76,7 +75,7 @@ struct AIChatAddressBarExperience: AIChatAddressBarExperienceProviding {
         if isIPadChromeShortcutInPlay {
             return DuckAIChromeShortcutVisibility.isAddressBarButtonVisibleOnIPad(
                 isLargeWidth: largeWidthProvider.isLargeWidth,
-                isAIChatNavigationBarUserSettingsEnabled: aiChatSettings.isAIChatNavigationBarUserSettingsEnabled
+                isTabBarShortcutEnabled: aiChatSettings.isAIChatTabBarUserSettingsEnabled
             )
         }
         return aiChatSettings.isAIChatAddressBarUserSettingsEnabled
