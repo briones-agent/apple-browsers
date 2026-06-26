@@ -725,6 +725,9 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         // The escape hatch and the empty-state logo are UTI chrome (bar-pinned hatch + the host's
         // `FocusedDaxLogoView`), not the NTP's — suppress the NTP's own so we never get two.
         controller.setEscapeHatch(nil)
+        // ...but keep the after-idle signal so the embedded NTP still shows the after-idle message
+        // (the visible hatch is the bar-pinned one).
+        controller.setOpenedAfterIdle(escapeHatchModel != nil)
         controller.setLogoHidden(true)
         return controller
     }
