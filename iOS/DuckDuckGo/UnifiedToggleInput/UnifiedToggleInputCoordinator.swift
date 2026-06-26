@@ -1094,12 +1094,12 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         }
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel) {
-        contentViewController.setEscapeHatch(model)
+    func setEscapeHatch(_ model: EscapeHatchModel, openedAfterIdle: Bool) {
+        contentViewController.setEscapeHatch(model, openedAfterIdle: openedAfterIdle)
     }
 
-    func clearEscapeHatch() {
-        contentViewController.setEscapeHatch(nil)
+    func clearEscapeHatch(openedAfterIdle: Bool = false) {
+        contentViewController.setEscapeHatch(nil, openedAfterIdle: openedAfterIdle)
     }
 
     func updateVoiceSearchAvailability(_ enabled: Bool) {

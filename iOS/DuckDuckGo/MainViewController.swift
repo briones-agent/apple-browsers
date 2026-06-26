@@ -1615,7 +1615,7 @@ class MainViewController: UIViewController {
         let model = escapeHatchModelBuilder.makeTabSwitcherOnly(targetTab: currentTab, router: self)
         controller.setEscapeHatch(model)
         currentNTPEscapeHatch = model
-        configureUnifiedInputEscapeHatch(model)
+        configureUnifiedInputEscapeHatch(model, openedAfterIdle: currentTab.openedAfterIdle)
     }
 
     /// True when an escape hatch action runs in focus mode (reads the persistent omnibar-session state, which
@@ -1727,7 +1727,7 @@ class MainViewController: UIViewController {
             lastActiveTabStore.recordActiveTab(uid: tabModel.uid)
         }
 
-        configureUnifiedInputEscapeHatch(hatch)
+        configureUnifiedInputEscapeHatch(hatch, openedAfterIdle: openedAfterIdle)
 
         // Suppress the NTP before it enters the view hierarchy so the Dax logo can't flash
         // on the one frame between addToContentContainer and the async alpha-0 set inside
@@ -1771,12 +1771,12 @@ class MainViewController: UIViewController {
         syncService.scheduler.requestSyncImmediately()
     }
 
-    private func configureUnifiedInputEscapeHatch(_ hatch: EscapeHatchModel?) {
+    private func configureUnifiedInputEscapeHatch(_ hatch: EscapeHatchModel?, openedAfterIdle: Bool) {
         guard let hatch else {
-            clearEscapeHatch()
+            clearEscapeHatch(openedAfterIdle: openedAfterIdle)
             return
         }
-        unifiedToggleInputCoordinator?.setEscapeHatch(hatch)
+        unifiedToggleInputCoordinator?.setEscapeHatch(hatch, openedAfterIdle: openedAfterIdle)
     }
 
     private func fireNTPShownInstrumentation(openedAfterIdle: Bool, hatch: EscapeHatchModel?) {
@@ -4780,10 +4780,10 @@ extension MainViewController: OmniBarDelegate {
         return model
     }
 
-    private func clearEscapeHatch() {
+    private func clearEscapeHatch(openedAfterIdle: Bool = false) {
         newTabPageViewController?.setEscapeHatch(nil)
         currentNTPEscapeHatch = nil
-        unifiedToggleInputCoordinator?.clearEscapeHatch()
+        unifiedToggleInputCoordinator?.clearEscapeHatch(openedAfterIdle: openedAfterIdle)
     }
 
     func useNewOmnibarTransitionBehaviour() -> Bool {
