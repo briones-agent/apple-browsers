@@ -1219,6 +1219,13 @@ public final class MockDatabase: DataBrokerProtectionRepository {
         return brokerProfileQueryDataToReturn.excludingIneligibleBrokers(isAuthenticatedUser: isAuthenticatedUser)
     }
 
+    public func fetchBrokerProfileQueryData(forBrokerId brokerId: Int64) throws -> [BrokerProfileQueryData] {
+        if let fetchAllBrokerProfileQueryDataError {
+            throw fetchAllBrokerProfileQueryDataError
+        }
+        return brokerProfileQueryDataToReturn.filter { $0.dataBroker.id == brokerId }
+    }
+
     public func fetchAllDataBrokers() throws -> [DataBrokerProtectionCore.DataBroker] {
         wasFetchAllDataBrokersCalled = true
 
@@ -1393,6 +1400,10 @@ public final class MockDatabase: DataBrokerProtectionRepository {
 
     public func fetchExtractedProfiles(for brokerId: Int64) throws -> [ExtractedProfile] {
         return extractedProfilesFromBroker
+    }
+
+    public func fetchAllExtractedProfiles() throws -> [ExtractedProfile] {
+        return brokerProfileQueryDataToReturn.flatMap { $0.extractedProfiles }
     }
 
     public func fetchAllAttempts() throws -> [AttemptInformation] {
@@ -2226,13 +2237,13 @@ public final class MockBrokerProfileJobDependencies: BrokerProfileJobDependencyP
         self.featureFlagger = MockDBPFeatureFlagger()
     }
 
-    public func createScanRunner(profileQuery: BrokerProfileQueryData,
+    public func createScanRunner(profileQuery: SubJobContextProviding,
                                  stageDurationCalculator: any StageDurationCalculator,
                                  shouldRunNextStep: @escaping () -> Bool) -> any BrokerProfileScanSubJobWebRunning {
         return mockScanRunner
     }
 
-    public func createOptOutRunner(profileQuery: BrokerProfileQueryData,
+    public func createOptOutRunner(profileQuery: SubJobContextProviding,
                                    stageDurationCalculator: any StageDurationCalculator,
                                    shouldRunNextStep: @escaping () -> Bool) -> any BrokerProfileOptOutSubJobWebRunning {
         return mockOptOutRunner
@@ -2876,8 +2887,7 @@ public final class MockScanSubJobWebRunner: BrokerProfileScanSubJobWebRunning {
 
     public init() { }
 
-    public func scan(_ profileQuery: BrokerProfileQueryData,
-                     showWebView: Bool,
+    public func scan(showWebView: Bool,
                      shouldRunNextStep: @escaping () -> Bool) async throws -> [ExtractedProfile] {
         wasScanCalled = true
 
@@ -2902,8 +2912,7 @@ public final class MockOptOutSubJobWebRunner: BrokerProfileOptOutSubJobWebProtoc
 
     public init() { }
 
-    public func optOut(profileQuery: BrokerProfileQueryData,
-                       extractedProfile: ExtractedProfile,
+    public func optOut(extractedProfile: ExtractedProfile,
                        showWebView: Bool,
                        shouldRunNextStep: @escaping () -> Bool) async throws {
         wasOptOutCalled = true
