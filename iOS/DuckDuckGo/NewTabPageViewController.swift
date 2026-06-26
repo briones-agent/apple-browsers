@@ -145,13 +145,18 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
         }
     }
 
-    /// `openedAfterIdle` defaults to `model != nil`; pass it explicitly when an NTP suppresses its own
-    /// hatch (drawn elsewhere) but should still show the after-idle message.
-    func setEscapeHatch(_ model: EscapeHatchModel?, openedAfterIdle: Bool? = nil) {
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
         newTabPageViewModel.escapeHatch = model
-        newTabPageViewModel.openedAfterIdle = openedAfterIdle ?? (model != nil)
+        newTabPageViewModel.openedAfterIdle = (model != nil)
         messagesModel.refresh()
         updateBorderView()
+    }
+
+    /// Sets the after-idle signal independently of the escape hatch, so an NTP that suppresses its
+    /// own hatch can still show the after-idle message.
+    func setOpenedAfterIdle(_ openedAfterIdle: Bool) {
+        newTabPageViewModel.openedAfterIdle = openedAfterIdle
+        messagesModel.refresh()
     }
 
     func setChromeLayoutContext(isBorderSuppressed: Bool) {
