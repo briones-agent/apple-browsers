@@ -838,10 +838,9 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
 
         viewController.applyCardLayout(.collapsed, animated: false)
         let renderState = computeRenderState()
-        viewController.apply(renderState.viewConfig, animated: false)
-        applyToolbarPresentation()
-        fetchModels()
 
+        // Set text before apply so clearDismissSnapshot sees the correct handler state when
+        // it fires inside applyCardLayout — otherwise textRightInset starts at the no-button value.
         let shouldSelectAllText: Bool
         if let text = prefilledText, !text.isEmpty {
             setText(text)
@@ -851,6 +850,10 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
             shouldSelectAllText = false
         }
         updateFloatingReturnKeyState()
+
+        viewController.apply(renderState.viewConfig, animated: false)
+        applyToolbarPresentation()
+        fetchModels()
 
         let expandedHeight = editingHeight()
 
@@ -989,9 +992,13 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         if animated {
             UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
                 applyModeChange()
+                // Push the new mode's content inset here (target height) so the suggestions content and
+                // the logo move in the same pass as the bar — not reactively after the height callback.
+                if didModeChange { self.pushContentInsets() }
             }
         } else {
             applyModeChange()
+            if didModeChange { pushContentInsets() }
         }
 
         applyToolbarPresentation()
@@ -1071,7 +1078,7 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     /// The collapsed AI-tab fire button. Exposed for `ViewHighlighter` targeting during onboarding.
     var aiTabFireButton: UIButton { viewController.aiTabFireButton }
 
-    /// Locks or unlocks the input bar during the Duck.ai onboarding experiment path.
+    /// Locks or unlocks the input bar during the Duck.ai fire onboarding path.
     /// When locked the text field cannot be activated and the collapsed bar ignores taps.
     func setOnboardingControlsLocked(_ locked: Bool) {
         isOnboardingLocked = locked
@@ -1399,6 +1406,10 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
             return
         }
         userScript.submitChangeModel(modelId)
+        guard isModelPickerForcedVisible, userScript.canDispatchBridgeMessages else {
+            return
+        }
+        UnifiedToggleInputCoordinatorPixelHelper.fireSubmitChangeModelPixel(modelId: modelId)
     }
 
     /// Surfaces the native model picker on the **active** chat in response to the FE's
@@ -1418,6 +1429,7 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         // expand animation before we ask the button to open its menu.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            UnifiedToggleInputCoordinatorPixelHelper.fireShowModelPickerPixel()
             self.viewController.presentModelPickerMenu()
         }
     }
@@ -1944,6 +1956,7 @@ extension UnifiedToggleInputCoordinator: UnifiedToggleInputViewControllerDelegat
                 recordDuckAIPromptDelivered(wasQueued: false, didSendBridgeMessage: didSendBridgeMessage)
             } else {
                 delegate?.unifiedToggleInputDidSubmitPrompt(text, modelId: configuration.modelId, tools: tools, reasoningEffort: configuration.reasoningEffort, images: images, files: files)
+                recordDuckAIPromptDelivered(wasQueued: false, didSendBridgeMessage: nil)
             }
         }
     }
@@ -2354,11 +2367,15 @@ private extension UnifiedToggleInputCoordinator {
     }
 
     private func markActiveChatPromptSubmitted() {
+        let wasInRecoveryPickerSession = isModelPickerForcedVisible
         hasSubmittedPrompt = true
         isModelPickerForcedVisible = false
         persistModelPickerPinClearedAfterHideIfNeeded()
         updateModelChipVisibility()
         syncHasSubmittedPromptToHandler()
+        if wasInRecoveryPickerSession {
+            UnifiedToggleInputCoordinatorPixelHelper.fireSubmitChangeModelPromptSentPixel()
+        }
     }
 
     func syncInputBehaviorToHandler() {
@@ -2642,6 +2659,11 @@ extension UnifiedToggleInputCoordinator {
     func recordDuckAIPromptDelivered(wasQueued: Bool?, didSendBridgeMessage: Bool?) {
         guard let scope = currentDuckAIWideEventFlowScope else { return }
         duckAIWideEventInstrumentation?.promptDeliveryUpdated(scope: scope, wasQueued: wasQueued, didSendBridgeMessage: didSendBridgeMessage)
+    }
+
+    func recordDuckAIPromptInterpretedAsURL() {
+        guard let scope = currentDuckAIWideEventFlowScope else { return }
+        duckAIWideEventInstrumentation?.promptInterpretedAsURL(scope: scope)
     }
 
     /// Called by the contextual sheet's native-input path, which submits its initial prompt

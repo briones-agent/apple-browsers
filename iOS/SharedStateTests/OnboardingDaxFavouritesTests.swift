@@ -44,6 +44,7 @@ private final class MockIdleReturnEligibilityManagerForMainVC: IdleReturnEligibi
     func isEligibleForNTPAfterIdle() -> Bool { false }
     func effectiveAfterInactivityOption() -> AfterInactivityOption { .lastUsedTab }
     func idleThresholdSeconds() -> Int { 60 }
+    func ntpAfterIdleState() -> NTPAfterIdleState { .notEligible }
 }
 
  @MainActor
@@ -137,7 +138,7 @@ private final class MockIdleReturnEligibilityManagerForMainVC: IdleReturnEligibi
                                     maliciousSiteProtectionPreferencesManager: MockMaliciousSiteProtectionPreferencesManager(),
                                     featureDiscovery: DefaultFeatureDiscovery(wasUsedBeforeStorage: UserDefaults.standard),
                                     keyValueStore: MockKeyValueFileStore(),
-                                    daxDialogsManager: DummyDaxDialogsManager(),
+                                    daxDialogsManager: MockDaxDialogsManager(),
                                     aiChatSettings: aiChatSettings,
                                     productSurfaceTelemetry: MockProductSurfaceTelemetry(),
                                     privacyStats: MockPrivacyStats(),
@@ -148,7 +149,7 @@ private final class MockIdleReturnEligibilityManagerForMainVC: IdleReturnEligibi
         )
         let fireExecutor = FireExecutor(tabManager: tabManager,
                                         websiteDataManager: mockWebsiteDataManager,
-                                        daxDialogsManager: DummyDaxDialogsManager(),
+                                        daxDialogsManager: MockDaxDialogsManager(),
                                         syncService: syncService,
                                         bookmarksDatabaseCleaner: bookmarkDatabaseCleaner,
                                         fireproofing: fireproofing,
@@ -198,7 +199,7 @@ private final class MockIdleReturnEligibilityManagerForMainVC: IdleReturnEligibi
             keyValueStore: keyValueStore,
             customConfigurationURLProvider: MockCustomURLProvider(),
             systemSettingsPiPTutorialManager: MockSystemSettingsPiPTutorialManager(),
-            daxDialogsManager: DummyDaxDialogsManager(),
+            daxDialogsManager: MockDaxDialogsManager(),
             dbpIOSPublicInterface: nil,
             freemiumPIREligibilityChecker: DefaultFreemiumPIREligibilityChecker(
                 featureFlagger: featureFlagger,

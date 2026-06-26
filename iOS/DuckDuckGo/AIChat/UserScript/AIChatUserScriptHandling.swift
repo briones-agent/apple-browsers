@@ -147,6 +147,7 @@ final class AIChatUserScriptErrorEventMapper: EventMapping<AIChatUserScriptError
 protocol AIChatUserScriptHandling: AnyObject {
     var displayMode: AIChatDisplayMode? { get set }
     var isFireModeProvider: (() -> Bool)? { get set }
+    var focusChatInputHandler: (@MainActor () -> Void)? { get set }
     func setPageContextProvider(_ provider: ((PageContextRequestReason) -> AIChatPageContextData?)?)
     func setContextualModePixelHandler(_ pixelHandler: AIChatContextualModePixelFiring)
     func getAIChatNativeConfigValues(params: Any, message: UserScriptMessage) -> Encodable?
@@ -179,6 +180,7 @@ protocol AIChatUserScriptHandling: AnyObject {
     func showModelPicker(params: Any, message: UserScriptMessage) async -> Encodable?
     func disableChatInput(params: Any, message: UserScriptMessage) async -> Encodable?
     func enableChatInput(params: Any, message: UserScriptMessage) async -> Encodable?
+    func focusChatInput(params: Any, message: UserScriptMessage) async -> Encodable?
 
     // Sync
     func getSyncStatus(params: Any, message: UserScriptMessage) -> Encodable?
@@ -201,6 +203,7 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
     private let syncHandler: AIChatSyncHandling
     private let featureFlagger: FeatureFlagger
     private let unifiedToggleInputFeature: UnifiedToggleInputFeatureProviding
+    private let iPadDuckAIControlsFeature: IPadDuckAIControlsFeatureProviding
     private var syncStatusChangedHandler: ((AIChatSyncHandler.SyncStatus) -> Void)?
     private var cancellables = Set<AnyCancellable>()
     private let migrationStore = AIChatMigrationStore()
@@ -220,6 +223,9 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
     /// Each owner (tab, contextual sheet, modal) is responsible for setting this.
     var isFireModeProvider: (() -> Bool)?
 
+    /// Called when the FE requests focus on the native address bar via `focusChatInput`.
+    var focusChatInputHandler: (@MainActor () -> Void)?
+
     /// Closure that provides page context on getAIChatPageContext requests.
     /// Parameter is the request reason (e.g., `.userAction` for manual attach).
     private var pageContextProvider: ((PageContextRequestReason) -> AIChatPageContextData?)?
@@ -232,6 +238,7 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
          aichatFullModeFeature: AIChatFullModeFeatureProviding = AIChatFullModeFeature(),
          aichatContextualModeFeature: AIChatContextualModeFeatureProviding = AIChatContextualModeFeature(),
          unifiedToggleInputFeature: UnifiedToggleInputFeatureProviding = UnifiedToggleInputFeature(),
+         iPadDuckAIControlsFeature: IPadDuckAIControlsFeatureProviding = IPadDuckAIControlsFeature(),
          aiChatUserScriptErrorEventMapper: EventMapping<AIChatUserScriptErrorEvent> = AIChatUserScriptErrorEventMapper(),
          isNativeStorageBridgeAvailable: Bool = false,
          installDateProvider: @escaping () -> Date? = { StatisticsUserDefaults().installDate },
@@ -246,6 +253,7 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
         self.aichatFullModeFeature = aichatFullModeFeature
         self.aichatContextualModeFeature = aichatContextualModeFeature
         self.unifiedToggleInputFeature = unifiedToggleInputFeature
+        self.iPadDuckAIControlsFeature = iPadDuckAIControlsFeature
         self.aiChatUserScriptErrorEventMapper = aiChatUserScriptErrorEventMapper
         self.isNativeStorageBridgeAvailable = isNativeStorageBridgeAvailable
         self.installDateProvider = installDateProvider
@@ -379,7 +387,7 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
         }
 
         let supportsNativeChatInput = (supportsFullMode || supportsContextualMode) && unifiedToggleInputFeature.isAvailable
-        let supportsNativePrompt = supportsNativeChatInput || defaults.supportsNativePrompt
+        let supportsNativePrompt = supportsNativeChatInput || defaults.supportsNativePrompt || iPadDuckAIControlsFeature.isAvailable
         let fireMode = isFireModeProvider?() ?? false
 
         return AIChatNativeConfigValues(
@@ -598,6 +606,13 @@ final class AIChatUserScriptHandler: AIChatUserScriptHandling {
     @MainActor
     func enableChatInput(params: Any, message: UserScriptMessage) async -> Encodable? {
         inputBoxHandler?.isSubmitBlockedByRecoveryCard = false
+        return nil
+    }
+
+    @MainActor
+    func focusChatInput(params: Any, message: UserScriptMessage) async -> Encodable? {
+        guard unifiedToggleInputFeature.isAvailable else { return nil }
+        focusChatInputHandler?()
         return nil
     }
 

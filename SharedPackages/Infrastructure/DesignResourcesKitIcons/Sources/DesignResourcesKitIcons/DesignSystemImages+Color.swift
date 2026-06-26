@@ -315,7 +315,11 @@ public extension DesignSystemImages {
                     ? .init(resource: .identityTheftRestorationColor24)
                     : .init(resource: .identityTheftRestorationColor24Legacy)
             }
-            public static var `import`: DesignSystemImage { .init(resource: .importColor24) }
+            public static var `import`: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .importColor24)
+                    : .init(resource: .importColor24Legacy)
+            }
             public static var info: DesignSystemImage { .init(resource: .infoRecolorable24)}
             public static var key: DesignSystemImage {
                 AppRebrand.isAppRebranded()
@@ -420,7 +424,9 @@ public extension DesignSystemImages {
                     ? .init(resource: .announcement96)
                     : .init(resource: .announcement96Legacy)
             }
+            public static var daxDuckAIStacked: DesignSystemImage { .init(resource: .daxDuckAIStacked96) }
             public static var duckAIDDGHero: DesignSystemImage { .init(resource: .duckAIDDGHeroColor96) }
+            public static var duckDuckGo: DesignSystemImage { .init(resource: .duckDuckGo96) }
             public static var extensionChrome: DesignSystemImage {
                 AppRebrand.isAppRebranded()
                     ? .init(resource: .extensionChrome96)
@@ -482,6 +488,11 @@ public extension DesignSystemImages {
                 AppRebrand.isAppRebranded()
                     ? .init(resource: .fire128)
                     : .init(resource: .fire128Legacy)
+            }
+            public static var lockLocked: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .lockLocked128)
+                    : .init(resource: .lockLocked128Legacy)
             }
             public static var networkProtectionVPN: DesignSystemImage { .init(resource: .networkProtectionVPN128) }
             public static var networkProtectionVPNDisabled: DesignSystemImage { .init(resource: .networkProtectionVPNDisabled128) }

@@ -379,6 +379,15 @@
 /* No comment provided by engineer. */
 "alert.message.bookmarkAll" = "Esamos žymės nebus kopijuojamos.";
 
+/* Button title for Sync error shown when both devices are already paired with the same account */
+"alert.sync-already-paired-with-account-button" = "Supratau";
+
+/* Description for Sync error shown when both devices are already paired with the same account */
+"alert.sync-already-paired-with-account-description" = "Jau susiejai šią paskyrą abiejuose įrenginiuose.";
+
+/* Title for Sync error shown when both devices are already paired with the same account */
+"alert.sync-already-paired-with-account-title" = "Jau susieta";
+
 /* Description for alert shown when sync error occurs because of bad bookmarks data */
 "alert.sync-bookmarks-bad-data-error-description" = "Kai kurios žymės suformatuotos neteisingai arba yra per ilgos ir nebuvo sinchronizuotos.";
 
@@ -387,6 +396,21 @@
 
 /* Title for alert shown when sync bookmarks paused for too many items */
 "alert.sync-bookmarks-paused-title" = "Žymių sinchronizavimas pristabdytas";
+
+/* Button title for Sync error shown when setup is canceled from the other device */
+"alert.sync-cancelled-from-other-device-button" = "Supratau";
+
+/* Description for Sync error shown when setup is canceled from the other device */
+"alert.sync-cancelled-from-other-device-description" = "Bandyk dar kartą.";
+
+/* Title for Sync error shown when setup is canceled from the other device */
+"alert.sync-cancelled-from-other-device-title" = "Sinchronizavimas atšauktas iš kito tavo įrenginio.";
+
+/* Description for Sync error shown when a third-party recovery code can only be used with Duck.ai */
+"alert.sync-code-only-compatible-with-duckai-description" = "Naršyklėje atidaryk duck.ai, eik į „Nuostatos“, tada skiltyje „Sync & Backup“ pasirink „Įjungti“, o po to – „Sinchronizuoti su kitu įrenginiu“.";
+
+/* Title for Sync error shown when a third-party recovery code can only be used with Duck.ai */
+"alert.sync-code-only-compatible-with-duckai-title" = "Nuskenuok šį kodą iš „Duck.ai“ nuostatų.";
 
 /* Description for alert shown when sync error occurs because of bad credentials data */
 "alert.sync-credentials-bad-data-error-description" = "Kai kurie slaptažodžiai suformatuoti neteisingai arba yra per ilgi ir nebuvo sinchronizuoti.";
@@ -411,6 +435,9 @@
 
 /* Sync error alert action button title, takes the user to the sync settings page. */
 "alert.sync-error-action" = "Sinchronizavimo parametrai";
+
+/* Description for Sync error shown when a third-party account already has a native DuckDuckGo Sync credential */
+"alert.sync-from-another-connected-device-description" = "Sinchronizuok šį įrenginį naudodamas jau prijungtą „DuckDuckGo“ naršyklę kitame įrenginyje.";
 
 /* Description for alert shown when user logged off from sync */
 "alert.sync-invalid-login-error-description" = "Sinchronizavimas buvo sustabdytas. Jei norite toliau sinchronizuoti šį įrenginį, iš naujo prisijunkite naudodami kitą įrenginį arba atkūrimo kodą.";
@@ -444,6 +471,12 @@
 
 /* Description for alert shown when sync error occurs because of too many requests */
 "alert.sync-too-many-requests-error-description" = "Sinchronizavimas ir atsarginės kopijos kūrimas laikinai nepasiekiami.";
+
+/* Description for Sync error shown when the app version does not support the scanned Sync code */
+"alert.sync-update-required-description" = "Šis kodas nepalaikomas dabartinėje programėlės versijoje.";
+
+/* Title for Sync error shown when the app version does not support the scanned Sync code */
+"alert.sync-update-required-title" = "Atnaujink „DuckDuckGo“ naršyklę ir bandyk dar kartą.";
 
 /* Title of the warning message that tells the user that there was an error with the sync feature. */
 "alert.sync.warning.sync-error" = "Sinchronizavimo klaida";
@@ -2968,6 +3001,12 @@
 /* Title for the data volume section in the VPN status screen */
 "network.protection.vpn.data-volume" = "Duomenų kiekis";
 
+/* Footer text for the Exclude CGNAT setting item. */
+"network.protection.vpn.exclude.cgnat.setting.footer" = "Rekomenduojama išjungti, kad visas tavo srautas eitų per VPN. Jei kyla problemų dėl tokių funkcijų kaip „Wi-Fi“ skambučiai, pranešimai ar balso paštas, pabandyk šią parinktį įjungti.";
+
+/* Title for the Exclude CGNAT setting item. */
+"network.protection.vpn.exclude.cgnat.setting.title" = "Išskirti operatoriaus paslaugas";
+
 /* Footer text for the Exclude Local Networks setting item. */
 "network.protection.vpn.exclude.local.networks.setting.footer" = "Leiskite vietiniam srautui apeiti VPN ir prisijungti prie vietinio tinklo įrenginių, pavyzdžiui, spausdintuvo.";
 
@@ -3016,6 +3055,18 @@
 /* Footer text for the DNS server setting item. */
 "network.protection.vpn.secure.dns.setting.footer" = "„DuckDuckGo“ nukreipia DNS užklausas per mūsų DNS serverius, kad tavo interneto tiekėjas negalėtų matyti, kokiose svetainėse lankaisi.";
 
+/* Title for the row that copies VPN diagnostic information to the clipboard. */
+"network.protection.vpn.settings.copy-diagnostics" = "Kopijuoti VPN diagnostiką";
+
+/* Caption beneath the Copy VPN Diagnostics row, explaining what it does. */
+"network.protection.vpn.settings.copy-diagnostics.caption" = "Kai kreipiesi į klientų aptarnavimo komandą, pridėk šių nuasmenintų VPN diagnostikos duomenų kopiją, kad galėtume padėti išspręsti tavo ryšio problemas.";
+
+/* Temporary title for the row after VPN diagnostic information is copied to the clipboard. */
+"network.protection.vpn.settings.copy-diagnostics.copied-to-clipboard" = "Nukopijuota į iškarpinę";
+
+/* Temporary title for the row when VPN diagnostic information could not be copied to the clipboard. */
+"network.protection.vpn.settings.copy-diagnostics.failed-to-copy-to-clipboard" = "Nepavyko nukopijuoti į iškarpinę";
+
 /* Title for the FAQ row in the VPN status screen. */
 "network.protection.vpn.settings.faq" = "DUK ir pagalba";
 
@@ -3027,6 +3078,12 @@
 
 /* Section header for the shortcuts section in VPN settings. */
 "network.protection.vpn.shortcuts.section.header" = "Šaukiniai";
+
+/* Footer text for the Strict Routing setting item. The 'Learn more' text is a Markdown link. */
+"network.protection.vpn.strict.routing.setting.footer" = "Rekomenduojama nepatikimuose tinkluose, pvz., viešajame „Wi-Fi“ tinkle viešbučiuose, baruose ir pan. Jei kyla problemų dėl funkcijų (pvz., „CarPlay“, „AirDrop“ ir pan.) ar jungiantis prie kitų įrenginių, pabandyk šią parinktį išjungti. [Sužinoti daugiau](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack)";
+
+/* Title for the Strict Routing setting item. */
+"network.protection.vpn.strict.routing.setting.title" = "Griežtas maršruto parinkimas";
 
 /* Confirm button for the new address bar picker */
 "new.address.bar.picker.confirm" = "Patvirtinti";
@@ -3145,8 +3202,8 @@
 /* Message of the last screen of the onboarding to the browser app for the Duck.ai flow. 'Duck.ai' is a brand name and should not be translated. '[[chat_icon]]' is a placeholder and should not be translated. */
 "onboarding.duckai.contextual.end-of-journey.message" = "Pradėkite privatų pokalbį su DI naudodami „Duck.ai“ arba perjunkite į apsaugotą naršymą su paieška.\n\n„Duck.ai“ galite naudoti visur, kur matote pokalbių piktogramą [[chat_icon]]";
 
-/* Body text of the subscription promo shown at the end of the Duck.ai onboarding flow. Describes the paid Duck.ai subscription. 'GPT', 'Claude', and 'Llama' are brand names and should not be translated. */
-"onboarding.duckai.contextual.subscription.message" = "Taip pat siūlome mokamą prenumeratą su pažangiais DI modeliais su didesniais pokalbių limitais su GPT, „Claude“ ir „Llama“, saugiu VPN ir kitais privalumais.";
+/* Body text of the subscription promo shown at the end of the Duck.ai onboarding flow. Describes the paid Duck.ai subscription. 'GPT', 'Claude' are brand names and should not be translated. */
+"onboarding.duckai.contextual.subscription.message" = "Taip pat siūlome mokamą prenumeratą, į kurią įeina pažangūs DI modeliai su didesniais GPT ir „Claude“ pokalbių limitais, saugus VPN ir dar daugiau.";
 
 /* Title shown on the Duck.ai query screen in the Duck.ai onboarding flow, prompting the user to try their first AI chat. */
 "onboarding.duckai.duckAIQuery.title" = "Išbandykite privatų pokalbį su DI!";
@@ -3164,10 +3221,10 @@
 "onboarding.duckduckgo.subscription.promo.message" = "„DuckDuckGo“ taip pat turi %1$@, prieinamą su %2$@ ir %3$@.";
 
 /* Bold text 'advanced, private AI'. This will replace the second placeholder (%3$@) in the following string - onboarding.subscription.promo.message. */
-"onboarding.duckduckgo.subscription.promo.message.advanced-private-ai-bold" = "pažangus, privatus dirbtinis intelektas";
+"onboarding.duckduckgo.subscription.promo.message.advanced-private-ai-bold" = "pažangiu, privačiu dirbtiniu intelektu";
 
 /* Bold text 'paid Privacy Pro subscription'. This will replace the second placeholder (%2$@) in the following string - onboarding.subscription.promo.message. */
-"onboarding.duckduckgo.subscription.promo.message.optional-subscription-bold" = "pasirenkama mokama prenumerata";
+"onboarding.duckduckgo.subscription.promo.message.optional-subscription-bold" = "pasirenkomą mokamą prenumeratą";
 
 /* Bold text 'VPN'. This will replace the first placeholder (%1$@) in the following string - onboarding.subscription.promo.messag. */
 "onboarding.duckduckgo.subscription.promo.message.vpn-two-more-bold" = "VPN";
@@ -3204,6 +3261,36 @@
 
 /* The title of the dialog to show the privacy features that DuckDuckGo offers */
 "onboarding.highlights.browsers.title" = "Apsaugos priemonės įjungtos!";
+
+/* Completion onboarding message shown after finishing Fire onboarding in Duck.ai flow. '[[chat_icon]]' is a placeholder and should not be translated. */
+"onboarding.highlights.duckAIQuery.completion.message" = "Adreso juostoje ieškok ir lankykis svetainėse arba perjunk į „Duck.ai“ privačiam pokalbiui su DI.\n\n„Duck.ai“ gali naudoti visur, kur tik matai pokalbio piktogramą [[chat_icon]]";
+
+/* Fire onboarding message shown after the first Duck.ai response. */
+"onboarding.highlights.duckAIQuery.fire.message" = "Privačius DI pokalbius galite ištrinti bet kada naudodami „Fire Button“. Išbandykite! 🔥";
+
+/* Fire onboarding title shown after the first Duck.ai response. */
+"onboarding.highlights.duckAIQuery.fire.title" = "Tai – „Duck.ai“!";
+
+/* Placeholder for AI query input in onboarding Duck.ai query selection screen. */
+"onboarding.highlights.duckAIQuery.placeholder.ai" = "Klausk bet ko privačiai";
+
+/* Placeholder for search query input in onboarding Duck.ai query selection screen. */
+"onboarding.highlights.duckAIQuery.placeholder.search" = "Ieškok privačiai";
+
+/* First suggestion chip label in onboarding Duck.ai query selection screen. */
+"onboarding.highlights.duckAIQuery.suggestion.option1" = "Paaiškink man apie akcijų rinką, tarsi man būtų 10 metų";
+
+/* Second suggestion chip label in onboarding Duck.ai query selection screen. */
+"onboarding.highlights.duckAIQuery.suggestion.option2" = "Suplanuok tobulą dieną Londone";
+
+/* Prompt submitted when user taps the third suggestion in onboarding Duck.ai query selection screen. */
+"onboarding.highlights.duckAIQuery.suggestion.option3.prompt" = "Kokie yra 10 įdomių faktų apie mokslą, gamtą ir istoriją?";
+
+/* Title for the onboarding Duck.ai query selection screen. */
+"onboarding.highlights.duckAIQuery.title" = "Ar esate pasirengę pradėti?\nIšbandykite paiešką arba dirbtinio intelekto pokalbį!";
+
+/* Label for the AI Chat option in the Search/Ask AI toggle on the onboarding screen. */
+"onboarding.highlights.duckAIQuery.toggle.ai" = "Klausk DI";
 
 /* The title of the fire button CTA to skip erasing the data. */
 "onboarding.highlights.fireDialog.cta.skip" = "Praleisti";
@@ -3515,6 +3602,9 @@
 "preserveLogins.remove.all.ok" = "GERAI";
 
 /* No comment provided by engineer. */
+"Previews" = "Peržiūros";
+
+/* No comment provided by engineer. */
 "Primary / First Action" = "Pirminis / pirmasis veiksmas";
 
 /* No comment provided by engineer. */
@@ -3760,6 +3850,21 @@
 /* Title of search assist settings link */
 "settings.aifeatures.assist" = "„Assist“ paieškos nustatymai";
 
+/* Search Assist frequency option: never show AI-assisted answers */
+"settings.aifeatures.assist.never" = "Niekada";
+
+/* Search Assist frequency option: often show AI-assisted answers */
+"settings.aifeatures.assist.often" = "Dažnai";
+
+/* Search Assist frequency option: show AI-assisted answers on demand */
+"settings.aifeatures.assist.ondemand" = "Pagal poreikį";
+
+/* Search Assist frequency option: sometimes show AI-assisted answers */
+"settings.aifeatures.assist.sometimes" = "Kartais";
+
+/* Title of the native Search Assist setting control */
+"settings.aifeatures.assist.title" = "„Assist“ paieška";
+
 /* Settings screen cell subtitle for enabling automatic page content attachment */
 "settings.aifeatures.automatic.context.subtitle" = "Automatiškai siųsti puslapio turinį į „Duck.ai“";
 
@@ -3769,11 +3874,29 @@
 /* Settings screen cell title for enabling chat suggestions */
 "settings.aifeatures.chat.suggestions.title" = "Pokalbių pasiūlymai";
 
+/* Button that turns off all AI features */
+"settings.aifeatures.disable.all" = "Naudoti DuckDuckGo be DI";
+
+/* Footer text below the disable all AI features button */
+"settings.aifeatures.disable.all.footer" = "Išjungia „Duck.ai“, paieškoje paslepia DI parengtus atsakymus ir iš vaizdų paieškos rezultatų pašalina žinomas DI brukalų svetaines.";
+
+/* Footer text shown once all AI features are already disabled */
+"settings.aifeatures.disable.all.footer.disabled" = "Šiuo metu naršyklėje DI išjungtas, todėl nebematysi DI parengtų atsakymų, o vaizdų paieškos rezultatuose matysi mažiau DI sukurtų vaizdų.";
+
+/* Section header for the Duck.ai settings group on the AI Features screen */
+"settings.aifeatures.duckai.section.header" = "Duck.ai";
+
 /* Title of hide AI-generated images settings link */
 "settings.aifeatures.hide.ai.generated.images" = "Slėpti DI generuotus vaizdus";
 
-/* Description of what the hide AI-generated images feature does */
-"settings.aifeatures.hide.ai.generated.images.subtitle" = "Vaizdų paieškos rezultatuose nepalieka Di sukurtų vaizdų";
+/* Hide AI-Generated Images option: off (images shown) */
+"settings.aifeatures.hide.ai.generated.images.off" = "Išjungta";
+
+/* Hide AI-Generated Images option: on (images hidden) */
+"settings.aifeatures.hide.ai.generated.images.on" = "Įjungta";
+
+/* Footnote for the hide AI-generated images setting; ends with a Learn more link to the help page (do not remove the link) */
+"settings.aifeatures.hide.ai.generated.images.subtitle" = "Iš vaizdų paieškos rezultatų pašalina žinomas DI brukalų svetaines. [Sužinok daugiau](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/results/how-to-filter-out-ai-images-in-duckduckgo-search-results)";
 
 /* Label describing a feature which is turned on always */
 "settings.always.on" = "Visada įjungta";
@@ -3890,7 +4013,7 @@
 "settings.cookie.pop-up-protection.protection" = "Apsauga nuo slapukų iškylančiųjų langų";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "„DuckDuckGo“ bandys pasirinkti didžiausią privatumą užtikrinančius nustatymus ir paslėpti šiuos iškylančiuosius langus.\n[Sužinokite daugiau](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-management)";
+"settings.cookie.pop.up.protection.explanation" = "„DuckDuckGo“ bandys pasirinkti didžiausią privatumą užtikrinančius nustatymus ir paslėpti šiuos iškylančiuosius langus.\n[Sužinokite daugiau](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Valdyti slapukų iššokančiuosius langus";
@@ -4579,6 +4702,21 @@
 /* Title of the dialog to confirm deleting Sync server data */
 "sync.delete.all.confirm.title" = "Ištrinti serverio duomenis?";
 
+/* Caption for a button to confirm sync setup with another device */
+"sync.pairing-v2.confirmation.action" = "Sinchronizuok dabar";
+
+/* Message for the dialog to confirm sync setup with another DuckDuckGo device */
+"sync.pairing-v2.confirmation.ddg.message" = "„%@“ turės prieigą prie tavo sinchronizuotų „DuckDuckGo“ slaptažodžių, automatinio pildymo duomenų ir „Duck.ai“ pokalbių.";
+
+/* Message for the dialog to confirm sync setup with a third-party device */
+"sync.pairing-v2.confirmation.third-party.message" = "„%@“ turės prieigą prie tavo sinchronizuotų „Duck.ai“ pokalbių.";
+
+/* Title of the dialog to confirm sync setup with another device */
+"sync.pairing-v2.confirmation.title" = "Sinchronizuoti naują įrenginį?";
+
+/* Fallback device name for confirmation dialogs */
+"sync.pairing-v2.unknown-peer-name" = "kitas įrenginys";
+
 /* Message for the Sync Promotion banner when user has bookmarks that can be synced */
 "sync.promo.bookmarks.message" = "Paskyros nereikia. Galutinis šifravimas (angl. „end-to-end encryption“) reiškia, kad niekas, išskyrus jus, negali pamatyti jūsų žymių, net mes.";
 
@@ -4797,6 +4935,12 @@
 
 /* No comment provided by engineer. */
 "UIAlert" = "UIAlert";
+
+/* Toast shown when a tapped .vcf contact link can't be parsed (e.g. malformed RFC 6350 content) */
+"vcard.add-contact.parse-failure" = "Nepavyko pridėti kontakto. Pabandykite atidaryti kontakto failą iš atsisiuntimų.";
+
+/* Toast shown after the user successfully adds a contact from a .vcf contact link to their Contacts */
+"vcard.contact-added" = "Kontaktas pridėtas";
 
 /* No comment provided by engineer. */
 "Version: %@" = "Versija: %@";
@@ -5197,3 +5341,55 @@
 /* Title for screen to screen confirming what data to import from a zip file (bookmarks and /or passwords) */
 "zip.content.import.types.title" = "Ką nori importuoti?";
 
+
+/* No comment provided by engineer. */
+"No matches for \"%@\"" = "Nėra atitikmenų pagal užklausą „%@“";
+
+/* Toast message shown after copying sync code to clipboard */
+"sync.simplified.code.copied.toast" = "Kodas nukopijuotas";
+
+
+/* Open the native Duck.ai chat history sheet from the browser menu. */
+"action.title.chats" = "Pokalbiai";
+
+/* Title shown when the user has no Duck.ai chat history yet. */
+"aiChat.history.emptyState.title" = "Nėra naujausių pokalbių";
+
+/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
+"aiChat.history.emptyState.openDuckAi" = "Atidaryti „Duck.ai“";
+
+/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
+"aiChat.history.searchBar.placeholder" = "Paieška";
+
+/* Section header above the user's pinned chats in the Duck.ai chat history list. */
+"aiChat.history.section.pinned" = "Prisegti";
+
+/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
+"aiChat.history.section.recent" = "Naujausi";
+
+/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
+"aiChat.history.noSearchResults.title" = "Atitikmenų nerasta";
+
+/* Title of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.title" = "Nepavyko įkelti pokalbių";
+
+/* Message of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.message" = "Įkeliant „Duck.ai“ pokalbius įvyko klaida. Bandykite dar kartą vėliau.";
+
+/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.delete.a11y" = "Trinti pokalbį";
+
+/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.download.a11y" = "Atsisiųsti pokalbį";
+
+/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
+"aiChat.history.swipe.pin.a11y" = "Prisegti pokalbį";
+
+/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
+"aiChat.history.swipe.unpin.a11y" = "Atsegti pokalbį";
+
+/* Button to delete all chats in scoped fire confirmation dialog */
+"scoped.fire.confirmation.delete.chats.button" = "Trinti pokalbius";
+
+/* Do not translate - stringsdict entry */
+"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";

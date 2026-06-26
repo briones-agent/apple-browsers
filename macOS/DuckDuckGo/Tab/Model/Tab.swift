@@ -177,7 +177,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
                 cacheType: .inMemory,
                 bookmarkManager: NSApp.delegateTyped.bookmarkManager,
                 fireproofDomains: fireproofDomains,
-                privacyConfigurationManager: privacyFeatures.contentBlocking.privacyConfigurationManager)
+                privacyConfigurationManager: privacyFeatures.contentBlocking.privacyConfigurationManager,
+                featureFlagger: featureFlagger ?? NSApp.delegateTyped.featureFlagger)
         }
 
         self.init(id: id,
@@ -564,6 +565,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     let webViewDidReceiveRedirectPublisher = PassthroughSubject<Void, Never>()
     let webViewDidFailNavigationPublisher = PassthroughSubject<Void, Never>()
     let webViewRenderingProgressDidChangePublisher = PassthroughSubject<Void, Never>()
+    /// Fires on same-document (SPA) navigations, which `webViewDidFinishNavigationPublisher` filters out.
+    let webViewDidPerformSameDocumentNavigationPublisher = PassthroughSubject<Void, Never>()
 
     // MARK: - Properties
 
@@ -1504,6 +1507,7 @@ extension Tab/*: NavigationResponder*/ { // to be moved to Tab+Navigation.swift
         guard navigation.isCurrent else { return }
 
         invalidateInteractionStateData()
+        webViewDidPerformSameDocumentNavigationPublisher.send()
     }
 
     @MainActor

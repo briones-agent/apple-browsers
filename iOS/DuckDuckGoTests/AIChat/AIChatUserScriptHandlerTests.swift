@@ -37,6 +37,8 @@ class AIChatUserScriptHandlerTests: XCTestCase {
     var mockAIChatSyncHandler: MockAIChatSyncHandling!
     var mockAIChatFullModeFeature: MockAIChatFullModeFeatureProviding!
     var mockAIChatContextualModeFeature: MockAIChatContextualModeFeatureProviding!
+    var mockUnifiedToggleInputFeature: MockUnifiedToggleInputFeatureProvider!
+    var mockIPadDuckAIControlsFeature: MockIPadDuckAIControlsFeatureProvider!
     private var mockUserScriptErrorEventMapper: CapturingAIChatUserScriptErrorEventMapper!
     private var mockUserDefaults: UserDefaults!
 
@@ -51,6 +53,8 @@ class AIChatUserScriptHandlerTests: XCTestCase {
         mockAIChatSyncHandler = MockAIChatSyncHandling()
         mockAIChatFullModeFeature = MockAIChatFullModeFeatureProviding()
         mockAIChatContextualModeFeature = MockAIChatContextualModeFeatureProviding()
+        mockUnifiedToggleInputFeature = MockUnifiedToggleInputFeatureProvider()
+        mockIPadDuckAIControlsFeature = MockIPadDuckAIControlsFeatureProvider()
         mockUserScriptErrorEventMapper = CapturingAIChatUserScriptErrorEventMapper()
 
         mockUserDefaults = UserDefaults(suiteName: mockSuiteName)
@@ -67,6 +71,8 @@ class AIChatUserScriptHandlerTests: XCTestCase {
         mockAIChatSyncHandler = nil
         mockAIChatFullModeFeature = nil
         mockAIChatContextualModeFeature = nil
+        mockUnifiedToggleInputFeature = nil
+        mockIPadDuckAIControlsFeature = nil
         mockUserScriptErrorEventMapper = nil
         PixelFiringMock.tearDown()
         super.tearDown()
@@ -84,6 +90,8 @@ class AIChatUserScriptHandlerTests: XCTestCase {
             keyValueStore: mockUserDefaults,
             aichatFullModeFeature: mockAIChatFullModeFeature,
             aichatContextualModeFeature: mockAIChatContextualModeFeature,
+            unifiedToggleInputFeature: mockUnifiedToggleInputFeature,
+            iPadDuckAIControlsFeature: mockIPadDuckAIControlsFeature,
             aiChatUserScriptErrorEventMapper: aiChatUserScriptErrorEventMapper ?? AIChatUserScriptErrorEventMapper(),
             isNativeStorageBridgeAvailable: isNativeStorageBridgeAvailable,
             installDateProvider: installDateProvider,
@@ -946,5 +954,92 @@ extension AIChatUserScriptHandlerTests {
 
         // Then
         XCTAssertEqual(mockUserDefaults.object(forKey: termsAcceptedKey) as? Bool, true)
+    }
+}
+
+// MARK: - focusChatInput Tests
+
+extension AIChatUserScriptHandlerTests {
+
+    @MainActor
+    func testWhenUnifiedToggleInputFeatureIsAvailableThenFocusChatInputCallsHandler() async {
+        // Given
+        mockUnifiedToggleInputFeature.isAvailable = true
+        var handlerCallCount = 0
+        aiChatUserScriptHandler.focusChatInputHandler = { handlerCallCount += 1 }
+
+        // When
+        let result = await aiChatUserScriptHandler.focusChatInput(
+            params: [],
+            message: MockUserScriptMessage(name: "test", body: [:])
+        )
+
+        // Then
+        XCTAssertNil(result)
+        XCTAssertEqual(handlerCallCount, 1)
+    }
+
+    @MainActor
+    func testWhenUnifiedToggleInputFeatureIsUnavailableThenFocusChatInputDoesNotCallHandler() async {
+        // Given
+        mockUnifiedToggleInputFeature.isAvailable = false
+        var handlerCallCount = 0
+        aiChatUserScriptHandler.focusChatInputHandler = { handlerCallCount += 1 }
+
+        // When
+        let result = await aiChatUserScriptHandler.focusChatInput(
+            params: [],
+            message: MockUserScriptMessage(name: "test", body: [:])
+        )
+
+        // Then
+        XCTAssertNil(result)
+        XCTAssertEqual(handlerCallCount, 0)
+    }
+
+    @MainActor
+    func testWhenFocusChatInputHandlerIsNotSetThenFocusChatInputReturnsNilWithoutCrashing() async {
+        // Given
+        mockUnifiedToggleInputFeature.isAvailable = true
+        aiChatUserScriptHandler.focusChatInputHandler = nil
+
+        // When
+        let result = await aiChatUserScriptHandler.focusChatInput(
+            params: [],
+            message: MockUserScriptMessage(name: "test", body: [:])
+        )
+
+        // Then
+        XCTAssertNil(result)
+    }
+}
+
+// MARK: - supportsNativePrompt (iPad Duck.ai bar controls)
+
+extension AIChatUserScriptHandlerTests {
+
+    func testWhenIPadDuckAIControlsAvailableThenSupportsNativePromptIsTrueButSupportsNativeChatInputIsFalse() {
+        // Given the iPad model picker is active and UTI (iPhone) is not
+        mockUnifiedToggleInputFeature.isAvailable = false
+        mockIPadDuckAIControlsFeature.isAvailable = true
+
+        // When
+        let configValues = aiChatUserScriptHandler.getAIChatNativeConfigValues(params: [], message: MockUserScriptMessage(name: "test", body: [:])) as? AIChatNativeConfigValues
+
+        // Then: the front end is told to read the native prompt (model), but input is not deferred to native
+        XCTAssertEqual(configValues?.supportsNativePrompt, true)
+        XCTAssertEqual(configValues?.supportsNativeChatInput, false)
+    }
+
+    func testWhenNoNativePromptSourceAvailableThenSupportsNativePromptIsFalse() {
+        // Given neither the iPad picker nor UTI is active
+        mockUnifiedToggleInputFeature.isAvailable = false
+        mockIPadDuckAIControlsFeature.isAvailable = false
+
+        // When
+        let configValues = aiChatUserScriptHandler.getAIChatNativeConfigValues(params: [], message: MockUserScriptMessage(name: "test", body: [:])) as? AIChatNativeConfigValues
+
+        // Then
+        XCTAssertEqual(configValues?.supportsNativePrompt, false)
     }
 }

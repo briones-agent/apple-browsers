@@ -70,11 +70,7 @@ struct SettingsAIExperimentalPickerView: View {
     }
 
     private var shouldUseIPadAssets: Bool {
-        isIPadAIToggleOn && UIDevice.current.userInterfaceIdiom == .pad
-    }
-
-    private var isIPadAIToggleOn: Bool {
-        AppDependencyProvider.shared.featureFlagger.isFeatureOn(.iPadAIToggle)
+        UIDevice.current.userInterfaceIdiom == .pad
     }
 
     private func rebrandableImage(_ rebranded: ImageResource, legacy: ImageResource) -> ImageResource {
@@ -176,7 +172,7 @@ private struct CheckmarkView: View {
             Image(uiImage: DesignSystemImages.Recolorable.Size24.check)
                 .resizable()
                 .renderingMode(.template)
-                .foregroundStyle(Color(designSystemColor: .accent))
+                .foregroundStyle(Color(designSystemColor: .accentPrimary))
         } else {
             Image(uiImage: DesignSystemImages.Glyphs.Size24.shapeCircle)
                 .resizable()

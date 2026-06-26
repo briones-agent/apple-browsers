@@ -254,8 +254,8 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         largeSizeSpacingConstraint?.isActive = showButtons
 
         let isExpandedPhone = newMode == .expandedPhone
-        leadingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : 0
-        trailingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : 0
+        leadingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : Metrics.iPadButtonSpacing
+        trailingButtonsContainer.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeButtonSpacing : Metrics.iPadButtonSpacing
         stackView.spacing = isExpandedPhone ? Metrics.expandedPhoneSizeSpacing : Metrics.expandedPadSizeSpacing
         stackViewLeadingConstraint?.constant = isExpandedPhone ? Metrics.expandedPhoneSizeMargins.leading : Metrics.textAreaHorizontalPadding
         stackViewTrailingConstraint?.constant = isExpandedPhone ? -Metrics.expandedPhoneSizeMargins.trailing : -Metrics.textAreaHorizontalPadding
@@ -364,6 +364,71 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
     var onAIChatSendPressed: (() -> Void)?
     var isAIVoiceChatEnabled: Bool = false
 
+    let modelPickerButton: UIButton = {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "chevron.down")?.withConfiguration(
+            UIImage.SymbolConfiguration(pointSize: 10, weight: .medium)
+        )
+        config.imagePlacement = .trailing
+        config.imagePadding = Metrics.modelPickerChipSpacing
+        config.titleLineBreakMode = .byTruncatingTail
+        config.contentInsets = NSDirectionalEdgeInsets(
+            top: 0,
+            leading: Metrics.modelPickerChipHorizontalPadding,
+            bottom: 0,
+            trailing: Metrics.modelPickerChipHorizontalPadding
+        )
+        config.baseForegroundColor = UIColor(designSystemColor: .textPrimary)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var updated = attributes
+            updated.font = .daxSubheadRegular()
+            return updated
+        }
+        config.background.strokeColor = UIColor(designSystemColor: .lines)
+        config.background.strokeWidth = 1
+        config.cornerStyle = .capsule
+
+        let button = UIButton(configuration: config)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = "AIChat.Omnibar.iPad.ModelPicker"
+        button.isHidden = true
+        // High (not required) hugging so the leading `>=` constraint wins and the title
+        // truncates rather than producing an unsatisfiable layout for long model names.
+        button.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        button.titleLabel?.lineBreakMode = .byTruncatingTail
+        if #available(iOS 16.0, *) {
+            button.preferredMenuElementOrder = .fixed
+        }
+        return button
+    }()
+
+    /// Enables the model picker chip (driven by the `iPadDuckAIBarControls` flag).
+    var isModelPickerEnabled: Bool = false {
+        didSet { refreshModelPickerVisibility() }
+    }
+
+    /// The short name shown on the model picker chip. The chip stays hidden while this is empty.
+    var aiChatModelName: String? {
+        didSet {
+            modelPickerButton.configuration?.title = aiChatModelName
+            refreshModelPickerVisibility()
+        }
+    }
+
+    /// The pull-down menu listing selectable models. Setting it enables the chip's primary action.
+    var aiChatModelPickerMenu: UIMenu? {
+        get { modelPickerButton.menu }
+        set {
+            modelPickerButton.menu = newValue
+            modelPickerButton.showsMenuAsPrimaryAction = (newValue != nil)
+        }
+    }
+
+    private var canShowModelPicker: Bool {
+        isModelPickerEnabled && !(aiChatModelName?.isEmpty ?? true)
+    }
+
     let aiChatTextView: UITextView = {
         let textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
@@ -470,6 +535,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
         searchAreaContainerView.addSubview(aiChatTextView)
         searchAreaContainerView.addSubview(aiChatSendButton)
+        searchAreaContainerView.addSubview(modelPickerButton)
         searchAreaContainerView.addSubview(aiChatLeftButton)
 
         addSubview(activeOutlineView)
@@ -609,7 +675,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
 
         activeOutlineView.isUserInteractionEnabled = false
         activeOutlineView.translatesAutoresizingMaskIntoConstraints = false
-        activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accent).cgColor
+        activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accentPrimary).cgColor
         activeOutlineView.layer.borderWidth = Metrics.activeBorderWidth
         activeOutlineView.layer.cornerRadius = Metrics.activeBorderRadius
         activeOutlineView.layer.cornerCurve = .continuous
@@ -717,7 +783,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
             activeOutlineView.layer.borderColor = UIColor(singleUseColor: .fireModeAccent).cgColor
         } else {
             searchAreaContainerView.backgroundColor = UIColor(designSystemColor: .backgroundTertiary)
-            activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accent).cgColor
+            activeOutlineView.layer.borderColor = UIColor(designSystemColor: .accentPrimary).cgColor
         }
         let style: UIUserInterfaceStyle = fireMode ? .dark : .unspecified
         searchAreaContainerView.subviews.forEach { $0.overrideUserInterfaceStyle = style }
@@ -858,11 +924,9 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         self.omniBarLongPressInteraction = nil
     }
 
-    /// Returns the expanded-area subview (text view or send button) at the given point.
-    /// When expanded, these views overflow beyond this view's bounds so we must claim them explicitly.
     private func overflowTarget(at point: CGPoint, with event: UIEvent?) -> UIView? {
         guard isSearchAreaExpanded else { return nil }
-        let candidates: [UIView] = [aiChatSendButton, aiChatTextView]
+        let candidates: [UIView] = [aiChatSendButton, modelPickerButton, aiChatTextView]
         return candidates.first { candidate in
             guard !candidate.isHidden else { return false }
             let localPoint = candidate.convert(point, from: self)
@@ -1015,6 +1079,12 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
         static let sendButtonSize: CGFloat = 40.0
         static let expansionAnimationDuration: TimeInterval = 0.25
 
+        // Duck.ai model picker chip (iPad), styled to match the iPhone model chip.
+        static let modelPickerChipHeight: CGFloat = 40.0
+        static let modelPickerChipHorizontalPadding: CGFloat = 16.0
+        static let modelPickerChipSpacing: CGFloat = 4.0
+        static let modelPickerToSendButtonSpacing: CGFloat = 8.0
+
         static let expandedPadSizeSpacing: CGFloat = 24.0
         static let expandedPadSizeMargins = NSDirectionalEdgeInsets(
             top: 0,
@@ -1023,6 +1093,7 @@ final class DefaultOmniBarView: UIView, OmniBarView, ExpandableOmniBarView {
             trailing: expandedPadSizeSpacing
         )
 
+        static let iPadButtonSpacing: CGFloat = 12.0
         static let expandedPhoneSizeSpacing: CGFloat = 16.0
         static let expandedPhoneSizeButtonSpacing: CGFloat = 10.0
         static let expandedPhoneSizeMargins = NSDirectionalEdgeInsets(
@@ -1265,6 +1336,11 @@ extension DefaultOmniBarView {
             aiChatSendButton.bottomAnchor.constraint(equalTo: searchAreaContainerView.bottomAnchor, constant: -Metrics.duckAITextViewBottomPadding),
             aiChatSendButton.widthAnchor.constraint(equalToConstant: Metrics.sendButtonSize),
             aiChatSendButton.heightAnchor.constraint(equalToConstant: Metrics.sendButtonSize),
+
+            modelPickerButton.trailingAnchor.constraint(equalTo: aiChatSendButton.leadingAnchor, constant: -Metrics.modelPickerToSendButtonSpacing),
+            modelPickerButton.centerYAnchor.constraint(equalTo: aiChatSendButton.centerYAnchor),
+            modelPickerButton.heightAnchor.constraint(equalToConstant: Metrics.modelPickerChipHeight),
+            modelPickerButton.leadingAnchor.constraint(greaterThanOrEqualTo: aiChatTextView.leadingAnchor),
         ])
 
         let bottomEqual = searchAreaStackView.bottomAnchor.constraint(equalTo: searchAreaAlignmentView.bottomAnchor)
@@ -1291,7 +1367,7 @@ extension DefaultOmniBarView {
     func setUpExpandedTextViewProperties() {
         aiChatTextView.font = UIFont.daxBodyRegular()
         aiChatTextView.textColor = UIColor(designSystemColor: .textPrimary)
-        aiChatTextView.tintColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accent)
+        aiChatTextView.tintColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accentPrimary)
         aiChatTextView.autocapitalizationType = .none
         aiChatTextView.autocorrectionType = .no
         aiChatTextView.spellCheckingType = .no
@@ -1305,8 +1381,10 @@ extension DefaultOmniBarView {
         guard animated else {
             searchAreaContainerView.applyShadowOpacityMultiplier(1)
             aiChatSendButton.alpha = isSearchAreaExpanded ? 1 : 0
+            modelPickerButton.alpha = (isSearchAreaExpanded && canShowModelPicker) ? 1 : 0
             if !isSearchAreaExpanded {
                 aiChatSendButton.isHidden = true
+                modelPickerButton.isHidden = true
             }
             applyExpansionConstraints()
             applyExpansionClipping()
@@ -1339,9 +1417,11 @@ extension DefaultOmniBarView {
             if self.isSearchAreaExpanded {
                 self.searchAreaContainerView.applyShadowOpacityMultiplier(1)
                 self.aiChatSendButton.alpha = 1
+                self.modelPickerButton.alpha = self.canShowModelPicker ? 1 : 0
             } else {
                 self.searchAreaContainerView.applyShadowOpacityMultiplier(0)
                 self.aiChatSendButton.alpha = 0
+                self.modelPickerButton.alpha = 0
             }
             self.layoutIfNeeded()
         } completion: { _ in
@@ -1349,6 +1429,7 @@ extension DefaultOmniBarView {
                 self.applyExpansionClipping()
                 self.searchAreaContainerView.applyShadowOpacityMultiplier(1)
                 self.aiChatSendButton.isHidden = true
+                self.modelPickerButton.isHidden = true
                 self.onCollapseAnimationCompleted?()
                 self.onCollapseAnimationCompleted = nil
             } else {
@@ -1375,6 +1456,10 @@ extension DefaultOmniBarView {
             aiChatSendButton.alpha = 0
             searchAreaContainerView.bringSubviewToFront(aiChatSendButton)
             updateAIChatSendButton(hasText: !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if canShowModelPicker {
+                prepareModelPickerButtonForDisplay()
+            }
         } else {
             let currentText = aiChatTextView.text ?? ""
             aiChatTextView.isHidden = true
@@ -1385,6 +1470,24 @@ extension DefaultOmniBarView {
         }
     }
 
+    private func refreshModelPickerVisibility() {
+        guard isSearchAreaExpanded, canShowModelPicker else {
+            modelPickerButton.isHidden = true
+            return
+        }
+        guard modelPickerButton.isHidden else { return }
+        prepareModelPickerButtonForDisplay()
+        UIView.animate(withDuration: Metrics.expansionAnimationDuration) {
+            self.modelPickerButton.alpha = 1
+        }
+    }
+
+    private func prepareModelPickerButtonForDisplay() {
+        modelPickerButton.isHidden = false
+        modelPickerButton.alpha = 0
+        searchAreaContainerView.bringSubviewToFront(modelPickerButton)
+    }
+
     /// Toggles the textField's visibility so its placeholder shows through
     /// the transparent duckAITextView when empty, and hides when there's text.
     func updateTextFieldPlaceholderVisibility(hasText: Bool) {
@@ -1393,7 +1496,7 @@ extension DefaultOmniBarView {
     }
 
     func updateAIChatSendButton(hasText: Bool) {
-        let accentColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accent)
+        let accentColor = fireMode ? UIColor(singleUseColor: .fireModeAccent) : UIColor(designSystemColor: .accentPrimary)
         if hasText {
             aiChatSendButton.setImage(DesignSystemImages.Glyphs.Size24.arrowRightSmall, for: .normal)
             aiChatSendButton.backgroundColor = accentColor
@@ -1460,22 +1563,26 @@ final class RebrandPreviewOverride: ObservableObject {
     private let isRebranded: Bool
     private let previousAppRebrand: () -> Bool
     private let previousDesignSystemRebrand: () -> Bool
+    private let previousPalette: ColorPalette
 
     init(isRebranded: Bool) {
         self.isRebranded = isRebranded
         previousAppRebrand = AppRebrand.isAppRebranded
         previousDesignSystemRebrand = DesignSystemRebrand.isAppRebranded
+        previousPalette = DesignSystemPalette.current
         apply()
     }
 
     func apply() {
         AppRebrand.isAppRebranded = { [isRebranded] in isRebranded }
         DesignSystemRebrand.isAppRebranded = { [isRebranded] in isRebranded }
+        DesignSystemPalette.current = isRebranded ? .rebranded : .default
     }
 
     deinit {
         AppRebrand.isAppRebranded = previousAppRebrand
         DesignSystemRebrand.isAppRebranded = previousDesignSystemRebrand
+        DesignSystemPalette.current = previousPalette
     }
 }
 

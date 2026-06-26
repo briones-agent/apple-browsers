@@ -36,6 +36,7 @@ final class AIChatContentHandlerTests: XCTestCase {
     var mockProductSurfaceTelemetry: MockProductSurfaceTelemetry!
     var mockFreeTrialConversionService: MockFreeTrialConversionInstrumentationService!
     var mockUnifiedToggleInputFeature: MockUnifiedToggleInputFeatureProvider!
+    var mockIPadDuckAIControlsFeature: MockIPadDuckAIControlsFeatureProvider!
 
     override func setUpWithError() throws {
         mockSettings = MockAIChatSettingsProvider()
@@ -44,6 +45,7 @@ final class AIChatContentHandlerTests: XCTestCase {
         mockProductSurfaceTelemetry = MockProductSurfaceTelemetry()
         mockFreeTrialConversionService = MockFreeTrialConversionInstrumentationService()
         mockUnifiedToggleInputFeature = MockUnifiedToggleInputFeatureProvider()
+        mockIPadDuckAIControlsFeature = MockIPadDuckAIControlsFeatureProvider()
 
         handler = AIChatContentHandler(
             aiChatSettings: mockSettings,
@@ -53,7 +55,8 @@ final class AIChatContentHandlerTests: XCTestCase {
             productSurfaceTelemetry: mockProductSurfaceTelemetry,
             freeTrialConversionService: mockFreeTrialConversionService,
             statisticsLoader: StatisticsLoader(fireSearchExperimentPixels: {}),
-            unifiedToggleInputFeature: mockUnifiedToggleInputFeature
+            unifiedToggleInputFeature: mockUnifiedToggleInputFeature,
+            iPadDuckAIControlsFeature: mockIPadDuckAIControlsFeature
         )
     }
 
@@ -283,6 +286,34 @@ final class AIChatContentHandlerTests: XCTestCase {
 
         let nativeInputItem = components.queryItems?.first { $0.name == AIChatURLParameters.nativeInputName }
         XCTAssertEqual(nativeInputItem?.value, AIChatURLParameters.nativeInputValue)
+    }
+
+    func testWhenIPadDuckAIControlsAvailableThenBuildQueryURLAddsNativeInputParameter() throws {
+        mockSettings.aiChatURL = URL(string: "https://duck.ai")!
+        mockUnifiedToggleInputFeature.isAvailable = false
+        mockIPadDuckAIControlsFeature.isAvailable = true
+
+        let url = handler.buildQueryURL(query: "test", autoSend: false, flowType: .default, tools: nil)
+
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            XCTFail("Invalid URL components")
+            return
+        }
+
+        let nativeInputItem = components.queryItems?.first { $0.name == AIChatURLParameters.nativeInputName }
+        XCTAssertEqual(nativeInputItem?.value, AIChatURLParameters.nativeInputValue)
+    }
+
+    func testWhenNoNativeInputSourceAvailableThenBuildQueryURLOmitsNativeInputParameter() throws {
+        mockSettings.aiChatURL = URL(string: "https://duck.ai")!
+        mockUnifiedToggleInputFeature.isAvailable = false
+        mockIPadDuckAIControlsFeature.isAvailable = false
+
+        let url = handler.buildQueryURL(query: "test", autoSend: false, flowType: .default, tools: nil)
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let nativeInputItem = components?.queryItems?.first { $0.name == AIChatURLParameters.nativeInputName }
+        XCTAssertNil(nativeInputItem)
     }
 
     func testBuildQueryURLWithNativeInputAvailableAndNilQueryAddsNativeInputParameter() throws {
@@ -693,6 +724,14 @@ final class MockUnifiedToggleInputFeatureProvider: UnifiedToggleInputFeatureProv
     }
 }
 
+final class MockIPadDuckAIControlsFeatureProvider: IPadDuckAIControlsFeatureProviding {
+    var isAvailable: Bool
+
+    init(isAvailable: Bool = false) {
+        self.isAvailable = isAvailable
+    }
+}
+
 final class MockAIChatUserScript: AIChatUserScriptProviding {
     var delegate: (any DuckDuckGo.AIChatUserScriptDelegate)? {
         get { nil }
@@ -769,6 +808,7 @@ final class MockAIChatUserScript: AIChatUserScriptProviding {
 final class MockAIChatUserScriptHandling: AIChatUserScriptHandling {
     var displayMode: AIChatDisplayMode?
     var isFireModeProvider: (() -> Bool)?
+    var focusChatInputHandler: (@MainActor () -> Void)?
 
     func setPageContextProvider(_ provider: ((PageContextRequestReason) -> AIChatPageContextData?)?) {}
     func setContextualModePixelHandler(_ pixelHandler: AIChatContextualModePixelFiring) {}
@@ -809,6 +849,7 @@ final class MockAIChatUserScriptHandling: AIChatUserScriptHandling {
     func showModelPicker(params: Any, message: UserScriptMessage) async -> Encodable? { nil }
     func disableChatInput(params: Any, message: UserScriptMessage) async -> Encodable? { nil }
     func enableChatInput(params: Any, message: UserScriptMessage) async -> Encodable? { nil }
+    func focusChatInput(params: Any, message: UserScriptMessage) async -> Encodable? { nil }
 }
 // swiftlint:enable inclusive_language
 

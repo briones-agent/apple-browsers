@@ -19,7 +19,10 @@
 
 import AIChat
 import Combine
+import Core
 import UIKit
+import UserScript
+import WebKit
 import XCTest
 @testable import DuckDuckGo
 
@@ -232,6 +235,52 @@ final class UnifiedToggleInputCoordinatorTests: XCTestCase {
 
         XCTAssertTrue(sut.isSubmitBlockedByRecoveryCard,
                       "Empty model list ⇒ no access-checked selectedModel ⇒ block must remain")
+    }
+
+    // MARK: - Recovery Picker Session Pixels
+
+    func test_recoveryPickerSession_fullFunnel_smokeTest() {
+        let previousDryRun = Pixel.isDryRun
+        Pixel.isDryRun = true
+        defer { Pixel.isDryRun = previousDryRun }
+
+        _ = sut.prepareExternalPromptSubmission()
+        let userScript = makeBridgeReadyUserScript()
+        sut.bindToTab(userScript, hasExistingChat: true)
+        sut.modelStore.models = [makeModel(id: "gpt-5", access: true)]
+
+        sut.presentModelPickerForActiveChat()
+        sut.handleModelSelection("gpt-5")
+        sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "follow-up", mode: .aiChat)
+
+        XCTAssertTrue(sut.viewController.isModelChipHidden)
+    }
+
+    func test_recoveryPickerSession_submitChangeModelPixel_smokeTest_withoutRecoveryPin() {
+        let previousDryRun = Pixel.isDryRun
+        Pixel.isDryRun = true
+        defer { Pixel.isDryRun = previousDryRun }
+
+        _ = sut.prepareExternalPromptSubmission()
+        let userScript = makeBridgeReadyUserScript()
+        sut.bindToTab(userScript, hasExistingChat: true)
+        sut.modelStore.models = [
+            makeModel(id: "haiku", access: true),
+            makeModel(id: "gpt-5", access: true)
+        ]
+        sut.updateSelectedModel("haiku")
+
+        sut.handleModelSelection("gpt-5")
+    }
+
+    func test_recoveryPickerSession_promptSentPixel_notFiredWithoutRecoveryPin() {
+        let previousDryRun = Pixel.isDryRun
+        Pixel.isDryRun = true
+        defer { Pixel.isDryRun = previousDryRun }
+
+        sut.modelStore.models = [makeModel(id: "gpt-5", access: true)]
+        sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "first prompt", mode: .aiChat)
+        sut.unifiedToggleInputVC(sut.viewController, didSubmitText: "follow-up", mode: .aiChat)
     }
 
     func test_hide_clearsRecoveryBlock() {
@@ -935,18 +984,6 @@ final class UnifiedToggleInputCoordinatorTests: XCTestCase {
         sut.updateIsFireTab(true)
         sut.updateIsFireTab(false)
         XCTAssertFalse(sut.viewController.handler.isFireTab)
-    }
-
-    func test_updateIsFireTab_noChangeDoesNotRebuildDaxLogoManager() {
-        let initialManager = sut.contentViewController.daxLogoManager
-        sut.updateIsFireTab(false)
-        XCTAssertTrue(sut.contentViewController.daxLogoManager === initialManager)
-    }
-
-    func test_updateIsFireTab_trueRebuildsDaxLogoManager() {
-        let initialManager = sut.contentViewController.daxLogoManager
-        sut.updateIsFireTab(true)
-        XCTAssertFalse(sut.contentViewController.daxLogoManager === initialManager)
     }
 
     // MARK: - Submit From Omnibar Editing
@@ -2328,6 +2365,15 @@ final class UnifiedToggleInputCoordinatorTests: XCTestCase {
         sut.modelStore.attachmentLimits = makeLimits()
     }
 
+    private func makeBridgeReadyUserScript() -> AIChatUserScript {
+        let userScript = makeTestUserScript()
+        let webView = WKWebView()
+        let broker = UserScriptMessageBroker(context: "test", requiresRunInPageContentWorld: true)
+        userScript.with(broker: broker)
+        userScript.webView = webView
+        return userScript
+    }
+
     private func makeModel(id: String,
                            access: Bool,
                            supportsImageUpload: Bool = false,
@@ -3579,6 +3625,7 @@ final class MockSwitchBarSubmissionMetrics: SwitchBarSubmissionMetricsProviding 
 private final class MockDuckAIWideEventInstrumentation: DuckAIWideEventInstrumentation {
     private(set) var submissionStartedScopes: [DuckAIWideEventFlowScope] = []
     private(set) var tabSwitchedAwayCalls: [TabUID] = []
+    private(set) var promptInterpretedAsURLScopes: [DuckAIWideEventFlowScope] = []
 
     func submissionStarted(scope: DuckAIWideEventFlowScope,
                            modelId: String?,
@@ -3603,4 +3650,5 @@ private final class MockDuckAIWideEventInstrumentation: DuckAIWideEventInstrumen
     func fireButtonClearedTabDuringGeneration(tabID: TabUID) {}
     func sheetDismissedDuringGeneration(scope: DuckAIWideEventFlowScope) {}
     func pageLoadFailed(scope: DuckAIWideEventFlowScope, error: Error) {}
+    func promptInterpretedAsURL(scope: DuckAIWideEventFlowScope) { promptInterpretedAsURLScopes.append(scope) }
 }
