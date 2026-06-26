@@ -2514,6 +2514,8 @@ class MainViewController: UIViewController {
         } completion: { _ in
             toolbarSnapshot?.removeFromSuperview()
 
+            self.resetBarsAfterTransitionAnimationIfNeeded(wasKeyboardShowing: isKeyboardShowing)
+
             self.omniBar.barView.textField.suppressResignFirstResponder = false
             if isKeyboardShowing {
                 self.omniBar.beginEditing(animated: false)
@@ -2540,6 +2542,14 @@ class MainViewController: UIViewController {
         hideNotificationBarIfBrokenSitePromptShown()
     }
 
+    private func resetBarsAfterTransitionAnimationIfNeeded(wasKeyboardShowing: Bool) {
+        // Rotation changes the bar geometry, so the scroll-hide state can't carry across it.
+        // Reset to revealed (editing and AI chrome manage their own layout).
+        if !self.isCurrentTabUsingUnifiedInputAIChrome, !wasKeyboardShowing {
+            self.resetBars(animated: false)
+        }
+    }
+
     private func deferredFireOrientationPixel() {
         orientationPixelWorker?.cancel()
         orientationPixelWorker = nil
@@ -2560,7 +2570,14 @@ class MainViewController: UIViewController {
             && (size.width > size.height)
     }
 
+    private var isApplyingWidth = false
+
     private func applyWidth(for size: CGSize? = nil) {
+        // Re-entrancy guard: a refreshOmniBar side-effect calls applyWidth() with no size
+        // mid-rotation, which reads stale view.bounds and re-applies the wrong chrome mode.
+        guard !isApplyingWidth else { return }
+        isApplyingWidth = true
+        defer { isApplyingWidth = false }
 
         if AppWidthObserver.shared.isLargeWidth {
             applyLargeWidth()
