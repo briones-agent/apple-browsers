@@ -128,7 +128,7 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
                                                 imageLoader: remoteMessagingImageLoader,
                                                 pixelReporter: remoteMessagingPixelReporter,
                                                 fireModePromotionEligibility: fireModePromotionEligibility,
-                                                isOpenedAfterIdle: { [weak viewModel] in viewModel?.openedAfterIdleOverride ?? (viewModel?.escapeHatch != nil) })
+                                                isOpenedAfterIdle: { [weak viewModel] in viewModel?.openedAfterIdle ?? false })
 
         super.init(rootView: NewTabPageView(isFocussedState: isFocussedState,
                                             narrowLayoutInLandscape: narrowLayoutInLandscape,
@@ -147,6 +147,7 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
 
     func setEscapeHatch(_ model: EscapeHatchModel?) {
         newTabPageViewModel.escapeHatch = model
+        newTabPageViewModel.openedAfterIdle = (model != nil)
         messagesModel.refresh()
         updateBorderView()
     }
@@ -154,7 +155,7 @@ final class NewTabPageViewController: UIHostingController<NewTabPageView>, NewTa
     /// Sets the after-idle signal independently of the escape hatch, so an NTP that suppresses its
     /// own hatch can still show the after-idle message.
     func setOpenedAfterIdle(_ openedAfterIdle: Bool) {
-        newTabPageViewModel.openedAfterIdleOverride = openedAfterIdle
+        newTabPageViewModel.openedAfterIdle = openedAfterIdle
         messagesModel.refresh()
     }
 

@@ -27,8 +27,9 @@ final class NewTabPageViewModel: ObservableObject {
     @Published var canEditFavorites = true
     @Published private(set) var isOnboarding: Bool
     @Published var escapeHatch: EscapeHatchModel?
-    /// Overrides the after-idle signal for home messages when set; when nil it's derived from `escapeHatch != nil`.
-    var openedAfterIdleOverride: Bool?
+    /// Whether this NTP is in the after-idle context (drives the after-idle home message). Defaults to
+    /// `escapeHatch != nil` via `setEscapeHatch`; set independently when the hatch is drawn elsewhere.
+    var openedAfterIdle: Bool = false
     @Published var sectionTitle: String?
     @Published var isLogoHidden: Bool = false
     /// Hides the favorites grid (without removing it) so the UTI defocus handoff can keep the embedded
