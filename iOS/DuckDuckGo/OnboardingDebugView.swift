@@ -39,6 +39,11 @@ struct OnboardingDebugView: View {
 
     var body: some View {
         List {
+            // Test Danger warning
+            Section {
+                Text("Random copy")
+            }
+
             Section {
                 Button(action: {
                     viewModel.resetDaxDialogs()
