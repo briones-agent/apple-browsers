@@ -132,10 +132,6 @@ final class UnifiedInputContentContainerViewController: UIViewController {
     private var needsVisibleRefresh = true
     private var requestedContentInset: (top: CGFloat, bottom: CGFloat) = (0, 0)
     private var escapeHatchModel: EscapeHatchModel?
-    /// Whether the current NTP session was opened after idle. Tracked separately from the escape hatch
-    /// so the after-idle message renders even when this surface suppresses its own hatch, and so a
-    /// non-after-idle hatch (e.g. post-burn tab switcher) doesn't trigger it.
-    private var openedAfterIdle = false
     /// The non-typing chrome (escape hatch + Duck.ai sync-promo) is pinned to the bar (not rendered
     /// inside the SwiftUI host) so it rides the bar's animation in the same layout pass — constant gap,
     /// no cross-framework sync. Its measured height is reserved in the content inset.
@@ -289,13 +285,20 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         refreshVisibleContent(animateContentUpdates: false)
     }
 
-    func setEscapeHatch(_ model: EscapeHatchModel?, openedAfterIdle: Bool) {
+    /// Whether the current NTP session was opened after idle — the source of truth for the after-idle
+    /// message, read fresh from the current tab. Decoupled from the escape hatch so the message renders
+    /// even when this surface suppresses its own hatch, and so a non-after-idle hatch (e.g. post-burn
+    /// tab switcher) doesn't trigger it.
+    private var sessionOpenedAfterIdle: Bool {
+        suggestionTrayDependencies?.tabsModelProvider().currentTab?.openedAfterIdle ?? false
+    }
+
+    func setEscapeHatch(_ model: EscapeHatchModel?) {
         let hatchPresenceChanged = (escapeHatchModel != nil) != (model != nil)
         escapeHatchModel = model
-        self.openedAfterIdle = openedAfterIdle
-        // The favorites NTP is memoized, so it can't pick this up at build time on later changes —
+        // The favorites NTP is memoized, so it can't re-read this at build time on later changes —
         // push it in.
-        unifiedSuggestionsHost?.updateOpenedAfterIdle(openedAfterIdle)
+        unifiedSuggestionsHost?.updateOpenedAfterIdle(sessionOpenedAfterIdle)
         // The chrome (hatch + sync-promo) is pinned to the bar (see below), not rendered in the host.
         updatePinnedChrome()
         updateSingleHostTopOffset()
@@ -735,7 +738,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
         controller.setEscapeHatch(nil)
         // ...but keep the after-idle signal so the embedded NTP still shows the after-idle message
         // (the visible hatch is the bar-pinned one).
-        controller.setOpenedAfterIdle(openedAfterIdle)
+        controller.setOpenedAfterIdle(sessionOpenedAfterIdle)
         controller.setLogoHidden(true)
         return controller
     }
