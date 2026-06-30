@@ -1366,6 +1366,42 @@
 /* Third paragraph of the Control Center Widget Education screen */
 "control.center.widget.education.paragraph.3" = "Tap **Add a Control** at the bottom of the screen";
 
+/* Small 'NEW' badge shown above the Cookie Pop-up Protection opt-in dialog header */
+"cookie-popup-protection.opt-in.badge" = "New";
+
+/* Confirm button in the Cookie Pop-up Protection opt-in dialog */
+"cookie-popup-protection.opt-in.confirm" = "Confirm";
+
+/* Body of the opt-in dialog when cookie pop-up protection is off */
+"cookie-popup-protection.opt-in.disabled.body" = "We'll aim to select the most-private options available for you and close them. If they don't have opt-outs, we accept on your behalf and close them.";
+
+/* Primary (recommended) option when cookie pop-up protection is off */
+"cookie-popup-protection.opt-in.disabled.primary-option" = "Handle cookie pop-ups for me";
+
+/* Secondary option when cookie pop-up protection is off */
+"cookie-popup-protection.opt-in.disabled.secondary-option" = "I'll handle them myself";
+
+/* Title of the opt-in dialog when cookie pop-up protection is off */
+"cookie-popup-protection.opt-in.disabled.title" = "Want us to handle & hide cookie pop-ups for you?";
+
+/* Body of the opt-in dialog when cookie pop-up protection is already enabled */
+"cookie-popup-protection.opt-in.enabled.body" = "We can save you a click by accepting cookie pop-ups that don't offer an opt-out.";
+
+/* Primary (recommended) option when cookie pop-up protection is already enabled */
+"cookie-popup-protection.opt-in.enabled.primary-option" = "Accept those on my behalf";
+
+/* Secondary option when cookie pop-up protection is already enabled */
+"cookie-popup-protection.opt-in.enabled.secondary-option" = "I'll close them myself";
+
+/* Title of the opt-in dialog when cookie pop-up protection is already enabled */
+"cookie-popup-protection.opt-in.enabled.title" = "Want us to handle more cookie pop-ups for you?";
+
+/* Footer text in the Cookie Pop-up Protection opt-in dialog. The text between ** ** is rendered bold. */
+"cookie-popup-protection.opt-in.footer" = "You can always adjust later in **Settings > Cookie Pop-up Protection**.";
+
+/* Header of the Cookie Pop-up Protection opt-in dialog */
+"cookie-popup-protection.opt-in.header" = "Cookie Pop-up Protection";
+
 /* Cookie pop-up preference option */
 "cookie.popup.preference.block-all" = "Reject, Hide, or Accept";
 
