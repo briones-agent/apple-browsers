@@ -20,9 +20,12 @@ import AppKit
 import BrowserServicesKit
 import Combine
 import FeatureFlags
+import PixelKit
+import WebExtensions
 
-/// Persisted state for the Cookie Pop-up Protection opt-in dialog (showing conditions + debug reset).
+/// Persisted state for the Cookie Pop-up Protection opt-in dialog (for telemetry + showing conditions + debug reset).
 struct CookiePopupProtectionOptInPromptStore {
+    private static let firstShownDateKey = "cookie-popup-protection.opt-in.first-shown-date"
     private static let shownCountKey = "cookie-popup-protection.opt-in.shown-count"
 
     private let userDefaults: UserDefaults
@@ -31,15 +34,40 @@ struct CookiePopupProtectionOptInPromptStore {
         self.userDefaults = userDefaults
     }
 
+    var firstShownDate: Date? {
+        get { userDefaults.object(forKey: Self.firstShownDateKey) as? Date }
+        nonmutating set { userDefaults.set(newValue, forKey: Self.firstShownDateKey) }
+    }
+
     /// How many times the dialog has been shown on launch.
     var shownCount: Int {
         get { userDefaults.integer(forKey: Self.shownCountKey) }
         nonmutating set { userDefaults.set(newValue, forKey: Self.shownCountKey) }
     }
 
+    /// Bucketed time elapsed from the first-shown date to `now`, for telemetry.
+    func bucketedTimeSinceFirstShown(now: Date = Date()) -> String? {
+        guard let firstShownDate else { return nil }
+        return CookiePopupProtectionOptInTimeBucket.bucket(for: now.timeIntervalSince(firstShownDate))
+    }
+
     /// Clears all persisted opt-in dialog state (debug reset).
     func reset() {
+        userDefaults.removeObject(forKey: Self.firstShownDateKey)
         userDefaults.removeObject(forKey: Self.shownCountKey)
+    }
+}
+
+/// Maps an elapsed interval (seconds) into a coarse bucket label for telemetry.
+enum CookiePopupProtectionOptInTimeBucket {
+    static func bucket(for elapsed: TimeInterval) -> String {
+        switch elapsed {
+        case ..<60: return "0-1min"
+        case ..<(5 * 60): return "1-5min"
+        case ..<(60 * 60): return "5-60min"
+        case ..<(24 * 60 * 60): return "1h-1d"
+        default: return "1d+"
+        }
     }
 }
 
@@ -89,14 +117,30 @@ final class CookiePopupProtectionOptInPromoDelegate: InternalPromoDelegate {
             return .noChange
         }
 
-        // Skip counting for force-shows (promo debug menu).
+        // Feature state when shown — unchanged until the user confirms, so reuse it for the confirmation pixel too.
+        let autoconsentEnabled = browserTabViewController.cookiePopupProtectionPreferences.isAutoconsentEnabled
+
+        // Skip telemetry + counting for force-shows (promo debug menu).
         if !force {
+            let isFirstShow = store.shownCount == 0
+            if isFirstShow {
+                store.firstShownDate = Date()
+            }
             store.shownCount += 1
+            PixelKit.fire(isFirstShow ? CookiePopupProtectionOptInPixel.shownFirst(autoconsentEnabled: autoconsentEnabled)
+                                      : .shownRepeat(autoconsentEnabled: autoconsentEnabled),
+                          frequency: .standard)
         }
 
         return await withCheckedContinuation { continuation in
             showContinuation = continuation
-            browserTabViewController.showCookiePopupProtectionOptInDialog(onConfirm: { [weak self] _ in
+            browserTabViewController.showCookiePopupProtectionOptInDialog(onConfirm: { [weak self] preference in
+                if !force {
+                    PixelKit.fire(CookiePopupProtectionOptInPixel.optionConfirmed(preference: preference,
+                                                                                  autoconsentEnabled: autoconsentEnabled,
+                                                                                  timeSinceShown: self?.store.bucketedTimeSinceFirstShown()),
+                                  frequency: .standard)
+                }
                 self?.resume(with: .actioned)
             })
         }
