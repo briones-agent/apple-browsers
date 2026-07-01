@@ -87,7 +87,9 @@ enum CookiePopupProtectionOptInTimeBucket {
 }
 
 /// Shows the Cookie Pop-up Protection opt-in dialog on app launch via the modal prompt queue.
-/// Shown at most `maxShowCount` times, only ≥ `minDaysSinceInstall` days after install, and never after the user confirms.
+/// Shown only while the Cookie Pop-up Protection setting feature flag is on, at most `maxShowCount` times,
+/// only ≥ `minDaysSinceInstall` days after install, not while the user is already on the most-private
+/// setting, and never after the user confirms.
 final class CookiePopupProtectionOptInModalPromptProvider: ModalPromptProvider {
 
     private enum Constants {
@@ -143,6 +145,8 @@ final class CookiePopupProtectionOptInModalPromptProvider: ModalPromptProvider {
     private var isEligibleToShow: Bool {
         guard featureFlagger.isFeatureOn(.cookiePopupPreferenceSetting),
               featureFlagger.isFeatureOn(.cookiePopupOptInDialog) else { return false }
+        // Nothing to offer users already on the most-private setting — it already accepts no-opt-out cookies.
+        guard AppUserDefaults().cookiePopupPreference != .max else { return false }
         guard !store.hasConfirmed, store.shownCount < Constants.maxShowCount else { return false }
         guard let installDate = statisticsStore.installDate else { return false }
         let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
