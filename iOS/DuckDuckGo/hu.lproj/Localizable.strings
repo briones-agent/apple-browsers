@@ -103,6 +103,9 @@
 /* Cancel action - button shown in alert */
 "action.title.cancel" = "Mégsem";
 
+/* Open the native Duck.ai chat history sheet from the browser menu. */
+"action.title.chats" = "Beszélgetések";
+
 /* Copy action */
 "action.title.copy" = "Másolás";
 
@@ -318,6 +321,45 @@
 
 /* Title for the New Voice Chat row in the Duck.ai tab header Plus (+) menu */
 "aichat.header.plusMenu.newVoiceChat" = "Új hangcsevegés";
+
+/* Title of the confirmation shown when the user taps Fire in Duck.ai chat history to delete all chats; the number is the chat count. Do not translate - stringsdict entry */
+"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+
+/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
+"aiChat.history.emptyState.openDuckAi" = "Duck.ai megnyitása";
+
+/* Title shown when the user has no Duck.ai chat history yet. */
+"aiChat.history.emptyState.title" = "Nincsenek friss beszélgetések";
+
+/* Message of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.message" = "Hiba történt a Duck.ai-beszélgetéseid betöltése során. Próbáld újra később.";
+
+/* Title of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.title" = "Nem sikerült betölteni a beszélgetéseket";
+
+/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
+"aiChat.history.noSearchResults.title" = "Nincs találat";
+
+/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
+"aiChat.history.searchBar.placeholder" = "Keresés";
+
+/* Section header above the user's pinned chats in the Duck.ai chat history list. */
+"aiChat.history.section.pinned" = "Kitűzve";
+
+/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
+"aiChat.history.section.recent" = "Legutóbbiak";
+
+/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.delete.a11y" = "Beszélgetés törlése";
+
+/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.download.a11y" = "Beszélgetés letöltése";
+
+/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
+"aiChat.history.swipe.pin.a11y" = "Beszélgetés kitűzése";
+
+/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
+"aiChat.history.swipe.unpin.a11y" = "Beszélgetés kitűzésének megszüntetése";
 
 /* Subtitle for the extended reasoning mode in the Duck.ai reasoning picker */
 "aichat.reasoning.extended.subtitle" = "Elemezési feladatokhoz";
@@ -1389,6 +1431,21 @@
 
 /* Third paragraph of the Control Center Widget Education screen */
 "control.center.widget.education.paragraph.3" = "Koppints a képernyő alján található **Vezérlő hozzáadása** gombra";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.block-all" = "Reject, Hide, or Accept";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.block-standard" = "Reject or Hide";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.do-not-block" = "Off";
+
+/* Explanation below cookie pop-up preference picker in settings */
+"cookie.popup.preference.explanation" = "Some cookie pop-ups don't have a 'reject' option. By default, we won't block them. Choose **Reject, Hide, or Accept** to let us handle these — we may need to accept some cookies when necessary.";
+
+/* Title for cookie pop-up preference picker in settings */
+"cookie.popup.preference.title" = "Pop-up Setting";
 
 /* Crash Report always send button title */
 "crash.report.dialog.always.send" = "Mindig küldjön hibajelentést";
@@ -3691,6 +3748,9 @@
 /* Button to delete all tabs and data in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.all.button" = "Összes törlése";
 
+/* Button to delete all chats in scoped fire confirmation dialog */
+"scoped.fire.confirmation.delete.chats.button" = "Beszélgetések törlése";
+
 /* Button to delete a single tab and its site data in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.tab.button" = "Lap törlése";
 
@@ -3851,13 +3911,13 @@
 "settings.aifeatures.assist.often" = "Gyakran";
 
 /* Search Assist frequency option: show AI-assisted answers on demand */
-"settings.aifeatures.assist.ondemand" = "Igény szerint";
+"settings.aifeatures.assist.ondemand" = "Igény esetén";
 
 /* Search Assist frequency option: sometimes show AI-assisted answers */
 "settings.aifeatures.assist.sometimes" = "Néha";
 
 /* Title of the native Search Assist setting control */
-"settings.aifeatures.assist.title" = "Keresési asszisztens";
+"settings.aifeatures.assist.title" = "Search Assist";
 
 /* Settings screen cell subtitle for enabling automatic page content attachment */
 "settings.aifeatures.automatic.context.subtitle" = "Az oldal tartalmának automatikus küldése a Duck.ai részére";
@@ -3869,7 +3929,7 @@
 "settings.aifeatures.chat.suggestions.title" = "Csevegési javaslatok";
 
 /* Button that turns off all AI features */
-"settings.aifeatures.disable.all" = "A DuckDuckGo használata AI nélkül";
+"settings.aifeatures.disable.all" = "DuckDuckGo használata MI nélkül";
 
 /* Footer text below the disable all AI features button */
 "settings.aifeatures.disable.all.footer" = "Kikapcsolja a Duck.ai-t, elrejti az AI segítségével létrehozott válaszokat a keresésben, és kiszűri az ismert AI-spam-webhelyeket a képkeresési eredmények közül.";
@@ -3900,6 +3960,12 @@
 
 /* Settings screen cell text for addess bar position */
 "settings.appearance.address.bar" = "Címsor elhelyezkedése";
+
+/* Settings screen toggle (iPad only) that hides the tab bar and address bar while scrolling */
+"settings.appearance.hide.tab.bar.while.scrolling" = "Lapsáv elrejtése görgetés közben";
+
+/* Footer (iPad only) shown below the Hide Tab Bar While Scrolling toggle, explaining where the behavior applies */
+"settings.appearance.hide.tab.bar.while.scrolling.footer" = "A legtöbb webhelyen elérhető. A Duck.ai, a térképek és a játékok látható állapotban tarthatják a lapsávot.";
 
 /* Settings screen cell for opening links in associated apps */
 "settings.associated.apps" = "Hivatkozások megnyitása társított alkalmazásokban";
@@ -4007,7 +4073,7 @@
 "settings.cookie.pop-up-protection.protection" = "Felugró sütiablak elleni védelem";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "A DuckDuckGo megpróbálja kiválasztani a rendelkezésre álló leginkább privát beállításokat, és elrejteni az ilyen felugró ablakokat.\n[További részletek](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo will try to select the most private settings available and hide these pop-ups for you.\n[Learn More](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Felugró sütiablakok kezelése";
@@ -5335,55 +5401,3 @@
 /* Title for screen to screen confirming what data to import from a zip file (bookmarks and /or passwords) */
 "zip.content.import.types.title" = "Mit szeretnél importálni?";
 
-
-/* No comment provided by engineer. */
-"No matches for \"%@\"" = "Nincs találat a következőre: „%@”";
-
-/* Toast message shown after copying sync code to clipboard */
-"sync.simplified.code.copied.toast" = "Kód másolva";
-
-
-/* Open the native Duck.ai chat history sheet from the browser menu. */
-"action.title.chats" = "Beszélgetések";
-
-/* Title shown when the user has no Duck.ai chat history yet. */
-"aiChat.history.emptyState.title" = "Nincsenek friss beszélgetések";
-
-/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
-"aiChat.history.emptyState.openDuckAi" = "Duck.ai megnyitása";
-
-/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
-"aiChat.history.searchBar.placeholder" = "Keresés";
-
-/* Section header above the user's pinned chats in the Duck.ai chat history list. */
-"aiChat.history.section.pinned" = "Kitűzve";
-
-/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
-"aiChat.history.section.recent" = "Legutóbbiak";
-
-/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
-"aiChat.history.noSearchResults.title" = "Nincs találat";
-
-/* Title of the alert shown when Duck.ai chat history fails to load. */
-"aiChat.history.loadError.title" = "Nem sikerült betölteni a beszélgetéseket";
-
-/* Message of the alert shown when Duck.ai chat history fails to load. */
-"aiChat.history.loadError.message" = "Hiba történt a Duck.ai-beszélgetéseid betöltése során. Próbáld újra később.";
-
-/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
-"aiChat.history.swipe.delete.a11y" = "Beszélgetés törlése";
-
-/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
-"aiChat.history.swipe.download.a11y" = "Beszélgetés letöltése";
-
-/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
-"aiChat.history.swipe.pin.a11y" = "Beszélgetés kitűzése";
-
-/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
-"aiChat.history.swipe.unpin.a11y" = "Beszélgetés kitűzésének megszüntetése";
-
-/* Button to delete all chats in scoped fire confirmation dialog */
-"scoped.fire.confirmation.delete.chats.button" = "Beszélgetések törlése";
-
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";

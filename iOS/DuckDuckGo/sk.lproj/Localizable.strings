@@ -103,6 +103,9 @@
 /* Cancel action - button shown in alert */
 "action.title.cancel" = "Zrušiť";
 
+/* Open the native Duck.ai chat history sheet from the browser menu. */
+"action.title.chats" = "Čety";
+
 /* Copy action */
 "action.title.copy" = "Kopírovať";
 
@@ -318,6 +321,45 @@
 
 /* Title for the New Voice Chat row in the Duck.ai tab header Plus (+) menu */
 "aichat.header.plusMenu.newVoiceChat" = "Nový hlasový čet";
+
+/* Title of the confirmation shown when the user taps Fire in Duck.ai chat history to delete all chats; the number is the chat count. Do not translate - stringsdict entry */
+"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+
+/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
+"aiChat.history.emptyState.openDuckAi" = "Otvoriť Duck.ai";
+
+/* Title shown when the user has no Duck.ai chat history yet. */
+"aiChat.history.emptyState.title" = "Žiadne nedávne konverzácie";
+
+/* Message of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.message" = "Pri načítavaní tvojich četov Duck.ai sa vyskytla chyba. Skús to znova neskôr.";
+
+/* Title of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.title" = "Nepodarilo sa načítať čety";
+
+/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
+"aiChat.history.noSearchResults.title" = "Nenašli sa žiadne zhody";
+
+/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
+"aiChat.history.searchBar.placeholder" = "Vyhľadávať";
+
+/* Section header above the user's pinned chats in the Duck.ai chat history list. */
+"aiChat.history.section.pinned" = "Pripnuté";
+
+/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
+"aiChat.history.section.recent" = "Nedávne";
+
+/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.delete.a11y" = "Zmazať čet";
+
+/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.download.a11y" = "Čet na stiahnutie";
+
+/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
+"aiChat.history.swipe.pin.a11y" = "Pripnúť čet";
+
+/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
+"aiChat.history.swipe.unpin.a11y" = "Rozpnúť čet";
 
 /* Subtitle for the extended reasoning mode in the Duck.ai reasoning picker */
 "aichat.reasoning.extended.subtitle" = "Pre analytické úlohy";
@@ -1389,6 +1431,21 @@
 
 /* Third paragraph of the Control Center Widget Education screen */
 "control.center.widget.education.paragraph.3" = "Ťukni na tlačidlo **Pridať ovládací prvok** v spodnej časti obrazovky";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.block-all" = "Reject, Hide, or Accept";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.block-standard" = "Reject or Hide";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.do-not-block" = "Off";
+
+/* Explanation below cookie pop-up preference picker in settings */
+"cookie.popup.preference.explanation" = "Some cookie pop-ups don't have a 'reject' option. By default, we won't block them. Choose **Reject, Hide, or Accept** to let us handle these — we may need to accept some cookies when necessary.";
+
+/* Title for cookie pop-up preference picker in settings */
+"cookie.popup.preference.title" = "Pop-up Setting";
 
 /* Crash Report always send button title */
 "crash.report.dialog.always.send" = "Vždy odosielať správy o zlyhaní";
@@ -3691,6 +3748,9 @@
 /* Button to delete all tabs and data in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.all.button" = "Odstrániť všetko";
 
+/* Button to delete all chats in scoped fire confirmation dialog */
+"scoped.fire.confirmation.delete.chats.button" = "Zmazať čet";
+
 /* Button to delete a single tab and its site data in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.tab.button" = "Odstrániť kartu";
 
@@ -3857,7 +3917,7 @@
 "settings.aifeatures.assist.sometimes" = "Niekedy";
 
 /* Title of the native Search Assist setting control */
-"settings.aifeatures.assist.title" = "Assist vyhľadávania";
+"settings.aifeatures.assist.title" = "Search Assist";
 
 /* Settings screen cell subtitle for enabling automatic page content attachment */
 "settings.aifeatures.automatic.context.subtitle" = "Automaticky odoslať obsah stránky do Duck.ai";
@@ -3869,7 +3929,7 @@
 "settings.aifeatures.chat.suggestions.title" = "Návrhy četu";
 
 /* Button that turns off all AI features */
-"settings.aifeatures.disable.all" = "Používať DuckDuckGo bez AI";
+"settings.aifeatures.disable.all" = "Používaj DuckDuckGo bez AI";
 
 /* Footer text below the disable all AI features button */
 "settings.aifeatures.disable.all.footer" = "Zakáže Duck.ai, skryje odpovede s podporou umelej inteligencie vo vyhľadávaní a filtruje známe spamové stránky s umelou inteligenciou vo výsledkoch vyhľadávania obrázkov.";
@@ -3900,6 +3960,12 @@
 
 /* Settings screen cell text for addess bar position */
 "settings.appearance.address.bar" = "Poloha riadku s adresou";
+
+/* Settings screen toggle (iPad only) that hides the tab bar and address bar while scrolling */
+"settings.appearance.hide.tab.bar.while.scrolling" = "Skryť panel s kartami počas rolovania";
+
+/* Footer (iPad only) shown below the Hide Tab Bar While Scrolling toggle, explaining where the behavior applies */
+"settings.appearance.hide.tab.bar.while.scrolling.footer" = "Dostupné na väčšine webových stránok. Duck.ai, mapy a hry môžu ponechať panel s kartami viditeľný.";
 
 /* Settings screen cell for opening links in associated apps */
 "settings.associated.apps" = "Otvárať odkazy v pridružených aplikáciách";
@@ -4007,7 +4073,7 @@
 "settings.cookie.pop-up-protection.protection" = "Ochrana proti automatickému otváraniu okien o súboroch cookie";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo sa pokúsi vybrať najosobnejšie dostupné nastavenia a skryť tieto automatické okná za vás.\n[Viac informácií](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo will try to select the most private settings available and hide these pop-ups for you.\n[Learn More](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Správa kontextových okien súborov cookie";
@@ -5335,55 +5401,3 @@
 /* Title for screen to screen confirming what data to import from a zip file (bookmarks and /or passwords) */
 "zip.content.import.types.title" = "Čo chceš importovať?";
 
-
-/* No comment provided by engineer. */
-"No matches for \"%@\"" = "Žiadne zhody pre \"%@\"";
-
-/* Toast message shown after copying sync code to clipboard */
-"sync.simplified.code.copied.toast" = "Kód bol skopírovaný";
-
-
-/* Open the native Duck.ai chat history sheet from the browser menu. */
-"action.title.chats" = "Čety";
-
-/* Title shown when the user has no Duck.ai chat history yet. */
-"aiChat.history.emptyState.title" = "Žiadne nedávne konverzácie";
-
-/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
-"aiChat.history.emptyState.openDuckAi" = "Otvoriť Duck.ai";
-
-/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
-"aiChat.history.searchBar.placeholder" = "Vyhľadávať";
-
-/* Section header above the user's pinned chats in the Duck.ai chat history list. */
-"aiChat.history.section.pinned" = "Pripnuté";
-
-/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
-"aiChat.history.section.recent" = "Nedávne";
-
-/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
-"aiChat.history.noSearchResults.title" = "Nenašli sa žiadne zhody";
-
-/* Title of the alert shown when Duck.ai chat history fails to load. */
-"aiChat.history.loadError.title" = "Nepodarilo sa načítať čety";
-
-/* Message of the alert shown when Duck.ai chat history fails to load. */
-"aiChat.history.loadError.message" = "Pri načítavaní tvojich četov Duck.ai sa vyskytla chyba. Skús to znova neskôr.";
-
-/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
-"aiChat.history.swipe.delete.a11y" = "Zmazať čet";
-
-/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
-"aiChat.history.swipe.download.a11y" = "Čet na stiahnutie";
-
-/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
-"aiChat.history.swipe.pin.a11y" = "Pripnúť čet";
-
-/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
-"aiChat.history.swipe.unpin.a11y" = "Rozpnúť čet";
-
-/* Button to delete all chats in scoped fire confirmation dialog */
-"scoped.fire.confirmation.delete.chats.button" = "Zmazať čet";
-
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";

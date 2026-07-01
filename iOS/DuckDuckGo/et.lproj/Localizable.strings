@@ -103,6 +103,9 @@
 /* Cancel action - button shown in alert */
 "action.title.cancel" = "Tühista";
 
+/* Open the native Duck.ai chat history sheet from the browser menu. */
+"action.title.chats" = "Vestlused";
+
 /* Copy action */
 "action.title.copy" = "Kopeeri";
 
@@ -318,6 +321,45 @@
 
 /* Title for the New Voice Chat row in the Duck.ai tab header Plus (+) menu */
 "aichat.header.plusMenu.newVoiceChat" = "Uus häälvestlus";
+
+/* Title of the confirmation shown when the user taps Fire in Duck.ai chat history to delete all chats; the number is the chat count. Do not translate - stringsdict entry */
+"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+
+/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
+"aiChat.history.emptyState.openDuckAi" = "Ava Duck.ai";
+
+/* Title shown when the user has no Duck.ai chat history yet. */
+"aiChat.history.emptyState.title" = "Hiljutisi vestlusi pole";
+
+/* Message of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.message" = "Duck.ai vestluste laadimisel läks midagi valesti. Proovi hiljem uuesti.";
+
+/* Title of the alert shown when Duck.ai chat history fails to load. */
+"aiChat.history.loadError.title" = "Vestlusi ei õnnestunud laadida";
+
+/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
+"aiChat.history.noSearchResults.title" = "Ühtegi vastet ei leitud";
+
+/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
+"aiChat.history.searchBar.placeholder" = "Otsi";
+
+/* Section header above the user's pinned chats in the Duck.ai chat history list. */
+"aiChat.history.section.pinned" = "Kinnitatud";
+
+/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
+"aiChat.history.section.recent" = "Hiljutised";
+
+/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.delete.a11y" = "Kustuta vestlus";
+
+/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
+"aiChat.history.swipe.download.a11y" = "Laadi alla vestlus";
+
+/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
+"aiChat.history.swipe.pin.a11y" = "Kinnita vestlus";
+
+/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
+"aiChat.history.swipe.unpin.a11y" = "Eemalda kinnitus vestluselt";
 
 /* Subtitle for the extended reasoning mode in the Duck.ai reasoning picker */
 "aichat.reasoning.extended.subtitle" = "Analüütiliste ülesannete jaoks";
@@ -1389,6 +1431,21 @@
 
 /* Third paragraph of the Control Center Widget Education screen */
 "control.center.widget.education.paragraph.3" = "Puuduta ekraani allosas nuppu **Lisa juhtelement**";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.block-all" = "Reject, Hide, or Accept";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.block-standard" = "Reject or Hide";
+
+/* Cookie pop-up preference option */
+"cookie.popup.preference.do-not-block" = "Off";
+
+/* Explanation below cookie pop-up preference picker in settings */
+"cookie.popup.preference.explanation" = "Some cookie pop-ups don't have a 'reject' option. By default, we won't block them. Choose **Reject, Hide, or Accept** to let us handle these — we may need to accept some cookies when necessary.";
+
+/* Title for cookie pop-up preference picker in settings */
+"cookie.popup.preference.title" = "Pop-up Setting";
 
 /* Crash Report always send button title */
 "crash.report.dialog.always.send" = "Saada krahhiaruanded alati";
@@ -3691,6 +3748,9 @@
 /* Button to delete all tabs and data in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.all.button" = "Kustuta kõik";
 
+/* Button to delete all chats in scoped fire confirmation dialog */
+"scoped.fire.confirmation.delete.chats.button" = "Kustuta vestlused";
+
 /* Button to delete a single tab and its site data in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.tab.button" = "Kustuta vahekaart";
 
@@ -3857,7 +3917,7 @@
 "settings.aifeatures.assist.sometimes" = "Mõnikord";
 
 /* Title of the native Search Assist setting control */
-"settings.aifeatures.assist.title" = "Otsingu Assist";
+"settings.aifeatures.assist.title" = "Search Assist";
 
 /* Settings screen cell subtitle for enabling automatic page content attachment */
 "settings.aifeatures.automatic.context.subtitle" = "Saada lehe sisu automaatselt Duck.ai-le";
@@ -3869,7 +3929,7 @@
 "settings.aifeatures.chat.suggestions.title" = "Vestluse soovitused";
 
 /* Button that turns off all AI features */
-"settings.aifeatures.disable.all" = "Kasuta DuckDuckGot ilma tehisintellektita";
+"settings.aifeatures.disable.all" = "Kasuta DuckDuckGo ilma AI-ta";
 
 /* Footer text below the disable all AI features button */
 "settings.aifeatures.disable.all.footer" = "Keelab Duck.ai, peidab otsingus tehisintellektiga toetatud vastused ja filtreerib pildiotsingu tulemustest teadaolevaid tehisintellekti rämpsposti saite.";
@@ -3900,6 +3960,12 @@
 
 /* Settings screen cell text for addess bar position */
 "settings.appearance.address.bar" = "Aadressiriba asukoht";
+
+/* Settings screen toggle (iPad only) that hides the tab bar and address bar while scrolling */
+"settings.appearance.hide.tab.bar.while.scrolling" = "Peida kerimise ajal vahekaartide riba";
+
+/* Footer (iPad only) shown below the Hide Tab Bar While Scrolling toggle, explaining where the behavior applies */
+"settings.appearance.hide.tab.bar.while.scrolling.footer" = "Saadaval enamikul veebisaitidel. Duck.ai, kaardid ja mängud võivad vahekaartide riba nähtavana hoida.";
 
 /* Settings screen cell for opening links in associated apps */
 "settings.associated.apps" = "Ava lingid seotud rakendustes";
@@ -4007,7 +4073,7 @@
 "settings.cookie.pop-up-protection.protection" = "Küpsiste hüpikakna kaitse";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo proovib valida kõige privaatsemad saadaolevad seaded ja peidab need hüpikaknad sinu eest.\n[Lisateave](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo will try to select the most private settings available and hide these pop-ups for you.\n[Learn More](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Halda küpsiste hüpikaknaid";
@@ -5335,55 +5401,3 @@
 /* Title for screen to screen confirming what data to import from a zip file (bookmarks and /or passwords) */
 "zip.content.import.types.title" = "Mida soovite importida?";
 
-
-/* No comment provided by engineer. */
-"No matches for \"%@\"" = "„%@“ kohta ei leitud vasteid";
-
-/* Toast message shown after copying sync code to clipboard */
-"sync.simplified.code.copied.toast" = "Kood kopeeritud";
-
-
-/* Open the native Duck.ai chat history sheet from the browser menu. */
-"action.title.chats" = "Vestlused";
-
-/* Title shown when the user has no Duck.ai chat history yet. */
-"aiChat.history.emptyState.title" = "Hiljutisi vestlusi pole";
-
-/* Primary button on the empty Duck.ai chat-history screen; opens the Duck.ai web chat. */
-"aiChat.history.emptyState.openDuckAi" = "Ava Duck.ai";
-
-/* Placeholder for the search bar at the top of the Duck.ai chat history list. */
-"aiChat.history.searchBar.placeholder" = "Otsi";
-
-/* Section header above the user's pinned chats in the Duck.ai chat history list. */
-"aiChat.history.section.pinned" = "Kinnitatud";
-
-/* Section header above the user's recent (unpinned) chats in the Duck.ai chat history list. */
-"aiChat.history.section.recent" = "Hiljutised";
-
-/* Shown inside the Duck.ai chat history list when the user's search query returns no matching chats. */
-"aiChat.history.noSearchResults.title" = "Ühtegi vastet ei leitud";
-
-/* Title of the alert shown when Duck.ai chat history fails to load. */
-"aiChat.history.loadError.title" = "Vestlusi ei õnnestunud laadida";
-
-/* Message of the alert shown when Duck.ai chat history fails to load. */
-"aiChat.history.loadError.message" = "Duck.ai vestluste laadimisel läks midagi valesti. Proovi hiljem uuesti.";
-
-/* Accessibility label for the delete action revealed by swiping a Duck.ai chat row. */
-"aiChat.history.swipe.delete.a11y" = "Kustuta vestlus";
-
-/* Accessibility label for the download action revealed by swiping a Duck.ai chat row. */
-"aiChat.history.swipe.download.a11y" = "Laadi alla vestlus";
-
-/* Accessibility label for the pin action revealed by leading-swiping a Duck.ai chat row in the Recent section. */
-"aiChat.history.swipe.pin.a11y" = "Kinnita vestlus";
-
-/* Accessibility label for the unpin action revealed by leading-swiping a Duck.ai chat row in the Pinned section. */
-"aiChat.history.swipe.unpin.a11y" = "Eemalda kinnitus vestluselt";
-
-/* Button to delete all chats in scoped fire confirmation dialog */
-"scoped.fire.confirmation.delete.chats.button" = "Kustuta vestlused";
-
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
