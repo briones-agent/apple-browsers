@@ -289,6 +289,14 @@ extension MainViewController {
         }, deepLinkTarget: .restoreFlow)
     }
 
+    func segueToSubscriptionWelcome() {
+        Logger.lifecycle.debug(#function)
+        hideAllHighlightsIfNeeded()
+        launchSettings(completion: {
+            $0.triggerDeepLinkNavigation(to: .subscriptionWelcome)
+        }, deepLinkTarget: .subscriptionWelcome)
+    }
+
     func segueToVPN() {
         Logger.lifecycle.debug(#function)
         hideAllHighlightsIfNeeded()

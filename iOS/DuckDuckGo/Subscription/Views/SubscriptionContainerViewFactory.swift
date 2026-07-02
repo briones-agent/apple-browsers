@@ -53,6 +53,7 @@ enum SubscriptionContainerViewFactory {
     }
 
     static func makeSubscribeFlowV2(redirectURLComponents: URLComponents?,
+                                    landingURL: URL? = nil,
                                     navigationCoordinator: SubscriptionNavigationCoordinator,
                                     subscriptionManager: SubscriptionManager,
                                     subscriptionFeatureAvailability: SubscriptionFeatureAvailability,
@@ -85,12 +86,14 @@ enum SubscriptionContainerViewFactory {
             return subscriptionManager.urlForPurchaseFromRedirect(redirectURLComponents: redirectURLComponents, tld: tld)
         }()
 
+        let initialURL = landingURL ?? redirectPurchaseURL
+
         let origin = redirectURLComponents?.queryItems?.first(where: { $0.name == AttributionParameter.origin })?.value
 
 
         let viewModel = SubscriptionContainerViewModel(
             subscriptionManager: subscriptionManager,
-            redirectPurchaseURL: redirectPurchaseURL,
+            initialURL: initialURL,
             isInternalUser: internalUserDecider.isInternalUser,
             userScript: SubscriptionPagesUserScript(),
             userScriptsDependencies: userScriptsDependencies,
@@ -204,7 +207,7 @@ enum SubscriptionContainerViewFactory {
 
         let viewModel = SubscriptionContainerViewModel(
             subscriptionManager: subscriptionManager,
-            redirectPurchaseURL: plansURL,
+            initialURL: plansURL,
             flowType: .planUpdate,
             isInternalUser: internalUserDecider.isInternalUser,
             userScript: SubscriptionPagesUserScript(),

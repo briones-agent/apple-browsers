@@ -88,9 +88,6 @@ enum SubscriptionFunnelOrigin: String {
     /// User entered the funnel by tapping the VPN push notification without an active VPN entitlement.
     /// https://app.asana.com/1/137249556945/project/1207260194172075/task/1215398999855859
     case notificationVPN = "funnel_notification_ios__subscriptionvpn"
-
-    /// User entered the funnel by tapping the subscription expiration reminder push notification.
-    case notificationSubscriptionExpiration = "funnel_notification_ios__subscriptionexpiration"
 }
 
 /// Represents the origin point from which the user enters the subscription restore funnel in the iOS app.

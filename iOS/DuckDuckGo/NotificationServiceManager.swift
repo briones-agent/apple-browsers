@@ -103,7 +103,7 @@ private extension NotificationServiceManager {
         switch actionIdentifier {
         case UNNotificationDefaultActionIdentifier:
             Pixel.fire(pixel: .subscriptionExpirationReminderNotificationTapped)
-            mainCoordinator.segueToDuckDuckGoSubscription(origin: SubscriptionFunnelOrigin.notificationSubscriptionExpiration.rawValue)
+            mainCoordinator.segueToSubscriptionWelcome()
         case UNNotificationDismissActionIdentifier:
             Pixel.fire(pixel: .subscriptionExpirationReminderNotificationDismissed)
         default:
