@@ -318,12 +318,7 @@ final class SubscriptionPagesUseSubscriptionFeature: Subfeature {
 
             // 5: No existing subscription was found, so proceed with the remaining purchase flow
             let purchaseTransactionJWS: String
-            let appStoreRestoreFlow = DefaultAppStoreRestoreFlow(subscriptionManager: subscriptionManager,
-                                                                   storePurchaseManager: subscriptionManager.storePurchaseManager())
-            let appStorePurchaseFlow = DefaultAppStorePurchaseFlow(subscriptionManager: subscriptionManager,
-                                                                     storePurchaseManager: subscriptionManager.storePurchaseManager(),
-                                                                     appStoreRestoreFlow: appStoreRestoreFlow,
-                                                                     wideEvent: wideEvent)
+            let appStorePurchaseFlow = makeAppStorePurchaseFlow()
             // 6: Execute App Store purchase (account creation + StoreKit transaction) and handle the result
             Logger.subscription.log("[Purchase] Purchasing")
             let purchaseResult = await appStorePurchaseFlow.purchaseSubscription(with: subscriptionSelection.id, includeProTier: subscriptionFeatureAvailability.isProTierPurchaseEnabled)
@@ -357,6 +352,9 @@ final class SubscriptionPagesUseSubscriptionFeature: Subfeature {
                         wideEvent.discardFlow(data)
                         self.purchaseWideEventData = nil
                     }
+                } else if error == .transactionPendingAuthentication {
+                    data.markPurchasePendingAuthentication()
+                    wideEvent.updateFlow(data)
                 } else {
                     switch error {
                     case .accountCreationFailed(let creationError):

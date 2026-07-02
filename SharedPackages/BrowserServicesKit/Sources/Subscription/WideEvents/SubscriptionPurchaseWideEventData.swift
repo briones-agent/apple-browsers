@@ -41,6 +41,7 @@ public class SubscriptionPurchaseWideEventData: WideEventData {
     public var createAccountDuration: WideEvent.MeasuredInterval?
     public var completePurchaseDuration: WideEvent.MeasuredInterval?
     public var activateAccountDuration: WideEvent.MeasuredInterval?
+    public var pendingAuthenticationStartedAt: Date?
 
     public var funnelName: String?
 
@@ -52,7 +53,7 @@ public class SubscriptionPurchaseWideEventData: WideEventData {
     private enum CodingKeys: String, CodingKey {
         case globalData, contextData, appData
         case purchasePlatform, subscriptionIdentifier, freeTrialEligible, funnelName
-        case createAccountDuration, completePurchaseDuration, activateAccountDuration
+        case createAccountDuration, completePurchaseDuration, activateAccountDuration, pendingAuthenticationStartedAt
         case failingStep, errorData
     }
 
@@ -64,6 +65,7 @@ public class SubscriptionPurchaseWideEventData: WideEventData {
                 createAccountDuration: WideEvent.MeasuredInterval? = nil,
                 completePurchaseDuration: WideEvent.MeasuredInterval? = nil,
                 activateAccountDuration: WideEvent.MeasuredInterval? = nil,
+                pendingAuthenticationStartedAt: Date? = nil,
                 errorData: WideEventErrorData? = nil,
                 contextData: WideEventContextData = WideEventContextData(),
                 appData: WideEventAppData = WideEventAppData(),
@@ -76,6 +78,7 @@ public class SubscriptionPurchaseWideEventData: WideEventData {
         self.createAccountDuration = createAccountDuration
         self.completePurchaseDuration = completePurchaseDuration
         self.activateAccountDuration = activateAccountDuration
+        self.pendingAuthenticationStartedAt = pendingAuthenticationStartedAt
         self.errorData = errorData
         self.contextData = contextData
         self.appData = appData
@@ -85,6 +88,20 @@ public class SubscriptionPurchaseWideEventData: WideEventData {
     public func completionDecision(for trigger: WideEventCompletionTrigger) async -> WideEventCompletionDecision {
         switch trigger {
         case .appLaunch:
+            if let pendingAuthenticationStartedAt {
+                if let checker = entitlementsChecker, await checker() {
+                    failingStep = nil
+                    errorData = nil
+                    return .complete(.success(reason: StatusReason.pendingAuthenticationDelayedActivation.rawValue))
+                }
+
+                if Date() >= pendingAuthenticationStartedAt.addingTimeInterval(Self.activationTimeout) {
+                    return .complete(.unknown(reason: StatusReason.pendingAuthenticationTimeout.rawValue))
+                }
+
+                return .keepPending
+            }
+
             guard var interval = activateAccountDuration, let start = interval.start else {
                 return .complete(.unknown(reason: StatusReason.partialData.rawValue))
             }
@@ -126,6 +143,8 @@ extension SubscriptionPurchaseWideEventData {
         case partialData = "partial_data"
         case missingEntitlements = "missing_entitlements"
         case missingEntitlementsDelayedActivation = "missing_entitlements_delayed_activation"
+        case pendingAuthenticationDelayedActivation = "pending_authentication_delayed_activation"
+        case pendingAuthenticationTimeout = "pending_authentication_timeout"
     }
 
     public func jsonParameters() -> [String: Encodable] {
@@ -146,6 +165,12 @@ extension SubscriptionPurchaseWideEventData {
     public func markAsFailed(at step: FailingStep, error: Error) {
         self.failingStep = step
         self.errorData = WideEventErrorData(error: error)
+    }
+
+    public func markPurchasePendingAuthentication(startedAt: Date = Date()) {
+        self.pendingAuthenticationStartedAt = startedAt
+        self.failingStep = nil
+        self.errorData = nil
     }
 
     private static func bucket(_ ms: Int) -> Int {

@@ -443,8 +443,14 @@
             {
                 "key": "feature.data.ext.status_reason",
                 "type": "string",
-                "description": "Reason string for the current status, when applicable - currently applied to UNKNOWN status pixels",
-                "enum": ["partial_data", "missing_entitlements", "missing_entitlements_delayed_activation"]
+                "description": "Reason string for the current status, when applicable - currently applied to UNKNOWN and delayed SUCCESS status pixels",
+                "enum": [
+                    "partial_data",
+                    "missing_entitlements",
+                    "missing_entitlements_delayed_activation",
+                    "pending_authentication_delayed_activation",
+                    "pending_authentication_timeout"
+                ]
             },
             {
                 "key": "feature.data.ext.purchase_platform",

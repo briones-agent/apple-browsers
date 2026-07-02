@@ -476,6 +476,100 @@ final class SubscriptionWideEventTests: XCTestCase {
         }
     }
 
+    func testMarkPurchasePendingAuthentication_clearsFailureStateAndStoresStartDate() {
+        let subscriptionData = SubscriptionPurchaseWideEventData(
+            purchasePlatform: .appStore,
+            subscriptionIdentifier: "ddg.privacy.pro.monthly.renews.us",
+            freeTrialEligible: false,
+            contextData: WideEventContextData()
+        )
+        subscriptionData.markAsFailed(at: .accountPayment, error: makeTestError())
+
+        let startedAt = Date(timeIntervalSince1970: 1_750_000_000)
+        subscriptionData.markPurchasePendingAuthentication(startedAt: startedAt)
+
+        XCTAssertEqual(subscriptionData.pendingAuthenticationStartedAt, startedAt)
+        XCTAssertNil(subscriptionData.failingStep)
+        XCTAssertNil(subscriptionData.errorData)
+    }
+
+    func testCompletionDecision_pendingAuthenticationWithinTimeout_returnsKeepPending() async {
+        let subscriptionData = SubscriptionPurchaseWideEventData(
+            purchasePlatform: .appStore,
+            subscriptionIdentifier: "ddg.privacy.pro.monthly.renews.us",
+            freeTrialEligible: false,
+            contextData: WideEventContextData()
+        )
+        subscriptionData.markPurchasePendingAuthentication(startedAt: Date().addingTimeInterval(-SubscriptionPurchaseWideEventData.activationTimeout + 10))
+
+        let decision = await subscriptionData.completionDecision(for: .appLaunch)
+
+        switch decision {
+        case .keepPending:
+            break
+        case .complete:
+            XCTFail("Expected keep pending for pending authentication inside timeout")
+        }
+    }
+
+    func testCompletionDecision_pendingAuthenticationWithEntitlements_completesWithSuccess() async {
+        let subscriptionData = SubscriptionPurchaseWideEventData(
+            purchasePlatform: .appStore,
+            subscriptionIdentifier: "ddg.privacy.pro.monthly.renews.us",
+            freeTrialEligible: false,
+            contextData: WideEventContextData()
+        )
+        subscriptionData.markAsFailed(at: .accountPayment, error: makeTestError())
+        subscriptionData.markPurchasePendingAuthentication(startedAt: Date())
+        subscriptionData.entitlementsChecker = { true }
+
+        let decision = await subscriptionData.completionDecision(for: .appLaunch)
+
+        switch decision {
+        case .complete(let status):
+            XCTAssertEqual(status, .success(reason: SubscriptionPurchaseWideEventData.StatusReason.pendingAuthenticationDelayedActivation.rawValue))
+            XCTAssertNil(subscriptionData.failingStep)
+            XCTAssertNil(subscriptionData.errorData)
+        case .keepPending:
+            XCTFail("Expected completion with success")
+        }
+    }
+
+    func testCompletionDecision_pendingAuthenticationTimeoutExceeded_returnsTimeout() async {
+        let subscriptionData = SubscriptionPurchaseWideEventData(
+            purchasePlatform: .appStore,
+            subscriptionIdentifier: "ddg.privacy.pro.monthly.renews.us",
+            freeTrialEligible: false,
+            contextData: WideEventContextData()
+        )
+        subscriptionData.markPurchasePendingAuthentication(startedAt: Date().addingTimeInterval(-SubscriptionPurchaseWideEventData.activationTimeout - 10))
+
+        let decision = await subscriptionData.completionDecision(for: .appLaunch)
+
+        switch decision {
+        case .complete(let status):
+            XCTAssertEqual(status, .unknown(reason: SubscriptionPurchaseWideEventData.StatusReason.pendingAuthenticationTimeout.rawValue))
+        case .keepPending:
+            XCTFail("Expected completion with pending authentication timeout")
+        }
+    }
+
+    func testPendingAuthenticationStartedAt_roundTripsThroughCodable() throws {
+        let startedAt = Date(timeIntervalSince1970: 1_750_000_000)
+        let subscriptionData = SubscriptionPurchaseWideEventData(
+            purchasePlatform: .appStore,
+            subscriptionIdentifier: "ddg.privacy.pro.monthly.renews.us",
+            freeTrialEligible: false,
+            contextData: WideEventContextData()
+        )
+        subscriptionData.markPurchasePendingAuthentication(startedAt: startedAt)
+
+        let encoded = try JSONEncoder().encode(subscriptionData)
+        let decoded = try JSONDecoder().decode(SubscriptionPurchaseWideEventData.self, from: encoded)
+
+        XCTAssertEqual(decoded.pendingAuthenticationStartedAt, startedAt)
+    }
+
 }
 
 struct MockWideEventFeatureFlagProvider: WideEventFeatureFlagProviding {

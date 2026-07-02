@@ -378,6 +378,60 @@ final class SubscriptionPagesUseSubscriptionFeatureTests: XCTestCase {
         XCTAssertEqual(startedSecond.funnelName, "funnel_onpurchasecheck_multiple")
     }
 
+    @MainActor
+    func testAppStorePendingAuthentication_UpdatesPurchaseWideEventWithoutCompletingFailure() async throws {
+        let originURL = URL(string: "https://duckduckgo.com/subscriptions?origin=funnel_appsettings_macos")!
+        let webView = MockURLWebView(url: originURL)
+        let message = WKScriptMessage.mock(name: "subscriptionSelected", body: [:], webView: webView)
+        let pendingTransactionHandler = MockPendingTransactionHandler()
+
+        mockStorePurchaseManager.isEligibleForFreeTrialResult = true
+        mockStorePurchaseManager.purchaseSubscriptionResult = .failure(.transactionPendingAuthentication)
+        subscriptionManager.resultCreateAccountTokenContainer = OAuthTokensFactory.makeValidTokenContainerWithEntitlements()
+        mockUIHandler.setAlertResponse(alertResponse: .alertSecondButtonReturn)
+        let mockStripePurchaseFlow = StripePurchaseFlowMock(prepareSubscriptionPurchaseResult: .failure(.noProductsFound))
+
+        let flowPerformer = DefaultSubscriptionFlowsExecuter(
+            subscriptionManager: subscriptionManager,
+            uiHandler: mockUIHandler,
+            wideEvent: mockWideEvent,
+            subscriptionEventReporter: mockEventReporter,
+            pendingTransactionHandler: pendingTransactionHandler
+        )
+        let pendingSut = SubscriptionPagesUseSubscriptionFeature(subscriptionManager: subscriptionManager,
+                                                                 subscriptionSuccessPixelHandler: subscriptionSuccessPixelHandler,
+                                                                 stripePurchaseFlow: mockStripePurchaseFlow,
+                                                                 uiHandler: mockUIHandler,
+                                                                 subscriptionFeatureAvailability: mockSubscriptionFeatureAvailability,
+                                                                 freemiumDBPUserStateManager: mockFreemiumDBPUserStateManager,
+                                                                 notificationCenter: mockNotificationCenter,
+                                                                 dataBrokerProtectionFreemiumPixelHandler: mockPixelHandler,
+                                                                 aiChatURL: URL.duckDuckGo,
+                                                                 wideEvent: mockWideEvent,
+                                                                 subscriptionEventReporter: mockEventReporter,
+                                                                 pendingTransactionHandler: pendingTransactionHandler,
+                                                                 flowPerformer: flowPerformer,
+                                                                 requestValidator: mockRequestValidator)
+        pendingSut.with(broker: broker)
+
+        _ = try await pendingSut.subscriptionSelected(params: ["id": "monthly"], original: message)
+
+        XCTAssertTrue(pendingTransactionHandler.markPurchasePendingCalled)
+        XCTAssertTrue(mockEventReporter.reportedActivationErrors.contains { error in
+            if case .purchasePendingTransaction = error { return true }
+            return false
+        })
+
+        let purchaseStarts = mockWideEvent.started.compactMap { $0 as? SubscriptionPurchaseWideEventData }
+        XCTAssertEqual(purchaseStarts.count, 1)
+        XCTAssertTrue(mockWideEvent.completions.allSatisfy { !($0.0 is SubscriptionPurchaseWideEventData) })
+
+        let updated = try XCTUnwrap(mockWideEvent.updates.compactMap { $0 as? SubscriptionPurchaseWideEventData }.last)
+        XCTAssertNotNil(updated.pendingAuthenticationStartedAt)
+        XCTAssertNil(updated.failingStep)
+        XCTAssertNil(updated.errorData)
+    }
+
     // MARK: - GetSubscriptionTierOptions Tests
 
     func testGetSubscriptionTierOptions_WhenProTierEnabled_PassesTrueToIncludeProTier() async throws {

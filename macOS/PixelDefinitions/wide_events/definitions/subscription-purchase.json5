@@ -4,7 +4,7 @@
         "owners": ["samsymons"],
         "meta": {
             "type": "macos-subscription-purchase",
-            "version": "1.0"
+            "version": "1.1"
         },
         "feature": {
             "name": "subscription-purchase",
@@ -13,8 +13,14 @@
                 "ext": {
                     "status_reason": {
                         "type": "string",
-                        "description": "Reason accompanying outcomes that are not a clean terminal result at send time. `partial_data` = an orphaned flow was completed after app launch without enough captured data to classify it; `missing_entitlements` = entitlements were still not present when the activation timeout elapsed (sent as UNKNOWN); `missing_entitlements_delayed_activation` = entitlements were initially missing but appeared on a later app launch, so the purchase is counted as a delayed SUCCESS.",
-                        "enum": ["partial_data", "missing_entitlements", "missing_entitlements_delayed_activation"]
+                        "description": "Reason accompanying outcomes that are not a clean terminal result at send time. `partial_data` = an orphaned flow was completed after app launch without enough captured data to classify it; `missing_entitlements` = entitlements were still not present when the activation timeout elapsed (sent as UNKNOWN); `missing_entitlements_delayed_activation` = entitlements were initially missing but appeared on a later app launch, so the purchase is counted as a delayed SUCCESS; `pending_authentication_delayed_activation` = StoreKit returned a pending transaction, but entitlements appeared on a later app launch, so the purchase is counted as a delayed SUCCESS; `pending_authentication_timeout` = StoreKit returned a pending transaction and entitlements were still not present when the activation timeout elapsed (sent as UNKNOWN).",
+                        "enum": [
+                            "partial_data",
+                            "missing_entitlements",
+                            "missing_entitlements_delayed_activation",
+                            "pending_authentication_delayed_activation",
+                            "pending_authentication_timeout"
+                        ]
                     },
                     "purchase_platform": {
                         "type": "string",
