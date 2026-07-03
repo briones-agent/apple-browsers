@@ -257,7 +257,19 @@ final class UnifiedInputContentContainerViewController: UIViewController {
             // Re-resolve now (synchronously, before the host is shown) so the prior session's stale
             // content isn't flashed. Runs after `prepareForActivation` clears the dismiss freeze.
             activationResolveTrigger.send(())
+            syncDuckAISurfaceWithSettings()
             duckAISurface?.refreshRecents()
+        }
+    }
+
+    /// Re-checks the Chat Suggestions gate on every focus: this VC is built once per browser session
+    /// (`viewWillAppear` only fires once), so without this, toggling the setting wouldn't take effect
+    /// until the app restarts.
+    private func syncDuckAISurfaceWithSettings() {
+        if featureFlagger.isFeatureOn(.aiChatSuggestions) && aiChatSettings.isChatSuggestionsEnabled {
+            attachDuckAISurfaceIfNeeded()
+        } else {
+            detachDuckAISurfaceFromSingleHost()
         }
     }
 
@@ -524,7 +536,8 @@ final class UnifiedInputContentContainerViewController: UIViewController {
 
         let source = SearchSuggestionsSource(
             loader: loader,
-            query: { [weak self] in self?.switchBarHandler.currentText ?? "" },
+            // Empty when "Search Suggestions" is off, else `effectiveTopHits` falls back to a phrase row.
+            query: { [weak self] in self?.appSettings.autocomplete == true ? (self?.switchBarHandler.currentText ?? "") : "" },
             showAskAIChat: aiChatSettings.isAIChatEnabled
         )
 
@@ -604,7 +617,7 @@ final class UnifiedInputContentContainerViewController: UIViewController {
             switchBarHandler.toggleStatePublisher,
             switchBarHandler.currentTextPublisher)
             .filter { mode, _ in mode == .search }
-            .map { _, text in text }
+            .map { [weak self] _, text in self?.appSettings.autocomplete == true ? text : "" }
             .removeDuplicates()
             .eraseToAnyPublisher()
 
