@@ -185,13 +185,13 @@ private final class MockDelegate: DBPUICommunicationDelegate {
     var handshakeUserDataCalled = false
     var handshakeUserDataToReturn: DBPUIHandshakeUserData?
 
-    func getHandshakeUserData() -> DBPUIHandshakeUserData? {
+    func getHandshakeUserData() async -> DBPUIHandshakeUserData? {
         handshakeUserDataCalled = true
         return handshakeUserDataToReturn
     }
 
     func saveProfile() async throws {}
-    func getUserProfile() -> DBPUIUserProfile? { nil }
+    func getUserProfile() async -> DBPUIUserProfile? { nil }
     func deleteProfileData() throws {}
     func addNameToCurrentUserProfile(_ name: DBPUIUserProfileName) -> Bool { false }
     func setNameAtIndexInCurrentUserProfile(_ payload: DBPUINameAtIndex) -> Bool { false }

@@ -39,6 +39,7 @@ public enum DataBrokerProtectionError: Error, Equatable, Codable {
     case dataNotInDatabase
     case jobTimeout
     case webContentProcessTerminated
+    case secureVaultNotInitialized
 
     static func parse(params: Any) -> DataBrokerProtectionError {
         let errorDataResult = try? JSONSerialization.data(withJSONObject: params)
@@ -91,6 +92,8 @@ extension DataBrokerProtectionError {
             return "jobTimeout"
         case .webContentProcessTerminated:
             return "webContentProcessTerminated"
+        case .secureVaultNotInitialized:
+            return "secureVaultNotInitialized"
         }
     }
 }
@@ -132,6 +135,8 @@ extension DataBrokerProtectionError: LocalizedError {
             return "Job timed out"
         case .webContentProcessTerminated:
             return "Web content process terminated"
+        case .secureVaultNotInitialized:
+            return "Secure Vault has not finished initializing"
         }
     }
 }
@@ -153,7 +158,7 @@ extension DataBrokerProtectionError: CustomNSError {
         case .cantCalculatePreferredRunDate: return 111
         case .httpError: return 112
         case .dataNotInDatabase: return 113
-        /// code 114 was for .vaultNotAvailable error, which has been removed
+        case .secureVaultNotInitialized: return 114
         case .jobTimeout: return 115
         case .webContentProcessTerminated: return 116
         }

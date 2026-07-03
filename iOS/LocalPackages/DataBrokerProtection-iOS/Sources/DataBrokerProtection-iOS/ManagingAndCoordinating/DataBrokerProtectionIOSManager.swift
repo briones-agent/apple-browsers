@@ -93,6 +93,7 @@ public class DBPIOSInterface {
     }
 
     public protocol DatabaseDelegate: AnyObject {
+        func prepareDatabaseAccess() async throws
         func getUserProfile() throws -> DataBrokerProtectionCore.DataBrokerProtectionProfile?
         func getAllDataBrokers() throws -> [DataBrokerProtectionCore.DataBroker]
         func getAllBrokerProfileQueryData() throws -> [DataBrokerProtectionCore.BrokerProfileQueryData]
@@ -124,9 +125,9 @@ public class DBPIOSInterface {
     }
 
     protocol PixelsDelegate: AnyObject {
-        func tryToFireEngagementPixels(isAuthenticated: Bool)
-        func tryToFireWeeklyPixels(isAuthenticated: Bool)
-        func tryToFireStatsPixels()
+        func tryToFireEngagementPixels(isAuthenticated: Bool, resources: DataBrokerProtectionIOSManagerVaultResources)
+        func tryToFireWeeklyPixels(isAuthenticated: Bool, resources: DataBrokerProtectionIOSManagerVaultResources)
+        func tryToFireStatsPixels(resources: DataBrokerProtectionIOSManagerVaultResources)
     }
 
     protocol DBPWideEventsDelegate: AnyObject {
@@ -145,6 +146,45 @@ public class DBPIOSInterface {
 
 extension BGTask: DBPIOSInterface.BGTaskHandling {}
 
+final class DataBrokerProtectionIOSManagerVaultResources {
+    let database: DataBrokerProtectionRepository
+    var queueManager: JobQueueManaging
+    let jobDependencies: BrokerProfileJobDependencyProviding
+    let emailConfirmationDataService: EmailConfirmationDataServiceProvider
+    private let brokerUpdaterProvider: () -> BrokerJSONServiceProvider?
+
+    private let engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository
+
+    lazy var brokerUpdater = brokerUpdaterProvider()
+    lazy var engagementPixels = DataBrokerProtectionEngagementPixels(
+        database: jobDependencies.database,
+        handler: jobDependencies.pixelHandler,
+        repository: engagementPixelsRepository
+    )
+    lazy var eventPixels = DataBrokerProtectionEventPixels(
+        database: jobDependencies.database,
+        handler: jobDependencies.pixelHandler
+    )
+    lazy var statsPixels = DataBrokerProtectionStatsPixels(
+        database: jobDependencies.database,
+        handler: jobDependencies.pixelHandler
+    )
+
+    init(database: DataBrokerProtectionRepository,
+         queueManager: JobQueueManaging,
+         jobDependencies: BrokerProfileJobDependencyProviding,
+         emailConfirmationDataService: EmailConfirmationDataServiceProvider,
+         brokerUpdaterProvider: @escaping () -> BrokerJSONServiceProvider?,
+         engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository) {
+        self.database = database
+        self.queueManager = queueManager
+        self.jobDependencies = jobDependencies
+        self.emailConfirmationDataService = emailConfirmationDataService
+        self.brokerUpdaterProvider = brokerUpdaterProvider
+        self.engagementPixelsRepository = engagementPixelsRepository
+    }
+}
+
 public final class DataBrokerProtectionIOSManager {
 
     private struct Constants {
@@ -160,20 +200,21 @@ public final class DataBrokerProtectionIOSManager {
 
     public static let backgroundTaskIdentifier = "com.duckduckgo.app.dbp.backgroundProcessing"
 
-    private let database: DataBrokerProtectionRepository
-    private var queueManager: JobQueueManaging
-    private let jobDependencies: BrokerProfileJobDependencyProviding
-    public var emailConfirmationDataService: EmailConfirmationDataServiceProvider?
+    private let vaultResourcesQueue = DispatchQueue(label: "com.duckduckgo.dbp.secureVaultResources", qos: .utility)
+    private let vaultResourcesLock = NSLock()
+    private var cachedVaultResources: DataBrokerProtectionIOSManagerVaultResources?
+    private var isVaultResourcesInitializationInProgress = false
+    private let makeVaultResources: () throws -> DataBrokerProtectionIOSManagerVaultResources
     private let authenticationManager: DataBrokerProtectionAuthenticationManaging
     private let userNotificationService: DataBrokerProtectionUserNotificationService
     private let sharedPixelsHandler: EventMapping<DataBrokerProtectionSharedPixels>
     private let iOSPixelsHandler: EventMapping<IOSPixels>
-    private let engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository
     private let privacyConfigManager: PrivacyConfigurationManaging
     private let quickLinkOpenURLHandler: (URL) -> Void
     private let maxBackgroundTaskWaitTime: TimeInterval
     private let minBackgroundTaskWaitTime: TimeInterval
     private let feedbackViewCreator: () -> (any View)
+    private let contentScopeProperties: ContentScopeProperties
     private let featureFlagger: DBPFeatureFlagging & FreemiumPIRFeatureFlagging
     private let settings: DataBrokerProtectionSettings
     private let subscriptionManager: DataBrokerProtectionSubscriptionManaging
@@ -233,43 +274,6 @@ public final class DataBrokerProtectionIOSManager {
         return isAuthenticated
     }
 
-    private lazy var brokerUpdater: BrokerJSONServiceProvider? = {
-        let databaseURL = DefaultDataBrokerProtectionDatabaseProvider.databaseFilePath(
-            directoryName: DatabaseConstants.directoryName,
-            fileName: DatabaseConstants.fileName,
-            appGroupIdentifier: nil
-        )
-        let vaultFactory = createDataBrokerProtectionSecureVaultFactory(appGroupName: nil, databaseFileURL: databaseURL)
-        guard let vault = try? vaultFactory.makeVault(reporter: nil) else {
-            return nil
-        }
-        let localBrokerService = LocalBrokerJSONService(resources: FileResources(runTypeProvider: settings),
-                                                        vault: vault,
-                                                        pixelHandler: sharedPixelsHandler,
-                                                        runTypeProvider: settings,
-                                                        isAuthenticatedUser: { [authenticationManager] in await authenticationManager.isUserAuthenticated },
-                                                        optOutRetryErrorFeatureFlagger: featureFlagger)
-
-        return RemoteBrokerJSONService(featureFlagger: featureFlagger,
-                                       settings: settings,
-                                       vault: vault,
-                                       authenticationManager: authenticationManager,
-                                       localBrokerProvider: localBrokerService)
-    }()
-    private lazy var engagementPixels = DataBrokerProtectionEngagementPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler,
-        repository: engagementPixelsRepository
-    )
-    private lazy var eventPixels = DataBrokerProtectionEventPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler
-    )
-    private lazy var statsPixels = DataBrokerProtectionStatsPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler
-    )
-
     init(queueManager: JobQueueManaging,
          jobDependencies: BrokerProfileJobDependencyProviding,
          emailConfirmationDataService: EmailConfirmationDataServiceProvider,
@@ -283,6 +287,7 @@ public final class DataBrokerProtectionIOSManager {
          maxBackgroundTaskWaitTime: TimeInterval = Constants.defaultMaxBackgroundTaskWaitTime,
          minBackgroundTaskWaitTime: TimeInterval = Constants.defaultMinBackgroundTaskWaitTime,
          feedbackViewCreator: @escaping () -> (any View),
+         contentScopeProperties: ContentScopeProperties? = nil,
          featureFlagger: DBPFeatureFlagging & FreemiumPIRFeatureFlagging,
          settings: DataBrokerProtectionSettings,
          subscriptionManager: DataBrokerProtectionSubscriptionManaging,
@@ -295,18 +300,24 @@ public final class DataBrokerProtectionIOSManager {
          continuedProcessingCoordinator: (any DBPContinuedProcessingCoordinating)? = nil,
          shouldRegisterBackgroundTaskHandler: Bool = true
     ) {
-        self.queueManager = queueManager
-        self.jobDependencies = jobDependencies
-        self.emailConfirmationDataService = emailConfirmationDataService
+        let vaultResources = DataBrokerProtectionIOSManagerVaultResources(
+            database: database,
+            queueManager: queueManager,
+            jobDependencies: jobDependencies,
+            emailConfirmationDataService: emailConfirmationDataService,
+            brokerUpdaterProvider: { nil },
+            engagementPixelsRepository: engagementPixelsRepository
+        )
+        self.cachedVaultResources = vaultResources
+        self.makeVaultResources = { vaultResources }
         self.authenticationManager = authenticationManager
         self.userNotificationService = userNotificationService
         self.sharedPixelsHandler = sharedPixelsHandler
         self.iOSPixelsHandler = iOSPixelsHandler
-        self.engagementPixelsRepository = engagementPixelsRepository
         self.privacyConfigManager = privacyConfigManager
-        self.database = database
         self.quickLinkOpenURLHandler = quickLinkOpenURLHandler
         self.feedbackViewCreator = feedbackViewCreator
+        self.contentScopeProperties = contentScopeProperties ?? jobDependencies.contentScopeProperties
         self.maxBackgroundTaskWaitTime = maxBackgroundTaskWaitTime
         self.minBackgroundTaskWaitTime = minBackgroundTaskWaitTime
         self.featureFlagger = featureFlagger
@@ -322,13 +333,141 @@ public final class DataBrokerProtectionIOSManager {
             self.continuedProcessingCoordinator = continuedProcessingCoordinator
         }
 
-        self.queueManager.delegate = self
+        vaultResources.queueManager.delegate = self
 
         if shouldRegisterBackgroundTaskHandler {
             registerBackgroundTaskHandler()
         }
         Logger.dataBrokerProtection.debug("PIR wide event sweep requested (iOS setup)")
         sweepWideEvents()
+    }
+
+    init(vaultResourcesBuilder: @escaping () throws -> DataBrokerProtectionIOSManagerVaultResources,
+         authenticationManager: DataBrokerProtectionAuthenticationManaging,
+         userNotificationService: DataBrokerProtectionUserNotificationService,
+         sharedPixelsHandler: EventMapping<DataBrokerProtectionSharedPixels>,
+         iOSPixelsHandler: EventMapping<IOSPixels>,
+         privacyConfigManager: PrivacyConfigurationManaging,
+         quickLinkOpenURLHandler: @escaping (URL) -> Void,
+         maxBackgroundTaskWaitTime: TimeInterval = Constants.defaultMaxBackgroundTaskWaitTime,
+         minBackgroundTaskWaitTime: TimeInterval = Constants.defaultMinBackgroundTaskWaitTime,
+         feedbackViewCreator: @escaping () -> (any View),
+         contentScopeProperties: ContentScopeProperties,
+         featureFlagger: DBPFeatureFlagging & FreemiumPIRFeatureFlagging,
+         settings: DataBrokerProtectionSettings,
+         subscriptionManager: DataBrokerProtectionSubscriptionManaging,
+         wideEvent: WideEventManaging?,
+         eventsHandler: EventMapping<JobEvent>,
+         isWebViewInspectable: Bool = false,
+         freeTrialConversionService: FreeTrialConversionInstrumentationService? = nil,
+         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
+         continuedProcessingCoordinator: (any DBPContinuedProcessingCoordinating)? = nil,
+         shouldRegisterBackgroundTaskHandler: Bool = true
+    ) {
+        self.makeVaultResources = vaultResourcesBuilder
+        self.authenticationManager = authenticationManager
+        self.userNotificationService = userNotificationService
+        self.sharedPixelsHandler = sharedPixelsHandler
+        self.iOSPixelsHandler = iOSPixelsHandler
+        self.privacyConfigManager = privacyConfigManager
+        self.quickLinkOpenURLHandler = quickLinkOpenURLHandler
+        self.feedbackViewCreator = feedbackViewCreator
+        self.contentScopeProperties = contentScopeProperties
+        self.maxBackgroundTaskWaitTime = maxBackgroundTaskWaitTime
+        self.minBackgroundTaskWaitTime = minBackgroundTaskWaitTime
+        self.featureFlagger = featureFlagger
+        self.settings = settings
+        self.subscriptionManager = subscriptionManager
+        self.wideEventSweeper = wideEvent.map { DBPWideEventSweeper(wideEvent: $0) }
+        self.eventsHandler = eventsHandler
+        self.isWebViewInspectable = isWebViewInspectable
+        self.freeTrialConversionService = freeTrialConversionService
+        self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
+
+        if let continuedProcessingCoordinator {
+            self.continuedProcessingCoordinator = continuedProcessingCoordinator
+        }
+
+        if shouldRegisterBackgroundTaskHandler {
+            registerBackgroundTaskHandler()
+        }
+        Logger.dataBrokerProtection.debug("PIR wide event sweep requested (iOS setup)")
+        sweepWideEvents()
+    }
+
+    public func initializeSecureVaultResources() async throws {
+        guard beginVaultResourcesInitializationIfNeeded() else {
+            return
+        }
+
+        do {
+            let resources = try await makeVaultResourcesOnQueue()
+            completeVaultResourcesInitialization(with: resources)
+        } catch {
+            completeVaultResourcesInitializationAfterFailure()
+            throw error
+        }
+    }
+
+    private func vaultResourcesIfReady() throws -> DataBrokerProtectionIOSManagerVaultResources {
+        vaultResourcesLock.lock()
+        defer { vaultResourcesLock.unlock() }
+
+        guard let cachedVaultResources else {
+            throw DataBrokerProtectionError.secureVaultNotInitialized
+        }
+
+        return cachedVaultResources
+    }
+
+    private func vaultResources() async throws -> DataBrokerProtectionIOSManagerVaultResources {
+        try vaultResourcesIfReady()
+    }
+
+    private func beginVaultResourcesInitializationIfNeeded() -> Bool {
+        vaultResourcesLock.lock()
+        defer { vaultResourcesLock.unlock() }
+
+        if cachedVaultResources != nil {
+            return false
+        }
+
+        if isVaultResourcesInitializationInProgress {
+            return false
+        }
+
+        isVaultResourcesInitializationInProgress = true
+        return true
+    }
+
+    private func makeVaultResourcesOnQueue() async throws -> DataBrokerProtectionIOSManagerVaultResources {
+        let makeVaultResources = makeVaultResources
+        let vaultResourcesQueue = vaultResourcesQueue
+
+        return try await withCheckedThrowingContinuation { continuation in
+            vaultResourcesQueue.async {
+                do {
+                    continuation.resume(returning: try makeVaultResources())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func completeVaultResourcesInitialization(with resources: DataBrokerProtectionIOSManagerVaultResources) {
+        resources.queueManager.delegate = self
+
+        vaultResourcesLock.lock()
+        cachedVaultResources = resources
+        isVaultResourcesInitializationInProgress = false
+        vaultResourcesLock.unlock()
+    }
+
+    private func completeVaultResourcesInitializationAfterFailure() {
+        vaultResourcesLock.lock()
+        isVaultResourcesInitializationInProgress = false
+        vaultResourcesLock.unlock()
     }
 }
 
@@ -341,7 +480,15 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
     }
 
     public func appDidBecomeActive() async {
-        await fireMonitoringPixels()
+        let resources: DataBrokerProtectionIOSManagerVaultResources
+        do {
+            resources = try await vaultResources()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable during app active: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
+        await fireMonitoringPixels(resources: resources)
         await sendGoToMarketFirstScanNotificationIfEligible()
 
         let isAuthenticated = await refreshFreeScanState()
@@ -354,9 +501,9 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
             return
         }
 
-        let operationPreferredDateUpdater = OperationPreferredDateUpdater(database: jobDependencies.database,
+        let operationPreferredDateUpdater = OperationPreferredDateUpdater(database: resources.jobDependencies.database,
                                                                           featureFlagger: featureFlagger)
-        operationPreferredDateUpdater.runPreferredRunDateNilMigrationIfNeeded(settings: jobDependencies.dataBrokerProtectionSettings)
+        operationPreferredDateUpdater.runPreferredRunDateNilMigrationIfNeeded(settings: resources.jobDependencies.dataBrokerProtectionSettings)
 
         if featureFlagger.isForegroundRunningOnAppActiveFeatureOn,
            !isInitialContinuedProcessingRunActive {
@@ -366,16 +513,16 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
         }
     }
 
-    func fireMonitoringPixels() async {
+    func fireMonitoringPixels(resources: DataBrokerProtectionIOSManagerVaultResources) async {
         let isAuthenticated = await authenticationManager.isUserAuthenticated
 
-        tryToFireEngagementPixels(isAuthenticated: isAuthenticated)
-        tryToFireWeeklyPixels(isAuthenticated: isAuthenticated)
+        tryToFireEngagementPixels(isAuthenticated: isAuthenticated, resources: resources)
+        tryToFireWeeklyPixels(isAuthenticated: isAuthenticated, resources: resources)
 
         // Stats pixels only fire for authenticated users (they relate to opt-outs)
         guard isAuthenticated else { return }
 
-        tryToFireStatsPixels()
+        tryToFireStatsPixels(resources: resources)
 
         Logger.dataBrokerProtection.debug("PIR wide event sweep requested (app active)")
         sweepWideEvents()
@@ -384,25 +531,33 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.UserEventsDelegate {
     public func dashboardDidOpen() {
+        let resources: DataBrokerProtectionIOSManagerVaultResources
+        do {
+            resources = try vaultResourcesIfReady()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable during dashboard open: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
         guard !isInitialContinuedProcessingRunActive else { return }
 
         switch (currentRunIsFreeScan, canRunFreemiumScans) {
         case (true, true):
             // unauthenticated freemium scan-only
             Logger.dataBrokerProtection.log("Starting scan-only operations whilst dashboard open (freemium)")
-            queueManager.startScheduledScanOperationsIfPermitted(showWebView: false,
-                                                                 isAuthenticatedUser: false,
-                                                                 jobDependencies: jobDependencies,
-                                                                 errorHandler: nil) {
+            resources.queueManager.startScheduledScanOperationsIfPermitted(showWebView: false,
+                                                                           isAuthenticatedUser: false,
+                                                                           jobDependencies: resources.jobDependencies,
+                                                                           errorHandler: nil) {
                 Logger.dataBrokerProtection.log("Scan operations completed whilst dashboard open")
             }
         case (false, _):
             // authenticated all operations
             Logger.dataBrokerProtection.log("Starting all operations whilst dashboard open")
-            queueManager.startScheduledAllOperationsIfPermitted(showWebView: false,
-                                                               isAuthenticatedUser: true,
-                                                               jobDependencies: jobDependencies,
-                                                               errorHandler: nil) {
+            resources.queueManager.startScheduledAllOperationsIfPermitted(showWebView: false,
+                                                                         isAuthenticatedUser: true,
+                                                                         jobDependencies: resources.jobDependencies,
+                                                                         errorHandler: nil) {
                 Logger.dataBrokerProtection.log("All operations completed whilst dashboard open")
             }
         default:
@@ -410,11 +565,15 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.UserEventsDelegate {
             Logger.dataBrokerProtection.log("Skipping dashboard-open operations")
         }
     }
-    
+
     public func dashboardDidClose() {
         Logger.dataBrokerProtection.log("Stopping operations as dashboard closed")
         // We don't want to stop immediate scans if they are running
-        self.queueManager.stopScheduledOperationsOnly()
+        do {
+            try vaultResourcesIfReady().queueManager.stopScheduledOperationsOnly()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable during dashboard close: \(error.localizedDescription, privacy: .public)")
+        }
     }
 }
 
@@ -425,28 +584,32 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AuthenticationDelegate
 }
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.DatabaseDelegate {
+    public func prepareDatabaseAccess() async throws {
+        _ = try await vaultResources()
+    }
+
     public func getUserProfile() throws -> DataBrokerProtectionCore.DataBrokerProtectionProfile? {
-        try database.fetchProfile()
+        try vaultResourcesIfReady().database.fetchProfile()
     }
 
     public func getAllDataBrokers() throws -> [DataBrokerProtectionCore.DataBroker] {
-        try database.fetchAllDataBrokers()
+        try vaultResourcesIfReady().database.fetchAllDataBrokers()
     }
 
     public func getAllBrokerProfileQueryData() throws -> [DataBrokerProtectionCore.BrokerProfileQueryData] {
-        try database.fetchAllBrokerProfileQueryData(reason: .profileHistoryReporting)
+        try vaultResourcesIfReady().database.fetchAllBrokerProfileQueryData(reason: .profileHistoryReporting)
     }
 
     public func getAllAttempts() throws -> [AttemptInformation] {
-        try database.fetchAllAttempts()
+        try vaultResourcesIfReady().database.fetchAllAttempts()
     }
 
     public func getAllOptOutEmailConfirmations() throws -> [OptOutEmailConfirmationJobData] {
-        try database.fetchAllOptOutEmailConfirmations()
+        try vaultResourcesIfReady().database.fetchAllOptOutEmailConfirmations()
     }
 
     public func getBackgroundTaskEvents(since date: Date) throws -> [BackgroundTaskEvent] {
-        try database.fetchBackgroundTaskEvents(since: date)
+        try vaultResourcesIfReady().database.fetchBackgroundTaskEvents(since: date)
     }
 
     @MainActor
@@ -471,12 +634,13 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DatabaseDelegate {
     }
 
     func saveProfileAndPrepareForInitialScans(_ profile: DataBrokerProtectionCore.DataBrokerProtectionProfile) async throws {
+        let resources = try await vaultResources()
         do {
-            try await database.save(profile)
+            try await resources.database.save(profile)
         } catch {
             throw error
         }
-        eventPixels.markInitialScansStarted()
+        resources.eventPixels.markInitialScansStarted()
         eventsHandler.fire(.profileSaved)
         freeTrialConversionService?.markPIRActivated()
 
@@ -484,13 +648,14 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DatabaseDelegate {
     }
 
     public func deleteAllUserProfileData() throws {
-        queueManager.stop()
-        try database.deleteProfileData()
+        let resources = try vaultResourcesIfReady()
+        resources.queueManager.stop()
+        try resources.database.deleteProfileData()
         DataBrokerProtectionSettings(defaults: .dbp).resetBrokerDeliveryData()
     }
 
     public func matchRemovedByUser(with id: Int64) throws {
-        try database.matchRemovedByUser(id)
+        try vaultResourcesIfReady().database.matchRemovedByUser(id)
     }
 }
 
@@ -498,7 +663,11 @@ extension DataBrokerProtectionIOSManager: JobQueueManagerDelegate {
     public func queueManagerWillEnqueueOperations(_ queueManager: JobQueueManaging) {
         Task {
             do {
-                try await brokerUpdater?.checkForUpdates()
+                try await vaultResources().brokerUpdater?.checkForUpdates()
+            } catch DataBrokerProtectionError.secureVaultNotInitialized {
+                Logger.dataBrokerProtection.error("Secure Vault resources unavailable while enqueueing operations")
+            } catch {
+                Logger.dataBrokerProtection.error("Broker JSON update failed while enqueueing operations: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -535,15 +704,16 @@ extension DataBrokerProtectionIOSManager: JobQueueManagerDelegate {
             }
         }
         // Figure out if we've just finished initial scans, and send the appropriate pixel if necessary
-        if eventPixels.hasInitialScansTotalDurationPixelBeenSent() {
-            return
-        }
-
         do {
-            let hasCompletedInitialScans = try database.haveAllEligibleScansRunAtLeastOnce(isAuthenticatedUser: currentRunIsFreeScan != true)
+            let resources = try vaultResourcesIfReady()
+            if resources.eventPixels.hasInitialScansTotalDurationPixelBeenSent() {
+                return
+            }
+
+            let hasCompletedInitialScans = try resources.database.haveAllEligibleScansRunAtLeastOnce(isAuthenticatedUser: currentRunIsFreeScan != true)
             if hasCompletedInitialScans {
-                let profile = try database.fetchProfile()
-                eventPixels.fireInitialScansTotalDurationPixel(numberOfProfileQueries: profile?.profileQueries.count ?? 0, isFreeScan: currentRunIsFreeScan)
+                let profile = try resources.database.fetchProfile()
+                resources.eventPixels.fireInitialScansTotalDurationPixel(numberOfProfileQueries: profile?.profileQueries.count ?? 0, isFreeScan: currentRunIsFreeScan)
             }
         } catch {
             Logger.dataBrokerProtection.error("Error when calculating if we should send the initial scans duration pixel, error: \(error.localizedDescription, privacy: .public)")
@@ -565,42 +735,51 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskInformat
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.JobQueueInformationDelegate {
     /// Used by the iOS PIR debug menu to check if jobs are currently running.
     public var isRunningJobs: Bool {
-        return queueManager.debugRunningStatusString == "running"
+        return (try? vaultResourcesIfReady().queueManager.debugRunningStatusString) == "running"
     }
 }
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.DebugCommandsDelegate {
 
     public func refreshRemoteBrokerJSON() async throws {
-        try await brokerUpdater?.checkForUpdates(skipsLimiter: true)
+        try await vaultResources().brokerUpdater?.checkForUpdates(skipsLimiter: true)
     }
 
     /// Used by the iOS PIR debug menu to trigger scheduled jobs.
     public func runScheduledJobs(type: JobType,
                                  errorHandler: ((DataBrokerProtectionJobsErrorCollection?) -> Void)?,
                                  completionHandler: (() -> Void)?) {
+        let resources: DataBrokerProtectionIOSManagerVaultResources
+        do {
+            resources = try vaultResourcesIfReady()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable while running debug jobs: \(error.localizedDescription, privacy: .public)")
+            completionHandler?()
+            return
+        }
+
         switch type {
         case .scheduledScan:
-            queueManager.startScheduledScanOperationsIfPermitted(
+            resources.queueManager.startScheduledScanOperationsIfPermitted(
                 showWebView: true,
                 isAuthenticatedUser: true,
-                jobDependencies: jobDependencies,
+                jobDependencies: resources.jobDependencies,
                 errorHandler: errorHandler,
                 completion: completionHandler
             )
         case .optOut:
-            queueManager.startImmediateOptOutOperationsIfPermitted(
+            resources.queueManager.startImmediateOptOutOperationsIfPermitted(
                 showWebView: true,
                 isAuthenticatedUser: true,
-                jobDependencies: jobDependencies,
+                jobDependencies: resources.jobDependencies,
                 errorHandler: errorHandler,
                 completion: completionHandler
             )
         case .all:
-            queueManager.startScheduledAllOperationsIfPermitted(
+            resources.queueManager.startScheduledAllOperationsIfPermitted(
                 showWebView: true,
                 isAuthenticatedUser: true,
-                jobDependencies: jobDependencies,
+                jobDependencies: resources.jobDependencies,
                 errorHandler: errorHandler,
                 completion: completionHandler
             )
@@ -610,15 +789,20 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DebugCommandsDelegate 
     }
 
     public func runEmailConfirmationJobs() async throws {
-        try await emailConfirmationDataService?.checkForEmailConfirmationData()
-        queueManager.addEmailConfirmationJobs(showWebView: true, jobDependencies: jobDependencies)
+        let resources = try await vaultResources()
+        try await resources.emailConfirmationDataService.checkForEmailConfirmationData()
+        resources.queueManager.addEmailConfirmationJobs(showWebView: true, jobDependencies: resources.jobDependencies)
     }
 
     public func fireWeeklyPixels() async {
         let isAuthenticated = await authenticationManager.isUserAuthenticated
+        guard let resources = try? await vaultResources() else {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable while firing weekly pixels")
+            return
+        }
         let eventPixels = DataBrokerProtectionEventPixels(
-            database: jobDependencies.database,
-            handler: jobDependencies.pixelHandler
+            database: resources.jobDependencies.database,
+            handler: resources.jobDependencies.pixelHandler
         )
         eventPixels.fireWeeklyReportPixels(isAuthenticated: isAuthenticated)
     }
@@ -631,7 +815,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DebugCommandsDelegate 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.RunPrerequisitesDelegate {
     public var meetsProfileRunPrequisite: Bool {
         get throws {
-            return try database.fetchProfile() != nil
+            return try vaultResourcesIfReady().database.fetchProfile() != nil
         }
     }
 
@@ -657,7 +841,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.RunPrerequisitesDelega
 
     public func validateRunPrerequisites() async -> Bool {
         do {
-            guard try meetsProfileRunPrequisite else {
+            guard try await vaultResources().database.fetchProfile() != nil else {
                 Logger.dataBrokerProtection.log("Profile run prerequisites are invalid")
                 return false
             }
@@ -686,7 +870,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DataBrokerProtectionVi
                                                   databaseDelegate: self,
                                                   userEventsDelegate: self,
                                                   privacyConfigManager: self.privacyConfigManager,
-                                                  contentScopeProperties: self.jobDependencies.contentScopeProperties,
+                                                  contentScopeProperties: contentScopeProperties,
                                                   webUISettings: DataBrokerProtectionWebUIURLSettings(.dbp),
                                                   openURLHandler: quickLinkOpenURLHandler,
                                                   feedbackViewCreator: feedbackViewCreator,
@@ -697,7 +881,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DataBrokerProtectionVi
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.OptOutEmailConfirmationHandlingDelegate {
     func checkForEmailConfirmationData() async {
         do {
-            try await emailConfirmationDataService?.checkForEmailConfirmationData()
+            try await vaultResources().emailConfirmationDataService.checkForEmailConfirmationData()
         } catch {
             Logger.dataBrokerProtection.error("Email confirmation data check failed: \(error, privacy: .public)")
         }
@@ -707,20 +891,20 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.OptOutEmailConfirmatio
 // MARK: - Private protocol implementations
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.PixelsDelegate {
-    func tryToFireEngagementPixels(isAuthenticated: Bool) {
+    func tryToFireEngagementPixels(isAuthenticated: Bool, resources: DataBrokerProtectionIOSManagerVaultResources) {
         Task {
             let needBackgroundAppRefresh = await needBackgroundAppRefreshForEngagementPixel()
-            engagementPixels.fireEngagementPixel(isAuthenticated: isAuthenticated, needBackgroundAppRefresh: needBackgroundAppRefresh)
+            resources.engagementPixels.fireEngagementPixel(isAuthenticated: isAuthenticated, needBackgroundAppRefresh: needBackgroundAppRefresh)
         }
     }
 
-    func tryToFireWeeklyPixels(isAuthenticated: Bool) {
-        eventPixels.tryToFireWeeklyPixels(isAuthenticated: isAuthenticated)
+    func tryToFireWeeklyPixels(isAuthenticated: Bool, resources: DataBrokerProtectionIOSManagerVaultResources) {
+        resources.eventPixels.tryToFireWeeklyPixels(isAuthenticated: isAuthenticated)
     }
 
-    func tryToFireStatsPixels() {
-        statsPixels.tryToFireStatsPixels()
-        statsPixels.fireCustomStatsPixelsIfNeeded()
+    func tryToFireStatsPixels(resources: DataBrokerProtectionIOSManagerVaultResources) {
+        resources.statsPixels.tryToFireStatsPixels()
+        resources.statsPixels.fireCustomStatsPixelsIfNeeded()
     }
 }
 
@@ -743,7 +927,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.NotificationDelegate, 
               meetsLocaleRequirement,
               isWithinGoToMarketReleaseWindow(currentAppVersion: AppVersion.shared.versionNumber),
               (try? await meetsEntitlementRunPrequisite) == true,
-              hasNotRunPIRScan() else {
+              await hasNotRunPIRScan() else {
             return
         }
 
@@ -778,6 +962,13 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
 
 #if !targetEnvironment(simulator)
             let isAuthenticatedUser = await refreshFreeScanState()
+            let resources: DataBrokerProtectionIOSManagerVaultResources
+            do {
+                resources = try await vaultResources()
+            } catch {
+                Logger.dataBrokerProtection.error("Secure Vault resources unavailable while scheduling background task: \(error.localizedDescription, privacy: .public)")
+                return
+            }
 
             do {
                 let request = BGProcessingTaskRequest(identifier: Self.backgroundTaskIdentifier)
@@ -787,7 +978,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
 
                 do {
                     earliestBeginDate = calculateEarliestBeginDate(
-                        firstEligibleJobDate: try database.fetchFirstEligibleJobDate(isAuthenticatedUser: isAuthenticatedUser)
+                        firstEligibleJobDate: try resources.database.fetchFirstEligibleJobDate(isAuthenticatedUser: isAuthenticatedUser)
                     )
                 } catch {
                     earliestBeginDate = Date().addingTimeInterval(maxBackgroundTaskWaitTime)
@@ -806,28 +997,28 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
         }
     }
 
-    private func startBackgroundTaskOperations(isAuthenticated: Bool, completion: @escaping () -> Void) {
+    private func startBackgroundTaskOperations(resources: DataBrokerProtectionIOSManagerVaultResources, isAuthenticated: Bool, completion: @escaping () -> Void) {
         if isAuthenticated {
             Logger.dataBrokerProtection.log("Starting all operations in background task")
-            queueManager.startScheduledAllOperationsIfPermitted(showWebView: false,
-                                                                isAuthenticatedUser: true,
-                                                                jobDependencies: jobDependencies,
-                                                                errorHandler: nil,
-                                                                completion: completion)
+            resources.queueManager.startScheduledAllOperationsIfPermitted(showWebView: false,
+                                                                          isAuthenticatedUser: true,
+                                                                          jobDependencies: resources.jobDependencies,
+                                                                          errorHandler: nil,
+                                                                          completion: completion)
         } else if canRunFreemiumScans {
             Logger.dataBrokerProtection.log("Starting scan-only operations in background task (freemium)")
-            queueManager.startScheduledScanOperationsIfPermitted(showWebView: false,
-                                                                 isAuthenticatedUser: false,
-                                                                 jobDependencies: jobDependencies,
-                                                                 errorHandler: nil,
-                                                                 completion: completion)
+            resources.queueManager.startScheduledScanOperationsIfPermitted(showWebView: false,
+                                                                           isAuthenticatedUser: false,
+                                                                           jobDependencies: resources.jobDependencies,
+                                                                           errorHandler: nil,
+                                                                           completion: completion)
         } else {
             Logger.dataBrokerProtection.log("No operations to start in background task")
             completion()
         }
     }
 
-    private func recordBackgroundTaskCompletedEvent(sessionId: String, startDate: Date) {
+    private func recordBackgroundTaskCompletedEvent(resources: DataBrokerProtectionIOSManagerVaultResources, sessionId: String, startDate: Date) {
         let completedAt = Date.now
         let duration = completedAt.timeIntervalSince(startDate) * 1000.0
         do {
@@ -837,7 +1028,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 timestamp: completedAt,
                 metadata: BackgroundTaskEvent.Metadata(durationInMs: duration)
             )
-            try database.recordBackgroundTaskEvent(event)
+            try resources.database.recordBackgroundTaskEvent(event)
         } catch {
             Logger.dataBrokerProtection.error("Failed to record background task completed event: \(error.localizedDescription, privacy: .public)")
         }
@@ -849,21 +1040,9 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
         let startDate = Date.now
         let sessionId = UUID().uuidString
 
-        // Record started event
-        do {
-            let event = BackgroundTaskEvent(
-                sessionId: sessionId,
-                eventType: .started,
-                timestamp: startDate,
-                metadata: nil
-            )
-            try database.recordBackgroundTaskEvent(event)
-        } catch {
-            Logger.dataBrokerProtection.error("Failed to record background task start event: \(error.localizedDescription, privacy: .public)")
-        }
-
         task.expirationHandler = {
-            self.queueManager.stop()
+            let resources = try? self.vaultResourcesIfReady()
+            resources?.queueManager.stop()
 
             let timeTaken = Date.now.timeIntervalSince(startDate)
             Logger.dataBrokerProtection.log("Background task expired with time taken: \(timeTaken)")
@@ -878,7 +1057,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                     timestamp: Date.now,
                     metadata: BackgroundTaskEvent.Metadata(durationInMs: duration)
                 )
-                try self.database.recordBackgroundTaskEvent(event)
+                try resources?.database.recordBackgroundTaskEvent(event)
             } catch {
                 Logger.dataBrokerProtection.error("Failed to record background task terminated event: \(error.localizedDescription, privacy: .public)")
             }
@@ -888,6 +1067,28 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
         }
 
         Task {
+            let resources: DataBrokerProtectionIOSManagerVaultResources
+            do {
+                resources = try await vaultResources()
+            } catch {
+                Logger.dataBrokerProtection.error("Secure Vault resources unavailable during background task: \(error.localizedDescription, privacy: .public)")
+                task.setTaskCompleted(success: false)
+                return
+            }
+
+            // Record started event
+            do {
+                let event = BackgroundTaskEvent(
+                    sessionId: sessionId,
+                    eventType: .started,
+                    timestamp: startDate,
+                    metadata: nil
+                )
+                try resources.database.recordBackgroundTaskEvent(event)
+            } catch {
+                Logger.dataBrokerProtection.error("Failed to record background task start event: \(error.localizedDescription, privacy: .public)")
+            }
+
             guard await validateRunPrerequisites() else {
                 Logger.dataBrokerProtection.log("Prerequisites are invalid during background task")
                 task.setTaskCompleted(success: false)
@@ -897,21 +1098,21 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
             let isAuthenticated = await self.refreshFreeScanState()
             if self.shouldSkipFreemiumBackgroundScanWork(isAuthenticated: isAuthenticated) {
                 Logger.dataBrokerProtection.log("Freemium background scan window expired; skipping background task")
-                self.recordBackgroundTaskCompletedEvent(sessionId: sessionId, startDate: startDate)
+                self.recordBackgroundTaskCompletedEvent(resources: resources, sessionId: sessionId, startDate: startDate)
                 task.setTaskCompleted(success: true)
                 return
             }
 
             await checkForEmailConfirmationData()
 
-            self.startBackgroundTaskOperations(isAuthenticated: isAuthenticated) {
+            self.startBackgroundTaskOperations(resources: resources, isAuthenticated: isAuthenticated) {
                 Logger.dataBrokerProtection.log("All operations completed in background task")
                 let timeTaken = Date.now.timeIntervalSince(startDate)
                 Logger.dataBrokerProtection.log("Background task finshed all operations with time taken: \(timeTaken)")
                 self.iOSPixelsHandler.fire(.backgroundTaskEndedHavingCompletedAllJobs(
                     duration: timeTaken * 1000.0))
 
-                self.recordBackgroundTaskCompletedEvent(sessionId: sessionId, startDate: startDate)
+                self.recordBackgroundTaskCompletedEvent(resources: resources, sessionId: sessionId, startDate: startDate)
                 self.scheduleBGProcessingTask()
                 task.setTaskCompleted(success: true)
             }
@@ -959,10 +1160,11 @@ private extension DataBrokerProtectionIOSManager {
                                      maxMinorReleaseOffset: GoToMarketConstants.maxMinorReleaseOffset)
     }
 
-    func hasNotRunPIRScan() -> Bool {
+    func hasNotRunPIRScan() async -> Bool {
         do {
-            let hasProfile = try database.fetchProfile() != nil
-            let brokerProfileQueryData = try database.fetchAllBrokerProfileQueryData(reason: .profileHistoryReporting)
+            let resources = try await vaultResources()
+            let hasProfile = try resources.database.fetchProfile() != nil
+            let brokerProfileQueryData = try resources.database.fetchAllBrokerProfileQueryData(reason: .profileHistoryReporting)
             let hasScansWithLastRunDate = brokerProfileQueryData.contains { $0.scanJobData.lastRunDate != nil }
             return !hasProfile && !hasScansWithLastRunDate
         } catch {
@@ -979,7 +1181,8 @@ private extension DataBrokerProtectionIOSManager {
     /// Handles common completion work for immediate scan operations.
     /// The queue also runs completion for interrupted scans; only normal completions may persist first-write-wins freemium state.
     func handleScanOperationsCompletion(scanCompletedNormally: Bool) async {
-        guard let hasMatches = try? database.hasMatches() else { return }
+        guard let resources = try? await vaultResources(),
+              let hasMatches = try? resources.database.hasMatches() else { return }
         if hasMatches {
             eventsHandler.fire(.firstScanCompletedAndMatchesFound)
         }
@@ -993,19 +1196,27 @@ extension DataBrokerProtectionIOSManager {
 
     @MainActor
     func startImmediateScanOperations() async {
+        let resources: DataBrokerProtectionIOSManagerVaultResources
+        do {
+            resources = try await vaultResources()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable while starting immediate scans: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
         Logger.dataBrokerProtection.log("Starting immediate scan operations")
         let backgroundAssertion = QRunInBackgroundAssertion(name: "DataBrokerProtectionIOSManager", application: .shared) {
-            self.queueManager.stop()
+            resources.queueManager.stop()
         }
 
         await checkForEmailConfirmationData()
         let isAuthenticatedUser = await refreshFreeScanState()
         // Completion also runs for interrupted scans; the error handler is the normal-finish signal.
         var scanCompletedNormally = false
-        queueManager.startImmediateScanOperationsIfPermitted(
+        resources.queueManager.startImmediateScanOperationsIfPermitted(
             showWebView: false,
             isAuthenticatedUser: isAuthenticatedUser,
-            jobDependencies: jobDependencies,
+            jobDependencies: resources.jobDependencies,
             errorHandler: { [weak self] errors in
                 if errors?.oneTimeError == nil {
                     scanCompletedNormally = true
@@ -1047,7 +1258,8 @@ extension DataBrokerProtectionIOSManager {
     }
 
     private func makeContinuedProcessingInitialRunPlan() throws -> DBPContinuedProcessingPlans.InitialScanPlan? {
-        let brokerProfileQueryData = try database.fetchEligibleBrokerProfileQueryData(isAuthenticatedUser: currentRunIsFreeScan != true)
+        let resources = try vaultResourcesIfReady()
+        let brokerProfileQueryData = try resources.database.fetchEligibleBrokerProfileQueryData(isAuthenticatedUser: currentRunIsFreeScan != true)
         let eligibleScanJobs = BrokerProfileJob.sortedEligibleJobs(
             brokerProfileQueriesData: brokerProfileQueryData,
             jobType: .manualScan,
@@ -1068,7 +1280,8 @@ extension DataBrokerProtectionIOSManager {
             return DBPContinuedProcessingPlans.OptOutPlan(optOutJobIDs: [])
         }
 
-        let brokerProfileQueryData = try database.fetchActiveBrokerProfileQueryData()
+        let resources = try vaultResourcesIfReady()
+        let brokerProfileQueryData = try resources.database.fetchActiveBrokerProfileQueryData()
         let eligibleOptOutJobs = BrokerProfileJob.sortedEligibleJobs(
             brokerProfileQueriesData: brokerProfileQueryData,
             jobType: .optOut,
@@ -1093,6 +1306,14 @@ extension DataBrokerProtectionIOSManager: DBPContinuedProcessingDelegate {
 
     @MainActor
     func coordinatorIsReadyForScanOperations() async {
+        let resources: DataBrokerProtectionIOSManagerVaultResources
+        do {
+            resources = try await vaultResources()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable during continued-processing scans: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
         Logger.dataBrokerProtection.log("Continued processing: starting immediate scan operations")
         let backgroundAssertion = QRunInBackgroundAssertion(name: "DataBrokerProtectionIOSManager", application: .shared) {
             Task { [weak self] in
@@ -1102,7 +1323,7 @@ extension DataBrokerProtectionIOSManager: DBPContinuedProcessingDelegate {
                 }
 
                 Logger.dataBrokerProtection.log("Legacy background assertion expired without attached continued task; stopping queue")
-                self.queueManager.stop()
+                resources.queueManager.stop()
             }
         }
 
@@ -1110,10 +1331,10 @@ extension DataBrokerProtectionIOSManager: DBPContinuedProcessingDelegate {
         let isAuthenticatedUser = await refreshFreeScanState()
         // Same completion semantics as `startImmediateScanOperations()`.
         var scanCompletedNormally = false
-        queueManager.startImmediateScanOperationsIfPermitted(
+        resources.queueManager.startImmediateScanOperationsIfPermitted(
             showWebView: false,
             isAuthenticatedUser: isAuthenticatedUser,
-            jobDependencies: jobDependencies,
+            jobDependencies: resources.jobDependencies,
             errorHandler: { [weak self] errors in
                 if errors?.oneTimeError == nil {
                     scanCompletedNormally = true
@@ -1135,11 +1356,16 @@ extension DataBrokerProtectionIOSManager: DBPContinuedProcessingDelegate {
     }
 
     func coordinatorIsReadyForOptOutOperations() {
+        guard let resources = try? vaultResourcesIfReady() else {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable during continued-processing opt outs")
+            return
+        }
+
         Logger.dataBrokerProtection.log("Continued processing: delegating to immediate opt-out operations")
-        queueManager.startImmediateOptOutOperationsIfPermitted(
+        resources.queueManager.startImmediateOptOutOperationsIfPermitted(
             showWebView: false,
             isAuthenticatedUser: true,
-            jobDependencies: jobDependencies,
+            jobDependencies: resources.jobDependencies,
             errorHandler: nil
         ) {
             Task { [weak self] in
@@ -1151,10 +1377,14 @@ extension DataBrokerProtectionIOSManager: DBPContinuedProcessingDelegate {
 
     func coordinatorDidRequestStopOperations() {
         Logger.dataBrokerProtection.log("Continued processing: stopping queue operations")
-        queueManager.stop()
+        do {
+            try vaultResourcesIfReady().queueManager.stop()
+        } catch {
+            Logger.dataBrokerProtection.error("Secure Vault resources unavailable while stopping continued-processing operations: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func continuedProcessingScanJobTimeout() -> TimeInterval {
-        jobDependencies.executionConfig.scanJobTimeout
+        (try? vaultResourcesIfReady().jobDependencies.executionConfig.scanJobTimeout) ?? .minutes(3)
     }
 }

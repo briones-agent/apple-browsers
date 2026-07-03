@@ -26,8 +26,10 @@ import BrowserServicesKit
 import PixelKit
 import Networking
 import Subscription
+import os.log
 
 final class DBPService: NSObject {
+    private let shouldDeferSecureVaultInitialization = true
     private let dbpIOSManager: DataBrokerProtectionIOSManager?
     public let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
     public var dbpIOSPublicInterface: DBPIOSInterface.PublicInterface? {
@@ -112,7 +114,8 @@ final class DBPService: NSObject {
                 freemiumDBPUserStateManager: freemiumDBPUserStateManager,
                 isWebViewInspectable: isWebViewInspectable,
                 freeTrialConversionService: appDependencies.freeTrialConversionService,
-                contentBlocking: dbpContentBlocking)
+                contentBlocking: dbpContentBlocking,
+                shouldDeferSecureVaultInitialization: shouldDeferSecureVaultInitialization)
         } else {
             assertionFailure("PixelKit not set up")
             self.dbpIOSManager = nil
@@ -127,6 +130,14 @@ final class DBPService: NSObject {
     func resume() {
         Task { @MainActor in
             await dbpIOSManager?.appDidBecomeActive()
+        }
+    }
+
+    func initializeSecureVaultResources() async {
+        do {
+            try await dbpIOSManager?.initializeSecureVaultResources()
+        } catch {
+            Logger.dataBrokerProtection.error("Failed to initialize PIR Secure Vault resources: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

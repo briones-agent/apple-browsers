@@ -41,7 +41,7 @@ public struct DBPUIFeatureConfigurationResponse: Encodable {
 public protocol DBPUICommunicationDelegate: AnyObject {
     func getHandshakeUserData() async -> DBPUIHandshakeUserData?
     func saveProfile() async throws
-    func getUserProfile() -> DBPUIUserProfile?
+    func getUserProfile() async -> DBPUIUserProfile?
     func deleteProfileData() throws
     func addNameToCurrentUserProfile(_ name: DBPUIUserProfileName) -> Bool
     func setNameAtIndexInCurrentUserProfile(_ payload: DBPUINameAtIndex) -> Bool
@@ -185,7 +185,7 @@ public struct DBPUICommunicationLayer: Subfeature {
     }
 
     func getCurrentUserProfile(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        guard let profile = delegate?.getUserProfile() else {
+        guard let profile = await delegate?.getUserProfile() else {
             return DBPUIStandardResponse(version: Constants.version, success: false, id: "NOT_FOUND", message: "No user profile found")
         }
 

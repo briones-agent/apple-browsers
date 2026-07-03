@@ -307,7 +307,7 @@ extension DBPUICommunicator: DBPUICommunicationDelegate {
         try await delegate?.saveCachedProfileToDatabase(profile)
     }
 
-    public func getUserProfile() -> DBPUIUserProfile? {
+    public func getUserProfile() async -> DBPUIUserProfile? {
         guard let profile = profile else { return nil }
 
         return DBPUIUserProfile(from: profile)

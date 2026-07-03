@@ -57,7 +57,8 @@ public class DataBrokerProtectionIOSManagerProvider {
                                   freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
                                   isWebViewInspectable: Bool = false,
                                   freeTrialConversionService: FreeTrialConversionInstrumentationService? = nil,
-                                  contentBlocking: DBPWebViewContentBlocking) -> DataBrokerProtectionIOSManager? {
+                                  contentBlocking: DBPWebViewContentBlocking,
+                                  shouldDeferSecureVaultInitialization: Bool = false) -> DataBrokerProtectionIOSManager? {
         let sharedPixelsHandler = DataBrokerProtectionSharedPixelsHandler(pixelKit: pixelKit, platform: .iOS)
         let iOSPixelsHandler = IOSPixelsHandler(pixelKit: pixelKit)
 
@@ -82,20 +83,92 @@ public class DataBrokerProtectionIOSManagerProvider {
                                                             messageSecret: UUID().uuidString,
                                                             featureToggles: features)
 
+        let vaultResourcesBuilder = {
+            try makeVaultResources(
+                authenticationManager: authenticationManager,
+                privacyConfigurationManager: privacyConfigurationManager,
+                featureFlagger: featureFlagger,
+                sharedPixelsHandler: sharedPixelsHandler,
+                wideEvent: wideEvent,
+                eventsHandler: eventsHandler,
+                applicationNameForUserAgentProvider: applicationNameForUserAgentProvider,
+                contentBlocking: contentBlocking,
+                dbpSettings: dbpSettings,
+                contentScopeProperties: contentScopeProperties
+            )
+        }
+
+        if shouldDeferSecureVaultInitialization {
+            return DataBrokerProtectionIOSManager(
+                vaultResourcesBuilder: vaultResourcesBuilder,
+                authenticationManager: authenticationManager,
+                userNotificationService: userNotificationService,
+                sharedPixelsHandler: sharedPixelsHandler,
+                iOSPixelsHandler: iOSPixelsHandler,
+                privacyConfigManager: privacyConfigurationManager,
+                quickLinkOpenURLHandler: quickLinkOpenURLHandler,
+                feedbackViewCreator: feedbackViewCreator,
+                contentScopeProperties: contentScopeProperties,
+                featureFlagger: featureFlagger,
+                settings: dbpSettings,
+                subscriptionManager: subscriptionManager,
+                wideEvent: wideEvent,
+                eventsHandler: eventsHandler,
+                isWebViewInspectable: isWebViewInspectable,
+                freeTrialConversionService: freeTrialConversionService,
+                freemiumDBPUserStateManager: freemiumDBPUserStateManager
+            )
+        }
+
+        let vaultResources: DataBrokerProtectionIOSManagerVaultResources
+        do {
+            vaultResources = try vaultResourcesBuilder()
+        } catch {
+            assertionFailure("Failed to make secure storage vault")
+            return nil
+        }
+
+        return DataBrokerProtectionIOSManager(
+            queueManager: vaultResources.queueManager,
+            jobDependencies: vaultResources.jobDependencies,
+            emailConfirmationDataService: vaultResources.emailConfirmationDataService,
+            authenticationManager: authenticationManager,
+            userNotificationService: userNotificationService,
+            sharedPixelsHandler: sharedPixelsHandler,
+            iOSPixelsHandler: iOSPixelsHandler,
+            privacyConfigManager: privacyConfigurationManager,
+            database: vaultResources.database,
+            quickLinkOpenURLHandler: quickLinkOpenURLHandler,
+            feedbackViewCreator: feedbackViewCreator,
+            contentScopeProperties: contentScopeProperties,
+            featureFlagger: featureFlagger,
+            settings: dbpSettings,
+            subscriptionManager: subscriptionManager,
+            wideEvent: wideEvent,
+            eventsHandler: eventsHandler,
+            isWebViewInspectable: isWebViewInspectable,
+            freeTrialConversionService: freeTrialConversionService,
+            freemiumDBPUserStateManager: freemiumDBPUserStateManager
+        )
+    }
+
+    private static func makeVaultResources(authenticationManager: DataBrokerProtectionAuthenticationManaging,
+                                           privacyConfigurationManager: PrivacyConfigurationManaging,
+                                           featureFlagger: DBPFeatureFlagging & FreemiumPIRFeatureFlagging,
+                                           sharedPixelsHandler: EventMapping<DataBrokerProtectionSharedPixels>,
+                                           wideEvent: WideEventManaging,
+                                           eventsHandler: EventMapping<JobEvent>,
+                                           applicationNameForUserAgentProvider: @escaping () -> String?,
+                                           contentBlocking: DBPWebViewContentBlocking,
+                                           dbpSettings: DataBrokerProtectionSettings,
+                                           contentScopeProperties: ContentScopeProperties) throws -> DataBrokerProtectionIOSManagerVaultResources {
         let fakeBroker = DataBrokerDebugFlagFakeBroker()
         let databaseURL = DefaultDataBrokerProtectionDatabaseProvider.databaseFilePath(directoryName: DatabaseConstants.directoryName, fileName: DatabaseConstants.fileName)
         let vaultFactory = createDataBrokerProtectionSecureVaultFactory(appGroupName: nil, databaseFileURL: databaseURL)
 
         let reporter = DataBrokerProtectionSecureVaultErrorReporter(pixelHandler: sharedPixelsHandler)
+        let vault = try vaultFactory.makeVault(reporter: reporter)
 
-        let vault: DefaultDataBrokerProtectionSecureVault<DefaultDataBrokerProtectionDatabaseProvider>
-        do {
-            vault = try vaultFactory.makeVault(reporter: reporter)
-        } catch {
-            assertionFailure("Failed to make secure storage vault")
-            return nil
-        }
-        
         let localBrokerService = LocalBrokerJSONService(resources: FileResources(runTypeProvider: dbpSettings),
                                                         vault: vault,
                                                         pixelHandler: sharedPixelsHandler,
@@ -151,26 +224,19 @@ public class DataBrokerProtectionIOSManagerProvider {
             isAuthenticatedUserProvider: { await authenticationManager.isUserAuthenticated }
         )
 
-        return DataBrokerProtectionIOSManager(
+        return DataBrokerProtectionIOSManagerVaultResources(
+            database: database,
             queueManager: queueManager,
             jobDependencies: jobDependencies,
             emailConfirmationDataService: emailConfirmationDataService,
-            authenticationManager: authenticationManager,
-            userNotificationService: userNotificationService,
-            sharedPixelsHandler: sharedPixelsHandler,
-            iOSPixelsHandler: iOSPixelsHandler,
-            privacyConfigManager: privacyConfigurationManager,
-            database: database,
-            quickLinkOpenURLHandler: quickLinkOpenURLHandler,
-            feedbackViewCreator: feedbackViewCreator,
-            featureFlagger: featureFlagger,
-            settings: dbpSettings,
-            subscriptionManager: subscriptionManager,
-            wideEvent: wideEvent,
-            eventsHandler: eventsHandler,
-            isWebViewInspectable: isWebViewInspectable,
-            freeTrialConversionService: freeTrialConversionService,
-            freemiumDBPUserStateManager: freemiumDBPUserStateManager
+            brokerUpdaterProvider: {
+                RemoteBrokerJSONService(featureFlagger: featureFlagger,
+                                        settings: dbpSettings,
+                                        vault: vault,
+                                        authenticationManager: authenticationManager,
+                                        localBrokerProvider: localBrokerService)
+            },
+            engagementPixelsRepository: DataBrokerProtectionEngagementPixelsUserDefaults(userDefaults: .dbp)
         )
     }
 }

@@ -66,10 +66,6 @@ public final class DBPUIViewModel {
         self.contentScopeProperties = contentScopeProperties
 
         self.editablePartialProfile = .init()
-        let profile = try? databaseDelegate.getUserProfile()
-        if let profile = profile {
-            self.editablePartialProfile = .init(from: profile)
-        }
     }
 
     @MainActor func setupCommunicationLayer() -> WKWebViewConfiguration {
@@ -125,11 +121,13 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
         try await databaseDelegate?.saveProfile(profile)
     }
     
-    public func getUserProfile() -> DBPUIUserProfile? {
+    public func getUserProfile() async -> DBPUIUserProfile? {
         do {
+            try await databaseDelegate?.prepareDatabaseAccess()
             let profile = try databaseDelegate?.getUserProfile()
 
-            guard let profile = profile else { return nil }
+            guard let profile else { return nil }
+            editablePartialProfile = .init(from: profile)
             return DBPUIUserProfile(from: profile)
         } catch {
             return nil
@@ -180,6 +178,7 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
     
     public func getInitialScanState() async -> DBPUIInitialScanState {
         do {
+            try await databaseDelegate?.prepareDatabaseAccess()
             let allQueryData = try databaseDelegate?.getAllBrokerProfileQueryData() ?? []
             let isAuthenticatedUser = (await authenticationDelegate?.isUserAuthenticated()) ?? true
             let eligibleQueryData = allQueryData.excludingIneligibleBrokers(isAuthenticatedUser: isAuthenticatedUser)
@@ -192,6 +191,7 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
 
     public func getMaintenanceScanState() async -> DBPUIScanAndOptOutMaintenanceState {
         do {
+            try await databaseDelegate?.prepareDatabaseAccess()
             let allQueryData = try databaseDelegate?.getAllBrokerProfileQueryData() ?? []
             let isAuthenticatedUser = (await authenticationDelegate?.isUserAuthenticated()) ?? true
             let eligibleQueryData = allQueryData.excludingIneligibleBrokers(isAuthenticatedUser: isAuthenticatedUser)
@@ -204,6 +204,7 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
     
     public func getDataBrokers() async -> [DBPUIDataBroker] {
         do {
+            try await databaseDelegate?.prepareDatabaseAccess()
             let brokers = try databaseDelegate?.getAllDataBrokers() ?? []
             let result = brokers.flatMap {
                 return DBPUIDataBroker.brokerWithMirrorSites(from: $0)

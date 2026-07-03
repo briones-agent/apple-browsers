@@ -1094,6 +1094,8 @@ public final class MockDatabase: DataBrokerProtectionRepository {
     public var scanEvents = [HistoryEvent]()
     public var optOutEvents = [HistoryEvent]()
     public var optOutToReturn: OptOutJobData?
+    public var hasMatchesToReturn = false
+    public var hasMatchesError: Error?
 
     public var brokerToReturn: DataBroker?
     public var profileQueryToReturn: ProfileQuery?
@@ -1391,7 +1393,10 @@ public final class MockDatabase: DataBrokerProtectionRepository {
     }
 
     public func hasMatches() throws -> Bool {
-        false
+        if let hasMatchesError {
+            throw hasMatchesError
+        }
+        return hasMatchesToReturn
     }
 
     public func matchRemovedByUser(_ matchID: Int64) throws {
