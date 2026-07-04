@@ -123,7 +123,6 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
     
     public func getUserProfile() async -> DBPUIUserProfile? {
         do {
-            try await databaseDelegate?.prepareDatabaseAccess()
             let profile = try databaseDelegate?.getUserProfile()
 
             guard let profile else { return nil }
@@ -178,7 +177,6 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
     
     public func getInitialScanState() async -> DBPUIInitialScanState {
         do {
-            try await databaseDelegate?.prepareDatabaseAccess()
             let allQueryData = try databaseDelegate?.getAllBrokerProfileQueryData() ?? []
             let isAuthenticatedUser = (await authenticationDelegate?.isUserAuthenticated()) ?? true
             let eligibleQueryData = allQueryData.excludingIneligibleBrokers(isAuthenticatedUser: isAuthenticatedUser)
@@ -191,7 +189,6 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
 
     public func getMaintenanceScanState() async -> DBPUIScanAndOptOutMaintenanceState {
         do {
-            try await databaseDelegate?.prepareDatabaseAccess()
             let allQueryData = try databaseDelegate?.getAllBrokerProfileQueryData() ?? []
             let isAuthenticatedUser = (await authenticationDelegate?.isUserAuthenticated()) ?? true
             let eligibleQueryData = allQueryData.excludingIneligibleBrokers(isAuthenticatedUser: isAuthenticatedUser)
@@ -204,7 +201,6 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
     
     public func getDataBrokers() async -> [DBPUIDataBroker] {
         do {
-            try await databaseDelegate?.prepareDatabaseAccess()
             let brokers = try databaseDelegate?.getAllDataBrokers() ?? []
             let result = brokers.flatMap {
                 return DBPUIDataBroker.brokerWithMirrorSites(from: $0)

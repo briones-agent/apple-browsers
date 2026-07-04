@@ -133,9 +133,9 @@ final class DBPService: NSObject {
         }
     }
 
-    func initializeSecureVaultResources() async {
+    func prepareSecureVaultResourcesAtLaunch() async {
         do {
-            try await dbpIOSManager?.initializeSecureVaultResources()
+            try await dbpIOSManager?.prepareSecureVaultResourcesAtLaunch()
         } catch {
             Logger.dataBrokerProtection.error("Failed to initialize PIR Secure Vault resources: \(error.localizedDescription, privacy: .public)")
         }

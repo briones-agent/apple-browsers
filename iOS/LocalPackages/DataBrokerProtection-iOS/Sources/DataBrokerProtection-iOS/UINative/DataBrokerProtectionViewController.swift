@@ -185,7 +185,7 @@ final public class DataBrokerProtectionViewController: UIViewController {
             }
 
             do {
-                try await databaseDelegate.waitForDashboardDatabaseAccess()
+                try await databaseDelegate.prepareDatabaseAccess()
                 try Task.checkCancellation()
                 loadDashboard()
             } catch is CancellationError {

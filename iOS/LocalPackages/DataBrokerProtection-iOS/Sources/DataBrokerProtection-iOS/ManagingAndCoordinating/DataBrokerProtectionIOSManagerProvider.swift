@@ -91,7 +91,7 @@ public class DataBrokerProtectionIOSManagerProvider {
                                                             messageSecret: UUID().uuidString,
                                                             featureToggles: features)
 
-        let vaultResourcesBuilder = {
+        let vaultResourcesProvider = {
             try makeVaultResources(
                 authenticationManager: authenticationManager,
                 privacyConfigurationManager: privacyConfigurationManager,
@@ -107,8 +107,9 @@ public class DataBrokerProtectionIOSManagerProvider {
         }
 
         if shouldDeferSecureVaultInitialization {
-            return DataBrokerProtectionIOSManager(
-                vaultResourcesBuilder: vaultResourcesBuilder,
+            return DataBrokerProtectionIOSManager.withDeferredVaultResources(
+                provider: vaultResourcesProvider,
+                contentScopeProperties: contentScopeProperties,
                 authenticationManager: authenticationManager,
                 userNotificationService: userNotificationService,
                 sharedPixelsHandler: sharedPixelsHandler,
@@ -116,7 +117,6 @@ public class DataBrokerProtectionIOSManagerProvider {
                 privacyConfigManager: privacyConfigurationManager,
                 quickLinkOpenURLHandler: quickLinkOpenURLHandler,
                 feedbackViewCreator: feedbackViewCreator,
-                contentScopeProperties: contentScopeProperties,
                 featureFlagger: featureFlagger,
                 settings: dbpSettings,
                 subscriptionManager: subscriptionManager,
@@ -130,25 +130,21 @@ public class DataBrokerProtectionIOSManagerProvider {
 
         let vaultResources: DBPVaultResources
         do {
-            vaultResources = try vaultResourcesBuilder()
+            vaultResources = try vaultResourcesProvider()
         } catch {
             assertionFailure("Failed to make secure storage vault")
             return nil
         }
 
-        return DataBrokerProtectionIOSManager(
-            queueManager: vaultResources.queueManager,
-            jobDependencies: vaultResources.jobDependencies,
-            emailConfirmationDataService: vaultResources.emailConfirmationDataService,
+        return DataBrokerProtectionIOSManager.withVaultResources(
+            vaultResources,
             authenticationManager: authenticationManager,
             userNotificationService: userNotificationService,
             sharedPixelsHandler: sharedPixelsHandler,
             iOSPixelsHandler: iOSPixelsHandler,
             privacyConfigManager: privacyConfigurationManager,
-            database: vaultResources.database,
             quickLinkOpenURLHandler: quickLinkOpenURLHandler,
             feedbackViewCreator: feedbackViewCreator,
-            contentScopeProperties: contentScopeProperties,
             featureFlagger: featureFlagger,
             settings: dbpSettings,
             subscriptionManager: subscriptionManager,

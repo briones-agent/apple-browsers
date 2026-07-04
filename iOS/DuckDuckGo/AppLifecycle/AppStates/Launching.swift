@@ -379,7 +379,7 @@ struct Launching: LaunchingHandling {
         launchTaskManager.register(task: WideEventLaunchCleanupTask(wideEventService: wideEventService))
         launchTaskManager.register(task: BlockLaunchTask(name: "Initialize PIR Secure Vault") { taskContext in
             Task {
-                await dbpService.initializeSecureVaultResources()
+                await dbpService.prepareSecureVaultResourcesAtLaunch()
                 taskContext.finish()
             }
         })

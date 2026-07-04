@@ -127,17 +127,22 @@ enum DBPContinuedProcessingTestUtils {
             freemiumDBPUserStateManagerOverride: FreemiumDBPUserStateManaging? = nil
         ) -> DataBrokerProtectionIOSManager {
             jobDependencies.database = database
-
-            return DataBrokerProtectionIOSManager(
+            let vaultResources = DBPVaultResources(
+                database: database,
                 queueManager: queueManager,
                 jobDependencies: jobDependencies,
                 emailConfirmationDataService: MockEmailConfirmationDataServiceProvider(),
+                brokerUpdaterProvider: { nil },
+                engagementPixelsRepository: MockDataBrokerProtectionEngagementPixelsRepository()
+            )
+
+            return DataBrokerProtectionIOSManager.withVaultResources(
+                vaultResources,
                 authenticationManager: authenticationManager,
                 userNotificationService: MockDataBrokerProtectionUserNotificationService(),
                 sharedPixelsHandler: MockDataBrokerProtectionPixelsHandler(),
                 iOSPixelsHandler: EventMapping<IOSPixels> { _, _, _, _ in },
                 privacyConfigManager: PrivacyConfigurationManagingMock(),
-                database: database,
                 quickLinkOpenURLHandler: { _ in },
                 feedbackViewCreator: { EmptyView() },
                 featureFlagger: featureFlagger,
@@ -145,7 +150,6 @@ enum DBPContinuedProcessingTestUtils {
                 subscriptionManager: MockDataBrokerProtectionSubscriptionManaging(),
                 wideEvent: nil,
                 eventsHandler: eventsHandler,
-                engagementPixelsRepository: MockDataBrokerProtectionEngagementPixelsRepository(),
                 freemiumDBPUserStateManager: (freemiumDBPUserStateManagerOverride ?? freemiumDBPUserStateManager),
                 continuedProcessingCoordinator: continuedProcessingCoordinator,
                 shouldRegisterBackgroundTaskHandler: false
