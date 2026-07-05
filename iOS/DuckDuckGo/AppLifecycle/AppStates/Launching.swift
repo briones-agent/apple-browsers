@@ -320,6 +320,7 @@ struct Launching: LaunchingHandling {
                                               freemiumPIREligibilityChecker: freemiumPIREligibilityChecker,
                                               freemiumPIRDebugSettings: freemiumPIRDebugSettings,
                                               freemiumDBPUserStateManager: dbpService.freemiumDBPUserStateManager,
+                                              profileStateManager: dbpService.profileStateManager,
                                               modalPromptCoordinationService: modalPromptCoordinationService,
                                               mobileCustomization: mobileCustomization,
                                               productSurfaceTelemetry: productSurfaceTelemetry,

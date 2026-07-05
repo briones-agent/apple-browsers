@@ -340,9 +340,8 @@ struct SettingsSubscriptionView: View {
 
         if subscriptionFeatures.contains(.dataBrokerProtection) {
             let hasDBPEntitlement = userEntitlements.contains(.dataBrokerProtection)
-            let hasValidStoredProfile = settingsViewModel.dbpMeetsProfileRunPrequisite
             let shouldShowPIRNewBadge = settingsViewModel.shouldShowNewBadge(for: .personalInformationRemoval)
-            var statusIndicator: StatusIndicator = hasDBPEntitlement && hasValidStoredProfile ? .on : .off
+            var statusIndicator = settingsViewModel.dbpProfileStatusIndicator
 
             let destination: LazyView<AnyView> = {
                 if settingsViewModel.isPIREnabled, let vcProvider = settingsViewModel.dataBrokerProtectionViewControllerProvider {
@@ -358,7 +357,7 @@ struct SettingsSubscriptionView: View {
                 SettingsCellView(
                     label: UserText.settingsPProDBPTitle,
                     image: Image(uiImage: DesignSystemImages.Color.Size24.identityBlockedPIR),
-                    statusIndicator: StatusIndicatorView(status: statusIndicator),
+                    statusIndicator: statusIndicator.map { StatusIndicatorView(status: $0) },
                     isGreyedOut: !hasDBPEntitlement,
                     optionalBadgeText: shouldShowPIRNewBadge ? UserText.settingsItemNewBadge : nil
                 )
