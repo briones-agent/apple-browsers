@@ -24,6 +24,7 @@ import FoundationExtensions
 import BrowserServicesKit
 import PixelKit
 import os.log
+import os
 import Subscription
 import UserNotifications
 import DataBrokerProtectionCore
@@ -40,6 +41,13 @@ extension DataBrokerProtectionSettings: @retroactive AppRunTypeProviding {
 }
 
 public class DataBrokerProtectionIOSManagerProvider {
+
+    private static let secureVaultSignposter = OSSignposter(logHandle: OSLog(subsystem: "com.duckduckgo.instrumentation", category: .pointsOfInterest))
+
+    private enum SecureVaultInitializationResult: String {
+        case success
+        case failure
+    }
 
     private let databaseURL = DefaultDataBrokerProtectionDatabaseProvider.databaseFilePath(directoryName: DatabaseConstants.directoryName, fileName: DatabaseConstants.fileName)
 
@@ -163,7 +171,14 @@ public class DataBrokerProtectionIOSManagerProvider {
         let vaultFactory = createDataBrokerProtectionSecureVaultFactory(appGroupName: nil, databaseFileURL: databaseURL)
 
         let reporter = DataBrokerProtectionSecureVaultErrorReporter(pixelHandler: sharedPixelsHandler)
+        let signpostState = Self.secureVaultSignposter.beginInterval("PIR Secure Vault Make")
+        var signpostResult: SecureVaultInitializationResult = .failure
+        defer {
+            Self.secureVaultSignposter.endInterval("PIR Secure Vault Make", signpostState, "Result: \(signpostResult.rawValue, privacy: .public)")
+        }
+
         let vault = try vaultFactory.makeVault(reporter: reporter)
+        signpostResult = .success
 
         let localBrokerService = LocalBrokerJSONService(resources: FileResources(runTypeProvider: dbpSettings),
                                                         vault: vault,
