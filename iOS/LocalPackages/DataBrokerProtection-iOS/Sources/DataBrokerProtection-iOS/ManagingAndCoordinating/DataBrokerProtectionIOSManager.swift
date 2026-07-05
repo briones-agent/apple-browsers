@@ -585,6 +585,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
             // low-priority background queue and can lose the race to the foreground transition,
             // so app-active must be able to start (or join) initialization rather than only wait.
             resources = try await vaultResources(reason: .appActive)
+            Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up App Active")
         } catch {
             Logger.dataBrokerProtection.error("Secure Vault resources unavailable during app active: \(error.localizedDescription, privacy: .public)")
             return
@@ -688,6 +689,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AuthenticationDelegate
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.DatabaseDelegate {
     public func prepareDatabaseAccess() async throws {
         _ = try await vaultResources(reason: .dashboard)
+        Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Dashboard")
     }
 
     public func getUserProfile() throws -> DataBrokerProtectionCore.DataBrokerProtectionProfile? {
@@ -1066,6 +1068,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
             do {
                 // Scheduling needs database state to choose the next eligible run.
                 resources = try await vaultResources(reason: .scheduling)
+                Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Scheduling")
             } catch {
                 Logger.dataBrokerProtection.error("Secure Vault resources unavailable while scheduling background task: \(error.localizedDescription, privacy: .public)")
                 return
@@ -1192,6 +1195,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 // iOS may launch the app directly for this task, so BG handling initializes the
                 // vault resources if the normal launch path has not completed.
                 resources = try await vaultResources(reason: .backgroundTask)
+                Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Background Task")
             } catch {
                 Logger.dataBrokerProtection.error("Secure Vault resources unavailable during background task: \(error.localizedDescription, privacy: .public)")
                 task.setTaskCompleted(success: false)
@@ -1326,6 +1330,7 @@ extension DataBrokerProtectionIOSManager {
             return
         }
 
+        Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Immediate Scan")
         Logger.dataBrokerProtection.log("Starting immediate scan operations")
         let backgroundAssertion = QRunInBackgroundAssertion(name: "DataBrokerProtectionIOSManager", application: .shared) {
             resources.queueManager.stop()
