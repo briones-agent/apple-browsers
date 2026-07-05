@@ -89,7 +89,11 @@ public class DBPIOSInterface {
         var meetsProfileRunPrequisite: Bool { get throws }
         var meetsEntitlementRunPrequisite: Bool { get async throws }
         var meetsLocaleRequirement: Bool { get }
+
         func validateRunPrerequisites() async -> Bool
+
+        /// Use this lightweight variant when the caller wants to avoid opening the secure vault and only needs cached profile state.
+        func validateRunPrerequisites(usingCachedProfileState profileState: DBPProfileState) async -> Bool
     }
 
     public protocol DatabaseDelegate: AnyObject {
@@ -182,6 +186,7 @@ public final class DataBrokerProtectionIOSManager {
     private let isWebViewInspectable: Bool
     private let freeTrialConversionService: FreeTrialConversionInstrumentationService?
     private let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
+    private let profileStateManager: DBPProfileStateManaging
     private var currentRunIsFreeScan: Bool?
     private var isContinuedProcessingRunActive = false
 
@@ -292,6 +297,7 @@ public final class DataBrokerProtectionIOSManager {
          isWebViewInspectable: Bool = false,
          freeTrialConversionService: FreeTrialConversionInstrumentationService? = nil,
          freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
+         profileStateManager: DBPProfileStateManaging,
          continuedProcessingCoordinator: (any DBPContinuedProcessingCoordinating)? = nil,
          shouldRegisterBackgroundTaskHandler: Bool = true
     ) {
@@ -317,6 +323,7 @@ public final class DataBrokerProtectionIOSManager {
         self.isWebViewInspectable = isWebViewInspectable
         self.freeTrialConversionService = freeTrialConversionService
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
+        self.profileStateManager = profileStateManager
 
         if let continuedProcessingCoordinator {
             self.continuedProcessingCoordinator = continuedProcessingCoordinator
@@ -476,6 +483,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DatabaseDelegate {
         } catch {
             throw error
         }
+        profileStateManager.recordProfileSaved()
         eventPixels.markInitialScansStarted()
         eventsHandler.fire(.profileSaved)
         freeTrialConversionService?.markPIRActivated()
@@ -486,6 +494,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DatabaseDelegate {
     public func deleteAllUserProfileData() throws {
         queueManager.stop()
         try database.deleteProfileData()
+        profileStateManager.recordProfileDeleted()
         DataBrokerProtectionSettings(defaults: .dbp).resetBrokerDeliveryData()
     }
 
@@ -656,8 +665,22 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.RunPrerequisitesDelega
     }
 
     public func validateRunPrerequisites() async -> Bool {
+        await validateRunPrerequisites {
+            try meetsProfileRunPrequisite
+        }
+    }
+
+    public func validateRunPrerequisites(usingCachedProfileState profileState: DBPProfileState) async -> Bool {
+        await validateRunPrerequisites {
+            // Existing PIR users may not have cached profile state yet, so only
+            // exclude users we explicitly know have no profile.
+            profileState != .noProfile
+        }
+    }
+
+    private func validateRunPrerequisites(meetsProfileRunPrequisite: () throws -> Bool) async -> Bool {
         do {
-            guard try meetsProfileRunPrequisite else {
+            guard try meetsProfileRunPrequisite() else {
                 Logger.dataBrokerProtection.log("Profile run prerequisites are invalid")
                 return false
             }
