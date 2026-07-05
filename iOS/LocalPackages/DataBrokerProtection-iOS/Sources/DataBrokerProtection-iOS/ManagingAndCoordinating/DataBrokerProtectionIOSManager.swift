@@ -24,7 +24,6 @@ import FoundationExtensions
 import BrowserServicesKit
 import PixelKit
 import os.log
-import os
 import Subscription
 import UserNotifications
 import DataBrokerProtectionCore
@@ -219,15 +218,9 @@ public final class DataBrokerProtectionIOSManager {
 
         /// Maximum amount of time Freemium users should keep receiving background scan work after profile setup.
         static let freemiumBackgroundScanWindow: TimeInterval = .days(7)
-
-        #if DEBUG
-        /// Temporary delay for testing deferred PIR Secure Vault initialization behavior on device.
-        static let secureVaultInitializationTestingDelayNanoseconds: UInt64 = 15_000_000_000
-        #endif
     }
 
     public static let backgroundTaskIdentifier = "com.duckduckgo.app.dbp.backgroundProcessing"
-    private static let secureVaultSignposter = OSSignposter(logHandle: OSLog(subsystem: "com.duckduckgo.instrumentation", category: .pointsOfInterest))
 
     private let vaultResourcesQueue = DispatchQueue(label: "com.duckduckgo.dbp.secureVaultResources", qos: .utility)
     private let vaultResourcesLock = NSLock()
@@ -497,10 +490,6 @@ public final class DataBrokerProtectionIOSManager {
             }
         case .initialize:
             do {
-                #if DEBUG
-                try await delaySecureVaultInitializationForTesting()
-                #endif
-
                 let resources = try await loadVaultResources()
                 completeVaultResourcesInitialization(with: .success(resources))
                 return resources
@@ -549,18 +538,6 @@ public final class DataBrokerProtectionIOSManager {
             }
         }
     }
-
-    #if DEBUG
-    private func delaySecureVaultInitializationForTesting() async throws {
-        Logger.dataBrokerProtection.debug("Delaying PIR Secure Vault initialization for device testing")
-        let signpostState = Self.secureVaultSignposter.beginInterval("PIR Secure Vault Initialization Testing Delay")
-        defer {
-            Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization Testing Delay", signpostState)
-        }
-
-        try await Task.sleep(nanoseconds: Constants.secureVaultInitializationTestingDelayNanoseconds)
-    }
-    #endif
 
     private func completeVaultResourcesInitialization(with result: Result<DBPVaultResources, Error>) {
         if case .success(let resources) = result {
