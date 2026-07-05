@@ -47,6 +47,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate? = nil,
         freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking,
         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
+        profileStateManager: DBPProfileStateManaging,
         idleReturnEligibilityManager: IdleReturnEligibilityManaging
     ) {
         self.bookmarksDatabase = bookmarksDatabase
@@ -60,6 +61,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         self.dbpRunPrerequisitesDelegate = dbpRunPrerequisitesDelegate
         self.freemiumPIREligibilityChecker = freemiumPIREligibilityChecker
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
+        self.profileStateManager = profileStateManager
         self.idleReturnEligibilityManager = idleReturnEligibilityManager
     }
 
@@ -74,6 +76,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
     let dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?
     let freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking
     let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
+    let profileStateManager: DBPProfileStateManaging
     let idleReturnEligibilityManager: IdleReturnEligibilityManaging
     func refreshConfigMatcher(using store: RemoteMessagingStoring) async -> RemoteMessagingConfigMatcher {
 
@@ -118,7 +121,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         let isCurrentPIRUser: Bool
 
         if featureFlagger.isFeatureOn(.personalInformationRemoval) {
-            isCurrentPIRUser = (await dbpRunPrerequisitesDelegate?.validateRunPrerequisites()) ?? false
+            isCurrentPIRUser = (await dbpRunPrerequisitesDelegate?.validateRunPrerequisites(usingCachedProfileState: profileStateManager.profileState)) ?? false
         } else {
             isCurrentPIRUser = false
         }

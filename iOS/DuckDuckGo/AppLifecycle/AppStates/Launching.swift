@@ -223,6 +223,7 @@ struct Launching: LaunchingHandling {
                                                             winBackOfferService: winBackOfferService,
                                                             freemiumPIREligibilityChecker: freemiumPIREligibilityChecker,
                                                             freemiumDBPUserStateManager: dbpService.freemiumDBPUserStateManager,
+                                                            profileStateManager: dbpService.profileStateManager,
                                                             subscriptionDataReporter: reportingService.subscriptionDataReporter,
                                                             remoteMessagingImageLoader: remoteMessagingImageLoader,
                                                             idleReturnEligibilityManager: idleReturnEligibilityManager,
