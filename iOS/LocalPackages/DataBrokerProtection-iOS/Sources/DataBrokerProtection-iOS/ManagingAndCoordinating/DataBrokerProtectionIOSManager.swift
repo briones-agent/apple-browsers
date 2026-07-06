@@ -192,13 +192,6 @@ final class DBPVaultResources {
 
 public final class DataBrokerProtectionIOSManager {
 
-    /// Stored while Secure Vault-backed resources are being initialized so callers can
-    /// await the same attempt and fail together if initialization fails.
-    private struct VaultResourcesInitAttempt {
-        let id = UUID()
-        let task: Task<DBPVaultResources, Error>
-    }
-
     /// The entry point requesting Secure Vault-backed resources. Every caller either starts
     /// initialization or joins one already in progress; the gate dedups concurrent initializers,
     /// so multiple entry points still result in a single initialization. The reason is for
@@ -209,11 +202,6 @@ public final class DataBrokerProtectionIOSManager {
         case dashboard
         case scheduling
         case backgroundTask
-    }
-
-    private enum VaultResourcesResolution {
-        case ready(DBPVaultResources)
-        case initializing(VaultResourcesInitAttempt)
     }
 
     private struct Constants {
@@ -238,7 +226,7 @@ public final class DataBrokerProtectionIOSManager {
     private let vaultResourcesQueue = DispatchQueue(label: "com.duckduckgo.dbp.secureVaultResources", qos: .utility)
     private let vaultResourcesLock = NSLock()
     private var cachedVaultResources: DBPVaultResources?
-    private var vaultResourcesInitAttempt: VaultResourcesInitAttempt?
+    private var ongoingVaultResourcesInitTask: Task<DBPVaultResources, Error>?
     private let vaultResourcesProvider: (() throws -> DBPVaultResources)?
     private let authenticationManager: DataBrokerProtectionAuthenticationManaging
     private let userNotificationService: DataBrokerProtectionUserNotificationService
@@ -485,39 +473,39 @@ public final class DataBrokerProtectionIOSManager {
     /// or joins one already in progress; the gate ensures a single initialization even when
     /// multiple entry points (launch, app-active, background task) arrive concurrently.
     private func vaultResources(reason: VaultInitReason) async throws -> DBPVaultResources {
-        let resolution: VaultResourcesResolution = vaultResourcesLock.withLock {
+        enum Resolution {
+            case ready(DBPVaultResources)
+            case initializing(Task<DBPVaultResources, Error>)
+        }
+
+        let resolution: Resolution = vaultResourcesLock.withLock {
             if let cachedVaultResources {
                 return .ready(cachedVaultResources)
             }
 
-            if let vaultResourcesInitAttempt {
-                return .initializing(vaultResourcesInitAttempt)
+            if let ongoingVaultResourcesInitTask {
+                return .initializing(ongoingVaultResourcesInitTask)
             }
 
-            let initAttempt = VaultResourcesInitAttempt(
-                task: Task {
-                    try await loadVaultResources()
+            let task = Task {
+                do {
+                    let resources = try await loadVaultResources()
+                    publishVaultResources(resources)
+                    return resources
+                } catch {
+                    clearVaultResourcesInitAttempt()
+                    throw error
                 }
-            )
-            vaultResourcesInitAttempt = initAttempt
-            return .initializing(initAttempt)
+            }
+            ongoingVaultResourcesInitTask = task
+            return .initializing(task)
         }
 
-        let initAttempt: VaultResourcesInitAttempt
         switch resolution {
         case .ready(let cachedResources):
             return cachedResources
-        case .initializing(let activeInitAttempt):
-            initAttempt = activeInitAttempt
-        }
-
-        do {
-            let resources = try await initAttempt.task.value
-            publishVaultResources(resources, for: initAttempt.id)
-            return resources
-        } catch {
-            clearVaultResourcesInitAttempt(for: initAttempt.id)
-            throw error
+        case .initializing(let task):
+            return try await task.value
         }
     }
 
@@ -553,19 +541,20 @@ public final class DataBrokerProtectionIOSManager {
     }
     #endif
 
-    private func publishVaultResources(_ resources: DBPVaultResources, for initAttemptID: UUID) {
+    /// Must be called only from the init task's own completion (single writer). Awaiters never call
+    /// these, which is what lets them stay guard-free: nothing can create a successor task until
+    /// this task nils `ongoingVaultResourcesInitTask`.
+    private func publishVaultResources(_ resources: DBPVaultResources) {
         vaultResourcesLock.withLock {
-            guard vaultResourcesInitAttempt?.id == initAttemptID else { return }
             resources.queueManager.delegate = self
             cachedVaultResources = resources
-            vaultResourcesInitAttempt = nil
+            ongoingVaultResourcesInitTask = nil
         }
     }
 
-    private func clearVaultResourcesInitAttempt(for initAttemptID: UUID) {
+    private func clearVaultResourcesInitAttempt() {
         vaultResourcesLock.withLock {
-            guard vaultResourcesInitAttempt?.id == initAttemptID else { return }
-            vaultResourcesInitAttempt = nil
+            ongoingVaultResourcesInitTask = nil
         }
     }
 }
