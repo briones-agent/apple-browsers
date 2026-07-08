@@ -641,6 +641,10 @@ final class MainCoordinator {
         controller.segueToDuckDuckGoSubscription(origin: origin)
     }
 
+    func segueToSubscriptionWelcome() {
+        controller.segueToSubscriptionWelcome()
+    }
+
     func presentNetworkProtectionStatusSettingsModal(origin: SubscriptionFunnelOrigin) {
         controller.presentNetworkProtectionStatusSettingsModal(origin: origin)
     }
