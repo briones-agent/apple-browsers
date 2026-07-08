@@ -194,9 +194,9 @@ public final class DataBrokerProtectionIOSManager {
 
     /// The entry point requesting Secure Vault-backed resources. Every caller either starts
     /// initialization or joins one already in progress; the gate dedups concurrent initializers,
-    /// so multiple entry points still result in a single initialization. The reason is for
-    /// call-site readability only.
-    private enum VaultInitReason {
+    /// so multiple entry points still result in a single initialization. The reason labels the
+    /// entry point that actually triggers initialization in the signpost interval / log below.
+    private enum VaultInitReason: String {
         case launch
         case appActive
         case dashboard
@@ -488,12 +488,20 @@ public final class DataBrokerProtectionIOSManager {
             }
 
             let task = Task {
+                Logger.dataBrokerProtection.log("PIR Secure Vault initialization triggered, reason: \(reason.rawValue, privacy: .public)")
+                let signpostState = Self.secureVaultSignposter.beginInterval(
+                    "PIR Secure Vault Initialization",
+                    id: Self.secureVaultSignposter.makeSignpostID(),
+                    "reason: \(reason.rawValue, privacy: .public)"
+                )
                 do {
                     let resources = try await loadVaultResources()
                     publishVaultResources(resources)
+                    Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: success")
                     return resources
                 } catch {
                     clearVaultResourcesInitAttempt()
+                    Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: failure")
                     throw error
                 }
             }
