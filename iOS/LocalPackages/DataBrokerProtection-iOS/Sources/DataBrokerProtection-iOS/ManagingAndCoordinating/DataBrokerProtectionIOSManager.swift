@@ -1128,7 +1128,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
 
     func scheduleBGProcessingTask() {
         Task {
-            let resources: DBPVaultResources
+            let resources: DBPVaultResources?
             do {
                 // Scheduling needs database state to choose the next eligible run.
                 resources = try await vaultResources(reason: .backgroundTask)
@@ -1137,10 +1137,11 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 return
             } catch {
                 Logger.dataBrokerProtection.error("Secure Vault resources unavailable while scheduling background task: \(error.localizedDescription, privacy: .public)")
-                return
+                resources = nil
             }
 
-            guard await validateRunPrerequisites() else {
+            if resources != nil,
+               await validateRunPrerequisites() == false {
                 Logger.dataBrokerProtection.log("Prerequisites are invalid during scheduling of background task")
                 return
             }
@@ -1156,21 +1157,30 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 return
             }
 
-#if !targetEnvironment(simulator)
+#if targetEnvironment(simulator)
+            Logger.dataBrokerProtection.log("Background task not supported in simulator")
+            return
+#endif
+
             let isAuthenticatedUser = await refreshFreeScanState()
 
             do {
                 let request = BGProcessingTaskRequest(identifier: Self.backgroundTaskIdentifier)
                 request.requiresNetworkConnectivity = true
 
-                let earliestBeginDate: Date
+                let fallbackDate = Date().addingTimeInterval(maxBackgroundTaskWaitTime)
 
-                do {
-                    earliestBeginDate = calculateEarliestBeginDate(
-                        firstEligibleJobDate: try resources.database.fetchFirstEligibleJobDate(isAuthenticatedUser: isAuthenticatedUser)
-                    )
-                } catch {
-                    earliestBeginDate = Date().addingTimeInterval(maxBackgroundTaskWaitTime)
+                let earliestBeginDate: Date
+                if let resources {
+                    do {
+                        earliestBeginDate = calculateEarliestBeginDate(
+                            firstEligibleJobDate: try resources.database.fetchFirstEligibleJobDate(isAuthenticatedUser: isAuthenticatedUser)
+                        )
+                    } catch {
+                        earliestBeginDate = fallbackDate
+                    }
+                } else {
+                    earliestBeginDate = fallbackDate
                 }
 
                 request.earliestBeginDate = earliestBeginDate
@@ -1182,7 +1192,6 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 Logger.dataBrokerProtection.log("Scheduling background task failed with error: \(error)")
                 self.iOSPixelsHandler.fire(.backgroundTaskSchedulingFailed(error: error))
             }
-#endif
         }
     }
 
@@ -1268,6 +1277,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 return
             } catch {
                 Logger.dataBrokerProtection.error("Secure Vault resources unavailable during background task: \(error.localizedDescription, privacy: .public)")
+                self.scheduleBGProcessingTask()
                 task.setTaskCompleted(success: false)
                 return
             }
