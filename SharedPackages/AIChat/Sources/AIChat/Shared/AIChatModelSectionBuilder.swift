@@ -84,3 +84,23 @@ public enum AIChatModelSectionBuilder {
         return sections
     }
 }
+
+/// A gated (subscriber-only) model paired with the public tier required to unlock it.
+public struct AIChatGatedModel {
+    public let model: AIChatModel
+    public let requiredTier: AIChatModelPublicAccessTier
+}
+
+public extension AIChatModelSectionBuilder {
+    /// Groups models for a picker that shows every gated model with an upsell, rather than hiding
+    /// higher-tier models: accessible models first, then every gated model paired with its required
+    /// tier (so a Plus user still sees Pro-only models, badged, alongside an upgrade path).
+    static func buildGatedSections(models: [AIChatModel]) -> (accessible: [AIChatModel], gated: [AIChatGatedModel]) {
+        let accessible = models.filter { $0.entityHasAccess }
+        let gated = models.compactMap { model -> AIChatGatedModel? in
+            guard !model.entityHasAccess, let requiredTier = model.lowestPublicAccessTier else { return nil }
+            return AIChatGatedModel(model: model, requiredTier: requiredTier)
+        }
+        return (accessible, gated)
+    }
+}

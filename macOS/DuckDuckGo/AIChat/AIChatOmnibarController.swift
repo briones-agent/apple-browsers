@@ -65,6 +65,7 @@ final class AIChatOmnibarController {
     private let suggestionsReader: AIChatSuggestionsReading?
     private let modelsService: AIChatModelsProviding
     private let subscriptionManager: any SubscriptionManager
+    private let subscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpselling
     private var preferences: AIChatPreferencesPersisting
     private var cancellables = Set<AnyCancellable>()
     private var sharedTextStateCancellable: AnyCancellable?
@@ -83,6 +84,10 @@ final class AIChatOmnibarController {
 
     /// Whether the user has an active paid subscription (plus or pro).
     private(set) var hasActiveSubscription = false
+
+    /// The resolved subscription tier (honors the PoC debug override). Drives per-model and
+    /// per-reasoning-effort gating in the pickers.
+    private(set) var userTier: AIChatUserTier = .free
 
     /// Per-tier attachment limits (file size / pages / counts, image counts, input-char) from the
     /// models endpoint, resolved to the user's tier. `nil` until fetched, or when the endpoint
@@ -190,7 +195,11 @@ final class AIChatOmnibarController {
         suggestionsReader: AIChatSuggestionsReading? = nil,
         preferences: AIChatPreferencesPersisting = AIChatPreferencesPersistor(),
         modelsService: AIChatModelsProviding = AIChatModelsService(),
-        subscriptionManager: any SubscriptionManager = Application.appDelegate.subscriptionManager
+        subscriptionManager: any SubscriptionManager = Application.appDelegate.subscriptionManager,
+        // `AIChatOmnibarSubscriptionUpsellPresenter.init` and `Application.appDelegate.subscriptionNavigationCoordinator`
+        // are both @MainActor-isolated; a default *parameter value* is evaluated in a nonisolated
+        // context even though this initializer's body is not, so the real default is resolved below.
+        subscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpselling? = nil
     ) {
         self.aiChatTabOpener = aiChatTabOpener
         self.tabCollectionViewModel = tabCollectionViewModel
@@ -201,6 +210,8 @@ final class AIChatOmnibarController {
         self.preferences = preferences
         self.modelsService = modelsService
         self.subscriptionManager = subscriptionManager
+        self.subscriptionUpsellPresenter = subscriptionUpsellPresenter
+            ?? AIChatOmnibarSubscriptionUpsellPresenter(coordinator: Application.appDelegate.subscriptionNavigationCoordinator)
         self.suggestionsViewModel = AIChatSuggestionsViewModel(
             maxSuggestions: suggestionsReader?.maxHistoryCount ?? AIChatSuggestionsViewModel.defaultMaxSuggestions
         )
@@ -300,6 +311,7 @@ final class AIChatOmnibarController {
                 let userTier = try await self.resolveUserTier()
                 guard !Task.isCancelled else { return }
                 self.hasActiveSubscription = userTier != .free
+                self.userTier = userTier
                 self.attachmentLimits = response.attachmentLimits?.limits(for: userTier)
                 self.models = response.models.map { AIChatModel(remoteModel: $0, userTier: userTier) }
                 self.clearStaleModelSelectionIfNeeded()
@@ -315,6 +327,12 @@ final class AIChatOmnibarController {
     }
 
     private func resolveUserTier() async throws -> AIChatUserTier {
+        // PoC: honor the Debug ▸ AI Chat ▸ "Simulate Duck.ai Subscription Tier" override when set,
+        // so gated flows can be demoed without a real subscription.
+        if let raw = UserDefaults.standard.duckAISimulatedTier,
+           let simulated = AIChatUserTier(rawValue: raw) {
+            return simulated
+        }
         do {
             guard let subscription = try await subscriptionManager.getSubscription(forceRefresh: false),
                   subscription.isActive else { return .free }
@@ -551,6 +569,60 @@ final class AIChatOmnibarController {
     /// Updates the selected reasoning effort and persists it for future sessions.
     func updateSelectedReasoningEffort(_ effort: AIChatReasoningEffort?) {
         preferences.selectedReasoningEffort = effort?.rawValue
+    }
+
+    // MARK: - Subscription gating
+
+    /// Whether the selected model's `effort` is accessible to the current tier. Returns `true` when
+    /// models haven't loaded, or the model has no per-effort gating metadata (`reasoningEffortAccess
+    /// == nil` → graceful degradation, matching today's behavior for models that predate this field).
+    func isReasoningEffortAccessible(_ effort: AIChatReasoningEffort) -> Bool {
+        selectedModel?.isAccessible(effort) ?? true
+    }
+
+    /// The public tier required to unlock `effort` on the selected model, or `nil` when it's already
+    /// accessible (or no model is selected).
+    func requiredTier(for effort: AIChatReasoningEffort) -> AIChatModelPublicAccessTier? {
+        guard let model = selectedModel, !model.isAccessible(effort) else { return nil }
+        return model.lowestPublicAccessTier(for: effort)
+    }
+
+    enum ReasoningEffortSelectionOutcome: Equatable {
+        case selected(AIChatReasoningEffort)
+        /// The effort is gated at `requiredTier`. The caller is responsible for explaining the
+        /// upsell (a confirmation dialog) before calling `presentSubscriptionUpsell(requiredTier:origin:)`
+        /// — selecting a gated effort must not silently navigate away.
+        case gated(requiredTier: AIChatModelPublicAccessTier)
+    }
+
+    /// Central handler for a reasoning-effort tap in the picker: selects it if accessible, otherwise
+    /// reports the tier gating it. Never navigates or changes the selection for a gated effort.
+    func handleReasoningEffortSelection(_ effort: AIChatReasoningEffort) -> ReasoningEffortSelectionOutcome {
+        guard let requiredTier = requiredTier(for: effort) else {
+            updateSelectedReasoningEffort(effort)
+            return .selected(effort)
+        }
+        return .gated(requiredTier: requiredTier)
+    }
+
+    /// Routes a gated selection to the subscription flow. Called directly for a gated model tap
+    /// (no intermediate confirmation), or from the reasoning-effort upsell dialog's "Subscribe" action.
+    func presentSubscriptionUpsell(requiredTier: AIChatModelPublicAccessTier, origin: SubscriptionFunnelOrigin) {
+        subscriptionUpsellPresenter.routeGatedSelection(requiredTier: requiredTier, userTier: userTier, origin: origin)
+    }
+
+    /// Routes a tap on a gated (subscriber-only) model straight to the subscription flow — no
+    /// intermediate confirmation dialog (unlike the reasoning-effort picker). No-op if the model is
+    /// already accessible or carries no public access tier.
+    func routeGatedModelSelection(_ model: AIChatModel) {
+        guard !model.entityHasAccess, let requiredTier = model.lowestPublicAccessTier else { return }
+        presentSubscriptionUpsell(requiredTier: requiredTier, origin: .addressBarModelPicker)
+    }
+
+    /// Opens the subscription activation flow, for a user who already has a subscription (e.g.
+    /// purchased on another device) and wants to sign in rather than purchase again.
+    func presentSubscriptionActivationFlow() {
+        Application.appDelegate.subscriptionNavigationCoordinator.navigateToSubscriptionActivation()
     }
 
     /// The model ID to use for the current submission.

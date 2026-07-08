@@ -323,3 +323,257 @@ extension NSMenuItem {
         return menuItem
     }
 }
+
+// MARK: - Subscriber Exclusive Header
+
+/// A non-selectable menu header row that shows a muted title ("Subscriber exclusive.") followed by a
+/// tappable blue link ("Try for free" / "Upgrade") that launches the subscription flow. Used at the
+/// top of the gated section of the Duck.ai model picker.
+struct SubscriberExclusiveHeaderView: View {
+    /// Muted leading label.
+    let title: String
+
+    /// Tappable trailing link text.
+    let linkText: String
+
+    /// Callback executed when the link is tapped.
+    var onTapLink: () -> Void
+
+    @State private var isLinkHovered = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .foregroundColor(.secondary)
+            Text(linkText)
+                .foregroundColor(Color(baseColor: .blue50))
+                .underline(isLinkHovered)
+                .onHover { isLinkHovered = $0 }
+                .onTapGesture { onTapLink() }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 13))
+        .padding(.leading, MenuItemWithBadgeConstants.iconLeftPadding)
+        .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: MenuItemWithBadgeConstants.hostingViewHeight)
+    }
+}
+
+extension NSMenuItem {
+
+    /// Creates a header row with a muted title and a trailing tappable link. Only the link is
+    /// interactive: tapping it dismisses the menu and performs `action` on `target`.
+    static func createSubscriberExclusiveHeader(title: String, linkText: String, action: Selector, target: AnyObject, menu: NSMenu) -> NSMenuItem {
+        let menuItem = NSMenuItem(action: action)
+        menuItem.target = target
+
+        weak let weakTarget = target
+        let menuAction = action
+
+        let headerView = SubscriberExclusiveHeaderView(title: title, linkText: linkText) {
+            menu.cancelTracking()
+            if let target = weakTarget {
+                DispatchQueue.main.async {
+                    _ = target.perform(menuAction, with: menuItem)
+                }
+            }
+        }
+
+        let hostingView = NSHostingView(rootView: headerView)
+        hostingView.frame.size.height = MenuItemWithBadgeConstants.hostingViewHeight
+        let requiredWidth = ceil(hostingView.fittingSize.width)
+        hostingView.frame.size.width = requiredWidth
+        hostingView.autoresizingMask = [.width]
+        menu.minimumWidth = max(menu.minimumWidth, requiredWidth)
+
+        menuItem.view = hostingView
+
+        return menuItem
+    }
+}
+
+// MARK: - Model Picker Row
+
+/// A designed model-picker row matching the Duck.ai model menu: leading provider icon, a two-tone
+/// title (bold family + regular variant), an optional descriptive subtitle, and a trailing grey
+/// label (tier / "BETA"). Gated rows render dimmed but remain interactive (they route to the
+/// subscription flow). The selected row shows a subtle highlight.
+struct ModelMenuRowView: View {
+    let icon: NSImage?
+    let boldTitle: String
+    let regularTitle: String
+    let subtitle: String?
+    let trailingText: String?
+    let isSelected: Bool
+    /// Gated (subscriber-only) models render dimmed.
+    let isDimmed: Bool
+    /// Non-interactive rows (gated models) don't highlight on hover and can't be clicked — matching
+    /// the web model picker, where only the "Try for free" link opens the subscription flow.
+    let isInteractive: Bool
+    var onTap: () -> Void
+
+    @State private var isHovered = false
+
+    // Kept close together so the row height doesn't jump noticeably when a model has no subtitle.
+    private static let singleLineHeight: CGFloat = 38
+    private static let twoLineHeight: CGFloat = 46
+
+    /// Vertical inset of the highlight/selection background, which also creates the visible gap
+    /// between adjacent rows.
+    private static let rowVerticalInset: CGFloat = 3
+
+    static func height(hasSubtitle: Bool) -> CGFloat {
+        hasSubtitle ? twoLineHeight : singleLineHeight
+    }
+
+    /// The cursor-hover highlight — the accent colour AppKit uses for the highlighted menu item, so
+    /// it matches the native reasoning-effort / tools menus in the same omnibar. The selected model
+    /// is marked with a leading checkmark (like those native menus), not a background fill.
+    private var isCursorHighlighted: Bool {
+        isInteractive && isHovered
+    }
+
+    /// `controlAccentColor` rather than the shared `MenuItemWithBadgeConstants.hoverColor`
+    /// (`selectedContentBackgroundColor`): that semantic color is designed to be viewed through
+    /// AppKit's menu vibrancy/blur material — filled flatly here it renders visibly more
+    /// indigo/purple than the vivid blue AppKit paints for a plain, view-less `NSMenuItem` (e.g.
+    /// the native reasoning-effort menu). The flat accent color matches that native look.
+    private static let cursorHighlightColor = Color(nsColor: .controlAccentColor)
+
+    private var backgroundFill: Color {
+        isCursorHighlighted ? Self.cursorHighlightColor : .clear
+    }
+
+    private var titleColor: Color {
+        if isCursorHighlighted { return .white }
+        return isDimmed ? Color(nsColor: .tertiaryLabelColor) : Color(nsColor: .labelColor)
+    }
+
+    private var subtitleColor: Color {
+        isCursorHighlighted ? .white.opacity(0.85) : Color(nsColor: .secondaryLabelColor)
+    }
+
+    private var trailingColor: Color {
+        isCursorHighlighted ? .white : Color(nsColor: .secondaryLabelColor)
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: MenuItemWithBadgeConstants.menuItemCornerRadius)
+                .fill(backgroundFill)
+                .padding([.leading, .trailing], MenuItemWithBadgeConstants.menuItemHorizontalPadding)
+                .padding(.vertical, Self.rowVerticalInset)
+
+            HStack(spacing: 0) {
+                // Checkmark gutter — reserved on every row so titles align; the ✓ marks the selected
+                // model, matching the native reasoning-effort menu's selection indicator.
+                ZStack {
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(titleColor)
+                    }
+                }
+                .frame(width: 14)
+                .padding(.leading, 8)
+                .padding(.trailing, 4)
+
+                Group {
+                    if let icon {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .foregroundColor(titleColor)
+                            .frame(width: 16, height: 16)
+                    } else {
+                        Color.clear.frame(width: 16, height: 16)
+                    }
+                }
+                .padding(.trailing, MenuItemWithBadgeConstants.iconTitleSpacing)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    (Text(boldTitle).fontWeight(.semibold)
+                        + Text(regularTitle.isEmpty ? "" : " \(regularTitle)").fontWeight(.regular))
+                        .font(.system(size: 13))
+                        .foregroundColor(titleColor)
+                        .lineLimit(1)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundColor(subtitleColor)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: MenuItemWithBadgeConstants.titleBadgeSpacing)
+
+                if let trailingText {
+                    Text(trailingText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(trailingColor)
+                        .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: Self.height(hasSubtitle: subtitle != nil))
+        .contentShape(Rectangle())
+        .allowsHitTesting(isInteractive)
+        .onHover { isHovered = $0 }
+        .onTapGesture { onTap() }
+    }
+}
+
+extension NSMenuItem {
+
+    /// Creates a designed model-picker row (see `ModelMenuRowView`). On tap it dismisses the menu
+    /// and performs `action` on `target`, so the caller can select the model or route a gated
+    /// selection to the subscription flow.
+    static func createModelRow(icon: NSImage?,
+                               boldTitle: String,
+                               regularTitle: String,
+                               subtitle: String?,
+                               trailingText: String?,
+                               isSelected: Bool,
+                               isDimmed: Bool,
+                               isInteractive: Bool,
+                               action: Selector,
+                               target: AnyObject,
+                               menu: NSMenu) -> NSMenuItem {
+        let menuItem = NSMenuItem(action: action)
+        menuItem.target = target
+        // Gated rows are non-interactive: not clickable, not keyboard-selectable.
+        menuItem.isEnabled = isInteractive
+
+        weak let weakTarget = target
+        let menuAction = action
+
+        let row = ModelMenuRowView(icon: icon,
+                                    boldTitle: boldTitle,
+                                    regularTitle: regularTitle,
+                                    subtitle: subtitle,
+                                    trailingText: trailingText,
+                                    isSelected: isSelected,
+                                    isDimmed: isDimmed,
+                                    isInteractive: isInteractive) {
+            menu.cancelTracking()
+            if let target = weakTarget {
+                DispatchQueue.main.async {
+                    _ = target.perform(menuAction, with: menuItem)
+                }
+            }
+        }
+
+        let hostingView = NSHostingView(rootView: row)
+        hostingView.frame.size.height = ModelMenuRowView.height(hasSubtitle: subtitle != nil)
+        let requiredWidth = ceil(hostingView.fittingSize.width)
+        hostingView.frame.size.width = requiredWidth
+        hostingView.autoresizingMask = [.width]
+        menu.minimumWidth = max(menu.minimumWidth, requiredWidth)
+
+        menuItem.view = hostingView
+
+        return menuItem
+    }
+}

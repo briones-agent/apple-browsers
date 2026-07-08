@@ -23,6 +23,7 @@ import FeatureFlags
 import PrivacyConfig
 import SubscriptionTestingUtilities
 @testable import DuckDuckGo_Privacy_Browser
+@testable import Subscription
 
 @MainActor
 final class AIChatOmnibarControllerTests: XCTestCase {
@@ -35,6 +36,7 @@ final class AIChatOmnibarControllerTests: XCTestCase {
     private var mockPreferences: MockAIChatPreferencesPersisting!
     private var mockModelsService: MockAIChatModelsProviding!
     private var mockSubscriptionManager: SubscriptionManagerMock!
+    private var mockSubscriptionUpsellPresenter: MockAIChatOmnibarSubscriptionUpselling!
     private var tabCollectionViewModel: TabCollectionViewModel!
 
     override func setUp() {
@@ -51,6 +53,7 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         mockPreferences = MockAIChatPreferencesPersisting()
         mockModelsService = MockAIChatModelsProviding()
         mockSubscriptionManager = SubscriptionManagerMock()
+        mockSubscriptionUpsellPresenter = MockAIChatOmnibarSubscriptionUpselling()
         tabCollectionViewModel = TabCollectionViewModel(isPopup: false)
 
         controller = AIChatOmnibarController(
@@ -60,7 +63,8 @@ final class AIChatOmnibarControllerTests: XCTestCase {
             searchPreferencesPersistor: searchPreferencesPersistor,
             preferences: mockPreferences,
             modelsService: mockModelsService,
-            subscriptionManager: mockSubscriptionManager
+            subscriptionManager: mockSubscriptionManager,
+            subscriptionUpsellPresenter: mockSubscriptionUpsellPresenter
         )
         controller.delegate = mockDelegate
     }
@@ -74,6 +78,7 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         mockPreferences = nil
         mockModelsService = nil
         mockSubscriptionManager = nil
+        mockSubscriptionUpsellPresenter = nil
         tabCollectionViewModel = nil
         super.tearDown()
     }
@@ -1367,6 +1372,183 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         XCTAssertEqual(mockPreferences.selectedReasoningEffort, "low")
     }
 
+    // MARK: - Subscription Gating Tests
+
+    func testWhenModelHasNoReasoningEffortAccess_ThenEffortIsAccessible() async {
+        // Given — graceful degradation: a model predating `reasoningEffortAccess` gates nothing
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(id: "legacy-model", entityHasAccess: true, supportedReasoningEffort: [.none, .low, .medium])
+        ]
+        mockPreferences.selectedModelId = "legacy-model"
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertTrue(controller.isReasoningEffortAccessible(.medium))
+        XCTAssertNil(controller.requiredTier(for: .medium))
+    }
+
+    func testWhenEffortIsGatedForFreeUser_ThenIsReasoningEffortAccessibleReturnsFalse() async {
+        // Given — free user, `.medium` requires plus/pro
+        setUserTier(nil)
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(
+                id: "gated-model",
+                entityHasAccess: true,
+                supportedReasoningEffort: [.none, .low, .medium],
+                reasoningEffortAccess: [
+                    AIChatReasoningEffortAccess(effort: .none, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .low, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .medium, accessTier: ["plus", "pro"], entityHasAccess: false)
+                ]
+            )
+        ]
+        mockPreferences.selectedModelId = "gated-model"
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertFalse(controller.isReasoningEffortAccessible(.medium))
+        XCTAssertTrue(controller.isReasoningEffortAccessible(.low))
+    }
+
+    func testWhenEffortIsGated_ThenRequiredTierMatchesLowestAccessTier() async {
+        // Given — `.medium` requires plus or pro; lowest is plus
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(
+                id: "gated-model",
+                entityHasAccess: true,
+                supportedReasoningEffort: [.none, .medium],
+                reasoningEffortAccess: [
+                    AIChatReasoningEffortAccess(effort: .none, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .medium, accessTier: ["plus", "pro"], entityHasAccess: false)
+                ]
+            )
+        ]
+        mockPreferences.selectedModelId = "gated-model"
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertEqual(controller.requiredTier(for: .medium), .plus)
+    }
+
+    func testWhenEffortIsGatedToProOnly_ThenRequiredTierIsPro() async {
+        // Given — `.medium` requires pro only
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(
+                id: "pro-gated-model",
+                entityHasAccess: true,
+                supportedReasoningEffort: [.none, .medium],
+                reasoningEffortAccess: [
+                    AIChatReasoningEffortAccess(effort: .none, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .medium, accessTier: ["pro"], entityHasAccess: false)
+                ]
+            )
+        ]
+        mockPreferences.selectedModelId = "pro-gated-model"
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertEqual(controller.requiredTier(for: .medium), .pro)
+    }
+
+    func testWhenHandleReasoningEffortSelectionForAccessibleEffort_ThenEffortIsSelectedAndPersisted() async {
+        // Given
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(id: "open-model", entityHasAccess: true, supportedReasoningEffort: [.none, .low])
+        ]
+        mockPreferences.selectedModelId = "open-model"
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // When
+        let outcome = controller.handleReasoningEffortSelection(.low)
+
+        // Then
+        XCTAssertEqual(outcome, .selected(.low))
+        XCTAssertEqual(mockPreferences.selectedReasoningEffort, "low")
+        XCTAssertFalse(mockSubscriptionUpsellPresenter.routeGatedSelectionCalled,
+                        "Selecting an accessible effort must not touch the upsell presenter")
+    }
+
+    func testWhenHandleReasoningEffortSelectionForGatedEffort_ThenOutcomeIsGatedAndSelectionUnchanged() async {
+        // Given — `.medium` is gated; nothing persisted yet
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(
+                id: "gated-model",
+                entityHasAccess: true,
+                supportedReasoningEffort: [.none, .medium],
+                reasoningEffortAccess: [
+                    AIChatReasoningEffortAccess(effort: .none, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .medium, accessTier: ["pro"], entityHasAccess: false)
+                ]
+            )
+        ]
+        mockPreferences.selectedModelId = "gated-model"
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // When
+        let outcome = controller.handleReasoningEffortSelection(.medium)
+
+        // Then — outcome reports the gate; the controller itself does not navigate (that's the
+        // caller's job, after showing a confirmation dialog) or change the persisted selection.
+        XCTAssertEqual(outcome, .gated(requiredTier: .pro))
+        XCTAssertNil(mockPreferences.selectedReasoningEffort)
+        XCTAssertFalse(mockSubscriptionUpsellPresenter.routeGatedSelectionCalled,
+                        "handleReasoningEffortSelection must not navigate directly — the reasoning-picker flow shows a confirmation dialog first")
+    }
+
+    func testWhenPresentSubscriptionUpsellCalled_ThenPresenterRoutesWithCurrentUserTierAndOrigin() {
+        // Given — a plus user (as if resolved from a prior fetch)
+        setUserTier(.plus)
+
+        // When
+        controller.presentSubscriptionUpsell(requiredTier: .pro, origin: .addressBarReasoningPicker)
+
+        // Then
+        XCTAssertTrue(mockSubscriptionUpsellPresenter.routeGatedSelectionCalled)
+        XCTAssertEqual(mockSubscriptionUpsellPresenter.lastRequiredTier, .pro)
+        XCTAssertEqual(mockSubscriptionUpsellPresenter.lastOrigin, .addressBarReasoningPicker)
+    }
+
+    func testWhenRouteGatedModelSelectionForGatedModel_ThenPresenterIsCalledWithModelTierAndModelPickerOrigin() async {
+        // Given
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(id: "gated-model", entityHasAccess: false, accessTier: ["pro"])
+        ]
+        controller.onOmnibarActivated()
+        await waitForModels()
+        let gatedModel = controller.models.first { $0.id == "gated-model" }!
+
+        // When
+        controller.routeGatedModelSelection(gatedModel)
+
+        // Then
+        XCTAssertTrue(mockSubscriptionUpsellPresenter.routeGatedSelectionCalled)
+        XCTAssertEqual(mockSubscriptionUpsellPresenter.lastRequiredTier, .pro)
+        XCTAssertEqual(mockSubscriptionUpsellPresenter.lastOrigin, .addressBarModelPicker)
+    }
+
+    func testWhenRouteGatedModelSelectionForAccessibleModel_ThenPresenterIsNotCalled() async {
+        // Given
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(id: "open-model", entityHasAccess: true)
+        ]
+        controller.onOmnibarActivated()
+        await waitForModels()
+        let accessibleModel = controller.models.first { $0.id == "open-model" }!
+
+        // When
+        controller.routeGatedModelSelection(accessibleModel)
+
+        // Then
+        XCTAssertFalse(mockSubscriptionUpsellPresenter.routeGatedSelectionCalled,
+                        "An already-accessible model must never route to the subscription flow")
+    }
+
     // MARK: - Helpers
 
     /// Creates a remote model for testing. Access is resolved locally from `accessTier`
@@ -1383,7 +1565,9 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         supportedFileTypes: [String]? = nil,
         entityHasAccess: Bool = true,
         supportedTools: [String] = [],
-        supportedReasoningEffort: [AIChatReasoningEffort] = []
+        supportedReasoningEffort: [AIChatReasoningEffort] = [],
+        accessTier: [String]? = nil,
+        reasoningEffortAccess: [AIChatReasoningEffortAccess]? = nil
     ) -> AIChatRemoteModel {
         AIChatRemoteModel(
             id: id,
@@ -1394,9 +1578,30 @@ final class AIChatOmnibarControllerTests: XCTestCase {
             supportsImageUpload: supportsImageUpload,
             supportedFileTypes: supportedFileTypes,
             supportedTools: supportedTools,
-            accessTier: entityHasAccess ? ["free"] : ["plus", "pro"],
-            supportedReasoningEffort: supportedReasoningEffort
+            accessTier: accessTier ?? (entityHasAccess ? ["free"] : ["plus", "pro"]),
+            supportedReasoningEffort: supportedReasoningEffort,
+            reasoningEffortAccess: reasoningEffortAccess
         )
+    }
+
+    /// Configures the mock subscription manager to resolve to `tier` (`nil` maps to a free/no-tier
+    /// active subscription). `AIChatOmnibarController.resolveUserTier()` reads this via
+    /// `subscriptionManager.getSubscription(forceRefresh:)`.
+    private func setUserTier(_ tier: TierName?) {
+        let subscription = DuckDuckGoSubscription(
+            productId: "test",
+            name: "test",
+            billingPeriod: .yearly,
+            startedAt: Date(),
+            expiresOrRenewsAt: Date().addingTimeInterval(86400 * 30),
+            platform: .apple,
+            status: .autoRenewable,
+            activeOffers: [],
+            tier: tier,
+            availableChanges: nil,
+            pendingPlans: nil
+        )
+        mockSubscriptionManager.resultSubscription = .success(subscription)
     }
 
     private func waitForModels() async {
@@ -1480,5 +1685,24 @@ private class MockAIChatModelsProviding: AIChatModelsProviding {
             throw error
         }
         return AIChatModelsResponse(models: modelsToReturn)
+    }
+}
+
+// MARK: - Mock Subscription Upsell Presenter
+
+@MainActor
+private class MockAIChatOmnibarSubscriptionUpselling: AIChatOmnibarSubscriptionUpselling {
+    var routeGatedSelectionCalled = false
+    var lastRequiredTier: AIChatModelPublicAccessTier?
+    var lastUserTier: AIChatUserTier?
+    var lastOrigin: SubscriptionFunnelOrigin?
+    var returnValue = true
+
+    func routeGatedSelection(requiredTier: AIChatModelPublicAccessTier, userTier: AIChatUserTier, origin: SubscriptionFunnelOrigin) -> Bool {
+        routeGatedSelectionCalled = true
+        lastRequiredTier = requiredTier
+        lastUserTier = userTier
+        lastOrigin = origin
+        return returnValue
     }
 }

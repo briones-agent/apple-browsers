@@ -34,6 +34,10 @@ final class AIChatDebugMenu: NSMenu {
         target: self
     )
 
+    /// PoC: lets a presenter simulate a Duck.ai subscription tier so the gated model / reasoning-effort
+    /// flows can be demoed on a single build without a real subscription.
+    private lazy var simulatedTierMenuItem: NSMenuItem = makeSimulatedTierMenuItem()
+
     init(debugStorage: (any KeyedStoring<AIChatDebugURLSettings>)? = nil) {
         self.debugStorage = if let debugStorage { debugStorage } else { UserDefaults.standard.keyedStoring() }
         super.init(title: "")
@@ -54,6 +58,10 @@ final class AIChatDebugMenu: NSMenu {
 
             NSMenuItem.separator()
 
+            simulatedTierMenuItem
+
+            NSMenuItem.separator()
+
             storageServerMenuItem
         }
     }
@@ -66,6 +74,40 @@ final class AIChatDebugMenu: NSMenu {
 
     override func update() {
         updateWebUIMenuItemsState()
+        updateSimulatedTierState()
+    }
+
+    // MARK: - Simulated Subscription Tier (PoC)
+
+    private func makeSimulatedTierMenuItem() -> NSMenuItem {
+        let parent = NSMenuItem(title: "Simulate Duck.ai Subscription Tier (PoC)", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        let options: [(title: String, raw: String?)] = [
+            ("Off (use real subscription)", nil),
+            ("Free", AIChatUserTier.free.rawValue),
+            ("Plus", AIChatUserTier.plus.rawValue),
+            ("Pro", AIChatUserTier.pro.rawValue)
+        ]
+        for option in options {
+            let item = NSMenuItem(title: option.title, action: #selector(setSimulatedTier(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = option.raw
+            submenu.addItem(item)
+        }
+        parent.submenu = submenu
+        return parent
+    }
+
+    @objc private func setSimulatedTier(_ sender: NSMenuItem) {
+        UserDefaults.standard.duckAISimulatedTier = sender.representedObject as? String
+        updateSimulatedTierState()
+    }
+
+    private func updateSimulatedTierState() {
+        let current = UserDefaults.standard.duckAISimulatedTier
+        for item in simulatedTierMenuItem.submenu?.items ?? [] {
+            item.state = (item.representedObject as? String) == current ? .on : .off
+        }
     }
 
     @objc func setCustomURL() {
@@ -168,5 +210,19 @@ final class AIChatDebugMenu: NSMenu {
         } else {
             _ = callback(nil)
         }
+    }
+}
+
+// MARK: - Simulated Subscription Tier storage (PoC)
+
+extension UserDefaults {
+    private static let duckAISimulatedTierKey = "aichat.debug.simulatedSubscriptionTier"
+
+    /// PoC-only override for the resolved Duck.ai subscription tier, used to demo gated model /
+    /// reasoning-effort flows without a real subscription. `nil` means "use the real subscription".
+    /// Stores an `AIChatUserTier` raw value (free / plus / pro).
+    var duckAISimulatedTier: String? {
+        get { string(forKey: Self.duckAISimulatedTierKey) }
+        set { set(newValue, forKey: Self.duckAISimulatedTierKey) }
     }
 }

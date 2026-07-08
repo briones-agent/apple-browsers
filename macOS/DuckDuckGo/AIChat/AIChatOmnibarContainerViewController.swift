@@ -1128,6 +1128,20 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         return result
     }
 
+    /// The reasoning-effort lock glyph, pre-tinted to the "disabled control" grey so a gated row
+    /// reads as locked/disabled even though the item stays clickable (it routes to the subscription
+    /// flow). Computed once — the glyph and tint never change at runtime.
+    private static let dimmedLockIcon: NSImage = {
+        let base = DesignSystemImages.Glyphs.Size16.lock
+        let tinted = NSImage(size: base.size)
+        tinted.lockFocus()
+        NSColor.disabledControlTextColor.set()
+        NSRect(origin: .zero, size: base.size).fill()
+        base.draw(at: .zero, from: NSRect(origin: .zero, size: base.size), operation: .destinationIn, fraction: 1.0)
+        tinted.unlockFocus()
+        return tinted
+    }()
+
     @objc private func toolsMenuCreateImageClicked() {
         if !omnibarController.isImageGenerationMode {
             PixelKit.fire(AIChatPixel.aiChatAddressBarImageGenerationActivated, frequency: .dailyAndCount, includeAppVersionParameter: true)
@@ -1683,40 +1697,118 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        let sections = AIChatModelSectionBuilder.buildSections(
-            models: omnibarController.models,
-            hasActiveSubscription: omnibarController.hasActiveSubscription,
-            advancedSectionHeader: UserText.aiChatModelPickerAdvancedSectionHeader,
-            basicSectionHeader: UserText.aiChatModelPickerBasicModelsSectionHeader
-        )
+        // Accessible models first (no header), then a "Subscriber exclusive" section listing every
+        // gated model (dimmed, with a PLUS/PRO badge) plus a link that opens the subscription flow —
+        // unlike AIChatModelSectionBuilder.buildSections (used by the NTP web dropdown), gated models
+        // are never hidden here, so a Plus user still sees Pro-only models with an Upgrade path.
+        let (accessible, gated) = AIChatModelSectionBuilder.buildGatedSections(models: omnibarController.models)
+        // Within the accessible group, models with a descriptive subtitle are listed before those
+        // without one, matching the website's ordering (each subgroup keeps the API's relative order).
+        let accessibleModels = Self.orderedBySubtitlePresence(accessible)
 
-        for (index, section) in sections.enumerated() {
-            if index > 0 {
-                menu.addItem(.separator())
-            }
-            if let header = section.header {
-                let headerItem = NSMenuItem(title: header, action: nil, keyEquivalent: "")
-                headerItem.isEnabled = false
-                menu.addItem(headerItem)
-            }
-            for model in section.items {
-                menu.addItem(menuItem(for: model))
+        for model in accessibleModels {
+            menu.addItem(modelRow(
+                for: model,
+                trailingText: Self.pocBetaTag(for: model),
+                isSelected: model.id == selectedModelId,
+                isDimmed: false,
+                isInteractive: true,
+                in: menu
+            ))
+        }
+
+        if !gated.isEmpty {
+            menu.addItem(.separator())
+            let linkText = omnibarController.userTier == .free
+                ? UserText.aiChatModelPickerTryForFree
+                : UserText.aiChatModelPickerUpgrade
+            let headerItem = NSMenuItem.createSubscriberExclusiveHeader(
+                title: UserText.aiChatModelPickerSubscriberExclusive,
+                linkText: linkText,
+                action: #selector(gatedModelSelected(_:)),
+                target: self,
+                menu: menu
+            )
+            // The header's link isn't tied to one model, but routing needs a required tier: the
+            // first gated model is representative (for a free user any gated model routes to the
+            // same purchase flow; for a plus user every remaining gated model requires pro).
+            headerItem.representedObject = gated.first?.model
+            menu.addItem(headerItem)
+            for gatedModel in gated {
+                menu.addItem(modelRow(
+                    for: gatedModel.model,
+                    trailingText: Self.tierBadgeText(for: gatedModel.requiredTier),
+                    isSelected: false,
+                    isDimmed: true,
+                    isInteractive: false,
+                    in: menu
+                ))
             }
         }
 
+        menu.minimumWidth = max(menu.minimumWidth, 320)
         return menu
     }
 
-    private func menuItem(for model: AIChatModel) -> NSMenuItem {
-        let item = NSMenuItem(title: model.name, action: #selector(modelSelected(_:)), keyEquivalent: "")
-        item.target = self
+    private func modelRow(for model: AIChatModel, trailingText: String?, isSelected: Bool, isDimmed: Bool, isInteractive: Bool, in menu: NSMenu) -> NSMenuItem {
+        let title = Self.splitModelTitle(model.name)
+        let item = NSMenuItem.createModelRow(
+            icon: model.menuIcon,
+            boldTitle: title.bold,
+            regularTitle: title.regular,
+            subtitle: isInteractive ? Self.pocModelSubtitle(for: model) : nil,
+            trailingText: trailingText,
+            isSelected: isSelected,
+            isDimmed: isDimmed,
+            isInteractive: isInteractive,
+            action: isInteractive ? #selector(modelSelected(_:)) : #selector(gatedModelSelected(_:)),
+            target: self,
+            menu: menu
+        )
         item.representedObject = model
-        item.image = model.menuIcon
-        item.isEnabled = model.entityHasAccess
-        if model.id == selectedModelId {
-            item.state = .on
-        }
         return item
+    }
+
+    /// Splits a model name into a bold family part and a regular remainder (e.g. "GPT-5.4 mini"
+    /// → bold "GPT-5.4", regular "mini"). Best-effort first-token split for the PoC.
+    private static func splitModelTitle(_ name: String) -> (bold: String, regular: String) {
+        guard let spaceIndex = name.firstIndex(of: " ") else { return (name, "") }
+        return (String(name[..<spaceIndex]), String(name[name.index(after: spaceIndex)...]))
+    }
+
+    /// Stable partition: models with a descriptive subtitle first (original relative order
+    /// preserved), then the rest (also in original relative order).
+    private static func orderedBySubtitlePresence(_ models: [AIChatModel]) -> [AIChatModel] {
+        let withSubtitle = models.filter { pocModelSubtitle(for: $0) != nil }
+        let withoutSubtitle = models.filter { pocModelSubtitle(for: $0) == nil }
+        return withSubtitle + withoutSubtitle
+    }
+
+    /// PoC-only descriptive subtitle. Real copy will come from product config — the `/models` API
+    /// does not carry model descriptions today.
+    private static func pocModelSubtitle(for model: AIChatModel) -> String? {
+        let name = model.name.lowercased()
+        if name.contains("nano") { return "Best for everyday use" }
+        if name.contains("mini") || name.contains("haiku") { return "Solid but uses limits faster" }
+        return nil
+    }
+
+    /// PoC-only "BETA" tag heuristic for accessible rows. Real copy will come from product config.
+    private static func pocBetaTag(for model: AIChatModel) -> String? {
+        model.name.lowercased().contains("gemma") ? "BETA" : nil
+    }
+
+    private static func tierBadgeText(for tier: AIChatModelPublicAccessTier) -> String {
+        switch tier {
+        case .plus: return UserText.aiChatModelPickerTierBadgePlus
+        case .pro: return UserText.aiChatModelPickerTierBadgePro
+        case .free: return "" // A gated model's required tier is never .free.
+        }
+    }
+
+    @objc private func gatedModelSelected(_ sender: NSMenuItem) {
+        guard let model = sender.representedObject as? AIChatModel else { return }
+        omnibarController.routeGatedModelSelection(model)
     }
 
     @objc private func modelSelected(_ sender: NSMenuItem) {
@@ -1741,11 +1833,16 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let currentEffort = omnibarController.displayedReasoningEffort
         for effort in omnibarController.pickerReasoningEfforts {
             let item = NSMenuItem(title: "", action: #selector(reasoningEffortSelected(_:)), keyEquivalent: "")
+            // Gated efforts stay visible + clickable (they route to the subscription flow), but
+            // show a dimmed lock glyph in place of the effort icon — matching the web, where only
+            // the icon dims and the title/subtitle keep their normal color — and never show as the
+            // current selection.
+            let isAccessible = omnibarController.isReasoningEffortAccessible(effort)
             item.attributedTitle = toolsMenuItemAttributedTitle(title: effort.title, subtitle: effort.subtitle)
             item.target = self
             item.representedObject = effort
-            item.image = effort.icon
-            if effort == currentEffort {
+            item.image = isAccessible ? effort.icon : Self.dimmedLockIcon
+            if isAccessible, effort == currentEffort {
                 item.state = .on
             }
             menu.addItem(item)
@@ -1756,9 +1853,30 @@ final class AIChatOmnibarContainerViewController: NSViewController {
 
     @objc private func reasoningEffortSelected(_ sender: NSMenuItem) {
         guard let effort = sender.representedObject as? AIChatReasoningEffort else { return }
-        omnibarController.updateSelectedReasoningEffort(effort)
-        updateReasoningPickerAppearance(effort)
-        PixelKit.fire(AIChatPixel.aiChatAddressBarReasoningEffortSelected, frequency: .dailyAndCount, includeAppVersionParameter: true)
+        switch omnibarController.handleReasoningEffortSelection(effort) {
+        case .selected(let effort):
+            updateReasoningPickerAppearance(effort)
+            PixelKit.fire(AIChatPixel.aiChatAddressBarReasoningEffortSelected, frequency: .dailyAndCount, includeAppVersionParameter: true)
+        case .gated(let requiredTier):
+            // Explains the upsell via a sheet rather than navigating immediately, and leaves the
+            // current selection unchanged.
+            presentReasoningUpsellAlert(requiredTier: requiredTier)
+        }
+    }
+
+    /// Explains the subscription upsell for a locked reasoning effort via `AIChatSubscriptionUpsellDialog`
+    /// — a custom SwiftUI `ModalView` sheet, not an `NSAlert`. `NSAlert` has no public API for
+    /// centering its icon/title, and hacking its private view hierarchy to force that layout proved
+    /// unreliable; a plain SwiftUI `VStack` gives the same centered look with no guessing.
+    private func presentReasoningUpsellAlert(requiredTier: AIChatModelPublicAccessTier) {
+        var dialog = AIChatSubscriptionUpsellDialog()
+        dialog.onSubscribe = { [weak self] in
+            self?.omnibarController.presentSubscriptionUpsell(requiredTier: requiredTier, origin: .addressBarReasoningPicker)
+        }
+        dialog.onHaveSubscription = { [weak self] in
+            self?.omnibarController.presentSubscriptionActivationFlow()
+        }
+        dialog.show()
     }
 
     private func updateReasoningPickerVisibility() {
