@@ -199,14 +199,16 @@ final class AIChatContextualSheetCoordinator {
 
         startObservingContextUpdates()
 
-        if sessionState.shouldTriggerAutoCollect(for: currentPageURL) {
-            if sessionState.showsSuggestionsStartSurface {
-                sessionState.beginLoadingSuggestions()
+        if currentPageURL != nil {
+            if sessionState.shouldTriggerAutoCollect(for: currentPageURL) {
+                if sessionState.showsSuggestionsStartSurface {
+                    sessionState.beginLoadingSuggestions()
+                }
+                pageContextHandler.triggerContextCollection()
+            } else if shouldCollectSignalsOnly {
+                sessionState.markPendingSignalsOnlyCollection()
+                pageContextHandler.triggerContextCollection()
             }
-            pageContextHandler.triggerContextCollection()
-        } else if shouldCollectSignalsOnly {
-            sessionState.markPendingSignalsOnlyCollection()
-            pageContextHandler.triggerContextCollection()
         }
 
         stopSessionTimer()
