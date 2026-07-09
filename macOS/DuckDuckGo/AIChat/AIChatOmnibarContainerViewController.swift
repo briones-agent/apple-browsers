@@ -1704,12 +1704,13 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let (accessible, gated) = AIChatModelSectionBuilder.buildGatedSections(models: omnibarController.models)
         // Within the accessible group, models with a descriptive subtitle are listed before those
         // without one, matching the website's ordering (each subgroup keeps the API's relative order).
-        let accessibleModels = Self.orderedBySubtitlePresence(accessible)
+        let accessibleModels = Self.pocOrderedAccessibleModels(accessible, userTier: omnibarController.userTier)
 
-        for model in accessibleModels {
+        for (model, subtitle) in accessibleModels {
             menu.addItem(modelRow(
                 for: model,
-                trailingText: Self.pocBetaTag(for: model),
+                subtitle: subtitle,
+                trailingText: Self.pocTrailingLabel(for: model),
                 isSelected: model.id == selectedModelId,
                 isDimmed: false,
                 isInteractive: true,
@@ -1740,7 +1741,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             for gatedModel in gated {
                 menu.addItem(modelRow(
                     for: gatedModel.model,
-                    trailingText: Self.tierBadgeText(for: gatedModel.requiredTier),
+                    subtitle: nil,
+                    trailingText: Self.pocTrailingLabel(for: gatedModel.model),
                     isSelected: false,
                     isDimmed: true,
                     isInteractive: false,
@@ -1753,13 +1755,13 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         return menu
     }
 
-    private func modelRow(for model: AIChatModel, trailingText: String?, isSelected: Bool, isDimmed: Bool, isInteractive: Bool, in menu: NSMenu) -> NSMenuItem {
+    private func modelRow(for model: AIChatModel, subtitle: String?, trailingText: String?, isSelected: Bool, isDimmed: Bool, isInteractive: Bool, in menu: NSMenu) -> NSMenuItem {
         let title = Self.splitModelTitle(model.name)
         let item = NSMenuItem.createModelRow(
             icon: model.menuIcon,
             boldTitle: title.bold,
             regularTitle: title.regular,
-            subtitle: isInteractive ? Self.pocModelSubtitle(for: model) : nil,
+            subtitle: subtitle,
             trailingText: trailingText,
             isSelected: isSelected,
             isDimmed: isDimmed,
@@ -1779,33 +1781,61 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         return (String(name[..<spaceIndex]), String(name[name.index(after: spaceIndex)...]))
     }
 
-    /// Stable partition: models with a descriptive subtitle first (original relative order
-    /// preserved), then the rest (also in original relative order).
-    private static func orderedBySubtitlePresence(_ models: [AIChatModel]) -> [AIChatModel] {
-        let withSubtitle = models.filter { pocModelSubtitle(for: $0) != nil }
-        let withoutSubtitle = models.filter { pocModelSubtitle(for: $0) == nil }
-        return withSubtitle + withoutSubtitle
+    /// PoC-only "correct ordering" per https://app.asana.com/1/137249556945/task/1216388092784294 —
+    /// duck.ai web computes this client-side too (a hand-maintained `modelPickerLayoutByTier` per
+    /// the linked task's comments): per-tier "recommended" models come first, each carrying a
+    /// subtitle purely by *position* (1st → "Best for everyday use", rest → "Solid but uses limits
+    /// faster") regardless of which model it is; everything else keeps the API's relative order,
+    /// unlabeled. Delete this whole function (and its matcher table) once the backend ships proper
+    /// ordering/labels — nothing else in this file depends on it.
+    private static func pocOrderedAccessibleModels(_ models: [AIChatModel], userTier: AIChatUserTier) -> [(model: AIChatModel, subtitle: String?)] {
+        var remaining = models
+        var recommended: [AIChatModel] = []
+        for matches in pocRecommendedModelMatchers(for: userTier) {
+            guard let index = remaining.firstIndex(where: { matches($0.name.lowercased()) }) else { continue }
+            recommended.append(remaining.remove(at: index))
+        }
+        let recommendedWithSubtitle = recommended.enumerated().map { index, model in
+            (model: model, subtitle: index == 0 ? "Best for everyday use" : "Solid but uses limits faster")
+        }
+        let rest = remaining.map { (model: $0, subtitle: nil as String?) }
+        return recommendedWithSubtitle + rest
     }
 
-    /// PoC-only descriptive subtitle. Real copy will come from product config — the `/models` API
-    /// does not carry model descriptions today.
-    private static func pocModelSubtitle(for model: AIChatModel) -> String? {
-        let name = model.name.lowercased()
-        if name.contains("nano") { return "Best for everyday use" }
-        if name.contains("mini") || name.contains("haiku") { return "Solid but uses limits faster" }
-        return nil
+    /// Per-tier "recommended" model matchers, in display order. Matches by lowercased name
+    /// substring (family/variant, not exact model id) since the mockups show the same family
+    /// recur across version bumps (e.g. Claude Opus 4.7 → 4.8) — mirrors the existing PoC
+    /// heuristics' approach, not tied to a stable backend id.
+    private static func pocRecommendedModelMatchers(for userTier: AIChatUserTier) -> [(String) -> Bool] {
+        let isFullGPT: (String) -> Bool = { $0.contains("gpt") && !$0.contains("mini") && !$0.contains("nano") }
+        switch userTier {
+        case .free:
+            return [
+                { $0.contains("nano") },
+                { $0.contains("mini") },
+                { $0.contains("claude") && $0.contains("haiku") }
+            ]
+        case .plus, .internal:
+            return [
+                isFullGPT,
+                { $0.contains("claude") && $0.contains("sonnet") }
+            ]
+        case .pro:
+            return [
+                isFullGPT,
+                { $0.contains("claude") && $0.contains("opus") }
+            ]
+        }
     }
 
-    /// PoC-only "BETA" tag heuristic for accessible rows. Real copy will come from product config.
-    private static func pocBetaTag(for model: AIChatModel) -> String? {
-        model.name.lowercased().contains("gemma") ? "BETA" : nil
-    }
-
-    private static func tierBadgeText(for tier: AIChatModelPublicAccessTier) -> String {
-        switch tier {
+    /// Trailing grey label for a model row, accessible or gated alike: PLUS/PRO whenever the
+    /// model's own minimum tier is above free (matches the web client, which badges e.g. a Plus
+    /// user's already-accessible Plus-tier models too) — otherwise a PoC-only "BETA" tag heuristic.
+    private static func pocTrailingLabel(for model: AIChatModel) -> String? {
+        switch model.lowestPublicAccessTier {
         case .plus: return UserText.aiChatModelPickerTierBadgePlus
         case .pro: return UserText.aiChatModelPickerTierBadgePro
-        case .free: return "" // A gated model's required tier is never .free.
+        case .free, .none: return model.name.lowercased().contains("gemma") ? "BETA" : nil
         }
     }
 
