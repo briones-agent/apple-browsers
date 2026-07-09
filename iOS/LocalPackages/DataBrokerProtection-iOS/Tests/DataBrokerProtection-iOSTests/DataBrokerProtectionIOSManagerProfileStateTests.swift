@@ -51,4 +51,13 @@ final class DataBrokerProtectionIOSManagerProfileStateTests: XCTestCase {
 
         XCTAssertEqual(dependencies.profileStateManager.profileState, .noProfile)
     }
+
+    func test_recordProfileStateUnknown_clearsStaleProfileState() {
+        let (_, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager()
+        dependencies.profileStateManager.recordProfileSaved()
+
+        dependencies.profileStateManager.recordProfileStateUnknown()
+
+        XCTAssertEqual(dependencies.profileStateManager.profileState, .unknown)
+    }
 }
