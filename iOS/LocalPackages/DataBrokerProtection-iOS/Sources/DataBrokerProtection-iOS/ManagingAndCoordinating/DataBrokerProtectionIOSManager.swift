@@ -578,6 +578,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
             resources = try await vaultResources(reason: .appActive)
         } catch DataBrokerProtectionError.secureVaultNotNeeded {
             Logger.dataBrokerProtection.log("Skipping app active operations (no profile)")
+            await sendGoToMarketFirstScanNotificationIfEligible()
             return
         } catch {
             Logger.dataBrokerProtection.error("Secure Vault resources unavailable during app active: \(error.localizedDescription, privacy: .public)")
@@ -1367,6 +1368,10 @@ private extension DataBrokerProtectionIOSManager {
     }
 
     func hasNotRunPIRScan() async -> Bool {
+        if profileStateManager.profileState == .noProfile {
+            return true
+        }
+
         do {
             let resources = try vaultResources()
             let hasProfile = try resources.database.fetchProfile() != nil
