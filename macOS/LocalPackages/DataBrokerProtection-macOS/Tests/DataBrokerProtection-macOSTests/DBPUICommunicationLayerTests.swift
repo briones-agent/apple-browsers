@@ -191,7 +191,7 @@ private final class MockDelegate: DBPUICommunicationDelegate {
     }
 
     func saveProfile() async throws {}
-    func getUserProfile() async -> DBPUIUserProfile? { nil }
+    func getUserProfile() -> DBPUIUserProfile? { nil }
     func deleteProfileData() throws {}
     func addNameToCurrentUserProfile(_ name: DBPUIUserProfileName) -> Bool { false }
     func setNameAtIndexInCurrentUserProfile(_ payload: DBPUINameAtIndex) -> Bool { false }

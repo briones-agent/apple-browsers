@@ -121,7 +121,7 @@ extension DBPUIViewModel: DBPUICommunicationDelegate {
         try await databaseDelegate?.saveProfile(profile)
     }
     
-    public func getUserProfile() async -> DBPUIUserProfile? {
+    public func getUserProfile() -> DBPUIUserProfile? {
         do {
             guard let profile = try databaseDelegate?.getUserProfile() else { return nil }
             return DBPUIUserProfile(from: profile)

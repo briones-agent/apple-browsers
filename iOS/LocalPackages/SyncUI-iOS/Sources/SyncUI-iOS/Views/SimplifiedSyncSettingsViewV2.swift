@@ -20,6 +20,7 @@
 import DesignResourcesKitIcons
 import DuckUI
 import SwiftUI
+import UIComponents
 
 // V2 of the Sync & Backup settings screen, gated behind the simplifiedSyncSetupV2 feature
 // flag. Started as a copy of SimplifiedSyncSettingsView and is being reshaped for the
@@ -42,11 +43,11 @@ public struct SimplifiedSyncSettingsViewV2: View {
         List {
             syncWarningBanners
             headerSection
-            syncToggleSection
 
             if model.isSyncEnabled {
                 syncEnabledSections
             } else {
+                syncToggleSection
                 syncDisabledSections
             }
         }
@@ -81,11 +82,12 @@ public struct SimplifiedSyncSettingsViewV2: View {
                 }
             }
         }
-        .sheet(isPresented: $model.isSyncWithAnotherDevicePromptVisible, onDismiss: {
-            model.syncWithAnotherDevicePromptDidDismiss()
-        }) {
-            SyncAnotherDevicePromptView(model: model)
-        }
+        .sheet(item: $model.connectingSheetPhase, onDismiss: {
+            model.connectingSheetDidDismiss()
+        }, content: {_ in
+            SimplifiedConnectingSheetViewV2(model: model)
+                .interactiveDismissDisabled()
+        })
     }
 }
 
@@ -105,7 +107,7 @@ extension SimplifiedSyncSettingsViewV2 {
 
     @ViewBuilder
     var syncDisabledSections: some View {
-        alreadySetUpSection
+        recoverSyncedDataSection
         getDesktopBrowserSection(source: .notActivated)
     }
 
@@ -123,15 +125,15 @@ extension SimplifiedSyncSettingsViewV2 {
     @ViewBuilder
     var headerSection: some View {
         Section {
-            VStack(spacing: 20) {
+            VStack(spacing: 8) {
                 ZStack {
-                    Image(AppRebrand.isAppRebranded() ? "Desktop-Mobile-Sync-128" : "Sync-New-128-legacy")
+                    Image(AppRebrand.isAppRebranded() ? "Desktop-Mobile-DDG-Devices-Feature-128" : "Sync-New-128-legacy", bundle: .module)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 128, height: 96)
                         .opacity(model.isSyncEnabled ? 0 : 1)
 
-                    Image(AppRebrand.isAppRebranded() ? "Desktop-Mobile-Sync-Pair-128" : "Sync-Pair-96-legacy")
+                    Image(AppRebrand.isAppRebranded() ? "Desktop-Mobile-Sync-Feature-128" : "Sync-Pair-96-legacy", bundle: .module)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 128, height: 96)
@@ -139,26 +141,21 @@ extension SimplifiedSyncSettingsViewV2 {
                 }
                 .padding(.top, -16)
 
-                ZStack {
-                    Text(model.isAIChatSyncEnabled ? UserText.simplifiedSyncHeaderMessage : UserText.simplifiedSyncHeaderMessageBasic)
+                VStack(spacing: 13) {
+                    VStack(spacing: 4) {
+                        Text(headerTitle)
+                            .daxTitle2()
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(Color(designSystemColor: .textPrimary))
+
+                        syncStatusIndicator
+                    }
+
+                    Text(headerMessage)
                         .daxBodyRegular()
                         .multilineTextAlignment(.center)
                         .foregroundColor(Color(designSystemColor: .textSecondary))
-                        .opacity(model.isSyncEnabled ? 0 : 1)
-                        .accessibilityHidden(model.isSyncEnabled)
-
-                    Button(action: model.scanQRCode) {
-                        HStack(spacing: 8) {
-                            Image(uiImage: DesignSystemImages.Glyphs.Size16.qr)
-                            Text(UserText.simplifiedSyncAnotherDeviceButton)
-                        }
-                    }
-                    .buttonStyle(PrimaryButtonStyle(disabled: !model.isConnectingDevicesAvailable, compact: true, fullWidth: false))
-                    .disabled(!model.isConnectingDevicesAvailable)
-                    .padding(.vertical, 10)
-                    .opacity(model.isSyncEnabled ? 1 : 0)
-                    .allowsHitTesting(model.isSyncEnabled)
-                    .accessibilityHidden(!model.isSyncEnabled)
+                        .padding(.horizontal, 16)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -167,6 +164,26 @@ extension SimplifiedSyncSettingsViewV2 {
         }
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color(designSystemColor: .background))
+    }
+
+    var headerTitle: String {
+        model.isSyncEnabled ? UserText.simplifiedSyncEnabledHeaderTitle : UserText.simplifiedSyncHeaderTitle
+    }
+
+    var headerMessage: String {
+        if model.isSyncEnabled {
+            return model.isAIChatSyncEnabled ? UserText.simplifiedSyncEnabledHeaderMessage : UserText.simplifiedSyncEnabledHeaderMessageBasic
+        } else {
+            return model.isAIChatSyncEnabled ? UserText.simplifiedSyncHeaderMessage : UserText.simplifiedSyncHeaderMessageBasic
+        }
+    }
+
+    @ViewBuilder
+    var syncStatusIndicator: some View {
+        StatusIndicatorView(
+            status: model.isSyncEnabled ? .on : .off,
+            text: model.isSyncEnabled ? UserText.simplifiedSyncStatusOn : UserText.simplifiedSyncStatusOff
+        )
     }
 
     @ViewBuilder
@@ -197,13 +214,11 @@ extension SimplifiedSyncSettingsViewV2 {
     var syncToggleSection: some View {
         Section {
             HStack {
-                Text(UserText.simplifiedSyncToggleTitle)
+                Text(UserText.simplifiedSyncToggleTitleThisDevice)
                     .daxBodyRegular()
                 Spacer()
                 if model.isBusy && !model.isSyncEnabled {
-                    Text(UserText.simplifiedSyncConnecting)
-                        .daxBodyRegular()
-                        .foregroundColor(Color(designSystemColor: .textSecondary))
+                    ProgressView()
                         .transition(.opacity)
                 }
                 Toggle("", isOn: Binding(
@@ -219,40 +234,45 @@ extension SimplifiedSyncSettingsViewV2 {
                 ))
                 .labelsHidden()
                 .tint(Color(designSystemColor: .accentPrimary))
+                .accessibilityLabel(UserText.simplifiedSyncToggleTitleThisDevice)
             }
             .animation(.easeInOut(duration: 0.3), value: model.isBusy)
             .disabled(model.isBusy || (!model.isSyncEnabled && !model.isAccountCreationAvailable))
+
+            if !model.isSyncEnabled {
+                syncWithAnotherDeviceButton
+            }
         }
         .listRowBackground(Color(designSystemColor: .surface))
     }
 
     @ViewBuilder
-    var alreadySetUpSection: some View {
-        Section {
-            Button {
-                model.scanQRCode()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(uiImage: DesignSystemImages.Glyphs.Size24.qr)
-                        .foregroundColor(Color(designSystemColor: .accentPrimary))
-                    Text(UserText.simplifiedSyncWithAnotherDeviceButton)
-                        .daxBodyRegular()
-                        .foregroundColor(Color(designSystemColor: .accentPrimary))
-                }
+    var syncWithAnotherDeviceButton: some View {
+        Button {
+            model.scanQRCode()
+        } label: {
+            HStack(spacing: 8) {
+                Image(uiImage: DesignSystemImages.Glyphs.Size24.qr)
+                    .foregroundColor(Color(designSystemColor: .accentPrimary))
+                Text(UserText.simplifiedSyncWithAnotherDeviceButton)
+                    .daxBodyRegular()
+                    .foregroundColor(Color(designSystemColor: .accentPrimary))
             }
-            .disabled(!model.isAccountCreationAvailable)
+        }
+        .disabled(!model.isAccountCreationAvailable)
+    }
 
+    @ViewBuilder
+    var recoverSyncedDataSection: some View {
+        Section {
             Button {
                 model.delegate?.fireSyncSetupPixel(event: .recoverSyncedDataTapped)
                 model.beginRecoverFlow()
             } label: {
-                HStack(spacing: 8) {
-                    Image(uiImage: DesignSystemImages.Glyphs.Size24.note)
-                        .foregroundColor(Color(designSystemColor: .accentPrimary))
-                    Text(UserText.simplifiedUseRecoveryCodeButton)
-                        .daxBodyRegular()
-                        .foregroundColor(Color(designSystemColor: .accentPrimary))
-                }
+                Text(UserText.simplifiedRecoverSyncedDataButton)
+                    .daxBodyRegular()
+                    .foregroundColor(Color(designSystemColor: .textPrimary))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .sheet(isPresented: $model.isRecoverSyncedDataSheetVisible) {
                 RecoverSyncedDataView(model: model, onCancel: {
@@ -261,7 +281,13 @@ extension SimplifiedSyncSettingsViewV2 {
             }
             .disabled(!model.isAccountRecoveryAvailable)
         } header: {
-            Text(UserText.simplifiedAlreadySetUpSectionHeader)
+            // Top-only gap above this section per the design. A clear header adds space above the
+            // card without touching the gap below it — unlike `listSectionSpacing`, which pads both
+            // sides of a section. Height is tuned against the canvas.
+            Color.clear
+                .frame(height: 44)
+                .listRowInsets(EdgeInsets())
+                .accessibilityHidden(true)
         }
         .listRowBackground(Color(designSystemColor: .surface))
     }
@@ -406,21 +432,16 @@ extension SimplifiedSyncSettingsViewV2 {
                     model.scanQRCode()
                 } label: {
                     HStack {
-                        Image(uiImage: DesignSystemImages.Glyphs.Size24.qr)
+                        Image(uiImage: DesignSystemImages.Glyphs.Size24.add)
                             .foregroundColor(Color(designSystemColor: .accentPrimary))
-                        Text(UserText.simplifiedSyncAnotherDeviceButton)
+                        Text(UserText.simplifiedSyncWithAnotherDeviceButton)
                             .daxBodyRegular()
                             .foregroundColor(Color(designSystemColor: .accentPrimary))
                     }
                 }
             }
         } header: {
-            HStack {
-                Text(UserText.syncedDevicesSectionHeader)
-                Circle()
-                    .fill(Color(designSystemColor: .alertGreen))
-                    .frame(width: 8)
-            }
+            Text(UserText.simplifiedMyDevicesSectionHeader)
         }
         .onReceive(timer) { _ in
             if selectedDevice == nil {
@@ -446,11 +467,18 @@ extension SimplifiedSyncSettingsViewV2 {
                         Text(UserText.syncedDevicesThisDeviceLabel)
                             .foregroundColor(.secondary)
                     }
+                    disclosureChevron
                 }
             }
             .transition(.opacity)
             .accessibility(identifier: "device")
         }
+    }
+
+    var disclosureChevron: some View {
+        Image(systemName: "chevron.forward")
+            .font(Font.system(.footnote).weight(.bold))
+            .foregroundColor(Color(UIColor.tertiaryLabel))
     }
 
     @ViewBuilder
@@ -531,15 +559,27 @@ extension SimplifiedSyncSettingsViewV2 {
             Button {
                 model.saveRecoveryPDF()
             } label: {
-                Text(UserText.simplifiedDownloadRecoveryCodeButton)
-                    .foregroundColor(Color(designSystemColor: .accentPrimary))
+                HStack {
+                    Text(UserText.simplifiedDownloadRecoveryCodeButton)
+                        .daxBodyRegular()
+                        .foregroundColor(Color(designSystemColor: .textPrimary))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(uiImage: DesignSystemImages.Glyphs.Size24.downloads)
+                        .foregroundColor(Color(designSystemColor: .icons))
+                }
             }
 
             Button {
                 model.simplifiedCopyRecoveryCode()
             } label: {
-                Text(UserText.simplifiedCopyRecoveryCodeButton)
-                    .foregroundColor(Color(designSystemColor: .accentPrimary))
+                HStack {
+                    Text(UserText.simplifiedCopyRecoveryCodeButton)
+                        .daxBodyRegular()
+                        .foregroundColor(Color(designSystemColor: .textPrimary))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(uiImage: DesignSystemImages.Glyphs.Size24.copy)
+                        .foregroundColor(Color(designSystemColor: .icons))
+                }
             }
         } header: {
             Text(UserText.recoverySectionHeader)
@@ -564,3 +604,81 @@ extension SimplifiedSyncSettingsViewV2 {
         .listRowBackground(Color(designSystemColor: .surface))
     }
 }
+
+// MARK: - Previews
+
+#if DEBUG
+
+private extension SyncSettingsViewModel {
+
+    /// Builds a `SyncSettingsViewModel` configured for previews. No delegate is set, so
+    /// delegate-driven side effects (device refresh, pixels, sheets) are inert.
+    static func preview(isSyncEnabled: Bool = false,
+                        devices: [Device] = [],
+                        isAIChatSyncEnabled: Bool = true,
+                        autoRestoreProvider: SyncAutoRestorePreviewProvider = .disabled) -> SyncSettingsViewModel {
+        let model = SyncSettingsViewModel(
+            isOnDevEnvironment: { false },
+            switchToProdEnvironment: {},
+            autoRestoreProvider: autoRestoreProvider
+        )
+        model.isAIChatSyncEnabled = isAIChatSyncEnabled
+        // Set `isSyncEnabled` before `devices`: its didSet clears devices when false.
+        model.isSyncEnabled = isSyncEnabled
+        model.devices = devices
+        return model
+    }
+}
+
+private extension SyncSettingsViewModel.Device {
+    static let thisDevice = SyncSettingsViewModel.Device(id: "1", name: "iPhone 15 Pro", type: "phone", isThisDevice: true)
+    static let desktop = SyncSettingsViewModel.Device(id: "2", name: "MacBook Pro", type: "desktop", isThisDevice: false)
+    static let otherMobile = SyncSettingsViewModel.Device(id: "3", name: "Pixel 8", type: "phone", isThisDevice: false)
+}
+
+#Preview("Sync Off") {
+    RebrandedPreview(isRebranded: true) {
+        NavigationView {
+            SimplifiedSyncSettingsViewV2(model: .preview(isSyncEnabled: false))
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+#Preview("Sync On – This Device Only") {
+    RebrandedPreview(isRebranded: true) {
+        NavigationView {
+            SimplifiedSyncSettingsViewV2(model: .preview(isSyncEnabled: true, devices: [.thisDevice], autoRestoreProvider: .enabled))
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+#Preview("Sync On – Multiple Devices") {
+    RebrandedPreview(isRebranded: true) {
+        NavigationView {
+            SimplifiedSyncSettingsViewV2(model: .preview(isSyncEnabled: true, devices: [.thisDevice, .desktop, .otherMobile], autoRestoreProvider: .enabled))
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+#Preview("Sync On – Loading Devices") {
+    RebrandedPreview(isRebranded: true) {
+        NavigationView {
+            SimplifiedSyncSettingsViewV2(model: .preview(isSyncEnabled: true, devices: []))
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+#Preview("Sync Off (Legacy brand)") {
+    RebrandedPreview(isRebranded: false) {
+        NavigationView {
+            SimplifiedSyncSettingsViewV2(model: .preview(isSyncEnabled: false))
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+#endif

@@ -225,8 +225,7 @@ final class AddressBarTextField: NSTextField {
         perfAIModeTerminatorCancellable?.cancel()
         perfAIModeTerminatorCancellable = nil
 
-        guard Application.appDelegate.featureFlagger.isFeatureOn(.aiChatOmnibarToggle),
-              let sharedTextState else { return }
+        guard let sharedTextState else { return }
 
         perfAIModeTerminatorCancellable = sharedTextState.$isInDuckAIMode
             .dropFirst()
@@ -743,27 +742,19 @@ final class AddressBarTextField: NSTextField {
 
     enum SuggestionWindowSizes {
 
-        private enum ToggleAlignmentOffset {
-            static let rebrandedWithToggle: CGFloat = 2
-            static let rebrandedWithoutToggle: CGFloat = 1
-            static let legacyWithToggle: CGFloat = 4
-            static let legacyWithoutToggle: CGFloat = 0
+        private enum Metrics {
+            static let shadowOffset: CGFloat = -2
+            static let windowOffset = CGPoint(x: -20, y: -3)
+            static let legacyShadowOffset: CGFloat = 5
+            static let legacyWindowOffset = CGPoint(x: -20, y: 5)
         }
 
-        private static let padding = CGPoint(x: -20, y: 1)
-
-        static func verticalOffset(isAppRebranded: Bool, aiChatOmnibarToggleEnabled: Bool) -> CGFloat {
-            if isAppRebranded {
-                return aiChatOmnibarToggleEnabled ? ToggleAlignmentOffset.rebrandedWithToggle : ToggleAlignmentOffset.rebrandedWithoutToggle
-            }
-
-            return aiChatOmnibarToggleEnabled ? ToggleAlignmentOffset.legacyWithToggle : ToggleAlignmentOffset.legacyWithoutToggle
+        static func shadowOffset(isAppRebranded: Bool) -> CGFloat {
+            isAppRebranded ? Metrics.shadowOffset : Metrics.legacyShadowOffset
         }
 
-        static func padding(isAppRebranded: Bool, aiChatOmnibarToggleEnabled: Bool) -> CGPoint {
-            var output = padding
-            output.y += verticalOffset(isAppRebranded: isAppRebranded, aiChatOmnibarToggleEnabled: aiChatOmnibarToggleEnabled)
-            return output
+        static func windowOffset(isAppRebranded: Bool) -> CGPoint {
+            isAppRebranded ? Metrics.windowOffset : Metrics.legacyWindowOffset
         }
     }
 
@@ -860,8 +851,7 @@ final class AddressBarTextField: NSTextField {
         }
 
         /// Shift the panel so its top edge clears the AI Chat omnibar toggle / aligns with the focused bar.
-        let isOmnibarEnabled = Application.appDelegate.featureFlagger.isFeatureOn(.aiChatOmnibarToggle)
-        let padding = SuggestionWindowSizes.padding(isAppRebranded: themeManager.isAppRebranded, aiChatOmnibarToggleEnabled: isOmnibarEnabled)
+        let padding = SuggestionWindowSizes.windowOffset(isAppRebranded: themeManager.isAppRebranded)
 
         suggestionWindow.setFrame(NSRect(x: 0, y: 0, width: superview.frame.width - 2 * padding.x, height: 0), display: true)
 
@@ -1421,7 +1411,6 @@ extension AddressBarTextField: NSTextViewDelegate {
         }
 
         let featureFlagger = Application.appDelegate.featureFlagger
-        let isAIChatOmnibarToggleEnabled = featureFlagger.isFeatureOn(.aiChatOmnibarToggle)
         let isChromeSidebarEnabled = featureFlagger.isFeatureOn(.aiChatChromeSidebar)
         let isGlobalAIEnabled = AIChatPreferences().isAIFeaturesEnabled
 
@@ -1431,10 +1420,10 @@ extension AddressBarTextField: NSTextViewDelegate {
         ]
 
         if isGlobalAIEnabled && !isChromeSidebarEnabled {
-            additionalMenuItems.append(.toggleAIChatAddressMenuItem(isOmnibarToggleEnabled: isAIChatOmnibarToggleEnabled))
+            additionalMenuItems.append(.toggleAIChatAddressMenuItem())
         }
 
-        if isGlobalAIEnabled && isAIChatOmnibarToggleEnabled {
+        if isGlobalAIEnabled {
             additionalMenuItems.append(.toggleAIChatToggleMenuItem)
         }
 
@@ -1513,8 +1502,8 @@ private extension NSMenuItem {
         return menuItem
     }
 
-    static func toggleAIChatAddressMenuItem(isOmnibarToggleEnabled: Bool) -> NSMenuItem {
-        let title = isOmnibarToggleEnabled ? UserText.showAIChatShortcutInAddress : UserText.showAIChatInAddress
+    static func toggleAIChatAddressMenuItem() -> NSMenuItem {
+        let title = UserText.showAIChatShortcutInAddress
         let menuItem = NSMenuItem(
             title: title,
             action: #selector(AddressBarTextField.toggleAIChatAddress(_:)),

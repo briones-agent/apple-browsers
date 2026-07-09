@@ -328,6 +328,7 @@ class MainViewController: UIViewController {
 
     let themeManager: ThemeManaging
     let keyValueStore: ThrowingKeyValueStoring
+    let recentModalPromptStatusProvider: RecentModalPromptStatusProviding?
     let systemSettingsPiPTutorialManager: SystemSettingsPiPTutorialManaging
     let onboardingResumeStepStore: any KeyedStoring<OnboardingStoringKeys>
     var adBlockingAvailability: AdBlockingAvailabilityProviding { tabManager.adBlockingAvailability }
@@ -463,7 +464,8 @@ class MainViewController: UIViewController {
         voiceShortcutFeature: DuckAIVoiceShortcutFeatureProviding = DuckAIVoiceShortcutFeature(),
         toggleModeStorage: ToggleModeStoring = ToggleModeStorage(),
         onboardingResumeStepStore: (any KeyedStoring<OnboardingStoringKeys>)? = nil,
-        onboardingManager: OnboardingManaging
+        onboardingManager: OnboardingManaging,
+        recentModalPromptStatusProvider: RecentModalPromptStatusProviding? = nil
     ) {
         self.remoteMessagingActionHandler = remoteMessagingActionHandler
         self.remoteMessagingImageLoader = remoteMessagingImageLoader
@@ -518,6 +520,7 @@ class MainViewController: UIViewController {
         self.maliciousSiteProtectionPreferencesManager = maliciousSiteProtectionPreferencesManager
         self.contentScopeExperimentsManager = contentScopeExperimentsManager
         self.keyValueStore = keyValueStore
+        self.recentModalPromptStatusProvider = recentModalPromptStatusProvider
         self.onboardingResumeStepStore = if let onboardingResumeStepStore { onboardingResumeStepStore } else { UserDefaults.app.keyedStoring() }
         self.customConfigurationURLProvider = customConfigurationURLProvider
         self.systemSettingsPiPTutorialManager = systemSettingsPiPTutorialManager
@@ -885,27 +888,6 @@ class MainViewController: UIViewController {
         view.addSubview(overlay)
         tabSwipeOverlayView = overlay
         swipeTabsCoordinator?.swipeOverlayView = overlay
-    }
-
-    func captureCurrentTabScreenSnapshotIfPossible(tabUID: String) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self else { return }
-            guard (self.tabSwipeOverlayView?.alpha ?? 0) == 0 else {
-                return
-            }
-            guard let currentTab = self.tabManager.currentTabsModel.currentTab,
-                  currentTab.uid == tabUID else {
-                return
-            }
-            guard self.view.window != nil,
-                  self.view.bounds.width > 0,
-                  self.view.bounds.height > 0 else { return }
-            let renderer = UIGraphicsImageRenderer(size: self.view.bounds.size)
-            let image = renderer.image { _ in
-                self.view.drawHierarchy(in: self.view.bounds, afterScreenUpdates: false)
-            }
-            self.previewsSource.updateFullScreenSnapshot(image, forTab: currentTab)
-        }
     }
 
     func updatePreviewForCurrentTab(completion: (() -> Void)? = nil) {
@@ -1313,6 +1295,7 @@ class MainViewController: UIViewController {
         }
 
         viewCoordinator.updateToolbarLayoutForAddressBarPosition(position)
+        reconcileAIChromeForCurrentTab()
         swipeTabsCoordinator?.refresh(tabsModel: tabManager.currentTabsModel, scrollToSelected: true)
 
         omniBar.adjust(for: position)
@@ -2676,7 +2659,7 @@ class MainViewController: UIViewController {
 
     private func applyWidthToTrayController() {
         if AppWidthObserver.shared.isLargeWidth {
-            self.suggestionTrayController?.float(withWidth: self.viewCoordinator.omniBar.barView.searchContainerWidth + 32)
+            self.suggestionTrayController?.float(withWidth: self.viewCoordinator.omniBar.barView.searchContainerWidth)
         } else {
             self.suggestionTrayController?.coversFullScreen = isInMinimalChromeLayout
             let bottomOmniBarHeight = appSettings.currentAddressBarPosition.isBottom ? omniBar.barView.expectedHeight : 0
@@ -4022,7 +4005,9 @@ extension MainViewController: OmniBarDelegate {
         let controlValues = viewCoordinator.omniBar.iPadDuckAIControlValues
         openAIChat(query, autoSend: true, tools: tools ?? controlValues.selectedTools,
                    modelId: controlValues.selectedModelId,
-                   reasoningEffort: controlValues.selectedReasoningEffort)
+                   reasoningEffort: controlValues.selectedReasoningEffort,
+                   images: controlValues.selectedImages,
+                   files: controlValues.selectedFiles)
     }
 
     func onChatHistorySelected(url: URL) {
@@ -4213,6 +4198,7 @@ extension MainViewController: OmniBarDelegate {
                 Pixel.fire(pixel: .browsingMenuOpenedError)
             }
         }
+        productSurfaceTelemetry.menuUsed()
     }
 
     private func launchDefaultBrowsingMenu(in context: BrowsingMenuContext, tabController tab: TabViewController) {
@@ -4238,8 +4224,7 @@ extension MainViewController: OmniBarDelegate {
         let browsingMenu: BrowsingMenuViewController =
         BrowsingMenuViewController.instantiate(headerEntries: headerEntries,
                                                menuEntries: menuEntries,
-                                               daxDialogsManager: daxDialogsManager,
-                                               productSurfaceTelemetry: productSurfaceTelemetry)
+                                               daxDialogsManager: daxDialogsManager)
         browsingMenu.isUsingSingleBar = isUsingSingleBar
         browsingMenu.onDismiss = { wasActionSelected in
             self.showMenuHighlighterIfNeeded()
@@ -4804,6 +4789,13 @@ extension MainViewController: OmniBarDelegate {
         performCancel()
     }
 
+    func onOmniBarExpandedContentSizeChanged() {
+        // The expanded input grew or shrank (an attachment was added/removed) while a Duck.ai popover
+        // is anchored beneath it — re-apply the inset so it follows instead of leaving a gap.
+        guard isPad, isPopoverVisible, isModeToggleInAIChatMode else { return }
+        suggestionTrayController?.setAdditionalTopInset(duckAIPopoverTopInset(), animated: true)
+    }
+
     private func duckAIPopoverTopInset() -> CGFloat {
         guard let searchContainer = viewCoordinator.omniBar.barView.searchContainer else {
             return 0
@@ -4951,6 +4943,12 @@ extension MainViewController: PopoverSuggestionsHosting {
     }
 
     func showPopoverDuckAIList(query: String) {
+        let isDuckAIInputExpanded = (viewCoordinator.omniBar as? OmniBarViewController)?
+            .expandableBarView?.isSearchAreaExpanded ?? false
+        guard isDuckAIInputExpanded else {
+            hidePopover()
+            return
+        }
         suggestionTrayController?.setAdditionalTopInset(duckAIPopoverTopInset(), animated: isPopoverVisible)
         tryToShowSuggestionTray(.duckAISuggestions(query: query))
     }
@@ -6542,9 +6540,11 @@ extension MainViewController {
     }
 
     private func applyFloatingUIIfNeeded() {
+        guard floatingUIManager.isFloatingUIEnabled else { return }
         viewCoordinator.setFloatingUIEnabled(floatingUIManager.isFloatingUIEnabled)
         FloatingUIChromeStyler().decorateMainViewIfNeeded(manager: floatingUIManager, coordinator: viewCoordinator)
         viewCoordinator.updateToolbarLayoutForAddressBarPosition(appSettings.currentAddressBarPosition)
+        reconcileAIChromeForCurrentTab()
     }
 
 }

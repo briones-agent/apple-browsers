@@ -310,7 +310,8 @@ final class MainCoordinator {
                                         whatsNewRepository: whatsNewRepository,
                                         darkReaderFeatureSettings: darkReaderFeatureSettings,
                                         toggleModeStorage: toggleModeStorage,
-                                        onboardingManager: onboardingManager)
+                                        onboardingManager: onboardingManager,
+                                        recentModalPromptStatusProvider: modalPromptCoordinationService)
 
         setupWebExtensions(privacyConfigurationManager: privacyConfigurationManager)
 
@@ -638,6 +639,10 @@ final class MainCoordinator {
 
     func segueToDuckDuckGoSubscription(origin: String?) {
         controller.segueToDuckDuckGoSubscription(origin: origin)
+    }
+
+    func segueToSubscriptionWelcome() {
+        controller.segueToSubscriptionWelcome()
     }
 
     func presentNetworkProtectionStatusSettingsModal(origin: SubscriptionFunnelOrigin) {

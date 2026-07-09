@@ -36,7 +36,7 @@ public protocol DBPProfileStateManaging {
 public final class DefaultDBPProfileStateManager: DBPProfileStateManaging {
 
     private enum Keys {
-        static let profileState = "ios-browser-profile-state"
+        static let profileState = "ios.browser.dbp.profile.state"
     }
 
     private let keyValueStore: KeyValueStoring

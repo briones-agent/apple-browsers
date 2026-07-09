@@ -48,20 +48,26 @@ protocol AddressBarStyleProviding {
     // MARK: - Metrics
     var addressBarActiveBackgroundViewRadius: CGFloat { get }
     var addressBarActiveBackgroundViewRadiusWithSuggestions: CGFloat { get }
+    var addressBarActiveBackgroundViewVerticalPadding: CGFloat { get }
     var addressBarActiveOuterBorderViewRadius: CGFloat { get }
     var addressBarActiveOuterBorderSize: CGFloat { get }
     var addressBarButtonSize: CGFloat { get }
     var addressBarButtonsCornerRadius: CGFloat { get }
+    var addressBarInactiveBackgroundViewVerticalPadding: CGFloat { get }
     var addressBarInactiveBackgroundViewLeadingPadding: CGFloat { get }
     var addressBarInactiveBackgroundViewTrailingPadding: CGFloat { get }
     var addressBarButtonsContainerViewLeadingPadding: CGFloat { get }
     var addressBarButtonsContainerViewTrailingPadding: CGFloat { get }
     var addressBarInactiveBackgroundViewRadius: CGFloat { get }
     var addressBarTextFieldLeadingPadding: CGFloat { get }
+    var addressBarToggleIndicatorGap: CGFloat { get }
+    var addressBarToggleIndicatorHorizontalInset: CGFloat { get }
     var addTabButtonPadding: CGFloat { get }
+    var aiChatOmnibarTextContainerTopPadding: CGFloat { get }
     var aiChatOmnibarTextContainerLeadingPadding: CGFloat { get }
     var privacyShieldStyleProvider: PrivacyShieldAddressBarStyleProviding { get }
     var suggestionHighlightCornerRadius: CGFloat { get }
+    var suggestionHighlightHorizontalPadding: CGFloat { get }
     var suggestionIconViewLeadingPadding: CGFloat { get }
     var suggestionShadowRadius: CGFloat { get }
     var suggestionTextFieldLeadingPadding: CGFloat { get }
@@ -73,10 +79,10 @@ struct AddressBarStyleProvidingFactory {
 
     static func buildStyleProvider(featureFlagger: FeatureFlagger) -> AddressBarStyleProviding {
         if featureFlagger.isFeatureOn(.appRebranding) {
-            return CurrentAddressBarStyleProvider(featureFlagger: featureFlagger)
+            return CurrentAddressBarStyleProvider()
         }
 
-        return LegacyAddressBarStyleProvider(featureFlagger: featureFlagger)
+        return LegacyAddressBarStyleProvider()
     }
 }
 
@@ -115,19 +121,10 @@ final class LegacyAddressBarStyleProvider: AddressBarStyleProviding {
     private let addressBarTrailingStackViewFocusedPadding: CGFloat = 4
     private let addressBarTrailingStackViewDefaultPadding: CGFloat = 3
 
-    private let featureFlagger: FeatureFlagger
-
-    private var isAIChatOmnibarEnabled: Bool {
-        featureFlagger.isFeatureOn(.aiChatOmnibarToggle)
-    }
-
-    init(featureFlagger: FeatureFlagger) {
-        self.featureFlagger = featureFlagger
-    }
-
     let defaultAddressBarFontSize: CGFloat = 13
     let newTabOrHomePageAddressBarFontSize: CGFloat = 13
     let addressBarButtonsCornerRadius: CGFloat = 9
+    let addressBarInactiveBackgroundViewVerticalPadding: CGFloat = 2 // Not used in Legacy Mode
     let shouldShowNewSearchIcon: Bool = true
     let shouldAddPaddingToAddressBarButtons: Bool = true
     let privacyShieldStyleProvider: PrivacyShieldAddressBarStyleProviding = CurrentPrivacyShieldAddressBarStyleProvider()
@@ -137,9 +134,12 @@ final class LegacyAddressBarStyleProvider: AddressBarStyleProviding {
     let addTabButtonPadding: CGFloat = 32 // Takes into account the extra 24pts (12pts for each inset on s-shaped tabs)
     let addressBarActiveBackgroundViewRadius: CGFloat = 15
     let addressBarActiveBackgroundViewRadiusWithSuggestions: CGFloat = 15
+    let addressBarActiveBackgroundViewVerticalPadding: CGFloat = 0 // Not used in Legacy Mode
     let addressBarInactiveBackgroundViewRadius: CGFloat = 12
     let addressBarInnerBorderViewRadius: CGFloat = 15
     let addressBarTextFieldLeadingPadding: CGFloat = 20
+    let addressBarToggleIndicatorGap: CGFloat = 2
+    let addressBarToggleIndicatorHorizontalInset: CGFloat = 0
     let addressBarActiveOuterBorderViewRadius: CGFloat = 17
     let addressBarActiveOuterBorderSize: CGFloat = -2
     let addressBarInactiveBackgroundViewLeadingPadding: CGFloat = 2
@@ -147,11 +147,13 @@ final class LegacyAddressBarStyleProvider: AddressBarStyleProviding {
     let addressBarButtonsContainerViewLeadingPadding: CGFloat = 2
     let addressBarButtonsContainerViewTrailingPadding: CGFloat = 2
     let aiChatOmnibarTextContainerLeadingPadding: CGFloat = 10
+    let aiChatOmnibarTextContainerTopPadding: CGFloat = 5
     let suggestionIconViewLeadingPadding: CGFloat = 8
     let suggestionTextFieldLeadingPadding: CGFloat = 8
     let topSpaceForSuggestionWindow: CGFloat = 16
     let suggestionShadowRadius: CGFloat = 3.0
     let suggestionHighlightCornerRadius: CGFloat = 6.0
+    let suggestionHighlightHorizontalPadding: CGFloat = 0
     let shouldLeaveBottomPaddingInSuggestions: Bool = true
     let shouldUseLegacyAddressBarSpacingMechanism: Bool = true
 
@@ -167,12 +169,12 @@ final class LegacyAddressBarStyleProvider: AddressBarStyleProviding {
         switch type {
         case .default:
             if focused {
-                return isAIChatOmnibarEnabled ? addressBarTopPaddingForDefaultFocusedWithAIChat : addressBarTopPaddingForDefault - 1
+                return addressBarTopPaddingForDefaultFocusedWithAIChat
             }
             return addressBarTopPaddingForDefault
         case .homePage:
             if focused {
-                return isAIChatOmnibarEnabled ? addressBarTopPaddingForHomePageFocusedWithAIChat : addressBarTopPaddingForHomePage - 1
+                return addressBarTopPaddingForHomePageFocusedWithAIChat
             }
             return addressBarTopPaddingForHomePage
         case .popUpWindow:
@@ -184,12 +186,12 @@ final class LegacyAddressBarStyleProvider: AddressBarStyleProviding {
         switch type {
         case .default:
             if focused {
-                return isAIChatOmnibarEnabled ? addressBarBottomPaddingForDefaultFocusedWithAIChat : addressBarBottomPaddingForDefault - 1
+                return addressBarBottomPaddingForDefaultFocusedWithAIChat
             }
             return addressBarBottomPaddingForDefault
         case .homePage:
             if focused {
-                return isAIChatOmnibarEnabled ? addressBarBottomPaddingForHomePageFocusedWithAIChat : addressBarBottomPaddingForHomePage - 1
+                return addressBarBottomPaddingForHomePageFocusedWithAIChat
             }
             return addressBarBottomPaddingForHomePage
         case .popUpWindow:
@@ -206,11 +208,7 @@ final class LegacyAddressBarStyleProvider: AddressBarStyleProviding {
     }
 
     func addressBarTrailingStackViewPadding(focused: Bool, showsToggle: Bool) -> CGFloat {
-        if featureFlagger.isFeatureOn(.aiChatOmnibarToggle) {
-            return addressBarTrailingStackViewOmnibarPadding
-        }
-
-        return focused ? addressBarTrailingStackViewFocusedPadding : addressBarTrailingStackViewDefaultPadding
+        return addressBarTrailingStackViewOmnibarPadding
     }
 
     func shouldShowOutlineBorder(isHomePage: Bool) -> Bool {
@@ -232,22 +230,20 @@ final class CurrentAddressBarStyleProvider: AddressBarStyleProviding {
     private let navigationBarHeightForDefault: CGFloat = 52
     private let navigationBarHeightForHomePage: CGFloat = 52
     private let navigationBarHeightForPopUpWindow: CGFloat = 42
-    private let addressBarTopPaddingForDefault: CGFloat = 7
-    private let addressBarTopPaddingForDefaultFocused: CGFloat = 3
+    private let addressBarTopPaddingForDefault: CGFloat = 2
     private let addressBarTopPaddingForPopUpWindow: CGFloat = 7
-    private let addressBarBottomPaddingForDefault: CGFloat = 7
-    private let addressBarBottomPaddingForDefaultFocused: CGFloat = 3
+    private let addressBarBottomPaddingForDefault: CGFloat = 2
     private let addressBarBottomPaddingForPopUpWindow: CGFloat = 7
     private let addressBarHorizontalPaddingExtended: CGFloat = 1
     private let addressBarHorizontalPaddingIDLE: CGFloat = 4
-    private let addressBarTrailingStackViewOmnibarPadding: CGFloat = 0
+    private let addressBarTrailingStackViewOmnibarPadding: CGFloat = 1
     private let addressBarTrailingStackViewFocusedPadding: CGFloat = 3
     private let addressBarTrailingStackViewDefaultPadding: CGFloat = 3
 
     // MARK: - Configuration
     let shouldShowNewSearchIcon: Bool = true
     let shouldAddPaddingToAddressBarButtons: Bool = true
-    let shouldAddAddressBarShadowWhenInactive: Bool = true
+    let shouldAddAddressBarShadowWhenInactive: Bool = false
     let shouldLeaveBottomPaddingInSuggestions: Bool = true
     let shouldUseLegacyAddressBarSpacingMechanism: Bool = false
 
@@ -259,21 +255,27 @@ final class CurrentAddressBarStyleProvider: AddressBarStyleProviding {
 
     let addressBarActiveBackgroundViewRadius: CGFloat = 19
     let addressBarActiveBackgroundViewRadiusWithSuggestions: CGFloat = 24
+    let addressBarActiveBackgroundViewVerticalPadding: CGFloat = 5
     let addressBarActiveOuterBorderViewRadius: CGFloat = 0      // Deprecated
     let addressBarActiveOuterBorderSize: CGFloat = 0            // Deprecated
     let addressBarButtonSize: CGFloat = 28
     let addressBarButtonsCornerRadius: CGFloat = 14
+    let addressBarInactiveBackgroundViewVerticalPadding: CGFloat = 7
     let addressBarInactiveBackgroundViewRadius: CGFloat = 17
     let addressBarInactiveBackgroundViewLeadingPadding: CGFloat = 6
     let addressBarInactiveBackgroundViewTrailingPadding: CGFloat = 6
     let addressBarButtonsContainerViewLeadingPadding: CGFloat = 7
     let addressBarButtonsContainerViewTrailingPadding: CGFloat = 7
     let addressBarTextFieldLeadingPadding: CGFloat = 23
+    let addressBarToggleIndicatorGap: CGFloat = 0
+    let addressBarToggleIndicatorHorizontalInset: CGFloat = 1
     let addTabButtonPadding: CGFloat = 32                       // Takes into account the extra 24pts (12pts for each inset on s-shaped tabs)
     let aiChatOmnibarTextContainerLeadingPadding: CGFloat = 13
+    let aiChatOmnibarTextContainerTopPadding: CGFloat = 6
     let privacyShieldStyleProvider: PrivacyShieldAddressBarStyleProviding = CurrentPrivacyShieldAddressBarStyleProvider()
     let suggestionHighlightCornerRadius: CGFloat = 12
-    let suggestionIconViewLeadingPadding: CGFloat = 8
+    let suggestionHighlightHorizontalPadding: CGFloat = 5
+    let suggestionIconViewLeadingPadding: CGFloat = 17
     let suggestionShadowRadius: CGFloat = 3.0
     let suggestionTextFieldLeadingPadding: CGFloat = 8
     let tabBarButtonSize: CGFloat = 28
@@ -289,15 +291,6 @@ final class CurrentAddressBarStyleProvider: AddressBarStyleProviding {
         return 0
     }()
 
-    // MARK: - Feature Flag Helpers
-    private let featureFlagger: FeatureFlagger
-
-    /// Designated Initializer
-    ///
-    init(featureFlagger: FeatureFlagger) {
-        self.featureFlagger = featureFlagger
-    }
-
     // MARK: - Public API(s)
 
     func navigationBarHeight(for type: AddressBarSizeClass, focused: Bool) -> CGFloat {
@@ -311,19 +304,21 @@ final class CurrentAddressBarStyleProvider: AddressBarStyleProviding {
         }
     }
 
+    /// Deprecated: Remove once `.appRebranding` Ships
     func addressBarTopPadding(for type: AddressBarSizeClass, focused: Bool) -> CGFloat {
         switch type {
         case .default, .homePage:
-            return focused ? addressBarTopPaddingForDefaultFocused : addressBarTopPaddingForDefault
+            return addressBarTopPaddingForDefault
         case .popUpWindow:
             return addressBarTopPaddingForPopUpWindow
         }
     }
 
+    /// Deprecated: Remove once `.appRebranding` Ships
     func addressBarBottomPadding(for type: AddressBarSizeClass, focused: Bool) -> CGFloat {
         switch type {
         case .default, .homePage:
-            return focused ? addressBarBottomPaddingForDefaultFocused : addressBarBottomPaddingForDefault
+            return addressBarBottomPaddingForDefault
         case .popUpWindow:
             return addressBarBottomPaddingForPopUpWindow
         }
@@ -338,11 +333,7 @@ final class CurrentAddressBarStyleProvider: AddressBarStyleProviding {
     }
 
     func addressBarTrailingStackViewPadding(focused: Bool, showsToggle: Bool) -> CGFloat {
-        if featureFlagger.isFeatureOn(.aiChatOmnibarToggle) {
-            return showsToggle ? addressBarTrailingStackViewOmnibarPadding : addressBarTrailingStackViewDefaultPadding
-        }
-
-        return focused ? addressBarTrailingStackViewFocusedPadding : addressBarTrailingStackViewDefaultPadding
+        return showsToggle ? addressBarTrailingStackViewOmnibarPadding : addressBarTrailingStackViewDefaultPadding
     }
 
     func shouldShowOutlineBorder(isHomePage: Bool) -> Bool {
@@ -350,7 +341,7 @@ final class CurrentAddressBarStyleProvider: AddressBarStyleProviding {
     }
 
     func sizeForSuggestionRow(isHomePage: Bool) -> CGFloat {
-        return 32
+        return 34
     }
 
     func addressBarInnerBorderViewRadius(isSuggestionsWindowVisible: Bool) -> CGFloat {

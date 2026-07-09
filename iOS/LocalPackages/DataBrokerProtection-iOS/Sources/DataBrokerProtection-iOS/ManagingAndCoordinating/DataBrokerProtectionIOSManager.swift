@@ -28,6 +28,7 @@ import os
 import Subscription
 import UserNotifications
 import DataBrokerProtectionCore
+import DataBrokerProtectionDebugServer
 import WebKit
 import BackgroundTasks
 import PrivacyConfig
@@ -80,6 +81,11 @@ public class DBPIOSInterface {
         func fireWeeklyPixels() async
 
         func resetAllNotificationStatesForDebug()
+
+        @discardableResult
+        func startDebugServer() async -> Bool
+        func stopDebugServer()
+        var debugServerPort: UInt16? { get }
     }
 
     public protocol AuthenticationDelegate: AnyObject {
@@ -92,9 +98,6 @@ public class DBPIOSInterface {
         var meetsLocaleRequirement: Bool { get }
 
         func validateRunPrerequisites() async -> Bool
-
-        /// Use this lightweight variant when the caller wants to avoid opening the secure vault and only needs cached profile state.
-        func validateRunPrerequisites(usingCachedProfileState profileState: DBPProfileState) async -> Bool
     }
 
     public protocol DatabaseDelegate: AnyObject {
@@ -200,8 +203,16 @@ public final class DataBrokerProtectionIOSManager {
         case launch
         case appActive
         case dashboard
-        case scheduling
         case backgroundTask
+
+        /// Dashboard is the only entry point that sets up a profile, so it always needs the vault.
+        /// Every other reason serves PIR lifecycle work and can be skipped for users without a profile.
+        var skipsWhenNoProfile: Bool {
+            switch self {
+            case .dashboard: return false
+            case .launch, .appActive, .backgroundTask: return true
+            }
+        }
     }
 
     private struct Constants {
@@ -249,6 +260,9 @@ public final class DataBrokerProtectionIOSManager {
     private let profileStateManager: DBPProfileStateManaging
     private var currentRunIsFreeScan: Bool?
     private var isContinuedProcessingRunActive = false
+
+    private var debugServer: DataBrokerProtectionDebugHTTPServer?
+    private var lastBackgroundTaskTriggerTimestamp: Date?
 
     private lazy var continuedProcessingCoordinator: any DBPContinuedProcessingCoordinating = {
         guard #available(iOS 26.0, *) else {
@@ -454,7 +468,11 @@ public final class DataBrokerProtectionIOSManager {
     }
 
     public func prepareSecureVaultResourcesAtLaunch() async throws {
-        _ = try await vaultResources(reason: .launch)
+        do {
+            _ = try await vaultResources(reason: .launch)
+        } catch DataBrokerProtectionError.secureVaultNotNeeded {
+            Logger.dataBrokerProtection.log("Skipping Secure Vault initialization at launch (no profile)")
+        }
     }
 
     /// Synchronous callers use this when they require resources to already exist.
@@ -476,6 +494,7 @@ public final class DataBrokerProtectionIOSManager {
         enum Resolution {
             case ready(DBPVaultResources)
             case initializing(Task<DBPVaultResources, Error>)
+            case skipped
         }
 
         let resolution: Resolution = vaultResourcesLock.withLock {
@@ -485,6 +504,10 @@ public final class DataBrokerProtectionIOSManager {
 
             if let ongoingVaultResourcesInitTask {
                 return .initializing(ongoingVaultResourcesInitTask)
+            }
+
+            if reason.skipsWhenNoProfile, profileStateManager.profileState == .noProfile {
+                return .skipped
             }
 
             let task = Task {
@@ -514,6 +537,8 @@ public final class DataBrokerProtectionIOSManager {
             return cachedResources
         case .initializing(let task):
             return try await task.value
+        case .skipped:
+            throw DataBrokerProtectionError.secureVaultNotNeeded
         }
     }
 
@@ -583,6 +608,10 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
             // so app-active must be able to start (or join) initialization rather than only wait.
             resources = try await vaultResources(reason: .appActive)
             Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up App Active")
+        } catch DataBrokerProtectionError.secureVaultNotNeeded {
+            Logger.dataBrokerProtection.log("Skipping app active operations (no profile)")
+            await sendGoToMarketFirstScanNotificationIfEligible()
+            return
         } catch {
             Logger.dataBrokerProtection.error("Secure Vault resources unavailable during app active: \(error.localizedDescription, privacy: .public)")
             return
@@ -913,6 +942,86 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DebugCommandsDelegate 
     public func resetAllNotificationStatesForDebug() {
         userNotificationService.resetAllNotificationStatesForDebug()
     }
+
+    private var canStartDebugServer: Bool {
+        #if DEBUG
+        return true
+        #else
+        return privacyConfigManager.internalUserDecider.isInternalUser
+        #endif
+    }
+
+    @discardableResult
+    public func startDebugServer() async -> Bool {
+        guard canStartDebugServer else {
+            Logger.dataBrokerProtection.error("Blocked PIR debug server start outside debug/internal-user context.")
+            return false
+        }
+
+        if let debugServer {
+            if debugServer.isStartingOrRunning {
+                return true
+            }
+            debugServer.stop()
+            self.debugServer = nil
+        }
+
+        let server = DataBrokerProtectionDebugHTTPServer(provider: self, logReader: DataBrokerProtectionIOSLogReader())
+        do {
+            try server.start()
+            debugServer = server
+            return true
+        } catch {
+            Logger.dataBrokerProtection.error("Failed to start PIR debug server: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    public func stopDebugServer() {
+        debugServer?.stop()
+        debugServer = nil
+    }
+
+    public var debugServerPort: UInt16? {
+        guard let debugServer, debugServer.isStartingOrRunning else {
+            return nil
+        }
+
+        return debugServer.port
+    }
+}
+
+// MARK: - Debug HTTP server read access
+
+extension DataBrokerProtectionIOSManager: DataBrokerProtectionDebugReadProviding {
+
+    public var agentVersion: String {
+        let version = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "unknown"
+        let build = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String) ?? "unknown"
+        return "\(version) (build: \(build))"
+    }
+
+    public var schedulerStateString: String {
+        (try? vaultResources().queueManager.debugRunningStatusString) ?? "unavailable"
+    }
+
+    public var lastSchedulerTrigger: Date? { lastBackgroundTaskTriggerTimestamp }
+
+    public var environmentName: String {
+        settings.selectedEnvironment == .production ? "production" : "staging"
+    }
+
+    public var endpointURL: URL { settings.endpointURL }
+
+    public var mainConfigETag: String? { settings.mainConfigETag }
+
+    public var lastBrokerJSONUpdateCheck: Date {
+        Date(timeIntervalSince1970: settings.lastBrokerJSONUpdateCheckTimestamp)
+    }
+
+    public func brokerProfileQueryData() throws -> [BrokerProfileQueryData] {
+        try vaultResources().database.fetchAllBrokerProfileQueryData(reason: .profileHistoryReporting)
+    }
 }
 
 extension DataBrokerProtectionIOSManager: DBPIOSInterface.RunPrerequisitesDelegate {
@@ -945,14 +1054,6 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.RunPrerequisitesDelega
     public func validateRunPrerequisites() async -> Bool {
         await validateRunPrerequisites {
             try meetsProfileRunPrequisite
-        }
-    }
-
-    public func validateRunPrerequisites(usingCachedProfileState profileState: DBPProfileState) async -> Bool {
-        await validateRunPrerequisites {
-            // Existing PIR users may not have cached profile state yet, so only
-            // exclude users we explicitly know have no profile.
-            profileState != .noProfile
         }
     }
 
@@ -1061,17 +1162,21 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
 
     func scheduleBGProcessingTask() {
         Task {
-            let resources: DBPVaultResources
+            let resources: DBPVaultResources?
             do {
                 // Scheduling needs database state to choose the next eligible run.
-                resources = try await vaultResources(reason: .scheduling)
+                resources = try await vaultResources(reason: .backgroundTask)
                 Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Scheduling")
+            } catch DataBrokerProtectionError.secureVaultNotNeeded {
+                Logger.dataBrokerProtection.log("Skipping background task scheduling (no profile)")
+                return
             } catch {
                 Logger.dataBrokerProtection.error("Secure Vault resources unavailable while scheduling background task: \(error.localizedDescription, privacy: .public)")
-                return
+                resources = nil
             }
 
-            guard await validateRunPrerequisites() else {
+            if resources != nil,
+               await validateRunPrerequisites() == false {
                 Logger.dataBrokerProtection.log("Prerequisites are invalid during scheduling of background task")
                 return
             }
@@ -1087,21 +1192,30 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 return
             }
 
-#if !targetEnvironment(simulator)
+#if targetEnvironment(simulator)
+            Logger.dataBrokerProtection.log("Background task not supported in simulator")
+            return
+#endif
+
             let isAuthenticatedUser = await refreshFreeScanState()
 
             do {
                 let request = BGProcessingTaskRequest(identifier: Self.backgroundTaskIdentifier)
                 request.requiresNetworkConnectivity = true
 
-                let earliestBeginDate: Date
+                let fallbackDate = Date().addingTimeInterval(maxBackgroundTaskWaitTime)
 
-                do {
-                    earliestBeginDate = calculateEarliestBeginDate(
-                        firstEligibleJobDate: try resources.database.fetchFirstEligibleJobDate(isAuthenticatedUser: isAuthenticatedUser)
-                    )
-                } catch {
-                    earliestBeginDate = Date().addingTimeInterval(maxBackgroundTaskWaitTime)
+                let earliestBeginDate: Date
+                if let resources {
+                    do {
+                        earliestBeginDate = calculateEarliestBeginDate(
+                            firstEligibleJobDate: try resources.database.fetchFirstEligibleJobDate(isAuthenticatedUser: isAuthenticatedUser)
+                        )
+                    } catch {
+                        earliestBeginDate = fallbackDate
+                    }
+                } else {
+                    earliestBeginDate = fallbackDate
                 }
 
                 request.earliestBeginDate = earliestBeginDate
@@ -1113,7 +1227,6 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 Logger.dataBrokerProtection.log("Scheduling background task failed with error: \(error)")
                 self.iOSPixelsHandler.fire(.backgroundTaskSchedulingFailed(error: error))
             }
-#endif
         }
     }
 
@@ -1159,6 +1272,7 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
         iOSPixelsHandler.fire(.backgroundTaskStarted)
         let startDate = Date.now
         let sessionId = UUID().uuidString
+        lastBackgroundTaskTriggerTimestamp = startDate
 
         task.expirationHandler = {
             let resources = try? self.vaultResources()
@@ -1193,8 +1307,13 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
                 // vault resources if the normal launch path has not completed.
                 resources = try await vaultResources(reason: .backgroundTask)
                 Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Background Task")
+            } catch DataBrokerProtectionError.secureVaultNotNeeded {
+                Logger.dataBrokerProtection.log("Skipping background task (no profile)")
+                task.setTaskCompleted(success: true)
+                return
             } catch {
                 Logger.dataBrokerProtection.error("Secure Vault resources unavailable during background task: \(error.localizedDescription, privacy: .public)")
+                self.scheduleBGProcessingTask()
                 task.setTaskCompleted(success: false)
                 return
             }
@@ -1284,6 +1403,10 @@ private extension DataBrokerProtectionIOSManager {
     }
 
     func hasNotRunPIRScan() async -> Bool {
+        if profileStateManager.profileState == .noProfile {
+            return true
+        }
+
         do {
             let resources = try vaultResources()
             let hasProfile = try resources.database.fetchProfile() != nil

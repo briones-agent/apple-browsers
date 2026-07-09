@@ -38,6 +38,9 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211150618152277/task/1216081727196784
     case appRebranding
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216394295428096?focus=true
+    case newTabPageRebranding
+
     /// Option to install Chrome extension during onboarding (DMG only)
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216010708822357
     case onboardingChromeExtension
@@ -143,9 +146,6 @@ public enum FeatureFlag: String, CaseIterable {
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866617328244
     case aiChatKeepSession
-
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212016242789291
-    case aiChatOmnibarToggle
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212745919983886?focus=true
     case aiChatSuggestions
@@ -292,6 +292,10 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215960699028461?focus=true
     case cookiePopupPreferenceSetting
 
+    /// Cookie Pop-up Protection opt-in dialog
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216209826654872?focus=true
+    case cookiePopupOptInDialog
+
     /// Enables advanced card ordering for the Next Steps List widget
     /// This flag is disabled by default to allow testing the new widget design with current ordering logic
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213076052926663?focus=true
@@ -410,6 +414,11 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214025222413375
     case aiChatNativeDataAccess
 
+    /// Gates the macOS "Customize Responses" native UI (omnibar + New Tab Page entry points).
+    /// Internal-only while in development.
+    /// https://app.asana.com/1/137249556945/project/1204006570077678/task/1216299435808476
+    case aiChatCustomizeResponses
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215798415697847
     /// Replaces the web-link Search Assist and Hide AI-Generated Images rows on the AI Features
     /// settings screen with native controls, regroups the main AI settings at the top, and adds the
@@ -491,6 +500,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.onboardingRebranding))
         case .appRebranding:
             Config(defaultValue: .disabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.appRebranding))
+        case .newTabPageRebranding:
+            Config(defaultValue: .disabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.appRebranding))
         case .onboardingChromeExtension:
             Config(defaultValue: .disabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.onboardingChromeExtension))
         case .unknownUsernameCategorization:
@@ -557,8 +568,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.selectionContext), category: .duckAI)
         case .aiChatKeepSession:
             Config(source: .remoteReleasable(AIChatSubfeature.keepSession), category: .duckAI)
-        case .aiChatOmnibarToggle:
-            Config(source: .remoteReleasable(AIChatSubfeature.omnibarToggle), category: .duckAI)
         case .aiChatSuggestions:
             Config(defaultValue: .enabled, source: .remoteReleasable(DuckAiChatHistorySubfeature.featureEnabled), category: .duckAI)
         case .aiChatOmnibarTools:
@@ -643,8 +652,10 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(AutoconsentSubfeature.heuristicAction), cohortType: HeuristicActionCohort.self)
         case .cookiePopupPreferenceSetting:
             Config(source: .remoteReleasable(AutoconsentSubfeature.cookiePopupPreferenceSetting), category: .popupBlocking)
+        case .cookiePopupOptInDialog:
+            Config(source: .remoteReleasable(AutoconsentSubfeature.cookiePopupOptInDialog), category: .popupBlocking)
         case .nextStepsListAdvancedCardOrdering:
-            Config(source: .disabled)
+            Config(defaultValue: .enabled, source: .remoteReleasable(HtmlNewTabPageSubfeature.nextStepsListAdvancedCardOrdering))
         case .crashCollectionLimitCallStackTreeDepth:
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.crashCollectionLimitCallStackTreeDepth), supportsLocalOverriding: false)
         case .freeTrialConversionWideEvent:
@@ -682,7 +693,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatSidebarFloating:
             Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.sidebarFloating), category: .duckAI)
         case .sidebarSuggestedPrompts:
-            Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.sidebarSuggestedPrompts), category: .duckAI)
+            Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.sidebarSuggestedPrompts), category: .duckAI)
         case .aiChatChromeSidebar:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.sidebar), category: .duckAI)
         case .webViewLookUpAction:
@@ -715,6 +726,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(AIChatSubfeature.nativeStorage), category: .duckAI)
         case .aiChatNativeDataAccess:
             Config(source: .remoteReleasable(AIChatSubfeature.nativeDataAccess), category: .duckAI)
+        case .aiChatCustomizeResponses:
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.customizeResponses), category: .duckAI)
         case .aiFeaturesNativeControls:
             Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.aiFeaturesNativeControls), category: .duckAI)
         case .aiChatNativeVoicePermissionFlow:

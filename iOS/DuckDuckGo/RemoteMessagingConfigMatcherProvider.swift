@@ -44,7 +44,6 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         themeManager: ThemeManaging = ThemeManager.shared,
         syncService: DDGSyncing,
         winBackOfferService: WinBackOfferService,
-        dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate? = nil,
         freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking,
         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
         profileStateManager: DBPProfileStateManaging,
@@ -58,7 +57,6 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         self.themeManager = themeManager
         self.syncService = syncService
         self.winBackOfferService = winBackOfferService
-        self.dbpRunPrerequisitesDelegate = dbpRunPrerequisitesDelegate
         self.freemiumPIREligibilityChecker = freemiumPIREligibilityChecker
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
         self.profileStateManager = profileStateManager
@@ -73,7 +71,6 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
     let themeManager: ThemeManaging
     let syncService: DDGSyncing
     let winBackOfferService: WinBackOfferService
-    let dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?
     let freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking
     let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
     let profileStateManager: DBPProfileStateManaging
@@ -102,6 +99,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         var subscriptionDaysSinceSubscribed: Int = -1
         var subscriptionDaysUntilExpiry: Int = -1
         var subscriptionPurchasePlatform: String?
+        var subscriptionTier: String?
         var isSubscriptionActive: Bool = false
         var isSubscriptionExpiring: Bool = false
         var isSubscriptionExpired: Bool = false
@@ -118,10 +116,14 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         }
 
         let shouldShowWinBackOfferUrgencyMessage = winBackOfferService.shouldShowUrgencyMessage
-        let isCurrentPIRUser: Bool
+        let isCurrentPIRUser: Bool?
 
         if featureFlagger.isFeatureOn(.personalInformationRemoval) {
-            isCurrentPIRUser = (await dbpRunPrerequisitesDelegate?.validateRunPrerequisites(usingCachedProfileState: profileStateManager.profileState)) ?? false
+            switch profileStateManager.profileState {
+            case .hasProfile: isCurrentPIRUser = true
+            case .noProfile: isCurrentPIRUser = false
+            case .unknown: isCurrentPIRUser = nil
+            }
         } else {
             isCurrentPIRUser = false
         }
@@ -136,6 +138,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
             subscriptionDaysSinceSubscribed = Calendar.current.numberOfDaysBetween(subscription.startedAt, and: Date()) ?? -1
             subscriptionDaysUntilExpiry = Calendar.current.numberOfDaysBetween(Date(), and: subscription.expiresOrRenewsAt) ?? -1
             subscriptionPurchasePlatform = subscription.platform.rawValue
+            subscriptionTier = subscription.tier?.rawValue
             subscriptionFreeTrialActive = subscription.hasActiveTrialOffer
 
             switch subscription.status {
@@ -186,6 +189,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
                                                        subscriptionDaysSinceSubscribed: subscriptionDaysSinceSubscribed,
                                                        subscriptionDaysUntilExpiry: subscriptionDaysUntilExpiry,
                                                        subscriptionPurchasePlatform: subscriptionPurchasePlatform,
+                                                       subscriptionTier: subscriptionTier,
                                                        isSubscriptionActive: isSubscriptionActive,
                                                        isSubscriptionExpiring: isSubscriptionExpiring,
                                                        isSubscriptionExpired: isSubscriptionExpired,
@@ -220,6 +224,10 @@ extension DuckDuckGoSubscription: @retroactive SubscriptionSurveyDataProviding {
 
     public var subscriptionBilling: String? {
         return billingPeriod.remoteMessagingFrameworkValue
+    }
+
+    public var subscriptionTier: String? {
+        return tier?.rawValue
     }
 
     public var subscriptionStartDate: Date? {

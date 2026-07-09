@@ -226,8 +226,7 @@ struct Launching: LaunchingHandling {
                                                             profileStateManager: dbpService.profileStateManager,
                                                             subscriptionDataReporter: reportingService.subscriptionDataReporter,
                                                             remoteMessagingImageLoader: remoteMessagingImageLoader,
-                                                            idleReturnEligibilityManager: idleReturnEligibilityManager,
-                                                            dbpRunPrerequisitesDelegate: dbpService.dbpIOSPublicInterface)
+                                                            idleReturnEligibilityManager: idleReturnEligibilityManager)
         let subscriptionService = SubscriptionService(privacyConfigurationManager: contentBlockingService.common.privacyConfigurationManager, featureFlagger: featureFlagger)
         let maliciousSiteProtectionService = MaliciousSiteProtectionService(featureFlagger: featureFlagger,
                                                                             privacyConfigurationManager: contentBlockingService.common.privacyConfigurationManager)
