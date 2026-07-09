@@ -1113,8 +1113,6 @@ public final class MockDatabase: DataBrokerProtectionRepository {
     public var updatePreferredRunDateError: Error?
     public var updateSubmittedSuccessfullyDateError: Error?
     public var brokerProfileQueryDataError: Error?
-    public var hasMatchesToReturn = false
-    public var hasMatchesError: Error?
 
     public lazy var callsList: [Bool] = [
         wasSaveProfileCalled,
