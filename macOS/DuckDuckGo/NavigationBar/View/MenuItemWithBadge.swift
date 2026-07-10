@@ -154,6 +154,11 @@ struct BadgeView: View {
     /// The text content to display in the badge
     let text: String
 
+    /// `true` rounds all four corners equally (e.g. the omnibar's "Try for free"/"Upgrade" tags);
+    /// `false` (default) keeps the asymmetric shape used by the PLUS/PRO/BETA/free-trial tags
+    /// elsewhere in the app.
+    var hasUniformCorners: Bool = false
+
     // Cache commonly used styling values to avoid repeated calculations
     private static let badgeFont = Font.system(size: 11, weight: .bold)
     private static let badgeShape = BadgeShape()
@@ -167,7 +172,17 @@ struct BadgeView: View {
             .padding(.leading, MenuItemWithBadgeConstants.paddingLeft)
             .padding(.trailing, MenuItemWithBadgeConstants.paddingRight)
             .frame(height: MenuItemWithBadgeConstants.height)
-            .background(Self.badgeShape.fill(Color(baseColor: .yellow60)))
+            .background(badgeBackground)
+    }
+
+    @ViewBuilder
+    private var badgeBackground: some View {
+        if hasUniformCorners {
+            RoundedRectangle(cornerRadius: MenuItemWithBadgeConstants.cornerRadius)
+                .fill(Color(baseColor: .yellow60))
+        } else {
+            Self.badgeShape.fill(Color(baseColor: .yellow60))
+        }
     }
 }
 
@@ -346,7 +361,7 @@ struct SubscriberExclusiveHeaderView: View {
             Text(title)
                 .foregroundColor(.secondary)
             Spacer(minLength: 8)
-            BadgeView(text: badgeText)
+            BadgeView(text: badgeText, hasUniformCorners: true)
                 .fixedSize()
                 .onTapGesture { onTapBadge() }
                 .onHover { hovering in
@@ -528,7 +543,7 @@ struct ModelMenuRowView: View {
                 Spacer(minLength: MenuItemWithBadgeConstants.titleBadgeSpacing)
 
                 if let trailingBadgeText {
-                    BadgeView(text: trailingBadgeText)
+                    BadgeView(text: trailingBadgeText, hasUniformCorners: true)
                         .fixedSize()
                         .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
                         .onHover { hovering in
