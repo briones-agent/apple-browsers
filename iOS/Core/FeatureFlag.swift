@@ -739,7 +739,7 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatNativeChatHistory:
             Config(defaultValue: .enabled, source: .remoteReleasable(DuckAiChatHistorySubfeature.nativeChatHistory))
         case .contextualSuggestedPrompts:
-            Config(source: .remoteReleasable(AIChatSubfeature.contextualSuggestedPrompts))
+            Config(defaultValue: .internalOnly, source: .remoteReleasable(AIChatSubfeature.contextualSuggestedPrompts))
         case .showWhatsNewPromptOnDemand:
             Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.showWhatsNewPromptOnDemand))
         case .unifiedToggleInput:

@@ -80,9 +80,15 @@ final class UserScripts: UserScriptsProvider {
 
         loginFormDetectionScript = sourceProvider.loginDetectionEnabled ? LoginFormDetectionUserScript() : nil
         do {
-            let configGenerator = ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: AppDependencyProvider.shared.featureFlagger,
-                                                                                privacyConfigurationManager: sourceProvider.privacyConfigurationManager,
-                                                                                excludedFeatures: [PrivacyFeature.autoconsent.rawValue])
+            let baseConfigGenerator = ContentScopePrivacyConfigurationJSONGenerator(featureFlagger:
+                                                                                        AppDependencyProvider.shared.featureFlagger,
+                                                                                    privacyConfigurationManager: sourceProvider.privacyConfigurationManager,
+                                                                                    excludedFeatures: [PrivacyFeature.autoconsent.rawValue])
+            // force-enable the C-S-S `pageContext.includePageTypeSignals`. Remove once remote privacy config ships `includePageTypeSignals`.
+            let configGenerator = PageTypeSignalsConfigInjector(
+                base: baseConfigGenerator,
+                isEnabled: AppDependencyProvider.shared.featureFlagger.isFeatureOn(.contextualSuggestedPrompts)
+            )
             let isolatedConfigGenerator = ContentScopePrivacyConfigurationJSONGenerator(featureFlagger: AppDependencyProvider.shared.featureFlagger,
                                                                                         privacyConfigurationManager: sourceProvider.privacyConfigurationManager)
             contentScopeUserScript = try ContentScopeUserScript(sourceProvider.privacyConfigurationManager,
@@ -238,4 +244,26 @@ final class UserScripts: UserScriptsProvider {
         }
     }
 
+}
+
+private struct PageTypeSignalsConfigInjector: CustomisedPrivacyConfigurationJSONGenerating {
+    let base: CustomisedPrivacyConfigurationJSONGenerating
+    let isEnabled: Bool
+
+    var privacyConfiguration: Data? {
+        let baseData = base.privacyConfiguration
+        guard isEnabled, let data = baseData,
+              var root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return baseData
+        }
+        var features = (root["features"] as? [String: Any]) ?? [:]
+        var pageContext = (features["pageContext"] as? [String: Any]) ?? ["state": "enabled", "exceptions": [Any]()]
+        var settings = (pageContext["settings"] as? [String: Any]) ?? [:]
+        settings["includePageTypeSignals"] = "enabled"
+        pageContext["settings"] = settings
+        features["pageContext"] = pageContext
+        root["features"] = features
+        let outData = (try? JSONSerialization.data(withJSONObject: root)) ?? baseData
+        return outData
+    }
 }
