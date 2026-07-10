@@ -20,7 +20,7 @@ on:
         description: 'How many recent merged PRs to replay when pr_numbers is empty'
         required: false
         type: string
-        default: '15'
+        default: '100'
   pull_request:
     paths:
       - '.github/scripts/detect-changed-areas.sh'
@@ -57,22 +57,40 @@ jobs:
               --json number --jq '.[].number' | tr '\n' ' ')
           fi
 
+          # "Would have saved" = a heavy check that ACTUALLY RAN (conclusion
+          # success/failure) but belongs to a workflow our flags would skip.
+          # We classify each would-skip workflow's checks into three states:
+          #   RAN         -> state SUCCESS or FAILURE  => real marginal saving
+          #   skipped/neutral (job-level `if:` skipped) => zero saving
+          #   absent      -> not present at all (native paths: filter already
+          #                  skipped the whole workflow) => zero saving
+          # Only RAN counts. The gate job itself ("Determine if checks should
+          # run") is excluded — it is the no-op gate, present whenever the
+          # workflow triggers, and is not a heavy job we would save.
+          saved_tally=$(mktemp)   # one "<workflow>: <job>" line per RAN saving
+          saved_prs=0
+          mismatch_prs=0
+          total_prs=0
+
           {
             echo "## Change-detection replay"
             echo ""
             echo "Flags computed by \`.github/scripts/detect-changed-areas.sh\` — the same script the shadow gate runs."
-            echo "\"Failed checks in would-skip areas\" lists failing check runs that belong to a workflow the flags"
-            echo "would have skipped; any entry there means the detection would have hidden a real failure."
             echo ""
-            echo "| PR | Title | ios | macos | shared | Would skip | Failed checks in would-skip areas |"
-            echo "|---|---|---|---|---|---|---|"
+            echo "**Would have saved** = heavy checks that actually ran (success/failure) but belong to a would-skip area — the incremental jobs our detection would remove. Checks that are absent (native \`paths:\` filter already skipped the workflow) or skipped/neutral do not count."
+            echo ""
+            echo "**Failed in would-skip areas** = a would-skip workflow had a failing check. Any entry there is a mismatch: detection would have hidden a real failure."
+            echo ""
+            echo "| PR | Title | ios | macos | shared | Would skip | Would-have-saved jobs (ran) | Failed in would-skip areas |"
+            echo "|---|---|---|---|---|---|---|---|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           for pr in $prs; do
+            total_prs=$((total_prs + 1))
             title=$(gh pr view "$pr" --repo "$REPO" --json title --jq '.title' | tr '|' '-' | cut -c1-60)
 
             if ! flags=$(gh pr diff "$pr" --repo "$REPO" --name-only | .github/scripts/detect-changed-areas.sh); then
-              echo "| #$pr | $title | error | error | error | - | could not compute flags |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| #$pr | $title | error | error | error | - | - | could not compute flags |" >> "$GITHUB_STEP_SUMMARY"
               continue
             fi
             ios=$(grep '^ios=' <<< "$flags" | cut -d= -f2)
@@ -95,22 +113,64 @@ jobs:
               skip_workflows+=("BSK - PR Checks" "DBP - PR Checks")
             fi
 
+            saved="-"
             failed="-"
             if [ ${#skip_workflows[@]} -gt 0 ]; then
               # gh pr checks exits non-zero when any check failed; that is data, not an error.
               checks_json=$(gh pr checks "$pr" --repo "$REPO" --json workflow,name,state 2>/dev/null || true)
               if [ -n "$checks_json" ]; then
                 wf_json=$(printf '%s\n' "${skip_workflows[@]}" | jq -R . | jq -cs .)
+
+                # RAN checks in would-skip workflows, excluding the gate job.
+                ran_json=$(jq -c --argjson wf "$wf_json" \
+                  '[.[]
+                    | select((.state == "SUCCESS" or .state == "FAILURE")
+                             and (.name | test("Determine if checks should run") | not)
+                             and (.workflow as $w | $wf | index($w)))
+                    | "\(.workflow): \(.name)"] | unique' <<< "$checks_json")
+                ran_count=$(jq 'length' <<< "$ran_json")
+                if [ "$ran_count" -gt 0 ]; then
+                  saved=$(jq -r 'join("; ")' <<< "$ran_json")
+                  saved_prs=$((saved_prs + 1))
+                  jq -r '.[]' <<< "$ran_json" >> "$saved_tally"
+                fi
+
+                # Failing checks in would-skip workflows (secondary safety check).
                 failed=$(jq -r --argjson wf "$wf_json" \
-                  '[.[] | select(.state == "FAILURE" and (.workflow as $w | $wf | index($w))) | "\(.workflow): \(.name)"] | join("; ")' \
+                  '[.[] | select(.state == "FAILURE" and (.workflow as $w | $wf | index($w))) | "\(.workflow): \(.name)"] | unique | join("; ")' \
                   <<< "$checks_json")
-                if [ -n "$failed" ]; then failed="MISMATCH - $failed"; else failed="-"; fi
+                if [ -n "$failed" ]; then failed="MISMATCH - $failed"; mismatch_prs=$((mismatch_prs + 1)); else failed="-"; fi
               else
+                saved="checks unavailable"
                 failed="checks unavailable"
               fi
             fi
 
             url="https://github.com/$REPO/pull/$pr"
-            echo "| [#$pr]($url) | $title | $ios | $macos | $shared | ${skip_areas:- -} | $failed |" >> "$GITHUB_STEP_SUMMARY"
-            echo "PR #$pr: ios=$ios macos=$macos shared=$shared would-skip:${skip_areas:- none} failed-in-skip: $failed"
+            echo "| [#$pr]($url) | $title | $ios | $macos | $shared | ${skip_areas:- -} | $saved | $failed |" >> "$GITHUB_STEP_SUMMARY"
+            echo "PR #$pr: ios=$ios macos=$macos shared=$shared would-skip:${skip_areas:- none} saved:[$saved] failed-in-skip: $failed"
           done
+
+          # ---- Summary totals ----
+          {
+            echo ""
+            echo "## Totals"
+            echo ""
+            echo "- PRs replayed: **$total_prs**"
+            echo "- PRs with >=1 would-have-saved job (real marginal saving): **$saved_prs**"
+            echo "- PRs with a failure in a would-skip area (mismatches — should be 0): **$mismatch_prs**"
+            echo ""
+            echo "### Would-have-saved jobs by frequency (count = PRs where that job ran but would be skipped)"
+            echo ""
+            if [ -s "$saved_tally" ]; then
+              echo "| Count | Workflow: job |"
+              echo "|---|---|"
+              sort "$saved_tally" | uniq -c | sort -rn | \
+                sed -E 's/^ *([0-9]+) (.*)$/| \1 | \2 |/'
+            else
+              echo "_No would-have-saved jobs across the replayed PRs._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "TOTALS: replayed=$total_prs saved_prs=$saved_prs mismatch_prs=$mismatch_prs"
+          echo "TALLY:"; sort "$saved_tally" | uniq -c | sort -rn
