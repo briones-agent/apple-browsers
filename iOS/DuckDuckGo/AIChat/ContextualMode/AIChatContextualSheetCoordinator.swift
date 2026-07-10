@@ -96,7 +96,7 @@ final class AIChatContextualSheetCoordinator {
     private var currentPageURLCancellable: AnyCancellable?
     private var didFinishURLCancellable: AnyCancellable?
     private var currentPageURL: URL?
-    private var persistentUTIHost: AIChatContextualUTIHost?
+    private(set) var persistentUTIHost: AIChatContextualUTIHost?
     private var latestDidFinishURL: URL?
 
     /// Handles all pixel firing for contextual mode.
@@ -286,6 +286,20 @@ final class AIChatContextualSheetCoordinator {
         featureFlagger.isFeatureOn(.contextualSuggestedPrompts)
             && !sessionState.hasActiveChat
             && !sessionState.shouldAutoCollectContext
+    }
+
+    /// Attachment (and its delivery state) a freshly created persistent UTI host should start with.
+    var initialUTIAttachment: (context: AIChatPageContext?, deliveryState: PageContextAttachmentDeliveryState) {
+        if let context = sessionState.intendedAttachedContext {
+            if isImmediateContextualUTIEnabled, !sessionState.hasActiveChat {
+                return (context, .pendingSubmit)
+            }
+            return (context, .delivered)
+        }
+        if sessionState.hasActiveChat, let context = sessionState.latestContext {
+            return (context, .pendingSubmit)
+        }
+        return (nil, .delivered)
     }
 }
 
@@ -526,19 +540,6 @@ private extension AIChatContextualSheetCoordinator {
         )
 
         return webVC
-    }
-
-    var initialUTIAttachment: (context: AIChatPageContext?, deliveryState: PageContextAttachmentDeliveryState) {
-        if let context = sessionState.intendedAttachedContext {
-            if isImmediateContextualUTIEnabled, !sessionState.hasActiveChat {
-                return (context, .pendingSubmit)
-            }
-            return (context, .delivered)
-        }
-        if sessionState.hasActiveChat, let context = sessionState.latestContext {
-            return (context, .pendingSubmit)
-        }
-        return (nil, .delivered)
     }
 
     var duckAiLastUsedModelProvider: DuckAiLastUsedModelProviding? {

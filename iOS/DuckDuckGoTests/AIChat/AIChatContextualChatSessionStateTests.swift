@@ -1368,7 +1368,209 @@ final class AIChatContextualChatSessionStateTests: XCTestCase {
         XCTAssertEqual(sessionState.viewState.chipState.description, "attached")
     }
 
+    // MARK: - Signals-Only Payload Tests
+
+    func testSignalsOnlyCollectionEmitsStrippedPayloadToFrontendBridge() throws {
+        // Given - suggestions ON, auto-attach OFF: the start surface collects signals only
+        mockFeatureFlagger.enabledFeatureFlags = [.contextualSuggestedPrompts]
+        mockSettings.isAutomaticContextAttachmentEnabled = false
+        var delivered: [(context: AIChatPageContextData?, targets: PageContextDeliveryTargets)] = []
+        sessionState.effects
+            .sink { if case .deliverPageContext(let context, let targets) = $0 { delivered.append((context, targets)) } }
+            .store(in: &cancellables)
+        let signals = AIChatPageTypeSignals(jsonLdType: ["Recipe"], ogType: "article", lang: "eu")
+
+        // When
+        sessionState.markPendingSignalsOnlyCollection()
+        sessionState.updateContext(makeTestContext(url: "https://example.com/recipe", pageTypeSignals: signals))
+
+        // Then - exactly one FE-bridge payload: metadata + signals, content stripped
+        XCTAssertEqual(delivered.count, 1)
+        XCTAssertEqual(delivered[0].targets, .frontendBridge)
+        let payload = try XCTUnwrap(delivered[0].context)
+        XCTAssertEqual(payload.content, "")
+        XCTAssertEqual(payload.attached, false)
+        XCTAssertEqual(payload.attachable, true)
+        XCTAssertEqual(payload.pageTypeSignals, signals)
+        XCTAssertEqual(payload.url, "https://example.com/recipe")
+        XCTAssertEqual(payload.title, "Test Page")
+
+        // And - a signals-only result must not count as a collected/attached page
+        XCTAssertNil(sessionState.latestContext)
+        XCTAssertEqual(sessionState.chipState, .placeholder)
+    }
+
+    func testSignalsOnlyCollectionWithNilContextEmitsNothing() {
+        // Given
+        mockFeatureFlagger.enabledFeatureFlags = [.contextualSuggestedPrompts]
+        mockSettings.isAutomaticContextAttachmentEnabled = false
+        var delivered: [SheetEffect] = []
+        sessionState.effects
+            .sink { if case .deliverPageContext = $0 { delivered.append($0) } }
+            .store(in: &cancellables)
+
+        // When - collection fails (empty page / decode failure)
+        sessionState.markPendingSignalsOnlyCollection()
+        sessionState.updateContext(nil)
+
+        // Then - nothing is pushed and the chip stays untouched
+        XCTAssertTrue(delivered.isEmpty)
+        XCTAssertEqual(sessionState.chipState, .placeholder)
+        XCTAssertNil(sessionState.latestContext)
+    }
+
+    func testChipRemovalOnStartSurfaceEmitsDetachSignalThenSignalsOnlyPayload() throws {
+        // Given - a chip attached on the start surface (suggestions ON, auto-attach OFF)
+        mockFeatureFlagger.enabledFeatureFlags = [.contextualSuggestedPrompts]
+        mockSettings.isAutomaticContextAttachmentEnabled = false
+        let signals = AIChatPageTypeSignals(jsonLdType: ["JobPosting"], ogType: nil, lang: "en")
+        sessionState.beginManualAttach()
+        sessionState.updateContext(makeTestContext(pageTypeSignals: signals))
+        XCTAssertEqual(sessionState.chipState.description, "attached")
+
+        var delivered: [(context: AIChatPageContextData?, targets: PageContextDeliveryTargets)] = []
+        sessionState.effects
+            .sink { if case .deliverPageContext(let context, let targets) = $0 { delivered.append((context, targets)) } }
+            .store(in: &cancellables)
+
+        // When - the user removes the chip (X tap)
+        sessionState.downgradeToPlaceholder()
+
+        // Then - the FE first receives a detach signal (nil), then the signals-only payload,
+        // in that order, so the suggestions surface keeps rendering page-tailored prompts.
+        XCTAssertEqual(delivered.count, 2)
+        XCTAssertNil(delivered[0].context)
+        XCTAssertEqual(delivered[0].targets, .frontendBridge)
+        XCTAssertEqual(delivered[1].targets, .frontendBridge)
+        let payload = try XCTUnwrap(delivered[1].context)
+        XCTAssertEqual(payload.content, "")
+        XCTAssertEqual(payload.attached, false)
+        XCTAssertEqual(payload.pageTypeSignals, signals)
+    }
+
+    // MARK: - Suggestions Resolve Race Tests
+
+    func testStaleSuggestionsResolveFromPreviousNavigationIsDiscarded() async {
+        // Given - a provider whose resolves complete only when the test says so
+        let provider = GatedContextualSuggestedPromptsProvider()
+        mockFeatureFlagger.enabledFeatureFlags = [.contextualSuggestedPrompts]
+        sessionState = AIChatContextualChatSessionState(
+            aiChatSettings: mockSettings,
+            pixelHandler: mockPixelHandler,
+            featureFlagger: mockFeatureFlagger,
+            suggestedPromptsProvider: provider
+        )
+        let stale = [ContextualSuggestedPrompt(id: "stale", label: "Stale", prompt: "Stale.", icon: "note")]
+        let fresh = [ContextualSuggestedPrompt(id: "fresh", label: "Fresh", prompt: "Fresh.", icon: "note")]
+
+        // When - navigation #1 starts a resolve that hangs
+        sessionState.markPendingSignalsOnlyCollection()
+        sessionState.updateContext(makeTestContext(url: "https://example.com/first"))
+        await yieldUntil { provider.startedCount == 1 }
+
+        // And - navigation #2 restarts loading and resolves first
+        sessionState.beginLoadingSuggestions()
+        sessionState.updateContext(makeTestContext(url: "https://example.com/second"))
+        await yieldUntil { provider.startedCount == 2 }
+        provider.resume(at: 1, returning: fresh)
+        await yieldUntil { self.sessionState.suggestionsLoadState == .loaded }
+
+        // And - the stale resolve from navigation #1 completes late
+        provider.resume(at: 0, returning: stale)
+        await yieldBriefly()
+
+        // Then - the late result is discarded, navigation #2's suggestions stay
+        XCTAssertEqual(sessionState.suggestions, fresh)
+        XCTAssertEqual(sessionState.viewState.suggestions, fresh)
+    }
+
+    func testLateSuggestionsResolveAfterChatStartIsDiscarded() async {
+        // Given - a resolve in flight on the start surface
+        let provider = GatedContextualSuggestedPromptsProvider()
+        mockFeatureFlagger.enabledFeatureFlags = [.contextualSuggestedPrompts]
+        sessionState = AIChatContextualChatSessionState(
+            aiChatSettings: mockSettings,
+            pixelHandler: mockPixelHandler,
+            featureFlagger: mockFeatureFlagger,
+            suggestedPromptsProvider: provider
+        )
+        sessionState.markPendingSignalsOnlyCollection()
+        sessionState.updateContext(makeTestContext())
+        await yieldUntil { provider.startedCount == 1 }
+
+        // When - the user submits a prompt before the resolve completes, then it completes late
+        sessionState.handlePromptSubmission("Hello")
+        provider.resume(at: 0, returning: [ContextualSuggestedPrompt(id: "late", label: "Late", prompt: "Late.", icon: "note")])
+        await yieldBriefly()
+
+        // Then - the late result must not mutate view state mid-chat
+        XCTAssertEqual(sessionState.frontendState, .chatWithoutInitialContext)
+        XCTAssertTrue(sessionState.suggestions.isEmpty)
+        XCTAssertTrue(sessionState.viewState.suggestions.isEmpty)
+    }
+
+    // MARK: - UTI Submission Transition Tests
+
+    func testBeginChatForUTISubmissionWithAttachedChip() {
+        // Given
+        sessionState.attachContextFromSuggestionTap(makeTestContext())
+
+        // When
+        sessionState.beginChatForUTISubmission()
+
+        // Then
+        XCTAssertEqual(sessionState.frontendState, .chatWithInitialContext)
+        XCTAssertTrue(mockPixelHandler.promptSubmittedWithContextFired)
+        XCTAssertFalse(mockPixelHandler.promptSubmittedWithoutContextFired)
+        guard case .webView = sessionState.viewState.content else {
+            return XCTFail("Expected webView content after UTI submission")
+        }
+    }
+
+    func testBeginChatForUTISubmissionWithPlaceholderChipAndURL() {
+        // Given
+        let chatURL = URL(string: "https://duck.ai/?chat=123")!
+
+        // When
+        sessionState.beginChatForUTISubmission(url: chatURL)
+
+        // Then
+        XCTAssertEqual(sessionState.frontendState, .chatWithoutInitialContext)
+        XCTAssertTrue(mockPixelHandler.promptSubmittedWithoutContextFired)
+        XCTAssertFalse(mockPixelHandler.promptSubmittedWithContextFired)
+        XCTAssertEqual(sessionState.contextualChatURL, chatURL)
+    }
+
+    func testBeginChatForUTISubmissionIgnoredInRestoredState() {
+        // Given
+        sessionState.restoreChat(with: URL(string: "https://duck.ai/?chat=abc")!)
+
+        // When
+        sessionState.beginChatForUTISubmission()
+
+        // Then - restored state is preserved and no submission pixels fire
+        XCTAssertEqual(sessionState.frontendState, .restoredChat)
+        XCTAssertFalse(mockPixelHandler.promptSubmittedWithContextFired)
+        XCTAssertFalse(mockPixelHandler.promptSubmittedWithoutContextFired)
+    }
+
     // MARK: - Helpers
+
+    /// Yields the main actor until `condition` holds (or the timeout elapses), letting
+    /// session-state resolve tasks run between checks.
+    private func yieldUntil(_ condition: () -> Bool, timeout: TimeInterval = 2.0) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() && Date() < deadline {
+            await Task.yield()
+        }
+    }
+
+    /// Yields a bounded number of times so an (incorrectly) scheduled task would get a chance to run.
+    private func yieldBriefly() async {
+        for _ in 0..<20 {
+            await Task.yield()
+        }
+    }
 
     private func makeTestContext(title: String = "Test Page",
                                  url: String = "https://example.com",
@@ -1476,5 +1678,24 @@ private final class MockContextualSuggestedPromptsProvider: ContextualSuggestedP
     func resolveSuggestions(_ input: ResolvePageSuggestionsInput) async -> [ContextualSuggestedPrompt] {
         lastInput = input
         return suggestions
+    }
+}
+
+// MARK: - Gated Suggested Prompts Provider
+
+/// Provider whose resolves hang until the test resumes them, for exercising in-flight races.
+@MainActor
+private final class GatedContextualSuggestedPromptsProvider: ContextualSuggestedPromptsProviding {
+    private(set) var startedCount = 0
+    private var continuations: [CheckedContinuation<[ContextualSuggestedPrompt], Never>] = []
+
+    func resolveSuggestions(_ input: ResolvePageSuggestionsInput) async -> [ContextualSuggestedPrompt] {
+        startedCount += 1
+        return await withCheckedContinuation { continuations.append($0) }
+    }
+
+    /// Resumes the resolve started as the `index`-th call (0-based), in any order the test needs.
+    func resume(at index: Int, returning suggestions: [ContextualSuggestedPrompt]) {
+        continuations[index].resume(returning: suggestions)
     }
 }

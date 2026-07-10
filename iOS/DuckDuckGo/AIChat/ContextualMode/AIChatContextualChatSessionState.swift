@@ -648,7 +648,9 @@ private extension AIChatContextualChatSessionState {
         suggestionsResolveTask?.cancel()
         suggestionsResolveTask = Task { [weak self] in
             guard let resolved = await self?.suggestedPromptsProvider.resolveSuggestions(input) else { return }
-            guard let self, !Task.isCancelled else { return }
+            // A prompt submission may start a chat while the resolve is in flight; submission
+            // methods don't cancel this task, so drop late results to keep chat view state intact.
+            guard let self, !Task.isCancelled, !self.hasActiveChat else { return }
             self.suggestions = resolved
             self.suggestionsLoadState = .loaded
             self.rebuildViewState()
