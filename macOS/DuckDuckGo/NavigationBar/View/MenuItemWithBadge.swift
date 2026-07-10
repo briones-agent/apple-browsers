@@ -572,13 +572,16 @@ struct ModelMenuRowView: View {
                         }
                         .onTapGesture { onTapBadge?() }
                 } else if let trailingText {
-                    // Same font weight and left inset as BadgeView's text, so the PLUS/PRO/BETA
-                    // tags line up with the "Try for free"/"Upgrade" badge next to them — they
-                    // just skip its background fill.
+                    // Matches BadgeView's own two-part right inset — its text sits paddingRight
+                    // *inside* the yellow box, which itself sits badgeRightPadding from the row
+                    // edge — so the plain PLUS/PRO/BETA word lines up with the badge's word, not
+                    // just with its box. Without the first padding, the box edges align but the
+                    // words don't: the badge's background eats space its text doesn't have.
                     Text(trailingText)
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(trailingColor)
                         .padding(.leading, MenuItemWithBadgeConstants.paddingLeft)
+                        .padding(.trailing, MenuItemWithBadgeConstants.paddingRight)
                         .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
                 }
             }
