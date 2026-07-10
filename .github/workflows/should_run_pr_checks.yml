@@ -37,13 +37,35 @@ on:
       strict_mode:
         description: 'Whether strict test mode is enabled (true/false)'
         value: ${{ jobs.check.outputs.strict_mode }}
+      # Per-area change flags. Phase 1: advisory/shadow only — nothing gates on
+      # these yet. Exposed now so a later phase can add `&& …outputs.<area>` to
+      # each expensive job's `if:` without re-touching this workflow.
+      macos:
+        description: 'Whether the diff touches macOS-relevant paths (true/false)'
+        value: ${{ jobs.check.outputs.macos }}
+      ios:
+        description: 'Whether the diff touches iOS-relevant paths (true/false)'
+        value: ${{ jobs.check.outputs.ios }}
+      bsk:
+        description: 'Whether the diff touches BrowserServicesKit-relevant paths (true/false)'
+        value: ${{ jobs.check.outputs.bsk }}
+      dbp:
+        description: 'Whether the diff touches DataBrokerProtection-relevant paths (true/false)'
+        value: ${{ jobs.check.outputs.dbp }}
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read   # `gh pr diff` reads the changed-file list via the API
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
       strict_mode: ${{ steps.check.outputs.strict_mode }}
+      macos: ${{ steps.paths.outputs.macos }}
+      ios: ${{ steps.paths.outputs.ios }}
+      bsk: ${{ steps.paths.outputs.bsk }}
+      dbp: ${{ steps.paths.outputs.dbp }}
     steps:
       - name: Evaluate run conditions
         id: check
@@ -84,3 +106,77 @@ jobs:
           else
             echo "strict_mode=false" >> $GITHUB_OUTPUT
           fi
+
+      # PHASE 1 (shadow): compute per-area change flags. These outputs are
+      # advisory only — no job gates on them yet. The step is deliberately
+      # fail-open: any error (or a non-PR event) yields all-true, i.e. exactly
+      # today's "run everything" behaviour, so it can never make the check job
+      # fail and skip downstream checks.
+      - name: Detect changed paths (shadow)
+        id: paths
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fail_open() {
+            for area in macos ios bsk dbp; do echo "${area}=true" >> "$GITHUB_OUTPUT"; done
+            echo "$1"
+            exit 0
+          }
+
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            fail_open "Non-PR event (${{ github.event_name }}): all areas = true (unchanged from today)"
+          fi
+
+          files=$(gh pr diff "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --name-only) \
+            || fail_open "Could not read changed files: failing open to all areas = true"
+
+          # A group entry ending in "/" matches everything under that directory;
+          # any other entry is matched as an exact file path.
+          changed() {
+            local f p
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              for p in $1; do
+                case "$p" in
+                  */) case "$f" in "$p"*) return 0 ;; esac ;;
+                  *)  [ "$f" = "$p" ] && return 0 ;;
+                esac
+              done
+            done <<< "$files"
+            return 1
+          }
+
+          # Shared dependency closures. ci_infra = composite actions + this gate
+          # workflow + the Xcode version; a change to any of them forces every
+          # area to run. Standalone automation workflows (e.g.
+          # macos_check_sparkle_update.yml) are intentionally absent, so editing
+          # them matches no area.
+          ci_infra=".github/actions/ .github/workflows/should_run_pr_checks.yml .xcode-version"
+          shared="SharedPackages/ scripts/translation-pr-checks/"
+
+          macos="$ci_infra $shared macOS/ .github/workflows/macos_pr_checks.yml .github/workflows/macos_private_api_report.yml"
+          ios="$ci_infra $shared iOS/ .github/workflows/ios_pr_checks.yml"
+          bsk="$ci_infra SharedPackages/BrowserServicesKit/"
+          dbp="$ci_infra SharedPackages/DataBrokerProtectionCore/"
+
+          for area in macos ios bsk dbp; do
+            if changed "${!area}"; then echo "${area}=true" >> "$GITHUB_OUTPUT"; else echo "${area}=false" >> "$GITHUB_OUTPUT"; fi
+          done
+
+      # PHASE 1 (shadow): log what a future gating phase WOULD skip. Purely
+      # informational — lets us eyeball the flags against real PRs before any
+      # job is gated on them.
+      - name: Shadow report
+        if: always()
+        run: |
+          echo "::group::Change-detection shadow report"
+          echo "event=${{ github.event_name }} should_run=${{ steps.check.outputs.should_run }}"
+          echo "flags: macos=${{ steps.paths.outputs.macos }} ios=${{ steps.paths.outputs.ios }} bsk=${{ steps.paths.outputs.bsk }} dbp=${{ steps.paths.outputs.dbp }}"
+          [ "${{ steps.paths.outputs.macos }}" = "false" ] && echo "WOULD-SKIP: macOS Test / Release Build / Notarized / PIR / performance"
+          [ "${{ steps.paths.outputs.ios }}" = "false" ]   && echo "WOULD-SKIP: iOS Unit Tests / Make Release Build"
+          [ "${{ steps.paths.outputs.bsk }}" = "false" ]   && echo "WOULD-SKIP: BSK unit tests (macOS + iOS)"
+          [ "${{ steps.paths.outputs.dbp }}" = "false" ]   && echo "WOULD-SKIP: DBP unit tests + DBP Test Report"
+          echo "::endgroup::"
+          exit 0
