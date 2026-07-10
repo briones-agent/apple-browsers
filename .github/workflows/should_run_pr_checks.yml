@@ -37,21 +37,6 @@ on:
       strict_mode:
         description: 'Whether strict test mode is enabled (true/false)'
         value: ${{ jobs.check.outputs.strict_mode }}
-      # Per-area change flags. Phase 1: advisory/shadow only — nothing gates on
-      # these yet. Exposed now so a later phase can add `&& …outputs.<area>` to
-      # each expensive job's `if:` without re-touching this workflow.
-      macos:
-        description: 'Whether the diff touches macOS-relevant paths (true/false)'
-        value: ${{ jobs.check.outputs.macos }}
-      ios:
-        description: 'Whether the diff touches iOS-relevant paths (true/false)'
-        value: ${{ jobs.check.outputs.ios }}
-      bsk:
-        description: 'Whether the diff touches BrowserServicesKit-relevant paths (true/false)'
-        value: ${{ jobs.check.outputs.bsk }}
-      dbp:
-        description: 'Whether the diff touches DataBrokerProtection-relevant paths (true/false)'
-        value: ${{ jobs.check.outputs.dbp }}
 
 jobs:
   check:
@@ -62,10 +47,6 @@ jobs:
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
       strict_mode: ${{ steps.check.outputs.strict_mode }}
-      macos: ${{ steps.paths.outputs.macos }}
-      ios: ${{ steps.paths.outputs.ios }}
-      bsk: ${{ steps.paths.outputs.bsk }}
-      dbp: ${{ steps.paths.outputs.dbp }}
     steps:
       - name: Evaluate run conditions
         id: check
@@ -107,11 +88,11 @@ jobs:
             echo "strict_mode=false" >> $GITHUB_OUTPUT
           fi
 
-      # PHASE 1 (shadow): compute per-area change flags. These outputs are
-      # advisory only — no job gates on them yet. The step is deliberately
-      # fail-open: any error (or a non-PR event) yields all-true, i.e. exactly
-      # today's "run everything" behaviour, so it can never make the check job
-      # fail and skip downstream checks.
+      # PHASE 1 (shadow): compute per-area change flags for logging only.
+      # Nothing gates on them — they are not exposed as outputs. The step is
+      # deliberately fail-open: any error (or a non-PR event) yields all-true,
+      # i.e. exactly today's "run everything" behaviour, so it can never make
+      # the check job fail and skip downstream checks.
       - name: Detect changed paths (shadow)
         id: paths
         continue-on-error: true
@@ -119,7 +100,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           fail_open() {
-            for area in macos ios bsk dbp; do echo "${area}=true" >> "$GITHUB_OUTPUT"; done
+            for area in ios macos shared; do echo "${area}=true" >> "$GITHUB_OUTPUT"; done
             echo "$1"
             exit 0
           }
@@ -148,20 +129,20 @@ jobs:
             return 1
           }
 
-          # Shared dependency closures. ci_infra = composite actions + this gate
+          # Dependency closures. ci_infra = composite actions + this gate
           # workflow + the Xcode version; a change to any of them forces every
-          # area to run. Standalone automation workflows (e.g.
+          # area to run. shared adds the SharedPackages closure, which covers
+          # every in-repo package (including BrowserServicesKit and
+          # DataBrokerProtectionCore). Standalone automation workflows (e.g.
           # macos_check_sparkle_update.yml) are intentionally absent, so editing
           # them matches no area.
           ci_infra=".github/actions/ .github/workflows/should_run_pr_checks.yml .xcode-version"
-          shared="SharedPackages/ scripts/translation-pr-checks/"
+          shared="$ci_infra SharedPackages/"
 
-          macos="$ci_infra $shared macOS/ .github/workflows/macos_pr_checks.yml .github/workflows/macos_private_api_report.yml"
-          ios="$ci_infra $shared iOS/ .github/workflows/ios_pr_checks.yml"
-          bsk="$ci_infra SharedPackages/BrowserServicesKit/"
-          dbp="$ci_infra SharedPackages/DataBrokerProtectionCore/"
+          ios="$shared scripts/translation-pr-checks/ iOS/ .github/workflows/ios_pr_checks.yml"
+          macos="$shared scripts/translation-pr-checks/ macOS/ .github/workflows/macos_pr_checks.yml .github/workflows/macos_private_api_report.yml"
 
-          for area in macos ios bsk dbp; do
+          for area in ios macos shared; do
             if changed "${!area}"; then echo "${area}=true" >> "$GITHUB_OUTPUT"; else echo "${area}=false" >> "$GITHUB_OUTPUT"; fi
           done
 
@@ -173,10 +154,9 @@ jobs:
         run: |
           echo "::group::Change-detection shadow report"
           echo "event=${{ github.event_name }} should_run=${{ steps.check.outputs.should_run }}"
-          echo "flags: macos=${{ steps.paths.outputs.macos }} ios=${{ steps.paths.outputs.ios }} bsk=${{ steps.paths.outputs.bsk }} dbp=${{ steps.paths.outputs.dbp }}"
-          [ "${{ steps.paths.outputs.macos }}" = "false" ] && echo "WOULD-SKIP: macOS Test / Release Build / Notarized / PIR / performance"
-          [ "${{ steps.paths.outputs.ios }}" = "false" ]   && echo "WOULD-SKIP: iOS Unit Tests / Make Release Build"
-          [ "${{ steps.paths.outputs.bsk }}" = "false" ]   && echo "WOULD-SKIP: BSK unit tests (macOS + iOS)"
-          [ "${{ steps.paths.outputs.dbp }}" = "false" ]   && echo "WOULD-SKIP: DBP unit tests + DBP Test Report"
+          echo "flags: ios=${{ steps.paths.outputs.ios }} macos=${{ steps.paths.outputs.macos }} shared=${{ steps.paths.outputs.shared }}"
+          [ "${{ steps.paths.outputs.ios }}" = "false" ]    && echo "WOULD-SKIP: iOS Unit Tests / Make Release Build"
+          [ "${{ steps.paths.outputs.macos }}" = "false" ]  && echo "WOULD-SKIP: macOS Test / Release Build / Notarized / PIR / performance"
+          [ "${{ steps.paths.outputs.shared }}" = "false" ] && echo "WOULD-SKIP: BSK + DBP unit tests / DBP Test Report"
           echo "::endgroup::"
           exit 0
