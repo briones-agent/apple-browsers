@@ -359,7 +359,7 @@ struct SubscriberExclusiveHeaderView: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(title)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(designSystemColor: .textPrimary))
             Spacer(minLength: 8)
             BadgeView(text: badgeText, hasUniformCorners: true)
                 .fixedSize()
@@ -484,7 +484,7 @@ struct ModelMenuRowView: View {
     }
 
     private var trailingColor: Color {
-        isCursorHighlighted ? .white : Color(nsColor: .secondaryLabelColor)
+        isCursorHighlighted ? .white : Color(designSystemColor: .textSecondary)
     }
 
     var body: some View {
