@@ -185,11 +185,9 @@ struct BadgeView: View {
         }
     }
 
-    /// Figma's "Pollen 300" (#FFD885) — the design system's own `RebrandingColor.Pollen` palette
-    /// carries this exact value (as `pollen30`, on its 0-100 rather than Figma's 50-900 step
-    /// convention) but is `internal` to DesignResourcesKit, scoped there until it's promoted for
-    /// app-wide use. Hardcoded here rather than widening that access ourselves.
-    private static let tryForFreeBadgeColor = Color(0xFFD885)
+    /// Figma's "Pollen 300" — `RebrandingColor.Pollen.pollen30` on this palette's 0-100 (rather
+    /// than Figma's 50-900) step convention.
+    private static let tryForFreeBadgeColor = RebrandingColor.Pollen.pollen30
 }
 
 // MARK: - Menu Item with Badge
@@ -447,6 +445,10 @@ struct ModelMenuRowView: View {
     /// the web model picker, where only the "Try for free" link opens the subscription flow.
     let isInteractive: Bool
     var onTap: () -> Void
+    /// Fires when `trailingBadgeText`'s badge is tapped, independent of `isInteractive`/`onTap` —
+    /// the reasoning picker's gated row is a disabled row (dimmed, not selectable) that still
+    /// needs its badge to open the upsell dialog.
+    var onTapBadge: (() -> Void)?
 
     @State private var isHovered = false
 
@@ -501,50 +503,59 @@ struct ModelMenuRowView: View {
                 .padding(.vertical, Self.rowVerticalInset)
 
             HStack(spacing: 0) {
-                // Checkmark gutter — reserved on every row so titles align; the ✓ marks the selected
-                // model, matching the native reasoning-effort menu's selection indicator.
-                ZStack {
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(titleColor)
-                    }
-                }
-                .frame(width: 14)
-                .padding(.leading, 8)
-                .padding(.trailing, 4)
-
-                Group {
-                    if let icon {
-                        Image(nsImage: icon)
-                            .resizable()
-                            .foregroundColor(titleColor)
-                            .frame(width: 16, height: 16)
-                    } else {
-                        Color.clear.frame(width: 16, height: 16)
-                    }
-                }
-                .padding(.trailing, MenuItemWithBadgeConstants.iconTitleSpacing)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Group {
-                        if emphasizesTitle {
-                            Text(boldTitle).fontWeight(.semibold)
-                                + Text(regularTitle.isEmpty ? "" : " \(regularTitle)").fontWeight(.regular)
-                        } else {
-                            Text(boldTitle).fontWeight(.regular)
+                // Wraps everything except the trailing badge, so a disabled row (isInteractive
+                // false) still lets its badge respond independently — the reasoning picker's
+                // gated row is dimmed and not selectable, but its "Try for free"/"Upgrade" badge
+                // still opens the upsell dialog.
+                HStack(spacing: 0) {
+                    // Checkmark gutter — reserved on every row so titles align; the ✓ marks the
+                    // selected model, matching the native reasoning-effort menu's selection indicator.
+                    ZStack {
+                        if isSelected {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(titleColor)
                         }
                     }
-                    .font(.system(size: 13))
-                    .foregroundColor(titleColor)
-                    .lineLimit(1)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.system(size: subtitleFontSize))
-                            .foregroundColor(subtitleColor)
-                            .lineLimit(1)
+                    .frame(width: 14)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 4)
+
+                    Group {
+                        if let icon {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .foregroundColor(titleColor)
+                                .frame(width: 16, height: 16)
+                        } else {
+                            Color.clear.frame(width: 16, height: 16)
+                        }
+                    }
+                    .padding(.trailing, MenuItemWithBadgeConstants.iconTitleSpacing)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Group {
+                            if emphasizesTitle {
+                                Text(boldTitle).fontWeight(.semibold)
+                                    + Text(regularTitle.isEmpty ? "" : " \(regularTitle)").fontWeight(.regular)
+                            } else {
+                                Text(boldTitle).fontWeight(.regular)
+                            }
+                        }
+                        .font(.system(size: 13))
+                        .foregroundColor(titleColor)
+                        .lineLimit(1)
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(.system(size: subtitleFontSize))
+                                .foregroundColor(subtitleColor)
+                                .lineLimit(1)
+                        }
                     }
                 }
+                .contentShape(Rectangle())
+                .allowsHitTesting(isInteractive)
+                .onTapGesture { onTap() }
 
                 Spacer(minLength: MenuItemWithBadgeConstants.titleBadgeSpacing)
 
@@ -555,6 +566,7 @@ struct ModelMenuRowView: View {
                         .onHover { hovering in
                             if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                         }
+                        .onTapGesture { onTapBadge?() }
                 } else if let trailingText {
                     // Same font weight and left inset as BadgeView's text, so the PLUS/PRO/BETA
                     // tags line up with the "Try for free"/"Upgrade" badge next to them — they
@@ -571,9 +583,7 @@ struct ModelMenuRowView: View {
         .frame(maxWidth: .infinity)
         .frame(height: Self.height(hasSubtitle: subtitle != nil))
         .contentShape(Rectangle())
-        .allowsHitTesting(isInteractive)
         .onHover { isHovered = $0 }
-        .onTapGesture { onTap() }
     }
 }
 
@@ -581,7 +591,9 @@ extension NSMenuItem {
 
     /// Creates a designed model-picker row (see `ModelMenuRowView`). On tap it dismisses the menu
     /// and performs `action` on `target`, so the caller can select the model or route a gated
-    /// selection to the subscription flow.
+    /// selection to the subscription flow. `badgeAction`, when given, fires independently from a
+    /// tap on the trailing badge specifically — for a row that's otherwise disabled (`isInteractive`
+    /// false) but still needs its badge to open the upsell dialog.
     static func createModelRow(icon: NSImage?,
                                boldTitle: String,
                                regularTitle: String,
@@ -594,12 +606,15 @@ extension NSMenuItem {
                                isDimmed: Bool,
                                isInteractive: Bool,
                                action: Selector,
+                               badgeAction: Selector? = nil,
                                target: AnyObject,
                                menu: NSMenu) -> NSMenuItem {
         let menuItem = NSMenuItem(action: action)
         menuItem.target = target
-        // Gated rows are non-interactive: not clickable, not keyboard-selectable.
-        menuItem.isEnabled = isInteractive
+        // Gated rows are non-interactive: not clickable, not keyboard-selectable — unless a
+        // badgeAction is present, in which case AppKit must not treat the item as fully disabled,
+        // or it may withhold events from the custom view entirely, including from the badge.
+        menuItem.isEnabled = isInteractive || badgeAction != nil
 
         weak let weakTarget = target
         let menuAction = action
@@ -614,14 +629,25 @@ extension NSMenuItem {
                                     emphasizesTitle: emphasizesTitle,
                                     isSelected: isSelected,
                                     isDimmed: isDimmed,
-                                    isInteractive: isInteractive) {
-            menu.cancelTracking()
-            if let target = weakTarget {
-                DispatchQueue.main.async {
-                    _ = target.perform(menuAction, with: menuItem)
-                }
-            }
-        }
+                                    isInteractive: isInteractive,
+                                    onTap: {
+                                        menu.cancelTracking()
+                                        if let target = weakTarget {
+                                            DispatchQueue.main.async {
+                                                _ = target.perform(menuAction, with: menuItem)
+                                            }
+                                        }
+                                    },
+                                    onTapBadge: badgeAction.map { badgeSelector in
+                                        {
+                                            menu.cancelTracking()
+                                            if let target = weakTarget {
+                                                DispatchQueue.main.async {
+                                                    _ = target.perform(badgeSelector, with: menuItem)
+                                                }
+                                            }
+                                        }
+                                    })
 
         let hostingView = NSHostingView(rootView: row)
         hostingView.frame.size.height = ModelMenuRowView.height(hasSubtitle: subtitle != nil)
