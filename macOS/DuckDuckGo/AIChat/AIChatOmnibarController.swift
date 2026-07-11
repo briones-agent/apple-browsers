@@ -140,6 +140,11 @@ final class AIChatOmnibarController {
         featureFlagger.isFeatureOn(.aiChatOmnibarWebSearch)
     }
 
+    /// Whether the Customize Responses tool is available in the omnibar tools menu.
+    var isCustomizeResponsesEnabled: Bool {
+        featureFlagger.isFeatureOn(.aiChatCustomizeResponses)
+    }
+
     /// Whether the reasoning effort picker is available.
     var isReasoningEffortEnabled: Bool {
         featureFlagger.isFeatureOn(.aiChatOmnibarReasoningEffort)
@@ -340,6 +345,7 @@ final class AIChatOmnibarController {
                 self.clearStaleModelSelectionIfNeeded()
                 self.clearStaleReasoningEffortIfNeeded()
                 self.deactivateWebSearchIfUnsupported()
+                self.deactivateImageGenerationIfUnsupported()
             } catch is CancellationError {
                 return
             } catch {
@@ -458,6 +464,14 @@ final class AIChatOmnibarController {
     var selectedModelSupportsWebSearch: Bool {
         guard !models.isEmpty else { return true }
         return models.first(where: { $0.id == persistedModelId })?.supportsTool(.webSearch) ?? true
+    }
+
+    /// Whether the currently selected model supports the GenerateImage tool.
+    /// Returns true when models are unavailable (conservative default — Create Image menu item
+    /// remains visible until the model list is known).
+    var selectedModelSupportsImageGeneration: Bool {
+        guard !models.isEmpty else { return true }
+        return models.first(where: { $0.id == persistedModelId })?.supportsTool(.imageGeneration) ?? true
     }
 
     /// Image formats supported by the currently selected model (e.g. ["png", "jpeg", "webp"]).
@@ -646,20 +660,39 @@ final class AIChatOmnibarController {
         Application.appDelegate.subscriptionNavigationCoordinator.navigateToSubscriptionActivation()
     }
 
-    /// The model ID to use for the current submission.
-    /// Returns nil when image generation mode is active — the mode field handles routing.
+    /// The model used for image-generation submissions: the selected model when it supports
+    /// GenerateImage, otherwise the first accessible model that does. `nil` while models
+    /// haven't loaded (or none supports the tool).
+    ///
+    /// Resolving the model natively matters: a handoff without `modelId` makes the duck.ai
+    /// page fall back to its own saved model, which may not support image generation (e.g.
+    /// Mistral) — the chat then starts on that model and no image is produced.
+    var imageGenerationModel: AIChatModel? {
+        if let selectedModel, selectedModel.supportsTool(.imageGeneration) {
+            return selectedModel
+        }
+        return models.first(where: { $0.entityHasAccess && $0.supportsTool(.imageGeneration) })
+    }
+
+    /// The model ID to use for the current submission. In image-generation mode an
+    /// image-capable model is sent explicitly, matching iOS.
     var effectiveModelId: String? {
-        isImageGenerationMode ? nil : currentModelId
+        isImageGenerationMode ? imageGenerationModel?.id : currentModelId
     }
 
-    /// The mode to include in the prompt payload (e.g., "image-generation").
+    /// The mode to include in the prompt payload. Only used as the image-generation fallback
+    /// when no image-capable model could be resolved (models not loaded) — the duck.ai page
+    /// then routes the request itself.
     var effectiveMode: String? {
-        isImageGenerationMode ? AIChatNativePrompt.imageGenerationMode : nil
+        isImageGenerationMode && imageGenerationModel == nil ? AIChatNativePrompt.imageGenerationMode : nil
     }
 
-    /// The tool choice to include in the prompt payload (e.g., ["WebSearch"]).
+    /// The tool choice to include in the prompt payload (e.g., ["GenerateImage"], ["WebSearch"]).
     var effectiveToolChoice: [String]? {
-        isWebSearchMode ? [AIChatRAGTool.webSearch.rawValue] : nil
+        if isImageGenerationMode {
+            return imageGenerationModel != nil ? [AIChatRAGTool.imageGeneration.rawValue] : nil
+        }
+        return isWebSearchMode ? [AIChatRAGTool.webSearch.rawValue] : nil
     }
 
     /// The reasoning effort to include in the prompt payload.
@@ -681,6 +714,7 @@ final class AIChatOmnibarController {
         // Clearing here keeps stale-effort handling in one place (see `clearStaleReasoningEffortIfNeeded`).
         clearStaleReasoningEffortIfNeeded()
         deactivateWebSearchIfUnsupported()
+        deactivateImageGenerationIfUnsupported()
     }
 
     /// Clears Web Search mode if the currently selected model doesn't support the WebSearch tool.
@@ -688,6 +722,14 @@ final class AIChatOmnibarController {
     /// mode must not remain active across a switch into such a model.
     private func deactivateWebSearchIfUnsupported() {
         guard isWebSearchMode, !selectedModelSupportsWebSearch else { return }
+        activeToolMode = nil
+    }
+
+    /// Clears image-generation mode if the currently selected model doesn't support the
+    /// GenerateImage tool. Mirrors `deactivateWebSearchIfUnsupported` so the tool can't stay
+    /// armed for a model that can't generate images (e.g. Mistral).
+    private func deactivateImageGenerationIfUnsupported() {
+        guard isImageGenerationMode, !selectedModelSupportsImageGeneration else { return }
         activeToolMode = nil
     }
 
@@ -1015,6 +1057,12 @@ final class AIChatOmnibarController {
     func viewAllChats() {
         PixelKit.fire(AIChatPixel.aiChatViewAllChatsClicked, frequency: .dailyAndCount, includeAppVersionParameter: true)
         aiChatTabOpener.openNewAIChat(in: .newTab(selected: true))
+    }
+
+    /// Fallback when no window can host the modal: opens the customize URL in a tab.
+    func openCustomizeResponses() {
+        let url = AIChatURLParameters.nativeCustomizeModalURL(from: AIChatRemoteSettings().aiChatURL)
+        aiChatTabOpener.openAIChatTab(with: .url(url), behavior: .newTab(selected: true))
     }
 
     func submit() {

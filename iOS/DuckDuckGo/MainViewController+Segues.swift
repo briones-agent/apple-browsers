@@ -226,29 +226,22 @@ extension MainViewController {
             storageHandler: duckAiNativeStorageHandler
         )
 
-        let storyboard = UIStoryboard(name: "TabSwitcher", bundle: nil)
-        guard let controller = storyboard.instantiateInitialViewController(creator: { coder in
-            TabSwitcherViewController(coder: coder,
-                                      bookmarksDatabase: self.bookmarksDatabase,
-                                      syncService: self.syncService,
-                                      featureFlagger: self.featureFlagger,
-                                      favicons: self.favicons,
-                                      tabManager: self.tabManager,
-                                      aiChatSettings: self.aiChatSettings,
-                                      appSettings: self.appSettings,
-                                      privacyStats: self.privacyStats,
-                                      productSurfaceTelemetry: self.productSurfaceTelemetry,
-                                      historyManager: self.historyManager,
-                                      fireproofing: self.fireproofing,
-                                      keyValueStore: self.keyValueStore,
-                                      daxDialogsManager: self.daxDialogsManager,
-                                      initialTrackerCountState: initialTrackerCountState,
-                                      duckAIGridContentProvider: duckAIGridContentProvider,
-                                      duckAIVoiceSessionTracker: self.duckAIVoiceSessionTracker)
-        }) else {
-            assertionFailure()
-            return
-        }
+        let controller = TabSwitcherViewController(bookmarksDatabase: self.bookmarksDatabase,
+                                                   syncService: self.syncService,
+                                                   featureFlagger: self.featureFlagger,
+                                                   favicons: self.favicons,
+                                                   tabManager: self.tabManager,
+                                                   aiChatSettings: self.aiChatSettings,
+                                                   appSettings: self.appSettings,
+                                                   privacyStats: self.privacyStats,
+                                                   productSurfaceTelemetry: self.productSurfaceTelemetry,
+                                                   historyManager: self.historyManager,
+                                                   fireproofing: self.fireproofing,
+                                                   keyValueStore: self.keyValueStore,
+                                                   daxDialogsManager: self.daxDialogsManager,
+                                                   initialTrackerCountState: initialTrackerCountState,
+                                                   duckAIGridContentProvider: duckAIGridContentProvider,
+                                                   duckAIVoiceSessionTracker: self.duckAIVoiceSessionTracker)
 
         controller.transitioningDelegate = tabSwitcherTransition
         controller.delegate = self
@@ -285,6 +278,14 @@ extension MainViewController {
         launchSettings(completion: {
             $0.triggerDeepLinkNavigation(to: .restoreFlow)
         }, deepLinkTarget: .restoreFlow)
+    }
+
+    func segueToSubscriptionWelcome() {
+        Logger.lifecycle.debug(#function)
+        hideAllHighlightsIfNeeded()
+        launchSettings(completion: {
+            $0.triggerDeepLinkNavigation(to: .subscriptionWelcome)
+        }, deepLinkTarget: .subscriptionWelcome)
     }
 
     func segueToVPN() {
@@ -498,6 +499,7 @@ extension MainViewController {
                                                   runPrerequisitesDelegate: dbpIOSPublicInterface,
                                                   dataBrokerProtectionViewControllerProvider: dbpIOSPublicInterface,
                                                   freemiumPIREligibilityChecker: freemiumPIREligibilityChecker,
+                                                  profileStateManager: profileStateManager,
                                                   winBackOfferVisibilityManager: winBackOfferVisibilityManager,
                                                   mobileCustomization: mobileCustomization,
                                                   userScriptsDependencies: userScriptsDependencies,
@@ -527,6 +529,9 @@ extension MainViewController {
 
                 // We are still presenting legacy views, so use a Navcontroller
                 let navController = SettingsUINavigationController(rootViewController: settingsController)
+                // When Settings is opened purely to host the onboarding subscription purchase, backing out
+                // without buying should return home rather than land on Settings (see the override).
+                navController.dismissesModalOnSubscriptionBailout = deepLinkTarget?.isOnboardingSubscriptionFlow ?? false
                 navController.navigationBar.tintColor = UIColor(designSystemColor: .textPrimary)
                 settingsController.modalPresentationStyle = UIModalPresentationStyle.automatic
                 // Opaque nav bar and matching view background so sheet top gap (if any) is visually continuous with the bar
@@ -623,17 +628,47 @@ extension MainViewController {
 //  so that we get the event regardless of where in the UI hierarchy it happens.
 class SettingsUINavigationController: UINavigationController {
 
+    /// Whether to dismiss the entire Settings modal when the subscription flow was presented,
+    /// but a subscription was not purchased
+    var dismissesModalOnSubscriptionBailout = false
+
+    /// Whether a subscription was acquired while the subscription flow was presented
+    private var didAcquireSubscription = false
+    private var subscriptionChangeObserver: Any?
+
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
     init(rootViewController: SettingsHostingController) {
         super.init(rootViewController: rootViewController)
+        subscriptionChangeObserver = NotificationCenter.default.addObserver(forName: .subscriptionDidChange,
+                                                                            object: nil,
+                                                                            queue: .main) { [weak self] _ in
+            self?.didAcquireSubscription = true
+        }
+    }
+
+    deinit {
+        if let subscriptionChangeObserver {
+            NotificationCenter.default.removeObserver(subscriptionChangeObserver)
+        }
     }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         NotificationCenter.default.post(name: .settingsDidDisappear, object: nil)
+    }
+
+    override func popViewController(animated: Bool) -> UIViewController? {
+        // Bail out to home instead of popping to the Settings root
+        // when leaving the onboarding subscription flow without a purchase.
+        if dismissesModalOnSubscriptionBailout,
+           !didAcquireSubscription {
+            dismiss(animated: true)
+            return nil
+        }
+        return super.popViewController(animated: animated)
     }
 
     override func pushViewController(_ viewController: UIViewController, animated: Bool) {
