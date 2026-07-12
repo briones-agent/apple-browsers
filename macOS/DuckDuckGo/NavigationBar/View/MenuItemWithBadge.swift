@@ -158,6 +158,11 @@ struct BadgeView: View {
     /// `false` (default) keeps the asymmetric shape used by the PLUS/PRO/BETA/free-trial tags
     /// elsewhere in the app.
     var hasUniformCorners: Bool = false
+    /// `true` once the omnibar's shared impression cap is reached — keeps the badge (and its tap
+    /// action) in place but swaps the attention-grabbing yellow for a neutral fill, per the Ship
+    /// Review decision to reduce long-term annoyance without removing the entry point. Only
+    /// applies to the uniform-corner style; other badges using this view aren't subject to the cap.
+    var isMuted: Bool = false
 
     // Cache commonly used styling values to avoid repeated calculations
     private static let badgeFont = Font.system(size: 11, weight: .bold)
@@ -166,7 +171,7 @@ struct BadgeView: View {
     var body: some View {
         Text(text)
             .font(Self.badgeFont)
-            .foregroundColor(.black)
+            .foregroundColor(isMuted ? Color(designSystemColor: .textPrimary) : .black)
             .padding(.top, MenuItemWithBadgeConstants.paddingTop)
             .padding(.bottom, MenuItemWithBadgeConstants.paddingBottom)
             .padding(.leading, MenuItemWithBadgeConstants.paddingLeft)
@@ -179,7 +184,7 @@ struct BadgeView: View {
     private var badgeBackground: some View {
         if hasUniformCorners {
             RoundedRectangle(cornerRadius: MenuItemWithBadgeConstants.cornerRadius)
-                .fill(Self.tryForFreeBadgeColor)
+                .fill(isMuted ? Color(designSystemColor: .controlsFillSecondary) : Self.tryForFreeBadgeColor)
         } else {
             Self.badgeShape.fill(Color(baseColor: .yellow60))
         }
@@ -357,6 +362,9 @@ struct SubscriberExclusiveHeaderView: View {
     /// Tappable trailing badge text.
     let badgeText: String
 
+    /// See `BadgeView.isMuted`.
+    var isBadgeMuted: Bool = false
+
     /// Callback executed when the badge is tapped.
     var onTapBadge: () -> Void
 
@@ -370,7 +378,7 @@ struct SubscriberExclusiveHeaderView: View {
                 .foregroundColor(Color(designSystemColor: .textPrimary))
                 .padding(.leading, MenuItemWithBadgeConstants.iconLeftPadding)
             Spacer(minLength: 8)
-            BadgeView(text: badgeText, hasUniformCorners: true)
+            BadgeView(text: badgeText, hasUniformCorners: true, isMuted: isBadgeMuted)
                 .fixedSize()
                 .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
                 .onTapGesture { onTapBadge() }
@@ -388,14 +396,14 @@ extension NSMenuItem {
 
     /// Creates a header row with a muted title and a trailing tappable badge. Only the badge is
     /// interactive: tapping it dismisses the menu and performs `action` on `target`.
-    static func createSubscriberExclusiveHeader(title: String, badgeText: String, action: Selector, target: AnyObject, menu: NSMenu) -> NSMenuItem {
+    static func createSubscriberExclusiveHeader(title: String, badgeText: String, isBadgeMuted: Bool = false, action: Selector, target: AnyObject, menu: NSMenu) -> NSMenuItem {
         let menuItem = NSMenuItem(action: action)
         menuItem.target = target
 
         weak let weakTarget = target
         let menuAction = action
 
-        let headerView = SubscriberExclusiveHeaderView(title: title, badgeText: badgeText) {
+        let headerView = SubscriberExclusiveHeaderView(title: title, badgeText: badgeText, isBadgeMuted: isBadgeMuted) {
             menu.cancelTracking()
             if let target = weakTarget {
                 DispatchQueue.main.async {
@@ -437,6 +445,8 @@ struct ModelMenuRowView: View {
     /// used for the reasoning picker's gated row (the model picker's own gated rows keep the plain
     /// PLUS/PRO `trailingText`; only their section header shows this badge).
     let trailingBadgeText: String?
+    /// See `BadgeView.isMuted`.
+    let isBadgeMuted: Bool
     /// `true` renders `boldTitle` semibold with `regularTitle` appended in regular weight (the
     /// model picker's "family + variant" look, e.g. "GPT-5.4" + "mini"). `false` renders the whole
     /// `boldTitle` string in regular weight — used for the reasoning picker's gated row, which has
@@ -560,7 +570,7 @@ struct ModelMenuRowView: View {
                 Spacer(minLength: MenuItemWithBadgeConstants.titleBadgeSpacing)
 
                 if let trailingBadgeText {
-                    BadgeView(text: trailingBadgeText, hasUniformCorners: true)
+                    BadgeView(text: trailingBadgeText, hasUniformCorners: true, isMuted: isBadgeMuted)
                         .fixedSize()
                         .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
                         .onHover { hovering in
@@ -610,6 +620,7 @@ extension NSMenuItem {
                                subtitleFontSize: CGFloat = 12,
                                trailingText: String?,
                                trailingBadgeText: String? = nil,
+                               isBadgeMuted: Bool = false,
                                emphasizesTitle: Bool = true,
                                isSelected: Bool,
                                isDimmed: Bool,
@@ -635,6 +646,7 @@ extension NSMenuItem {
                                     subtitleFontSize: subtitleFontSize,
                                     trailingText: trailingText,
                                     trailingBadgeText: trailingBadgeText,
+                                    isBadgeMuted: isBadgeMuted,
                                     emphasizesTitle: emphasizesTitle,
                                     isSelected: isSelected,
                                     isDimmed: isDimmed,

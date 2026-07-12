@@ -6237,6 +6237,30 @@
         }
       }
     },
+    "aichat.subscription-upsell-dialog.pro-message" : {
+      "comment" : "Body text of the subscription upsell dialog, shown to an existing Plus subscriber",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unlock more models, higher AI reasoning, and higher usage limits than the Plus plan by upgrading to Pro."
+          }
+        }
+      }
+    },
+    "aichat.subscription-upsell-dialog.pro-title" : {
+      "comment" : "Title of the subscription upsell dialog, shown to an existing Plus subscriber",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Upgrade to Pro"
+          }
+        }
+      }
+    },
     "aichat.subscription-upsell-dialog.not-now-button" : {
       "comment" : "Button in the subscription upsell dialog that dismisses it without taking any action",
       "extractionState" : "extracted_with_value",
@@ -6249,14 +6273,14 @@
         }
       }
     },
-    "aichat.subscription-upsell-dialog.subscribe-button" : {
-      "comment" : "Primary button in the subscription upsell dialog, shown when the user is still eligible for an introductory free trial (the trial is offered in the native purchase flow itself, not promised by this button's label)",
+    "aichat.subscription-upsell-dialog.try-for-free-button" : {
+      "comment" : "Primary button in the subscription upsell dialog, shown when the user is still eligible for an introductory free trial — matches the badge/tag text",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Subscribe to DuckDuckGo"
+            "value" : "Try for Free"
           }
         }
       }

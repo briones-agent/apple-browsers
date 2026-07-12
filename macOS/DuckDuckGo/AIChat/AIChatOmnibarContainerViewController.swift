@@ -1777,6 +1777,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 let headerItem = NSMenuItem.createSubscriberExclusiveHeader(
                     title: headerTitle,
                     badgeText: badgeText,
+                    isBadgeMuted: omnibarController.isBadgeMuted,
                     action: #selector(gatedModelSelected(_:)),
                     target: self,
                     menu: menu
@@ -1786,6 +1787,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 // same purchase flow; for a plus user every remaining gated model requires pro).
                 headerItem.representedObject = gated.first?.model
                 menu.addItem(headerItem)
+                omnibarController.recordBadgeImpression()
             }
             for gatedModel in gated {
                 menu.addItem(modelRow(
@@ -1920,8 +1922,16 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         // though the chip itself already displays the same fallback (updateReasoningPickerVisibility
         // applies it too) — the menu and the chip must agree on what's "current".
         let currentEffort = omnibarController.displayedReasoningEffort ?? omnibarController.pickerReasoningEfforts.first
+        var didShowUpsellBadge = false
         for effort in omnibarController.pickerReasoningEfforts {
             menu.addItem(reasoningEffortRow(for: effort, isSelected: effort == currentEffort, in: menu))
+            if omnibarController.requiredTier(for: effort) != nil && omnibarController.isSubscriptionUpsellEnabled {
+                didShowUpsellBadge = true
+            }
+        }
+        // One impression per menu-open, matching the model picker's header — not one per gated row.
+        if didShowUpsellBadge {
+            omnibarController.recordBadgeImpression()
         }
 
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: -5), in: reasoningPickerButton)
@@ -1954,6 +1964,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             subtitleFontSize: 11,
             trailingText: showsUpsellBadge ? nil : Self.tierBadgeText(for: requiredTier),
             trailingBadgeText: badgeText,
+            isBadgeMuted: omnibarController.isBadgeMuted,
             emphasizesTitle: false,
             isSelected: isSelected && !isGated,
             isDimmed: isGated,
@@ -2004,14 +2015,23 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// a gated tap here rather than navigating directly (per design review).
     private func presentSubscriptionUpsellDialog(requiredTier: AIChatModelPublicAccessTier, origin: SubscriptionFunnelOrigin) {
         var dialog = AIChatSubscriptionUpsellDialog()
-        // Unlike the badge/tag, the modal's primary button is tier-based, not eligibility-based —
-        // a free user always reads "Subscribe to DuckDuckGo" regardless of trial eligibility (the
-        // native purchase flow presents the trial terms itself, so the button doesn't need to
-        // promise it too), while "Upgrade" is reserved for an existing Plus subscriber, who has
-        // something to upgrade *from*. Same tier check the header title already uses.
-        dialog.primaryButtonText = omnibarController.userTier == .free
-            ? UserText.aiChatSubscriptionUpsellDialogSubscribeButton
-            : UserText.aiChatSubscriptionUpsellDialogUpgradeButton
+        switch omnibarController.userTier {
+        case .free:
+            // Title/message stay generic. Only the primary button follows eligibility, matching
+            // the badge/tag text ("Try for Free" vs "Upgrade") — the native purchase flow presents
+            // the trial terms itself, so an ineligible user shouldn't be told "Subscribe" only to
+            // find no trial offered.
+            dialog.primaryButtonText = omnibarController.shouldOfferFreeTrial
+                ? UserText.aiChatSubscriptionUpsellDialogTryForFreeButton
+                : UserText.aiChatSubscriptionUpsellDialogUpgradeButton
+        case .plus, .pro, .internal:
+            // An existing Plus subscriber is upgrading an active subscription, not discovering
+            // one — different copy, and no "I Have a Subscription" button since that doesn't apply.
+            dialog.title = UserText.aiChatSubscriptionUpsellDialogProTitle
+            dialog.message = UserText.aiChatSubscriptionUpsellDialogProMessage
+            dialog.primaryButtonText = UserText.aiChatSubscriptionUpsellDialogUpgradeButton
+            dialog.showsHaveSubscriptionButton = false
+        }
         dialog.onSubscribe = { [weak self] in
             self?.omnibarController.presentSubscriptionUpsell(requiredTier: requiredTier, origin: origin)
         }

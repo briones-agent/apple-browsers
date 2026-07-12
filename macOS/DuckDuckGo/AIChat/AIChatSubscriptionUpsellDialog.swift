@@ -27,9 +27,14 @@ import DesignResourcesKitIcons
 struct AIChatSubscriptionUpsellDialog: ModalView {
     @Environment(\.dismiss) private var dismiss
 
-    /// "Try for Free" or "Upgrade" — the caller decides based on the user's tier and StoreKit
+    /// The caller decides title, message, and button text based on the user's tier and StoreKit
     /// free-trial eligibility, since the dialog itself has no access to that state.
+    var title: String = UserText.aiChatSubscriptionUpsellDialogTitle
+    var message: String = UserText.aiChatSubscriptionUpsellDialogMessage
     var primaryButtonText: String = UserText.aiChatSubscriptionUpsellDialogUpgradeButton
+    /// Hidden for an existing Plus subscriber — "activate a subscription bought elsewhere" doesn't
+    /// apply to someone who already has one; they're upgrading it, not looking for it.
+    var showsHaveSubscriptionButton: Bool = true
     var onSubscribe: (() -> Void)?
     var onHaveSubscription: (() -> Void)?
 
@@ -41,11 +46,11 @@ struct AIChatSubscriptionUpsellDialog: ModalView {
                 .frame(width: 64, height: 64)
 
             VStack(spacing: 8) {
-                Text(UserText.aiChatSubscriptionUpsellDialogTitle)
+                Text(title)
                     .font(.system(size: 15).weight(.semibold))
                     .multilineTextAlignment(.center)
                     .fixMultilineScrollableText()
-                Text(UserText.aiChatSubscriptionUpsellDialogMessage)
+                Text(message)
                     .font(.system(size: 13))
                     .foregroundColor(Color(designSystemColor: .textSecondary))
                     .multilineTextAlignment(.center)
@@ -64,15 +69,17 @@ struct AIChatSubscriptionUpsellDialog: ModalView {
                 .buttonStyle(DefaultActionButtonStyle(enabled: true, topPadding: 0, bottomPadding: 0, pillShape: true))
                 .keyboardShortcut(.defaultAction)
 
-                Button {
-                    onHaveSubscription?()
-                    dismiss()
-                } label: {
-                    Text(UserText.aiChatSubscriptionUpsellDialogHaveSubscriptionButton)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 28)
+                if showsHaveSubscriptionButton {
+                    Button {
+                        onHaveSubscription?()
+                        dismiss()
+                    } label: {
+                        Text(UserText.aiChatSubscriptionUpsellDialogHaveSubscriptionButton)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 28)
+                    }
+                    .buttonStyle(StandardButtonStyle(topPadding: 0, bottomPadding: 0, pillShape: true))
                 }
-                .buttonStyle(StandardButtonStyle(topPadding: 0, bottomPadding: 0, pillShape: true))
 
                 Button {
                     dismiss()
