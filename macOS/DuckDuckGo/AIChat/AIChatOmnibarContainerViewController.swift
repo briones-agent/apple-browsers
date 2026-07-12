@@ -1777,6 +1777,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 let headerItem = NSMenuItem.createSubscriberExclusiveHeader(
                     title: headerTitle,
                     badgeText: badgeText,
+                    isBadgeMuted: omnibarController.isBadgeMuted,
                     action: #selector(gatedModelSelected(_:)),
                     target: self,
                     menu: menu
@@ -1786,6 +1787,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 // same purchase flow; for a plus user every remaining gated model requires pro).
                 headerItem.representedObject = gated.first?.model
                 menu.addItem(headerItem)
+                omnibarController.recordBadgeImpression()
             }
             for gatedModel in gated {
                 menu.addItem(modelRow(
@@ -1920,8 +1922,16 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         // though the chip itself already displays the same fallback (updateReasoningPickerVisibility
         // applies it too) — the menu and the chip must agree on what's "current".
         let currentEffort = omnibarController.displayedReasoningEffort ?? omnibarController.pickerReasoningEfforts.first
+        var didShowUpsellBadge = false
         for effort in omnibarController.pickerReasoningEfforts {
             menu.addItem(reasoningEffortRow(for: effort, isSelected: effort == currentEffort, in: menu))
+            if omnibarController.requiredTier(for: effort) != nil && omnibarController.isSubscriptionUpsellEnabled {
+                didShowUpsellBadge = true
+            }
+        }
+        // One impression per menu-open, matching the model picker's header — not one per gated row.
+        if didShowUpsellBadge {
+            omnibarController.recordBadgeImpression()
         }
 
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: -5), in: reasoningPickerButton)
@@ -1954,6 +1964,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             subtitleFontSize: 11,
             trailingText: showsUpsellBadge ? nil : Self.tierBadgeText(for: requiredTier),
             trailingBadgeText: badgeText,
+            isBadgeMuted: omnibarController.isBadgeMuted,
             emphasizesTitle: false,
             isSelected: isSelected && !isGated,
             isDimmed: isGated,

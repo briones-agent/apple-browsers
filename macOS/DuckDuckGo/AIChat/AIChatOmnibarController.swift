@@ -66,6 +66,12 @@ final class AIChatOmnibarController {
     private let modelsService: AIChatModelsProviding
     private let subscriptionManager: any SubscriptionManager
     private let subscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpselling
+    /// Shared across the model picker and reasoning-effort picker — reuses the same "N views" cap
+    /// already used for the app menu's own free-trial badge (see `FreeTrialBadgePersistor`), keyed
+    /// separately so the two counters don't collide. Unlike the app menu, which hides its badge
+    /// once the cap is reached, the omnibar keeps the badge (still tappable) and only mutes its
+    /// color — removing it would remove the only entry point to the upsell.
+    private let badgeImpressionPersistor: FreeTrialBadgePersisting
     private var preferences: AIChatPreferencesPersisting
     private var cancellables = Set<AnyCancellable>()
     private var sharedTextStateCancellable: AnyCancellable?
@@ -173,6 +179,19 @@ final class AIChatOmnibarController {
         return subscriptionManager.isUserEligibleForFreeTrial()
     }
 
+    /// `true` once the shared model-picker/reasoning-picker badge impression cap is reached — the
+    /// badge stays put and stays tappable, but the caller should render it muted rather than yellow.
+    var isBadgeMuted: Bool {
+        badgeImpressionPersistor.hasReachedViewLimit
+    }
+
+    /// Call once per menu-open where a subscription-upsell badge is actually shown (mirroring how
+    /// the app menu counts a "view" of its own free-trial badge) — not once per gated row, since a
+    /// menu can show several gated rows in one open.
+    func recordBadgeImpression() {
+        badgeImpressionPersistor.incrementViewCount()
+    }
+
     /// Whether 1-click voice-chat access in the omnibar is available. When disabled, the submit
     /// button keeps its legacy "arrow / disabled when empty" behavior.
     var isVoiceChatAccessEnabled: Bool {
@@ -227,7 +246,8 @@ final class AIChatOmnibarController {
         // `AIChatOmnibarSubscriptionUpsellPresenter.init` and `Application.appDelegate.subscriptionNavigationCoordinator`
         // are both @MainActor-isolated; a default *parameter value* is evaluated in a nonisolated
         // context even though this initializer's body is not, so the real default is resolved below.
-        subscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpselling? = nil
+        subscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpselling? = nil,
+        badgeImpressionPersistor: FreeTrialBadgePersisting = FreeTrialBadgePersistor(keyValueStore: UserDefaults.standard, keyPrefix: "aichat-omnibar")
     ) {
         self.aiChatTabOpener = aiChatTabOpener
         self.tabCollectionViewModel = tabCollectionViewModel
@@ -240,6 +260,7 @@ final class AIChatOmnibarController {
         self.subscriptionManager = subscriptionManager
         self.subscriptionUpsellPresenter = subscriptionUpsellPresenter
             ?? AIChatOmnibarSubscriptionUpsellPresenter(coordinator: Application.appDelegate.subscriptionNavigationCoordinator)
+        self.badgeImpressionPersistor = badgeImpressionPersistor
         self.suggestionsViewModel = AIChatSuggestionsViewModel(
             maxSuggestions: suggestionsReader?.maxHistoryCount ?? AIChatSuggestionsViewModel.defaultMaxSuggestions
         )
