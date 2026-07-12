@@ -145,16 +145,22 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             configProvider.showCustomizePopover = showCustomizePopover
         }
         if let selectedModelId = config.selectedModelId {
-            // Only refresh the cached short name when the id actually changes. Echoing back the
-            // same id (e.g. on web launch) must not overwrite a valid cache with `nil` just
-            // because `lastFetchedSections` hasn't been populated yet on this side.
-            let didChangeModelId = configProvider.selectedModelId != selectedModelId
-            configProvider.selectedModelId = selectedModelId
-            if didChangeModelId {
-                configProvider.selectedModelShortName = modelsProvider?.lastFetchedSections?
-                    .flatMap(\.items)
-                    .first(where: { $0.id == selectedModelId })?
-                    .shortName
+            let matchedItem = modelsProvider?.lastFetchedSections?
+                .flatMap(\.items)
+                .first(where: { $0.id == selectedModelId })
+            // Reject a model we know is gated (found and isEnabled == false) — a stale or forged
+            // selection could otherwise persist a model the user's tier doesn't actually grant.
+            // An unmatched id (e.g. sections not fetched yet) is let through unchanged, same as
+            // before this check existed.
+            if matchedItem?.isEnabled != false {
+                // Only refresh the cached short name when the id actually changes. Echoing back the
+                // same id (e.g. on web launch) must not overwrite a valid cache with `nil` just
+                // because `lastFetchedSections` hasn't been populated yet on this side.
+                let didChangeModelId = configProvider.selectedModelId != selectedModelId
+                configProvider.selectedModelId = selectedModelId
+                if didChangeModelId {
+                    configProvider.selectedModelShortName = matchedItem?.shortName
+                }
             }
         }
         persistReasoningEffort(from: config)
@@ -270,7 +276,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         await actionHandler.submitChat(
             action.chat,
             target: action.target,
-            modelId: action.modelId,
+            modelId: modelIdForSubmission(action: action),
             images: action.images,
             mode: action.mode,
             toolChoice: action.toolChoice,
@@ -279,6 +285,19 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             files: action.files
         )
         return nil
+    }
+
+    /// Returns the model id to attach to this submission, or `nil` if it's a model we know is
+    /// gated (found in the fetched sections and `isEnabled == false`) — same stale-state guard as
+    /// `reasoningEffortForSubmission`, but for the model itself: without it, a stale or forged
+    /// `modelId` could submit against a model the user's tier doesn't grant.
+    @MainActor
+    private func modelIdForSubmission(action: NewTabPageDataModel.SubmitChatAction) -> String? {
+        guard let modelId = action.modelId else { return nil }
+        let matchedItem = modelsProvider?.lastFetchedSections?
+            .flatMap(\.items)
+            .first(where: { $0.id == modelId })
+        return matchedItem?.isEnabled == false ? nil : modelId
     }
 
     @MainActor

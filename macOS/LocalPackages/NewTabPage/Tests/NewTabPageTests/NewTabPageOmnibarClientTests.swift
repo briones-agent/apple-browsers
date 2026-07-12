@@ -286,6 +286,29 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertEqual(configProvider.selectedReasoningEffort, "none")
     }
 
+    /// A model that's present but gated (`isEnabled == false`) must be rejected the same way — a
+    /// stale or forged `selectedModelId` shouldn't be able to persist a model the user's tier
+    /// doesn't grant, now that gated models stay in `aiModelSections` instead of being dropped.
+    @MainActor
+    func testWhenSetConfigWithGatedModelIdThenItIsIgnored() async throws {
+        configProvider.selectedModelId = "free-model"
+        configProvider.selectedModelShortName = "Free"
+        modelsProvider.lastFetchedSections = [
+            NewTabPageDataModel.AIModelSection(header: nil, items: [
+                NewTabPageDataModel.AIModelItem(id: "free-model", name: "Free", shortName: "Free",
+                                                 isEnabled: true, supportsImageUpload: false),
+                NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
+                                                 isEnabled: false, supportsImageUpload: false, upsell: "upgrade")
+            ])
+        ]
+        let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "gated-model", aiModelSections: nil, selectedReasoningEffort: nil, enableAttachTabs: nil, attachmentLimits: nil)
+
+        try await messageHelper.handleMessageExpectingNilResponse(named: .setConfig, parameters: newConfig)
+
+        XCTAssertEqual(configProvider.selectedModelId, "free-model")
+        XCTAssertEqual(configProvider.selectedModelShortName, "Free")
+    }
+
     @MainActor
     func testWhenSetConfigAndReasoningEffortDisabledThenValueIsIgnored() async throws {
         configProvider.isReasoningEffortEnabled = false
@@ -382,6 +405,31 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         await fulfillment(of: [expectation], timeout: 1)
 
         XCTAssertNil(forwardedEffort)
+    }
+
+    /// A gated model (`isEnabled == false`) must be dropped at submit time too — a stale or forged
+    /// `modelId` shouldn't be able to submit against a model the user's tier doesn't grant, now
+    /// that gated models stay in `aiModelSections` instead of being dropped.
+    @MainActor
+    func testWhenSubmitChatWithGatedModelIdThenModelIdIsDropped() async throws {
+        modelsProvider.lastFetchedSections = [
+            NewTabPageDataModel.AIModelSection(header: nil, items: [
+                NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
+                                                 isEnabled: false, supportsImageUpload: false, upsell: "upgrade")
+            ])
+        ]
+        let expectation = expectation(description: "submitChatCalled")
+        var forwardedModelId: String?
+        (actionHandler as? MockNewTabPageOmnibarActionsHandler)?.submitChatHandler = { _, _, modelId, _, _, _, _, _, _ in
+            forwardedModelId = modelId
+            expectation.fulfill()
+        }
+
+        let action = NewTabPageDataModel.SubmitChatAction(chat: "Hi", target: .sameTab, modelId: "gated-model", images: nil, mode: nil, toolChoice: nil, reasoningEffort: nil, pageContext: nil, files: nil)
+        try await messageHelper.handleMessageExpectingNilResponse(named: .submitChat, parameters: action)
+        await fulfillment(of: [expectation], timeout: 1)
+
+        XCTAssertNil(forwardedModelId)
     }
 
     @MainActor
