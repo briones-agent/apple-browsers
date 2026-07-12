@@ -510,10 +510,6 @@ struct ModelMenuRowView: View {
                 .padding(.vertical, Self.rowVerticalInset)
 
             HStack(spacing: 0) {
-                // Wraps everything except the trailing badge, so a disabled row (isInteractive
-                // false) still lets its badge respond independently — the reasoning picker's
-                // gated row is dimmed and not selectable, but its "Try for free"/"Upgrade" badge
-                // still opens the upsell dialog.
                 HStack(spacing: 0) {
                     // Checkmark gutter — reserved on every row so titles align; the ✓ marks the
                     // selected model, matching the native reasoning-effort menu's selection indicator.
@@ -560,9 +556,6 @@ struct ModelMenuRowView: View {
                         }
                     }
                 }
-                .contentShape(Rectangle())
-                .allowsHitTesting(isInteractive)
-                .onTapGesture { onTap() }
 
                 Spacer(minLength: MenuItemWithBadgeConstants.titleBadgeSpacing)
 
@@ -594,6 +587,12 @@ struct ModelMenuRowView: View {
         .frame(height: Self.height(hasSubtitle: subtitle != nil))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
+        // The whole row is the tap target — including the gap before the trailing content and
+        // the trailing PLUS/PRO/BETA label itself — not just the icon/title's own narrow bounding
+        // box. Gating on isInteractive here (rather than allowsHitTesting on this view) matters:
+        // allowsHitTesting(false) at this level would also block the trailing badge's own,
+        // independent onTapGesture below it, since it's a descendant of this view.
+        .onTapGesture { if isInteractive { onTap() } }
     }
 }
 
