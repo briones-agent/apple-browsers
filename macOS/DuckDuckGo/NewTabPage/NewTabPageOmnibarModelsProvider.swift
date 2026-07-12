@@ -17,6 +17,7 @@
 //
 
 import AIChat
+import Foundation
 import NewTabPage
 import os.log
 import Subscription
@@ -137,6 +138,12 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
     }
 
     private func resolveUserTier() async -> AIChatUserTier {
+        // Honor the Debug ▸ AI Chat ▸ "Simulate Subscription Tier" override when set, so gated
+        // flows can be demoed without a real subscription — same override the address-bar picker
+        // already respects.
+        if let simulated = UserDefaults.standard.duckAISimulatedTier {
+            return simulated.userTier
+        }
         do {
             guard let subscription = try await subscriptionManager.getSubscription(),
                   subscription.isActive else { return .free }
