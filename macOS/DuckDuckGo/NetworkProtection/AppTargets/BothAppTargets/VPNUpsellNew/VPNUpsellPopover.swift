@@ -66,8 +66,14 @@ struct VPNUpsellPopoverView: View {
 
     var body: some View {
         VStack(spacing: Constants.outerVerticalSpacing) {
-            animatedHeader
-                .padding(.horizontal, Constants.headerHorizontalPadding)
+            Group {
+                if viewModel.isAppRebranded {
+                    rebrandHeader
+                } else {
+                    animatedHeader
+                }
+            }
+            .padding(.horizontal, Constants.headerHorizontalPadding)
 
             VStack(spacing: Constants.innerVerticalSpacing) {
                 titleAndSubtitle
@@ -97,6 +103,10 @@ struct VPNUpsellPopoverView: View {
                 .frame(width: Constants.subscriptionSize.width, height: Constants.subscriptionSize.height)
                 .clipped()
             }
+    }
+
+    private var rebrandHeader: some View {
+        Image(.desktopMobileSubscription96)
     }
 
     private var titleAndSubtitle: some View {
