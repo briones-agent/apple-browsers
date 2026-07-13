@@ -1944,11 +1944,14 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// hover-highlight color to sit believably in the same menu (a gated row rendered visibly
     /// shifted right and off-color next to its native siblings).
     ///
-    /// Gated efforts render like a gated model row — dimmed, not selectable — but keep a tappable
-    /// "Try for free"/"Upgrade" badge that opens the upsell dialog, independent of the row's own
-    /// disabled state (see `ModelMenuRowView.onTapBadge`). With the subscription-upsell feature
-    /// flag off, the badge itself disappears too, in favor of a plain PLUS/PRO label matching the
-    /// model picker's own gated rows — no badge, no dialog, same as before the upsell UI shipped.
+    /// With the subscription-upsell feature flag on, a gated effort renders like any other row —
+    /// full color, highlights on hover, tappable anywhere — because tapping it does do something:
+    /// `reasoningEffortSelected` already routes a gated selection to the upsell dialog via
+    /// `handleReasoningEffortSelection`. The badge additionally gets its own tap target
+    /// (`ModelMenuRowView.onTapBadge`) purely so it's independently tappable within the row, not
+    /// because the row itself is disabled. With the flag off, the badge disappears in favor of a
+    /// plain PLUS/PRO label matching the model picker's own gated rows — no badge, no dialog, and
+    /// the row goes back to being genuinely inert, same as before the upsell UI shipped.
     private func reasoningEffortRow(for effort: AIChatReasoningEffort, isSelected: Bool, in menu: NSMenu) -> NSMenuItem {
         let requiredTier = omnibarController.requiredTier(for: effort)
         let isGated = requiredTier != nil
@@ -1967,8 +1970,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             isBadgeMuted: omnibarController.isBadgeMuted,
             emphasizesTitle: false,
             isSelected: isSelected && !isGated,
-            isDimmed: isGated,
-            isInteractive: !isGated,
+            isDimmed: isGated && !showsUpsellBadge,
+            isInteractive: !isGated || showsUpsellBadge,
             action: #selector(reasoningEffortSelected(_:)),
             badgeAction: showsUpsellBadge ? #selector(reasoningEffortBadgeSelected(_:)) : nil,
             target: self,
