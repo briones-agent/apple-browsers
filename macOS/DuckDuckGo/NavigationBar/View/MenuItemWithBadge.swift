@@ -81,6 +81,18 @@ struct MenuItemWithBadgeConstants {
         return .menuItemHover
     }()
 
+    /// The cursor-hover highlight for a designed row — `controlAccentColor` rather than
+    /// `hoverColor` (`selectedContentBackgroundColor`) above: that semantic color is designed to be
+    /// viewed through AppKit's menu vibrancy/blur material — filled flatly here it renders visibly
+    /// more indigo/purple than the vivid blue AppKit paints for a plain, view-less `NSMenuItem`
+    /// (e.g. the native reasoning-effort menu). The flat accent color matches that native look.
+    /// Shared by `ModelMenuRowView` and `SubscriberExclusiveHeaderView` so both highlight identically.
+    static let cursorHighlightColor = Color(nsColor: .controlAccentColor)
+
+    /// Vertical inset of the highlight/selection background, which also creates the visible gap
+    /// between adjacent rows.
+    static let rowVerticalInset: CGFloat = 3
+
 }
 
 // MARK: - Custom Badge Shape
@@ -350,52 +362,71 @@ extension NSMenuItem {
 
 // MARK: - Subscriber Exclusive Header
 
-/// A non-selectable menu header row that shows a muted title ("Subscriber exclusive.") followed by a
-/// tappable yellow "TRY FOR FREE" / "UPGRADE" badge that launches the subscription flow — the same
-/// `BadgeView` used for the PLUS/PRO/BETA tags, standardized across the model picker and the
-/// reasoning-effort picker's gated row per design review. Used at the top of the gated section of
-/// the Duck.ai model picker.
+/// A menu header row that shows a muted title ("Subscriber exclusive.") followed by a yellow
+/// "TRY FOR FREE" / "UPGRADE" badge — the same `BadgeView` used for the PLUS/PRO/BETA tags,
+/// standardized across the model picker and the reasoning-effort picker's gated row per design
+/// review. The whole row (not just the badge) launches the subscription flow and highlights on
+/// hover, matching `ModelMenuRowView`'s fully-interactive rows — there's no separate "select vs.
+/// gate" distinction here, tapping anywhere always leads to the same upsell dialog. Used at the
+/// top of the gated section of the Duck.ai model picker.
 struct SubscriberExclusiveHeaderView: View {
     /// Muted leading label.
     let title: String
 
-    /// Tappable trailing badge text.
+    /// Trailing badge text.
     let badgeText: String
 
     /// See `BadgeView.isMuted`.
     var isBadgeMuted: Bool = false
 
-    /// Callback executed when the badge is tapped.
-    var onTapBadge: () -> Void
+    /// Callback executed when the row is tapped, anywhere.
+    var onTap: () -> Void
+
+    @State private var isHovered = false
+
+    private var titleColor: Color {
+        isHovered ? .white : Color(designSystemColor: .textPrimary)
+    }
 
     var body: some View {
-        // Padding lives on the leading/trailing leaves themselves (title, badge), not wrapped
-        // around the whole HStack — matching ModelMenuRowView's structure exactly, rather than
-        // trusting that two differently-shaped layouts happen to resolve to the same pixel
-        // position once both get stretched to the menu's final width. They didn't.
-        HStack(spacing: 8) {
-            Text(title)
-                .foregroundColor(Color(designSystemColor: .textPrimary))
-                .padding(.leading, MenuItemWithBadgeConstants.iconLeftPadding)
-            Spacer(minLength: 8)
-            BadgeView(text: badgeText, hasUniformCorners: true, isMuted: isBadgeMuted)
-                .fixedSize()
-                .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
-                .onTapGesture { onTapBadge() }
-                .onHover { hovering in
-                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                }
+        ZStack {
+            RoundedRectangle(cornerRadius: MenuItemWithBadgeConstants.menuItemCornerRadius)
+                .fill(isHovered ? MenuItemWithBadgeConstants.cursorHighlightColor : .clear)
+                .padding([.leading, .trailing], MenuItemWithBadgeConstants.menuItemHorizontalPadding)
+                .padding(.vertical, MenuItemWithBadgeConstants.rowVerticalInset)
+
+            // Padding lives on the leading/trailing leaves themselves (title, badge), not wrapped
+            // around the whole HStack — matching ModelMenuRowView's structure exactly, rather than
+            // trusting that two differently-shaped layouts happen to resolve to the same pixel
+            // position once both get stretched to the menu's final width. They didn't.
+            HStack(spacing: 8) {
+                Text(title)
+                    .foregroundColor(titleColor)
+                    .padding(.leading, MenuItemWithBadgeConstants.iconLeftPadding)
+                Spacer(minLength: 8)
+                BadgeView(text: badgeText, hasUniformCorners: true, isMuted: isBadgeMuted)
+                    .fixedSize()
+                    .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
+            }
+            .frame(maxWidth: .infinity)
         }
         .font(.system(size: 13))
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: MenuItemWithBadgeConstants.hostingViewHeight)
+        // Matches ModelMenuRowView's own single-line row height, not the shared, shorter
+        // hostingViewHeight (used by unrelated menu badges elsewhere) — with no background fill
+        // this was never noticeably short, but once hover added a highlight rectangle here too,
+        // the shorter height read as a cramped, undersized version of the rows around it.
+        .frame(height: ModelMenuRowView.height(hasSubtitle: false))
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .onTapGesture { onTap() }
     }
 }
 
 extension NSMenuItem {
 
-    /// Creates a header row with a muted title and a trailing tappable badge. Only the badge is
-    /// interactive: tapping it dismisses the menu and performs `action` on `target`.
+    /// Creates a header row with a muted title and a trailing badge. The whole row is interactive:
+    /// tapping anywhere dismisses the menu and performs `action` on `target`.
     static func createSubscriberExclusiveHeader(title: String, badgeText: String, isBadgeMuted: Bool = false, action: Selector, target: AnyObject, menu: NSMenu) -> NSMenuItem {
         let menuItem = NSMenuItem(action: action)
         menuItem.target = target
@@ -413,7 +444,7 @@ extension NSMenuItem {
         }
 
         let hostingView = NSHostingView(rootView: headerView)
-        hostingView.frame.size.height = MenuItemWithBadgeConstants.hostingViewHeight
+        hostingView.frame.size.height = ModelMenuRowView.height(hasSubtitle: false)
         let requiredWidth = ceil(hostingView.fittingSize.width)
         hostingView.frame.size.width = requiredWidth
         hostingView.autoresizingMask = [.width]
@@ -453,10 +484,15 @@ struct ModelMenuRowView: View {
     /// no family/variant split and must match its native siblings' regular-weight title.
     let emphasizesTitle: Bool
     let isSelected: Bool
-    /// Gated (subscriber-only) models render dimmed.
+    /// Gated (subscriber-only) models render dimmed — but a gated row offering its own upsell
+    /// badge (the reasoning picker's gated effort) does not, matching the web model picker's
+    /// convention that any row with a live CTA reads as fully available.
     let isDimmed: Bool
-    /// Non-interactive rows (gated models) don't highlight on hover and can't be clicked — matching
-    /// the web model picker, where only the "Try for free" link opens the subscription flow.
+    /// Whether tapping *anywhere* on the row (not just a `trailingBadgeText` badge) does something.
+    /// `true` both for a genuinely selectable row and for a gated row that still routes to the
+    /// upsell dialog on tap — either way something happens, so the row also highlights on hover.
+    /// `false` only for a row with no action at all (a gated model row, or a gated effort with the
+    /// upsell feature flag off) — matching the web model picker, which shows no CTA in that case.
     let isInteractive: Bool
     var onTap: () -> Void
     /// Fires when `trailingBadgeText`'s badge is tapped, independent of `isInteractive`/`onTap` —
@@ -473,30 +509,19 @@ struct ModelMenuRowView: View {
     private static let singleLineHeight: CGFloat = 32
     private static let twoLineHeight: CGFloat = 46
 
-    /// Vertical inset of the highlight/selection background, which also creates the visible gap
-    /// between adjacent rows.
-    private static let rowVerticalInset: CGFloat = 3
-
     static func height(hasSubtitle: Bool) -> CGFloat {
         hasSubtitle ? twoLineHeight : singleLineHeight
     }
 
-    /// The cursor-hover highlight — the accent colour AppKit uses for the highlighted menu item, so
-    /// it matches the native reasoning-effort / tools menus in the same omnibar. The selected model
-    /// is marked with a leading checkmark (like those native menus), not a background fill.
+    /// `isInteractive` now covers both a genuinely selectable row and a gated row that still routes
+    /// to the upsell dialog on tap (see `isInteractive`'s own doc comment) — either way, something
+    /// happens when this row is tapped, so it highlights on hover like any other actionable row.
     private var isCursorHighlighted: Bool {
         isInteractive && isHovered
     }
 
-    /// `controlAccentColor` rather than the shared `MenuItemWithBadgeConstants.hoverColor`
-    /// (`selectedContentBackgroundColor`): that semantic color is designed to be viewed through
-    /// AppKit's menu vibrancy/blur material — filled flatly here it renders visibly more
-    /// indigo/purple than the vivid blue AppKit paints for a plain, view-less `NSMenuItem` (e.g.
-    /// the native reasoning-effort menu). The flat accent color matches that native look.
-    private static let cursorHighlightColor = Color(nsColor: .controlAccentColor)
-
     private var backgroundFill: Color {
-        isCursorHighlighted ? Self.cursorHighlightColor : .clear
+        isCursorHighlighted ? MenuItemWithBadgeConstants.cursorHighlightColor : .clear
     }
 
     private var titleColor: Color {
@@ -517,7 +542,7 @@ struct ModelMenuRowView: View {
             RoundedRectangle(cornerRadius: MenuItemWithBadgeConstants.menuItemCornerRadius)
                 .fill(backgroundFill)
                 .padding([.leading, .trailing], MenuItemWithBadgeConstants.menuItemHorizontalPadding)
-                .padding(.vertical, Self.rowVerticalInset)
+                .padding(.vertical, MenuItemWithBadgeConstants.rowVerticalInset)
 
             HStack(spacing: 0) {
                 HStack(spacing: 0) {
@@ -573,9 +598,6 @@ struct ModelMenuRowView: View {
                     BadgeView(text: trailingBadgeText, hasUniformCorners: true, isMuted: isBadgeMuted)
                         .fixedSize()
                         .padding(.trailing, MenuItemWithBadgeConstants.badgeRightPadding)
-                        .onHover { hovering in
-                            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                        }
                         .onTapGesture { onTapBadge?() }
                 } else if let trailingText {
                     // Matches BadgeView's own two-part right inset — its text sits paddingRight
