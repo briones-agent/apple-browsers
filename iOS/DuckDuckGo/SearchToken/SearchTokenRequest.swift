@@ -18,34 +18,53 @@
 //
 
 import Foundation
+import Networking
 
-/// Makes the network request for a search token.
+/// Makes the network request for a search token. Abstracted behind a protocol so `SearchTokenFetcher`
+/// can be tested against a mock.
 protocol SearchTokenRequesting {
-    /// Requests a fresh search token
+    /// Requests a fresh search token, bound by the backend to the given `User-Agent` (and the caller's IP).
+    /// Returns the token's `envelope`. Throws on transport error, non-2xx status, or a body that isn't the
+    /// expected `{ "envelope": "<token>" }` JSON.
     func requestToken(userAgent: String) async throws -> String
 }
 
-/// Concrete `SearchTokenRequesting`: `GET`s the token endpoint with the given `User-Agent` and decodes
-/// the `envelope` from the JSON response (`{ "envelope": "<token>" }`).
+/// Concrete `SearchTokenRequesting`: `GET`s the token endpoint (with a short timeout, since a warm that
+/// takes long isn't useful), validates a 2xx status, and decodes the `envelope` from the JSON response.
 struct SearchTokenRequest: SearchTokenRequesting {
+
+    enum RequestError: Error {
+        case malformedURL
+        case unexpectedStatusCode(Int)
+    }
 
     private struct Response: Decodable {
         let envelope: String
     }
 
     private let tokenURL: URL
-    private let httpFetch: (URLRequest) async throws -> (Data, URLResponse)
+    private let apiService: APIService
 
-    init(tokenURL: URL,
-         httpFetch: @escaping (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }) {
+    init(tokenURL: URL, apiService: APIService = DefaultAPIService()) {
         self.tokenURL = tokenURL
-        self.httpFetch = httpFetch
+        self.apiService = apiService
     }
 
     func requestToken(userAgent: String) async throws -> String {
-        var request = URLRequest(url: tokenURL)
-        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        let (data, _) = try await httpFetch(request)
-        return try JSONDecoder().decode(Response.self, from: data).envelope
+        guard let request = APIRequestV2(
+            url: tokenURL,
+            headers: APIRequestV2.HeadersV2(userAgent: userAgent),
+            timeoutInterval: 10 // best-effort warm — fail fast so a stalled request can't block refresh.
+        ) else {
+            throw RequestError.malformedURL
+        }
+
+        let response = try await apiService.fetch(request: request)
+        guard (200..<300).contains(response.httpResponse.statusCode) else {
+            throw RequestError.unexpectedStatusCode(response.httpResponse.statusCode)
+        }
+
+        let decoded: Response = try response.decodeBody()
+        return decoded.envelope
     }
 }

@@ -18,38 +18,66 @@
 //
 
 import XCTest
+import Networking
+import NetworkingTestingUtils
 @testable import DuckDuckGo
 
 final class SearchTokenRequestTests: XCTestCase {
 
     private let url = URL(string: "https://example.com/search-token")!
 
-    func testSetsUserAgentHeaderAndDecodesEnvelope() async throws {
-        var captured: URLRequest?
-        let sut = SearchTokenRequest(tokenURL: url, httpFetch: { request in
-            captured = request
-            let body = #"{"envelope":"tok-xyz"}"#.data(using: .utf8)!
-            return (body, HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
-        })
-
+    func testDecodesEnvelopeOnSuccess() async throws {
+        let sut = makeSUT(status: 200, body: #"{"envelope":"tok-xyz"}"#)
         let token = try await sut.requestToken(userAgent: "UA/2.0")
-
         XCTAssertEqual(token, "tok-xyz")
-        XCTAssertEqual(captured?.value(forHTTPHeaderField: "User-Agent"), "UA/2.0")
-        XCTAssertEqual(captured?.url, url)
     }
 
-    func testThrowsOnMalformedResponse() async {
-        let sut = SearchTokenRequest(tokenURL: url, httpFetch: { request in
-            ("not json".data(using: .utf8)!,
-             HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
-        })
+    func testThrowsOnNonSuccessStatusEvenWithDecodableBody() async {
+        // A 4xx/5xx whose body happens to decode must NOT be treated as a valid token.
+        let sut = makeSUT(status: 500, body: #"{"envelope":"should-not-be-used"}"#)
+        await assertThrows(sut) { error in
+            guard case SearchTokenRequest.RequestError.unexpectedStatusCode(let code) = error else {
+                return XCTFail("expected unexpectedStatusCode, got \(error)")
+            }
+            XCTAssertEqual(code, 500)
+        }
+    }
 
+    func testThrowsOnMalformedBody() async {
+        let sut = makeSUT(status: 200, body: "not json")
+        await assertThrows(sut)
+    }
+
+    func testThrowsWhenEnvelopeMissing() async {
+        let sut = makeSUT(status: 200, body: #"{"other":"x"}"#)
+        await assertThrows(sut)
+    }
+
+    func testPropagatesTransportError() async {
+        let service = MockAPIService(requestHandler: { _ in .failure(URLError(.notConnectedToInternet)) })
+        let sut = SearchTokenRequest(tokenURL: url, apiService: service)
+        await assertThrows(sut)
+    }
+
+    // MARK: helpers
+
+    private func makeSUT(status: Int, body: String) -> SearchTokenRequest {
+        let service = MockAPIService(requestHandler: { [url] _ in
+            let http = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil)!
+            return .success(APIResponseV2(data: body.data(using: .utf8), httpResponse: http))
+        })
+        return SearchTokenRequest(tokenURL: url, apiService: service)
+    }
+
+    private func assertThrows(_ sut: SearchTokenRequest,
+                              _ verify: (Error) -> Void = { _ in },
+                              file: StaticString = #filePath,
+                              line: UInt = #line) async {
         do {
             _ = try await sut.requestToken(userAgent: "UA")
-            XCTFail("expected requestToken to throw on malformed JSON")
+            XCTFail("expected requestToken to throw", file: file, line: line)
         } catch {
-            // expected
+            verify(error)
         }
     }
 }
