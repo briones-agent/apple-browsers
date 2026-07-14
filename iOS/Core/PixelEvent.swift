@@ -40,6 +40,14 @@ extension Pixel {
         ///
         /// For more info check the [Asana Task](https://app.asana.com/0/72649045549333/1209593812414962/f)
         case appLaunchFromShareExtension
+        /// Fired once per launch-time data point from MetricKit's time-to-first-draw histogram.
+        /// Recent (<24h) data on the current app version only.
+        /// https://app.asana.com/1/137249556945/project/1208671677432066/task/1216057869414471?focus=true
+        case launchTimeFirstDraw
+        /// Fired once per launch-time data point from MetricKit's application-resume histogram.
+        case launchTimeResume
+        /// Fired once per launch-time data point from MetricKit's optimized (prewarmed) time-to-first-draw histogram.
+        case launchTimeOptimizedFirstDraw
         case refreshPressed
         case pullToRefresh
 
@@ -2072,6 +2080,9 @@ extension Pixel.Event {
         case .appLaunch: return "ml"
         case .appLaunchFromExternalLink: return "m_app-launch_tapped-external-link"
         case .appLaunchFromShareExtension: return "m_app-launch_shared-link"
+        case .launchTimeFirstDraw: return "app-launch_metrickit_first-draw"
+        case .launchTimeResume: return "app-launch_metrickit_resume"
+        case .launchTimeOptimizedFirstDraw: return "app-launch_metrickit_optimized-first-draw"
         case .refreshPressed: return "m_r"
         case .pullToRefresh: return "m_pull-to-reload"
         case .widgetReport: return "m_widget-report"
