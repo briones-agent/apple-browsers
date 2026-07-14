@@ -42,6 +42,19 @@ final class SearchTokenExperimentSettingsTests: XCTestCase {
         XCTAssertEqual(sut.refreshWindow, 120)
     }
 
+    func testDefaultsWhenJSONMalformed() {
+        let sut = makeSUT(json: "not json")
+        XCTAssertEqual(sut.tokenTTL, 300)
+        XCTAssertEqual(sut.refreshWindow, 120)
+    }
+
+    func testDefaultsWhenValuesWrongType() {
+        // Non-numeric values (e.g. a quoted number) must fall back to defaults, not crash or coerce.
+        let sut = makeSUT(json: "{\"tokenTTLSeconds\": \"abc\", \"refreshWindowSeconds\": \"300\"}")
+        XCTAssertEqual(sut.tokenTTL, 300)
+        XCTAssertEqual(sut.refreshWindow, 120)
+    }
+
     private func makeSUT(json: String?) -> SearchTokenExperimentSettings {
         let config = MockPrivacyConfiguration()
         config.subfeatureSettings = json

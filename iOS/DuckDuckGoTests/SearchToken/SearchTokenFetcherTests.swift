@@ -111,7 +111,7 @@ final class SearchTokenFetcherTests: XCTestCase {
         XCTAssertEqual(requester.callCount, 1)
     }
 
-    func testFailureKeepsPreviousToken() async {
+    func testFailureKeepsPreviousTokenAndDoesNotExtendExpiry() async {
         let clock = Clock(Date(timeIntervalSince1970: 1000))
         let requester = MockSearchTokenRequester()
         requester.tokenToReturn = "old"
@@ -120,7 +120,11 @@ final class SearchTokenFetcherTests: XCTestCase {
         clock.advance(200) // within window -> attempts a fetch
         requester.error = URLError(.notConnectedToInternet)
         await sut.fetchIfNeeded(userAgent: "UA")
-        XCTAssertEqual(sut.retrieveToken(), "old") // unchanged after failure
+        XCTAssertEqual(sut.retrieveToken(), "old") // failed fetch keeps the previous token
+
+        // The failed fetch must NOT reset fetchedAt: advancing past the ORIGINAL t0 expiry must expire it.
+        clock.advance(101) // total 301 since t0 > ttl 300
+        XCTAssertNil(sut.retrieveToken())
     }
 }
 
