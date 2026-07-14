@@ -11292,7 +11292,6 @@
 				F17D72381E8B35C6003E8B0E /* AppURLsTests.swift */,
 				CBDD5DDE29A6736A00832877 /* APIHeadersTests.swift */,
 				F189AEE31F18FDAF001EBAE1 /* LinkTests.swift */,
-				E893A63A6D9BB66F042D3770 /* SearchTokenExperimentTests.swift */,
 			);
 			name = Domain;
 			sourceTree = "<group>";
