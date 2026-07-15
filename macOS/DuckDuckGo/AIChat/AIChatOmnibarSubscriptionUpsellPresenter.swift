@@ -81,13 +81,3 @@ struct AIChatOmnibarSubscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpsell
         )
     }
 }
-
-private extension AIChatModelPublicAccessTier {
-    var rawValue: String {
-        switch self {
-        case .free: return "free"
-        case .plus: return "plus"
-        case .pro: return "pro"
-        }
-    }
-}
