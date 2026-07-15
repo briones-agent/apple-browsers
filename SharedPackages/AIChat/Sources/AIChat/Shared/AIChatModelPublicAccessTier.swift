@@ -19,8 +19,9 @@
 import Foundation
 
 /// The lowest publicly-marketed subscription tier a model or reasoning effort requires. Distinct
-/// from `AIChatUserTier`, which also includes the non-public `.internal` case.
-public enum AIChatModelPublicAccessTier: Hashable, Sendable {
+/// from `AIChatUserTier`, which also includes the non-public `.internal` case. `String`-backed so
+/// the raw values ("free"/"plus"/"pro") can be used directly as pixel parameters.
+public enum AIChatModelPublicAccessTier: String, Hashable, Sendable {
     case free
     case plus
     case pro

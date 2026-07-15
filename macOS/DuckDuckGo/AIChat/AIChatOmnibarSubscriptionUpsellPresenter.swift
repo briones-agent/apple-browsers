@@ -31,6 +31,10 @@ protocol AIChatOmnibarSubscriptionUpselling {
     /// is known to be gated) or no flow applies.
     @discardableResult
     func routeGatedSelection(requiredTier: AIChatModelPublicAccessTier, userTier: AIChatUserTier, origin: SubscriptionFunnelOrigin) -> Bool
+
+    /// Opens the subscription activation flow, for a user who already has a subscription (e.g.
+    /// purchased on another device) and wants to sign in rather than purchase again.
+    func presentSubscriptionActivation()
 }
 
 @MainActor
@@ -61,6 +65,10 @@ struct AIChatOmnibarSubscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpsell
         }
     }
 
+    func presentSubscriptionActivation() {
+        coordinator.navigateToSubscriptionActivation()
+    }
+
     private func firePixel(currentTier: AIChatUserTier, requiredTier: AIChatModelPublicAccessTier, flowType: String) {
         PixelKit.fire(
             AIChatPixel.aiChatAddressBarSubscriptionUpsellTriggered(
@@ -71,15 +79,5 @@ struct AIChatOmnibarSubscriptionUpsellPresenter: AIChatOmnibarSubscriptionUpsell
             frequency: .dailyAndCount,
             includeAppVersionParameter: true
         )
-    }
-}
-
-private extension AIChatModelPublicAccessTier {
-    var rawValue: String {
-        switch self {
-        case .free: return "free"
-        case .plus: return "plus"
-        case .pro: return "pro"
-        }
     }
 }

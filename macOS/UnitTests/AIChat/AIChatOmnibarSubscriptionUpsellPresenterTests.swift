@@ -41,7 +41,8 @@ struct AIChatOmnibarSubscriptionUpsellPresenterTests {
 
     // MARK: - Tests
 
-    @Test("Free user gated to plus routes to the purchase flow")
+    @available(iOS 16, macOS 13, *)
+    @Test("Free user gated to plus routes to the purchase flow", .timeLimit(.minutes(1)))
     func freeUserGatedToPlusRoutesToPurchase() async throws {
         let (presenter, mockTabShower, mockSubscriptionManager) = createPresenter()
         mockSubscriptionManager.resultURL = URL(string: "https://duckduckgo.com/pro/purchase")!
@@ -57,7 +58,8 @@ struct AIChatOmnibarSubscriptionUpsellPresenterTests {
         #expect(url.absoluteString.contains("origin=funnel_addressbar_macos__modelpicker"))
     }
 
-    @Test("Free user gated to pro also routes to the purchase flow")
+    @available(iOS 16, macOS 13, *)
+    @Test("Free user gated to pro also routes to the purchase flow", .timeLimit(.minutes(1)))
     func freeUserGatedToProRoutesToPurchase() async throws {
         let (presenter, mockTabShower, mockSubscriptionManager) = createPresenter()
         mockSubscriptionManager.resultURL = URL(string: "https://duckduckgo.com/pro/purchase")!
@@ -72,7 +74,8 @@ struct AIChatOmnibarSubscriptionUpsellPresenterTests {
         #expect(url.absoluteString.contains("origin=funnel_addressbar_macos__reasoningpicker"))
     }
 
-    @Test("Plus user gated to pro routes to the upgrade (plans) flow")
+    @available(iOS 16, macOS 13, *)
+    @Test("Plus user gated to pro routes to the upgrade (plans) flow", .timeLimit(.minutes(1)))
     func plusUserGatedToProRoutesToUpgrade() async throws {
         let (presenter, mockTabShower, mockSubscriptionManager) = createPresenter()
         mockSubscriptionManager.resultURL = URL(string: "https://duckduckgo.com/subscriptions")!
@@ -89,7 +92,8 @@ struct AIChatOmnibarSubscriptionUpsellPresenterTests {
         #expect(url.absoluteString.contains("featurePage=duckai"))
     }
 
-    @Test("Pro user has no gated flow and nothing is presented")
+    @available(iOS 16, macOS 13, *)
+    @Test("Pro user has no gated flow and nothing is presented", .timeLimit(.minutes(1)))
     func proUserHasNoGatedFlow() async throws {
         let (presenter, mockTabShower, _) = createPresenter()
 
@@ -99,7 +103,8 @@ struct AIChatOmnibarSubscriptionUpsellPresenterTests {
         #expect(mockTabShower.capturedContent == nil)
     }
 
-    @Test("Internal user has no gated flow and nothing is presented")
+    @available(iOS 16, macOS 13, *)
+    @Test("Internal user has no gated flow and nothing is presented", .timeLimit(.minutes(1)))
     func internalUserHasNoGatedFlow() async throws {
         let (presenter, mockTabShower, _) = createPresenter()
 

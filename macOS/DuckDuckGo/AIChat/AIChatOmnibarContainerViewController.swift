@@ -1189,6 +1189,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
 
     private func presentCustomizeResponsesModal() {
         guard customizeResponsesModal == nil else { return }
+        PixelKit.fire(AIChatPixel.aiChatAddressBarCustomizeResponsesOpened, frequency: .dailyAndCount, includeAppVersionParameter: true)
         guard let parentWindow = view.window else {
             omnibarController.openCustomizeResponses()
             return
@@ -1837,6 +1838,8 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// the API's relative order. No descriptive subtitles for now — those need real backend/copy
     /// support, not this PR's per-position guesses. Delete this whole function (and its matcher
     /// table) once the backend ships proper ordering — nothing else in this file depends on it.
+    /// Follow-up to replace this PoC scaffolding with the final approach:
+    /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1216559729471554
     private static func pocOrderedAccessibleModels(_ models: [AIChatModel], userTier: AIChatUserTier) -> [AIChatModel] {
         var remaining = models
         var recommended: [AIChatModel] = []
@@ -1873,14 +1876,14 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         }
     }
 
-    /// Trailing grey label for a model row, accessible or gated alike: PLUS/PRO whenever the
-    /// model's own minimum tier is above free (matches the web client, which badges e.g. a Plus
-    /// user's already-accessible Plus-tier models too) — otherwise a PoC-only "BETA" tag heuristic.
+    /// Trailing grey PLUS/PRO label for a model row, accessible or gated alike, whenever the model's
+    /// own minimum tier is above free (matches the web client, which badges e.g. a Plus user's
+    /// already-accessible Plus-tier models too). `nil` for free-tier models.
     private static func pocTrailingLabel(for model: AIChatModel) -> String? {
         switch model.lowestPublicAccessTier {
         case .plus: return UserText.aiChatModelPickerTierBadgePlus
         case .pro: return UserText.aiChatModelPickerTierBadgePro
-        case .free, .none: return model.name.lowercased().contains("gemma") ? "BETA" : nil
+        case .free, .none: return nil
         }
     }
 
@@ -1924,8 +1927,9 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let currentEffort = omnibarController.displayedReasoningEffort ?? omnibarController.pickerReasoningEfforts.first
         var didShowUpsellBadge = false
         for effort in omnibarController.pickerReasoningEfforts {
-            menu.addItem(reasoningEffortRow(for: effort, isSelected: effort == currentEffort, in: menu))
-            if omnibarController.requiredTier(for: effort) != nil && omnibarController.isSubscriptionUpsellEnabled {
+            let requiredTier = omnibarController.requiredTier(for: effort)
+            menu.addItem(reasoningEffortRow(for: effort, requiredTier: requiredTier, isSelected: effort == currentEffort, in: menu))
+            if requiredTier != nil && omnibarController.isSubscriptionUpsellEnabled {
                 didShowUpsellBadge = true
             }
         }
@@ -1952,8 +1956,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// because the row itself is disabled. With the flag off, the badge disappears in favor of a
     /// plain PLUS/PRO label matching the model picker's own gated rows — no badge, no dialog, and
     /// the row goes back to being genuinely inert, same as before the upsell UI shipped.
-    private func reasoningEffortRow(for effort: AIChatReasoningEffort, isSelected: Bool, in menu: NSMenu) -> NSMenuItem {
-        let requiredTier = omnibarController.requiredTier(for: effort)
+    private func reasoningEffortRow(for effort: AIChatReasoningEffort, requiredTier: AIChatModelPublicAccessTier?, isSelected: Bool, in menu: NSMenu) -> NSMenuItem {
         let isGated = requiredTier != nil
         let showsUpsellBadge = isGated && omnibarController.isSubscriptionUpsellEnabled
         let badgeText = showsUpsellBadge

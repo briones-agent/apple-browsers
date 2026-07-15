@@ -37,6 +37,7 @@ final class AIChatOmnibarControllerTests: XCTestCase {
     private var mockModelsService: MockAIChatModelsProviding!
     private var mockSubscriptionManager: SubscriptionManagerMock!
     private var mockSubscriptionUpsellPresenter: MockAIChatOmnibarSubscriptionUpselling!
+    private var mockBadgeImpressionPersistor: MockFreeTrialBadgePersistor!
     private var tabCollectionViewModel: TabCollectionViewModel!
 
     override func setUp() {
@@ -54,6 +55,9 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         mockModelsService = MockAIChatModelsProviding()
         mockSubscriptionManager = SubscriptionManagerMock()
         mockSubscriptionUpsellPresenter = MockAIChatOmnibarSubscriptionUpselling()
+        // Injected (rather than the real UserDefaults-backed default) so the impression cap is
+        // controllable and no test leaks state into the shared standard defaults.
+        mockBadgeImpressionPersistor = MockFreeTrialBadgePersistor(initialCount: 0, cap: 4)
         tabCollectionViewModel = TabCollectionViewModel(isPopup: false)
 
         controller = AIChatOmnibarController(
@@ -64,7 +68,8 @@ final class AIChatOmnibarControllerTests: XCTestCase {
             preferences: mockPreferences,
             modelsService: mockModelsService,
             subscriptionManager: mockSubscriptionManager,
-            subscriptionUpsellPresenter: mockSubscriptionUpsellPresenter
+            subscriptionUpsellPresenter: mockSubscriptionUpsellPresenter,
+            badgeImpressionPersistor: mockBadgeImpressionPersistor
         )
         controller.delegate = mockDelegate
     }
@@ -79,6 +84,7 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         mockModelsService = nil
         mockSubscriptionManager = nil
         mockSubscriptionUpsellPresenter = nil
+        mockBadgeImpressionPersistor = nil
         tabCollectionViewModel = nil
         super.tearDown()
     }
@@ -1739,6 +1745,77 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         XCTAssertNil(requiredTier, "An already-accessible model must never report a required tier")
     }
 
+    // MARK: - Free-Trial Eligibility Tests
+
+    func testWhenFreeUserIsTrialEligible_ThenShouldOfferFreeTrialIsTrue() async {
+        // Given — a free user whose device is still eligible for an introductory trial
+        setUserTier(nil)
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+        mockModelsService.modelsToReturn = [makeRemoteModel(id: "m", entityHasAccess: true)]
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertTrue(controller.shouldOfferFreeTrial)
+    }
+
+    func testWhenFreeUserIsTrialIneligible_ThenShouldOfferFreeTrialIsFalse() async {
+        // Given — a free user who has already used their trial
+        setUserTier(nil)
+        mockSubscriptionManager.isEligibleForFreeTrialResult = false
+        mockModelsService.modelsToReturn = [makeRemoteModel(id: "m", entityHasAccess: true)]
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertFalse(controller.shouldOfferFreeTrial)
+    }
+
+    func testWhenUserIsPlus_ThenShouldOfferFreeTrialIsFalseRegardlessOfEligibility() async {
+        // Given — a Plus subscriber; trial eligibility must not matter, they upgrade, not trial
+        setUserTier(.plus)
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+        mockModelsService.modelsToReturn = [makeRemoteModel(id: "m", entityHasAccess: true)]
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then
+        XCTAssertFalse(controller.shouldOfferFreeTrial, "An existing subscriber always sees Upgrade, never Try for Free")
+    }
+
+    // MARK: - Badge Impression Cap Tests
+
+    func testWhenImpressionCapNotReached_ThenBadgeIsNotMuted() {
+        // Given — three views of a four-view cap
+        controller.recordBadgeImpression()
+        controller.recordBadgeImpression()
+        controller.recordBadgeImpression()
+
+        // Then — still shown in full color
+        XCTAssertFalse(controller.isBadgeMuted)
+    }
+
+    func testWhenImpressionCapReached_ThenBadgeIsMuted() {
+        // Given — four views reaches the cap
+        controller.recordBadgeImpression()
+        controller.recordBadgeImpression()
+        controller.recordBadgeImpression()
+        controller.recordBadgeImpression()
+
+        // Then — the badge stays but is muted from here on
+        XCTAssertTrue(controller.isBadgeMuted)
+    }
+
+    // MARK: - Subscription Activation Tests
+
+    func testWhenPresentSubscriptionActivationFlow_ThenPresenterActivationIsCalled() {
+        // When
+        controller.presentSubscriptionActivationFlow()
+
+        // Then — routed through the injected presenter, not the app-delegate singleton
+        XCTAssertTrue(mockSubscriptionUpsellPresenter.presentSubscriptionActivationCalled)
+    }
+
     // MARK: - Helpers
 
     /// Creates a remote model for testing. Access is resolved locally from `accessTier`
@@ -1888,6 +1965,7 @@ private class MockAIChatOmnibarSubscriptionUpselling: AIChatOmnibarSubscriptionU
     var lastUserTier: AIChatUserTier?
     var lastOrigin: SubscriptionFunnelOrigin?
     var returnValue = true
+    var presentSubscriptionActivationCalled = false
 
     func routeGatedSelection(requiredTier: AIChatModelPublicAccessTier, userTier: AIChatUserTier, origin: SubscriptionFunnelOrigin) -> Bool {
         routeGatedSelectionCalled = true
@@ -1895,5 +1973,25 @@ private class MockAIChatOmnibarSubscriptionUpselling: AIChatOmnibarSubscriptionU
         lastUserTier = userTier
         lastOrigin = origin
         return returnValue
+    }
+
+    func presentSubscriptionActivation() {
+        presentSubscriptionActivationCalled = true
+    }
+}
+
+private final class MockFreeTrialBadgePersistor: FreeTrialBadgePersisting {
+    private(set) var viewCount: Int
+    private let cap: Int
+
+    init(initialCount: Int, cap: Int) {
+        self.viewCount = initialCount
+        self.cap = cap
+    }
+
+    var hasReachedViewLimit: Bool { viewCount >= cap }
+
+    func incrementViewCount() {
+        if viewCount < cap { viewCount += 1 }
     }
 }
