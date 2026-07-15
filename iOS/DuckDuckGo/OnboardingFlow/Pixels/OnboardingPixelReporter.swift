@@ -55,10 +55,10 @@ protocol OnboardingIntroPixelReporting: OnboardingIntroImpressionReporting {
     func measureAutoRestoreOnboardingPromptShown()
     func measureAutoRestoreOnboardingRestoreCTAAction()
     func measureAutoRestoreOnboardingSkipCTAAction()
-    func measureBrowserComparisonImpression()
+    func measureSetDefaultBrowserImpression()
     func measureChooseBrowserCTAAction()
-    func measureAiComparisonImpression()
-    func measureAiComparisonCTAAction()
+    func measureAiIntroImpression()
+    func measureAiIntroCTAAction()
     func measureChooseAppIconImpression()
     func measureChooseAppIconColor(_ color: AppIcon)
     func measureAddressBarPositionSelectionImpression()
@@ -184,6 +184,7 @@ extension AppIcon {
         case .blue: .blue
         case .purple: .purple
         case .black: .black
+        case .white: .white
         }
     }
 }
@@ -238,7 +239,7 @@ extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
                                 flow: sharedPixelsStorage.onboardingFlow)
     }
 
-    func measureBrowserComparisonImpression() {
+    func measureSetDefaultBrowserImpression() {
         fire(event: .onboardingIntroComparisonChartShownUnique, unique: true)
         sharedPixelHandler.fire(.setDefault(.shown),
                                 source: sharedPixelsStorage.onboardingSource,
@@ -252,14 +253,14 @@ extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
                                 flow: sharedPixelsStorage.onboardingFlow)
     }
 
-    func measureAiComparisonImpression() {
-        sharedPixelHandler.fire(.aiComparison(.shown),
+    func measureAiIntroImpression() {
+        sharedPixelHandler.fire(.aiIntro(.shown),
                                 source: sharedPixelsStorage.onboardingSource,
                                 flow: sharedPixelsStorage.onboardingFlow)
     }
 
-    func measureAiComparisonCTAAction() {
-        sharedPixelHandler.fire(.aiComparison(.clicked(.engage)),
+    func measureAiIntroCTAAction() {
+        sharedPixelHandler.fire(.aiIntro(.clicked(.engage)),
                                 source: sharedPixelsStorage.onboardingSource,
                                 flow: sharedPixelsStorage.onboardingFlow)
     }

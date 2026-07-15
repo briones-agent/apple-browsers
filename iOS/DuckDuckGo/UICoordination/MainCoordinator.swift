@@ -128,6 +128,7 @@ final class MainCoordinator {
          freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking,
          freemiumPIRDebugSettings: FreemiumPIRDebugSettings,
          freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
+         profileStateManager: DBPProfileStateManaging,
          modalPromptCoordinationService: ModalPromptCoordinationService,
          mobileCustomization: MobileCustomization,
          productSurfaceTelemetry: ProductSurfaceTelemetry,
@@ -159,9 +160,10 @@ final class MainCoordinator {
         let tabsModelProvider = try Self.prepareTabsModel(previewsSource: previewsSource, tabsPersistence: tabsPersistence)
         let historyManager = try Self.makeHistoryManager(tabsModel: tabsModelProvider.aggregateTabsModel)
         reportingService.subscriptionDataReporter.injectTabsModel(tabsModelProvider.aggregateTabsModel)
-        let daxDialogsFactory = ContextualDaxDialogsProvider(featureFlagger: featureFlagger,
-                                                         contextualOnboardingLogic: daxDialogs,
-                                                         contextualOnboardingPixelReporter: reportingService.onboardingPixelReporter)
+        let daxDialogsFactory = ContextualDaxDialogFactory(
+            contextualOnboardingLogic: daxDialogs,
+            contextualOnboardingPixelReporter: reportingService.onboardingPixelReporter
+        )
         let contextualOnboardingPresenter = ContextualOnboardingPresenter(variantManager: variantManager, daxDialogsFactory: daxDialogsFactory)
         let textZoomCoordinatorProvider = Self.makeTextZoomCoordinatorProvider()
         let autoconsentManagementProvider = AutoconsentManagementProvider()
@@ -295,6 +297,7 @@ final class MainCoordinator {
                                         freemiumPIREligibilityChecker: freemiumPIREligibilityChecker,
                                         freemiumPIRDebugSettings: freemiumPIRDebugSettings,
                                         freemiumDBPUserStateManager: freemiumDBPUserStateManager,
+                                        profileStateManager: profileStateManager,
                                         launchSourceManager: launchSourceManager,
                                         winBackOfferVisibilityManager: winBackOfferService.visibilityManager,
                                         mobileCustomization: mobileCustomization,
