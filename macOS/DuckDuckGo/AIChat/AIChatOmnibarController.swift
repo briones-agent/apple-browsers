@@ -169,13 +169,8 @@ final class AIChatOmnibarController {
     /// StoreKit's on-device introductory-offer eligibility (has this Apple ID/device already used
     /// a free trial?), not the user's tier — so this only ever applies to a free user; an existing
     /// Plus subscriber upgrading to Pro always sees "Upgrade", trial eligibility notwithstanding.
-    /// Honors the Debug ▸ AI Chat ▸ "Simulate Subscription Tier" override when it specifies a
-    /// free-tier eligibility state, same as `resolveUserTier()` does for tier itself.
     var shouldOfferFreeTrial: Bool {
         guard userTier == .free else { return false }
-        if let simulatedEligibility = UserDefaults.standard.duckAISimulatedTier?.isEligibleForFreeTrial {
-            return simulatedEligibility
-        }
         return subscriptionManager.isUserEligibleForFreeTrial()
     }
 
@@ -377,11 +372,6 @@ final class AIChatOmnibarController {
     }
 
     private func resolveUserTier() async throws -> AIChatUserTier {
-        // Honor the Debug ▸ AI Chat ▸ "Simulate Subscription Tier" override when set, so gated
-        // flows can be demoed without a real subscription.
-        if let simulated = UserDefaults.standard.duckAISimulatedTier {
-            return simulated.userTier
-        }
         do {
             guard let subscription = try await subscriptionManager.getSubscription(forceRefresh: false),
                   subscription.isActive else { return .free }
