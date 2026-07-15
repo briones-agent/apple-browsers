@@ -4882,13 +4882,13 @@
       }
     },
     "aichat.model-picker.pro-exclusive" : {
-      "comment" : "Label above the gated models in the model picker menu, shown to Plus subscribers — they're already a subscriber, so the gated models (all Pro-only) are called out specifically rather than reusing the generic 'Subscriber exclusive' label",
+      "comment" : "Label above the gated models in the model picker menu, shown to Plus subscribers — they're already a subscriber, so the gated models (all Pro-only) are called out specifically rather than reusing the generic 'Subscriber Exclusive' label",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Pro exclusive."
+            "value" : "Pro Exclusive"
           }
         }
       }
@@ -4900,7 +4900,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Subscriber exclusive."
+            "value" : "Subscriber Exclusive"
           }
         }
       }
