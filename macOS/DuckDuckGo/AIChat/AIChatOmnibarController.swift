@@ -600,10 +600,12 @@ final class AIChatOmnibarController {
     /// The picker effort that visually represents the persisted selection. Returns the stored
     /// effort directly when it's in the picker list; otherwise maps to its bucket equivalent
     /// (`.medium` → `.high`, `.minimal` → `.none`) so the chip label/icon and the menu checkmark
-    /// stay in sync with what's actually submitted. Submission still sends the persisted value
-    /// unchanged via `effectiveReasoningEffort`.
+    /// stay in sync with what's actually submitted. Returns nil when the stored effort is gated
+    /// above the current tier, so the chip falls back to the accessible default — matching
+    /// `effectiveReasoningEffort`, which also drops a gated stored value rather than submitting it.
     var displayedReasoningEffort: AIChatReasoningEffort? {
-        guard let stored = selectedReasoningEffort else { return nil }
+        guard let stored = selectedReasoningEffort,
+              isReasoningEffortAccessible(stored) else { return nil }
         let efforts = pickerReasoningEfforts
         if efforts.contains(stored) { return stored }
         switch stored {
@@ -707,13 +709,18 @@ final class AIChatOmnibarController {
     }
 
     /// The reasoning effort to include in the prompt payload.
-    /// Returns nil when the feature flag is off, image generation mode is active, or the current
-    /// model doesn't list the persisted effort as supported — so we never send a stale value that
-    /// no longer applies to the active request.
+    /// Returns nil when the feature flag is off, image generation mode is active, the current model
+    /// doesn't list the persisted effort as supported, or the effort is gated above the user's tier
+    /// — so we never send a stale value that no longer applies to the active request. The tier check
+    /// matters because a persisted effort can survive a tier change (e.g. a Plus user who selected
+    /// Extended Reasoning, then lapsed to free): the model still *supports* it, so it isn't cleared
+    /// as stale, but the user can no longer *access* it and submitting it would fail on the server —
+    /// the exact error this feature prevents in the picker.
     var effectiveReasoningEffort: AIChatReasoningEffort? {
         guard isReasoningEffortEnabled, !isImageGenerationMode else { return nil }
         guard let effort = selectedReasoningEffort,
-              selectedModelReasoningEfforts.contains(effort) else { return nil }
+              selectedModelReasoningEfforts.contains(effort),
+              isReasoningEffortAccessible(effort) else { return nil }
         return effort
     }
 
