@@ -47,11 +47,11 @@ final class LegacyIconsProvider: IconsProviding {
     var navigationToolbarIconsProvider: NavigationToolbarIconsProviding = CurrentNavigationToolbarIconsProvider()
     var moreOptionsMenuIconsProvider: MoreOptionsMenuIconsProviding = CurrentMoreOptionsMenuIcons()
     var fireButtonStyleProvider: FireButtonIconStyleProviding = LegacyFireButtonIconStyleProvider()
-    var settingsIconProvider: SettingsIconsProviding = LegacySettingsIconProvider()
-    var bookmarksIconsProvider: BookmarksIconsProviding = LegacyBookmarksIconsProvider()
-    var vpnNavigationIconsProvider: IconProvider = NavigationBarIconProvider()
-    var suggestionsIconsProvider: SuggestionsIconsProviding = LegacySuggestionsIconsProvider()
-    var addressBarButtonsIconsProvider: AddressBarPermissionButtonsIconsProviding = LegacyAddressBarPermissionButtonIconsProvider()
+    var settingsIconProvider: SettingsIconsProviding = CurrentSettingsIconProvider()
+    var bookmarksIconsProvider: BookmarksIconsProviding = CurrentBookmarksIconsProvider()
+    var vpnNavigationIconsProvider: IconProvider = CurrentVPNNavigationBarIconProvider()
+    var suggestionsIconsProvider: SuggestionsIconsProviding = CurrentSuggestionsIconsProvider()
+    var addressBarButtonsIconsProvider: AddressBarPermissionButtonsIconsProviding = CurrentAddressBarPermissionButtonIconsProvider()
 }
 
 final class CurrentIconsProvider: IconsProviding {
