@@ -1457,6 +1457,38 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         XCTAssertEqual(controller.effectiveReasoningEffort, .low)
     }
 
+    func testWhenPersistedEffortIsSupportedButGatedAboveTier_ThenEffectiveReasoningEffortIsNil() async {
+        // Given — a free user with a persisted `.medium` effort that the model still *supports* but
+        // that is gated to plus/pro (e.g. selected while on Plus, then lapsed to free). It survives
+        // stale-effort cleanup (still supported), so the submit path must be the one to drop it.
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarReasoningEffort.rawValue] = true
+        setUserTier(nil)
+        mockModelsService.modelsToReturn = [
+            makeRemoteModel(
+                id: "gated-effort-model",
+                entityHasAccess: true,
+                supportedReasoningEffort: [.none, .low, .medium],
+                reasoningEffortAccess: [
+                    AIChatReasoningEffortAccess(effort: .none, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .low, accessTier: ["free", "plus", "pro"], entityHasAccess: true),
+                    AIChatReasoningEffortAccess(effort: .medium, accessTier: ["plus", "pro"], entityHasAccess: false)
+                ]
+            )
+        ]
+        mockPreferences.selectedModelId = "gated-effort-model"
+        mockPreferences.selectedReasoningEffort = "medium"
+
+        // When
+        controller.onOmnibarActivated()
+        await waitForModels()
+
+        // Then — the model supports `.medium` (so it isn't cleared as stale) but the free user can't
+        // access it, so it must not be attached to the submission.
+        XCTAssertTrue(controller.selectedModelReasoningEfforts.contains(.medium), "precondition: model still supports the effort")
+        XCTAssertFalse(controller.isReasoningEffortAccessible(.medium), "precondition: effort is gated for this tier")
+        XCTAssertNil(controller.effectiveReasoningEffort)
+    }
+
     func testWhenFeatureFlagDisabled_ThenEffectiveReasoningEffortIsNilEvenIfSelected() {
         // Given — user previously selected an effort while flag was on
         featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarReasoningEffort.rawValue] = false
