@@ -70,7 +70,7 @@ public struct PreferencesPurchaseSubscriptionView: View {
 
                 HStack {
                     Button(model.purchaseButtonTitle) { model.purchaseAction() }
-                        .buttonStyle(DefaultActionButtonStyle(enabled: true))
+                        .buttonStyle(DefaultActionButtonStyle(enabled: true, stateColors: DesignSystemRebrand.isAppRebranded() ? .themedActionButton : .legacyActionButton))
                     Button(UserText.haveSubscriptionButton) {
                         if model.shouldDirectlyLaunchActivationFlow {
                             model.sheetModel.handleEmailAction()
