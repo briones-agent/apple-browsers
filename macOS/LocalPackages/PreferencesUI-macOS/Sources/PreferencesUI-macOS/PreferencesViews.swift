@@ -18,6 +18,7 @@
 
 import SwiftUI
 import SwiftUIExtensions
+import DesignResourcesKit
 
 public struct TextMenuTitle: View {
     public let text: String
@@ -97,6 +98,7 @@ public struct ToggleMenuItem: View {
         Toggle(title, isOn: isOn)
             .fixMultilineScrollableText()
             .toggleStyle(.checkbox)
+            .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
     }
 }
 
@@ -121,7 +123,9 @@ public struct ToggleMenuItemWithDescription: View {
 
                 TextMenuItemCaption(description)
             }
-        }.toggleStyle(.checkbox)
+        }
+        .toggleStyle(.checkbox)
+        .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
     }
 }
 
