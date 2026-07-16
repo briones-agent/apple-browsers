@@ -1877,6 +1877,147 @@ final class AIChatOmnibarControllerTests: XCTestCase {
         XCTAssertTrue(mockSubscriptionUpsellPresenter.presentSubscriptionActivationCalled)
     }
 
+    // MARK: - Model Picker Content (modelPickerItems)
+
+    func testModelPickerItems_freeUserUpsellOn_accessibleThenSubscriberExclusiveGatedSection() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "free-a", accessTier: ["free"]),
+            makeRemoteModel(id: "free-b", accessTier: ["free"]),
+            makeRemoteModel(id: "gated-plus", accessTier: ["plus", "pro"]),
+            makeRemoteModel(id: "gated-pro", accessTier: ["pro"]),
+        ], tier: nil, trialEligible: true)
+
+        let items = controller.modelPickerItems(selectedModelId: nil)
+
+        let accessible = accessibleRows(items)
+        XCTAssertEqual(accessible.map(\.id), ["free-a", "free-b"])
+        XCTAssertNil(accessible[0].badge, "Free-tier models carry no trailing badge")
+
+        XCTAssertTrue(hasSeparator(items))
+
+        let header = gatedHeader(in: items)
+        XCTAssertEqual(header?.title, UserText.aiChatModelPickerSubscriberExclusive)
+        XCTAssertEqual(header?.badge, UserText.aiChatModelPickerTryForFree, "Trial-eligible free user sees Try for free")
+        XCTAssertEqual(header?.representativeId, "gated-plus", "First gated model represents the header's routing tier")
+
+        let gated = gatedRows(items)
+        XCTAssertEqual(gated.map(\.id), ["gated-plus", "gated-pro"])
+        XCTAssertEqual(gated[0].badge, UserText.aiChatModelPickerTierBadgePlus)
+        XCTAssertEqual(gated[1].badge, UserText.aiChatModelPickerTierBadgePro)
+    }
+
+    func testModelPickerItems_plusUserUpsellOn_proExclusiveHeaderUpgradeBadgeAndPlusModelsBadged() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "basic", accessTier: ["free", "plus"]),
+            makeRemoteModel(id: "plus-only", accessTier: ["plus"]),
+            makeRemoteModel(id: "pro-only", accessTier: ["pro"]),
+        ], tier: .plus, trialEligible: true)
+
+        let items = controller.modelPickerItems(selectedModelId: nil)
+
+        let accessible = accessibleRows(items)
+        XCTAssertEqual(accessible.map(\.id), ["basic", "plus-only"])
+        XCTAssertNil(accessible[0].badge, "A free+plus model resolves to the free tier — no badge")
+        XCTAssertEqual(accessible[1].badge, UserText.aiChatModelPickerTierBadgePlus,
+                       "An already-accessible plus-only model is still badged PLUS")
+
+        let header = gatedHeader(in: items)
+        XCTAssertEqual(header?.title, UserText.aiChatModelPickerProExclusive,
+                       "A Plus user's remaining gated models are all Pro-only")
+        XCTAssertEqual(header?.badge, UserText.aiChatModelPickerUpgrade,
+                       "A subscriber always sees Upgrade, never Try for free, regardless of trial eligibility")
+
+        XCTAssertEqual(gatedRows(items).map(\.id), ["pro-only"])
+        XCTAssertEqual(gatedRows(items).first?.badge, UserText.aiChatModelPickerTierBadgePro)
+    }
+
+    func testModelPickerItems_freeUserTrialIneligible_usesUpgradeBadge() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "gated-plus", accessTier: ["plus"]),
+        ], tier: nil, trialEligible: false)
+
+        let items = controller.modelPickerItems(selectedModelId: nil)
+
+        XCTAssertEqual(gatedHeader(in: items)?.badge, UserText.aiChatModelPickerUpgrade,
+                       "A free user who already used their trial sees Upgrade")
+    }
+
+    func testModelPickerItems_upsellOff_gatedRowsShownWithoutHeaderAndNoImpression() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = false
+        await loadModels([
+            makeRemoteModel(id: "free-a", accessTier: ["free"]),
+            makeRemoteModel(id: "gated-pro", accessTier: ["pro"]),
+        ], tier: nil)
+
+        let before = mockBadgeImpressionPersistor.viewCount
+        let items = controller.modelPickerItems(selectedModelId: nil)
+
+        XCTAssertTrue(hasSeparator(items), "Separator still divides accessible from gated when the flag is off")
+        XCTAssertNil(gatedHeader(in: items), "No upsell header when the flag is off")
+        XCTAssertEqual(gatedRows(items).map(\.id), ["gated-pro"], "Gated rows still render (dimmed) so they can't be selected")
+        XCTAssertEqual(mockBadgeImpressionPersistor.viewCount, before, "No badge impression recorded when no header is shown")
+    }
+
+    func testModelPickerItems_noGatedModels_noSeparatorHeaderOrImpression() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "free-a", accessTier: ["free"]),
+            makeRemoteModel(id: "free-b", accessTier: ["free"]),
+        ], tier: nil, trialEligible: true)
+
+        let before = mockBadgeImpressionPersistor.viewCount
+        let items = controller.modelPickerItems(selectedModelId: nil)
+
+        XCTAssertEqual(accessibleRows(items).map(\.id), ["free-a", "free-b"])
+        XCTAssertFalse(hasSeparator(items))
+        XCTAssertNil(gatedHeader(in: items))
+        XCTAssertTrue(gatedRows(items).isEmpty)
+        XCTAssertEqual(mockBadgeImpressionPersistor.viewCount, before)
+    }
+
+    func testModelPickerItems_recordsOneBadgeImpressionPerCallWhenHeaderShown() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "gated-pro", accessTier: ["pro"]),
+        ], tier: nil, trialEligible: true)
+
+        XCTAssertEqual(mockBadgeImpressionPersistor.viewCount, 0)
+        _ = controller.modelPickerItems(selectedModelId: nil)
+        XCTAssertEqual(mockBadgeImpressionPersistor.viewCount, 1, "One impression per menu open")
+        _ = controller.modelPickerItems(selectedModelId: nil)
+        XCTAssertEqual(mockBadgeImpressionPersistor.viewCount, 2)
+    }
+
+    func testModelPickerItems_headerMutedWhenImpressionCapReached() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "gated-pro", accessTier: ["pro"]),
+        ], tier: nil, trialEligible: true)
+        // Reach the 4-view cap configured in setUp.
+        for _ in 0..<4 { controller.recordBadgeImpression() }
+        XCTAssertTrue(controller.isBadgeMuted)
+
+        let items = controller.modelPickerItems(selectedModelId: nil)
+
+        XCTAssertEqual(gatedHeader(in: items)?.isMuted, true)
+    }
+
+    func testModelPickerItems_marksSelectedAccessibleRow() async {
+        featureFlagger.featuresStub[FeatureFlag.aiChatOmnibarSubscriptionUpsell.rawValue] = true
+        await loadModels([
+            makeRemoteModel(id: "free-a", accessTier: ["free"]),
+            makeRemoteModel(id: "free-b", accessTier: ["free"]),
+        ], tier: nil)
+
+        let rows = accessibleRows(controller.modelPickerItems(selectedModelId: "free-b"))
+
+        XCTAssertEqual(rows.first { $0.id == "free-a" }?.isSelected, false)
+        XCTAssertEqual(rows.first { $0.id == "free-b" }?.isSelected, true)
+    }
+
     // MARK: - Helpers
 
     /// Creates a remote model for testing. Access is resolved locally from `accessTier`
@@ -1957,6 +2098,45 @@ final class AIChatOmnibarControllerTests: XCTestCase {
             fileName: fileName,
             mimeType: "application/pdf"
         )
+    }
+
+    /// Loads `models` and resolves the user's tier + trial eligibility, mirroring a real fetch.
+    private func loadModels(_ models: [AIChatRemoteModel], tier: TierName?, trialEligible: Bool = false) async {
+        setUserTier(tier)
+        mockSubscriptionManager.isEligibleForFreeTrialResult = trialEligible
+        mockModelsService.modelsToReturn = models
+        controller.onOmnibarActivated()
+        await waitForModels()
+    }
+
+    // Accessors that flatten `[AIChatModelPickerItem]` for assertions (the enum isn't Equatable).
+    private struct PickerRow { let id: String; let badge: String?; let isSelected: Bool }
+    private struct PickerHeader { let title: String; let badge: String; let isMuted: Bool; let representativeId: String? }
+
+    private func accessibleRows(_ items: [AIChatModelPickerItem]) -> [PickerRow] {
+        items.compactMap { item -> PickerRow? in
+            guard case let .model(model, badge, isSelected) = item else { return nil }
+            return PickerRow(id: model.id, badge: badge, isSelected: isSelected)
+        }
+    }
+
+    private func gatedRows(_ items: [AIChatModelPickerItem]) -> [PickerRow] {
+        items.compactMap { item -> PickerRow? in
+            guard case let .gatedModel(model, badge) = item else { return nil }
+            return PickerRow(id: model.id, badge: badge, isSelected: false)
+        }
+    }
+
+    private func gatedHeader(in items: [AIChatModelPickerItem]) -> PickerHeader? {
+        for item in items {
+            guard case let .gatedHeader(title, badge, isMuted, representative) = item else { continue }
+            return PickerHeader(title: title, badge: badge, isMuted: isMuted, representativeId: representative?.id)
+        }
+        return nil
+    }
+
+    private func hasSeparator(_ items: [AIChatModelPickerItem]) -> Bool {
+        items.contains { if case .separator = $0 { return true }; return false }
     }
 }
 

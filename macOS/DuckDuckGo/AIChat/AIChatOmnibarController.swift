@@ -1384,3 +1384,54 @@ final class AIChatOmnibarController {
         }
     }
 }
+
+// MARK: - Model Picker Content
+
+/// A fully-resolved model-picker row so the view controller only maps it to an `NSMenuItem`.
+enum AIChatModelPickerItem {
+    case model(AIChatModel, badge: String?, isSelected: Bool)
+    case separator
+    case gatedHeader(title: String, badge: String, isMuted: Bool, representativeModel: AIChatModel?)
+    case gatedModel(AIChatModel, badge: String?)
+}
+
+extension AIChatOmnibarController {
+    /// Resolved picker contents (accessible first, then the gated upsell section); owns the flag, copy, ordering, and badge impression so the VC just renders.
+    func modelPickerItems(selectedModelId: String?) -> [AIChatModelPickerItem] {
+        let (accessible, gated) = AIChatModelSectionBuilder.buildGatedSections(models: models)
+        let ordered = AIChatModelSectionBuilder.orderedAccessibleModels(accessible, userTier: userTier)
+
+        var items: [AIChatModelPickerItem] = ordered.map { model in
+            .model(model, badge: trailingBadge(for: model), isSelected: model.id == selectedModelId)
+        }
+
+        guard !gated.isEmpty else { return items }
+        items.append(.separator)
+
+        if isSubscriptionUpsellEnabled {
+            // Free user's gated section mixes Plus+Pro ("Subscriber exclusive"); a Plus user's is Pro-only.
+            let title = userTier == .free ? UserText.aiChatModelPickerSubscriberExclusive
+                                          : UserText.aiChatModelPickerProExclusive
+            let badge = shouldOfferFreeTrial ? UserText.aiChatModelPickerTryForFree
+                                             : UserText.aiChatModelPickerUpgrade
+            // Header CTA routes off a representative tier; any gated model suffices.
+            items.append(.gatedHeader(title: title,
+                                      badge: badge,
+                                      isMuted: isBadgeMuted,
+                                      representativeModel: gated.first?.model))
+            recordBadgeImpression()
+        }
+
+        items += gated.map { .gatedModel($0.model, badge: trailingBadge(for: $0.model)) }
+        return items
+    }
+
+    /// PLUS/PRO tag for models whose minimum tier is above free (incl. already-accessible ones), else nil.
+    private func trailingBadge(for model: AIChatModel) -> String? {
+        switch model.lowestPublicAccessTier {
+        case .plus: return UserText.aiChatModelPickerTierBadgePlus
+        case .pro: return UserText.aiChatModelPickerTierBadgePro
+        case .free, .none: return nil
+        }
+    }
+}

@@ -1741,64 +1741,28 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        // Accessible models first (no header), then a "Subscriber exclusive" section listing every
-        // gated model (dimmed, with a PLUS/PRO badge) — unlike AIChatModelSectionBuilder.buildSections
-        // (used by the NTP web dropdown), gated models are never hidden here, so a Plus user still
-        // sees Pro-only models. When the subscription-upsell feature flag is on, the section also
-        // gets a "Try for free"/"Upgrade" badge that opens the confirmation dialog; when it's off,
-        // the gated rows are plain dimmed, non-interactive rows with no CTA — same as before this
-        // feature shipped, so disabling the flag can't reintroduce the "select a model you don't
-        // have access to" bug even though it removes the upsell path.
-        let (accessible, gated) = AIChatModelSectionBuilder.buildGatedSections(models: omnibarController.models)
-        let accessibleModels = Self.pocOrderedAccessibleModels(accessible, userTier: omnibarController.userTier)
-
-        for model in accessibleModels {
-            menu.addItem(modelRow(
-                for: model,
-                trailingText: Self.pocTrailingLabel(for: model),
-                isSelected: model.id == selectedModelId,
-                isDimmed: false,
-                isInteractive: true,
-                in: menu
-            ))
-        }
-
-        if !gated.isEmpty {
-            menu.addItem(.separator())
-            if omnibarController.isSubscriptionUpsellEnabled {
-                // A free user's gated section mixes Plus and Pro models — "Subscriber exclusive" fits.
-                // A Plus user is already a subscriber, and everything left gated is Pro-only, so call
-                // that out specifically instead of reusing the generic "Subscriber" label.
-                let isFreeUser = omnibarController.userTier == .free
-                let headerTitle = isFreeUser ? UserText.aiChatModelPickerSubscriberExclusive : UserText.aiChatModelPickerProExclusive
-                // Unlike the header title (which only cares whether the user is a subscriber at
-                // all), the badge also depends on StoreKit free-trial eligibility — a free user who
-                // already used their trial sees "Upgrade" here too, same as a Plus subscriber.
-                let badgeText = omnibarController.shouldOfferFreeTrial ? UserText.aiChatModelPickerTryForFree : UserText.aiChatModelPickerUpgrade
+        // The controller decides what the menu shows; this only maps each item to an NSMenuItem.
+        for item in omnibarController.modelPickerItems(selectedModelId: selectedModelId) {
+            switch item {
+            case .model(let model, let badge, let isSelected):
+                menu.addItem(modelRow(for: model, trailingText: badge, isSelected: isSelected,
+                                      isDimmed: false, isInteractive: true, in: menu))
+            case .separator:
+                menu.addItem(.separator())
+            case .gatedHeader(let title, let badge, let isMuted, let representativeModel):
                 let headerItem = NSMenuItem.createSubscriberExclusiveHeader(
-                    title: headerTitle,
-                    badgeText: badgeText,
-                    isBadgeMuted: omnibarController.isBadgeMuted,
+                    title: title,
+                    badgeText: badge,
+                    isBadgeMuted: isMuted,
                     action: #selector(gatedModelSelected(_:)),
                     target: self,
                     menu: menu
                 )
-                // The header's badge isn't tied to one model, but routing needs a required tier: the
-                // first gated model is representative (for a free user any gated model routes to the
-                // same purchase flow; for a plus user every remaining gated model requires pro).
-                headerItem.representedObject = gated.first?.model
+                headerItem.representedObject = representativeModel
                 menu.addItem(headerItem)
-                omnibarController.recordBadgeImpression()
-            }
-            for gatedModel in gated {
-                menu.addItem(modelRow(
-                    for: gatedModel.model,
-                    trailingText: Self.pocTrailingLabel(for: gatedModel.model),
-                    isSelected: false,
-                    isDimmed: true,
-                    isInteractive: false,
-                    in: menu
-                ))
+            case .gatedModel(let model, let badge):
+                menu.addItem(modelRow(for: model, trailingText: badge, isSelected: false,
+                                      isDimmed: true, isInteractive: false, in: menu))
             }
         }
 
@@ -1830,61 +1794,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     private static func splitModelTitle(_ name: String) -> (bold: String, regular: String) {
         guard let spaceIndex = name.firstIndex(of: " ") else { return (name, "") }
         return (String(name[..<spaceIndex]), String(name[name.index(after: spaceIndex)...]))
-    }
-
-    /// PoC-only "correct ordering" per https://app.asana.com/1/137249556945/task/1216388092784294 —
-    /// duck.ai web computes this client-side too (a hand-maintained `modelPickerLayoutByTier` per
-    /// the linked task's comments): per-tier "recommended" models come first, everything else keeps
-    /// the API's relative order. No descriptive subtitles for now — those need real backend/copy
-    /// support, not this PR's per-position guesses. Delete this whole function (and its matcher
-    /// table) once the backend ships proper ordering — nothing else in this file depends on it.
-    /// Follow-up to replace this PoC scaffolding with the final approach:
-    /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1216559729471554
-    private static func pocOrderedAccessibleModels(_ models: [AIChatModel], userTier: AIChatUserTier) -> [AIChatModel] {
-        var remaining = models
-        var recommended: [AIChatModel] = []
-        for matches in pocRecommendedModelMatchers(for: userTier) {
-            guard let index = remaining.firstIndex(where: { matches($0.name.lowercased()) }) else { continue }
-            recommended.append(remaining.remove(at: index))
-        }
-        return recommended + remaining
-    }
-
-    /// Per-tier "recommended" model matchers, in display order. Matches by lowercased name
-    /// substring (family/variant, not exact model id) since the mockups show the same family
-    /// recur across version bumps (e.g. Claude Opus 4.7 → 4.8) — mirrors the existing PoC
-    /// heuristics' approach, not tied to a stable backend id.
-    private static func pocRecommendedModelMatchers(for userTier: AIChatUserTier) -> [(String) -> Bool] {
-        let isFullGPT: (String) -> Bool = { $0.contains("gpt") && !$0.contains("mini") && !$0.contains("nano") }
-        switch userTier {
-        case .free:
-            return [
-                { $0.contains("nano") },
-                { $0.contains("mini") },
-                { $0.contains("claude") && $0.contains("haiku") }
-            ]
-        case .plus, .internal:
-            return [
-                isFullGPT,
-                { $0.contains("claude") && $0.contains("sonnet") }
-            ]
-        case .pro:
-            return [
-                isFullGPT,
-                { $0.contains("claude") && $0.contains("opus") }
-            ]
-        }
-    }
-
-    /// Trailing grey PLUS/PRO label for a model row, accessible or gated alike, whenever the model's
-    /// own minimum tier is above free (matches the web client, which badges e.g. a Plus user's
-    /// already-accessible Plus-tier models too). `nil` for free-tier models.
-    private static func pocTrailingLabel(for model: AIChatModel) -> String? {
-        switch model.lowestPublicAccessTier {
-        case .plus: return UserText.aiChatModelPickerTierBadgePlus
-        case .pro: return UserText.aiChatModelPickerTierBadgePro
-        case .free, .none: return nil
-        }
     }
 
     @objc private func gatedModelSelected(_ sender: NSMenuItem) {
