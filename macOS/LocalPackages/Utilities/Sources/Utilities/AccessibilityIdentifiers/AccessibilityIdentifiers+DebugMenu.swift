@@ -26,6 +26,8 @@ public extension AccessibilityIdentifiers {
         public static let openFailureURLSchemeAlternatingFailuresDemoPage = "DebugMenu.openFailureURLSchemeAlternatingFailuresDemoPage"
         /// `failure://demo?simulatedError=notConnected` (UI tests only).
         public static let openFailureURLSchemeNotConnectedQueryDemoPage = "DebugMenu.openFailureURLSchemeNotConnectedQueryDemoPage"
+        /// `failure://demo?simulatedError=hostNotFound` (UI tests only; error kind that must not auto-reload on tab reactivation).
+        public static let openFailureURLSchemeHostNotFoundQueryDemoPage = "DebugMenu.openFailureURLSchemeHostNotFoundQueryDemoPage"
 
         /// `MainMenu` updates the menu item title by state; UI tests detect on/off from the title (checkmarks are unreliable in XCUITest).
         public static let failureURLSchemeSimulateConnectionErrorMenuTitleOff = "Simulate failure:// connection error (Off)"

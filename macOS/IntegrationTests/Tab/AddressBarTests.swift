@@ -29,6 +29,7 @@ import PrivacyDashboard
 import SharedTestUtilities
 import SpecialErrorPages
 import Suggestions
+import WebKit
 import XCTest
 
 @testable import DuckDuckGo_Privacy_Browser
@@ -628,15 +629,33 @@ class AddressBarTests: XCTestCase {
         _=try await tab.webViewDidFinishNavigationPublisher.timeout(10).first().promise().value
         XCTAssertEqual(window.firstResponder, tab.webView)
 
+        // Hold the reload response open so the navigation is guaranteed to be in flight while the address bar is re-activated.
+        let eRequestReceived = expectation(description: "request received")
+        var heldTask: WKURLSchemeTask?
+        schemeHandler.middleware = [{ _ in
+            WKURLSchemeTaskHandler { task in
+                heldTask = task
+                eRequestReceived.fulfill()
+            }
+        }]
+
         // activate address bar, trigger reload by sending Return key and re-activate the address bar - it should be kept active
         let didFinishNavigation = tab.webViewDidFinishNavigationPublisher.timeout(10).first().promise()
         _=window.makeFirstResponder(addressBarTextField)
         type("\r")
-        try await Task.sleep(interval: 0.1)
+        await fulfillment(of: [eRequestReceived], timeout: 5)
+
+        // navigation is in flight: re-activate the address bar and type
         _=window.makeFirstResponder(addressBarTextField)
         type("some-text")
 
-        try await Task.sleep(interval: 1.0)
+        // release the response; page load completion must not steal focus or reset the typed value
+        let task = try XCTUnwrap(heldTask)
+        let response = try XCTUnwrap(MockHTTPURLResponse(url: XCTUnwrap(task.request.url), statusCode: 200, mime: "text/html", headerFields: [:]))
+        task.didReceive(response)
+        task.didReceive(Data(Self.testHtml.utf8))
+        task.didFinish()
+
         try await didFinishNavigation.value
         XCTAssertTrue(isAddressBarFirstResponder)
         XCTAssertEqual(addressBarValue, "some-text")
@@ -744,14 +763,31 @@ class AddressBarTests: XCTestCase {
 
         _=try await tab.webViewDidFinishNavigationPublisher.timeout(10).first().promise().value
 
+        // Hold the response open so the navigation is guaranteed to be in flight while the address bar is re-activated.
+        let eRequestReceived = expectation(description: "request received")
+        var heldTask: WKURLSchemeTask?
+        schemeHandler.middleware = [{ _ in
+            WKURLSchemeTaskHandler { task in
+                heldTask = task
+                eRequestReceived.fulfill()
+            }
+        }]
+
         let didFinishNavigation = tab.webViewDidFinishNavigationPublisher.timeout(10).first().promise()
         type(URL.duckDuckGo.absoluteString + "\r")
+        await fulfillment(of: [eRequestReceived], timeout: 5)
 
-        try await Task.sleep(interval: 0.1)
+        // navigation is in flight: re-activate the address bar and type
         _=window.makeFirstResponder(addressBarTextField)
         type("some-text")
 
-        try await Task.sleep(interval: 0.01)
+        // release the response; page load completion must not steal focus or reset the typed value
+        let task = try XCTUnwrap(heldTask)
+        let response = try XCTUnwrap(MockHTTPURLResponse(url: XCTUnwrap(task.request.url), statusCode: 200, mime: "text/html", headerFields: [:]))
+        task.didReceive(response)
+        task.didReceive(Data(Self.testHtml.utf8))
+        task.didFinish()
+
         try await didFinishNavigation.value
         XCTAssertTrue(isAddressBarFirstResponder)
         XCTAssertEqual(addressBarValue, "some-text")

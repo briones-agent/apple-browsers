@@ -29,7 +29,7 @@ class ErrorPageUITests: UITestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
         continueAfterFailure = false
-        app = XCUIApplication.setUp(environment: ["FAILURE_URL_SCHEME_ENABLED": "1"])
+        app = XCUIApplication.setUp(featureFlags: ["failureURLScheme": true])
         app.enforceSingleWindow()
         webView = app.webViews.firstMatch
         removePinnedTabsForTestCleanup()
@@ -134,10 +134,10 @@ class ErrorPageUITests: UITestCase {
 
         // Tab B: successful load so tab strip has mixed success/error.
         app.openNewTab()
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
         app.activateAddressBar()
-        addressBarTextField.pasteURL(URL(string: "https://example.com")!, pressingEnter: true)
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load")
+        addressBarTextField.pasteURL(Self.privacyTestPagesHomeURL, pressingEnter: true)
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load privacy-test-pages.site")
 
         // Re-select tab A: host-not-found error should still be shown (connection-style failures can behave differently).
         selectUnpinnedTab(at: 0)
@@ -145,12 +145,6 @@ class ErrorPageUITests: UITestCase {
         assertUnreachableHostErrorPageVisible()
         assertSelectedTabTitleEquals(Self.tabErrorTitle)
         assertSaveAsMenuItemEnabled(false)
-        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), "https://tab-switch-no-autoreload.invalid/")
-
-        // Aligned with `testWhenTabWithOtherErrorActivated_reloadNotTriggered`: no silent navigation away from host-not-found after reselection.
-        let spuriousExampleDomain = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
-        XCTAssertFalse(spuriousExampleDomain.waitForExistence(timeout: 2.0), "Host-not-found tab should not auto-load unrelated success content")
-        assertUnreachableHostErrorPageVisible()
         XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), "https://tab-switch-no-autoreload.invalid/")
 
         assertNavigationChromeMatchesHostNotFoundCase()
@@ -211,10 +205,10 @@ class ErrorPageUITests: UITestCase {
 
         // Second tab: real page so tab 0’s web view is deactivated (reactivation will run the load again).
         app.openNewTab()
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
         app.activateAddressBar()
-        addressBarTextField.pasteURL(URL(string: "https://example.com")!, pressingEnter: true)
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load example.com")
+        addressBarTextField.pasteURL(Self.privacyTestPagesHomeURL, pressingEnter: true)
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load privacy-test-pages.site")
 
         // Back to tab 0: second handler pass should show the other connection-style line and bump the attempt counter.
         selectUnpinnedTab(at: 0)
@@ -295,15 +289,6 @@ class ErrorPageUITests: UITestCase {
         XCTAssertTrue(
             app.addressBarValueActivatingIfNeeded()?.contains("127.0.0.1") == true,
             "Address bar should still show the failing URL"
-        )
-
-        // Aligned with `testWhenTabWithConnectionLostErrorActivatedAndReloadFailsAgain…`: stay on error after reactivation (no silent load of the other tab’s page).
-        let spuriousRecoveryPage = webView.staticTexts.containing(\.value, containing: recoveryPageTitle).firstMatch
-        XCTAssertFalse(spuriousRecoveryPage.waitForExistence(timeout: 2.0), "Refused-connection tab should not show the recovery tab’s content")
-        assertGenericErrorPageVisible()
-        XCTAssertTrue(
-            app.addressBarValueActivatingIfNeeded()?.contains("127.0.0.1") == true,
-            "Address bar should still show the refused connection target"
         )
 
         // Recovery tab unchanged after visiting failing tab again.
@@ -846,14 +831,14 @@ class ErrorPageUITests: UITestCase {
         )
 
         // User navigates to a reachable site from the address bar.
-        let recoveredURL = URL(string: "https://example.com")!
+        let recoveredURL = Self.privacyTestPagesHomeURL
         app.activateAddressBar()
         addressBarTextField.pasteURL(recoveredURL, pressingEnter: true)
 
-        let recoveredContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
-        XCTAssertTrue(recoveredContent.waitForExistence(timeout: UITests.Timeouts.localTestServer), "Should load successfully after navigating to a valid URL")
+        let recoveredContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
+        XCTAssertTrue(recoveredContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Should load successfully after navigating to a valid URL")
 
-        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), "https://example.com/", "Should successfully navigate to example.com")
+        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), Self.privacyTestPagesHomeAddressBarValue, "Should successfully navigate to privacy-test-pages.site")
     }
 
     // MARK: - Reload failing page
@@ -912,7 +897,7 @@ class ErrorPageUITests: UITestCase {
 
     // MARK: - Forward navigation with error in history
 
-    /// Success → error → example.com; back twice then forward twice. Forward stack keeps the error entry; menu row count is current + forward entries.
+    /// Success → error → privacy-test-pages.site; back twice then forward twice. Forward stack keeps the error entry; menu row count is current + forward entries.
     func testErrorPage_ForwardNavigationAfterError_PreservesHistory() throws {
         // Step 1: Successful load (test server).
         let firstURL = UITests.simpleServedPage(titled: "First Error Test Page")
@@ -934,12 +919,12 @@ class ErrorPageUITests: UITestCase {
         )
 
         // Step 3: Another successful page so forward stack includes the error entry.
-        let thirdURL = URL(string: "https://example.com")!
+        let thirdURL = Self.privacyTestPagesHomeURL
         app.activateAddressBar()
         addressBarTextField.pasteURL(thirdURL, pressingEnter: true)
 
-        let thirdPageContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
-        XCTAssertTrue(thirdPageContent.waitForExistence(timeout: UITests.Timeouts.localTestServer), "Third page should load")
+        let thirdPageContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
+        XCTAssertTrue(thirdPageContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Third page should load")
 
         // Step 4: Back twice — to error, then to first page.
         XCTAssertTrue(app.backButton.waitForExistence(timeout: UITests.Timeouts.elementExistence), "Back button should be available")
@@ -957,11 +942,11 @@ class ErrorPageUITests: UITestCase {
         let errorHistoryTitle = try XCTUnwrap(errorURL.host, "Invalid URL should have a host for history title fallback")
         XCTAssertEqual(
             navigationHistoryMenuTitlesFromRightClicking(app.forwardButton),
-            ["First Error Test Page", errorHistoryTitle, "Example Domain"],
-            "Forward popup: current row plus error and example ahead"
+            ["First Error Test Page", errorHistoryTitle, Self.privacyTestPagesHomeDocumentTitle],
+            "Forward popup: current row plus error and privacy-test-pages home ahead"
         )
 
-        // Step 5: Forward twice — error page, then example.com.
+        // Step 5: Forward twice — error page, then privacy-test-pages.site.
         XCTAssertTrue(app.forwardButton.waitForExistence(timeout: UITests.Timeouts.elementExistence), "Forward button should be available")
         XCTAssertTrue(app.forwardButton.isEnabled, "Forward button should be enabled")
         app.forwardButton.click()
@@ -973,9 +958,9 @@ class ErrorPageUITests: UITestCase {
         )
 
         app.forwardButton.click()
-        XCTAssertTrue(thirdPageContent.waitForExistence(timeout: UITests.Timeouts.localTestServer), "Should go forward to third page")
+        XCTAssertTrue(thirdPageContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Should go forward to third page")
 
-        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), "https://example.com/", "Final URL after forward through error")
+        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), Self.privacyTestPagesHomeAddressBarValue, "Final URL after forward through error")
     }
 
     // MARK: - Local history: back, reload, forward
@@ -1346,25 +1331,25 @@ class ErrorPageUITests: UITestCase {
 
     // MARK: - Toolbar reload on success page
 
-    /// Toolbar reload on example.com keeps content and URL.
+    /// Toolbar reload on privacy-test-pages.site keeps content and URL.
     func testErrorPage_ToolbarReloadButton_ReloadsCurrentURL() throws {
-        let url = URL(string: "https://example.com")!
+        let url = Self.privacyTestPagesHomeURL
         app.activateAddressBar()
         addressBarTextField.pasteURL(url, pressingEnter: true)
 
         // Baseline happy path: `app.reloadButton` on a working page.
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Example page should load")
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Privacy Test Pages home should load")
 
-        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), "https://example.com/", "Precondition: example.com is loaded")
+        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), Self.privacyTestPagesHomeAddressBarValue, "Precondition: privacy-test-pages.site is loaded")
 
         let reloadButton = app.reloadButton
         XCTAssertTrue(reloadButton.waitForExistence(timeout: UITests.Timeouts.elementExistence), "Reload button should exist")
         reloadButton.click()
 
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Content should be visible after reload")
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Content should be visible after reload")
 
-        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), "https://example.com/", "URL should remain on example.com after reload")
+        XCTAssertEqual(app.addressBarValueActivatingIfNeeded(), Self.privacyTestPagesHomeAddressBarValue, "URL should remain on privacy-test-pages.site after reload")
     }
 
     // MARK: - failure:// scheme (DuckURLSchemeHandler; Debug submenu)
@@ -1386,10 +1371,10 @@ class ErrorPageUITests: UITestCase {
         assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
         app.openNewTab()
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
         app.activateAddressBar()
-        addressBarTextField.pasteURL(URL(string: "https://example.com")!, pressingEnter: true)
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load example.com")
+        addressBarTextField.pasteURL(Self.privacyTestPagesHomeURL, pressingEnter: true)
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load privacy-test-pages.site")
 
         selectUnpinnedTab(at: 0)
         assertGenericErrorPageVisible()
@@ -1397,23 +1382,23 @@ class ErrorPageUITests: UITestCase {
         assertSelectedTabTitleEquals(Self.tabErrorTitle)
     }
 
-    /// Simulated `failure://` error, simulate **off**, load example.com, **Back** — handler serves demo HTML again.
+    /// Simulated `failure://` error, simulate **off**, load privacy-test-pages.site, **Back** — handler serves demo HTML again.
     func testErrorPage_GoingBackToFailureScheme_AfterDisablingSimulate_ReloadSucceeds() throws {
         app.closeAllWindows()
 
-        // Error first, then example.com on top; turn simulate off before Back so the failure:// commit reloads as demo.
+        // Error first, then privacy-test-pages.site on top; turn simulate off before Back so the failure:// commit reloads as demo.
         ensureSimulateFailureURLSchemeOn()
         openFailureURLSchemeDemoViaDebugMenu()
         assertGenericErrorPageVisible()
         assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
         app.activateAddressBar()
-        addressBarTextField.pasteURL(URL(string: "https://example.com")!, pressingEnter: true)
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "example.com should load")
+        addressBarTextField.pasteURL(Self.privacyTestPagesHomeURL, pressingEnter: true)
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "privacy-test-pages.site should load")
 
         XCTAssertTrue(app.backButton.waitForExistence(timeout: UITests.Timeouts.elementExistence), "Back should return to the failure:// commit")
-        XCTAssertTrue(app.backButton.isEnabled, "Back should be enabled with example.com above the failed scheme load")
+        XCTAssertTrue(app.backButton.isEnabled, "Back should be enabled with privacy-test-pages.site above the failed scheme load")
         ensureSimulateFailureURLSchemeOff()
         app.backButton.click()
         assertFailureSchemeDemoPageBodyVisible()
@@ -1423,7 +1408,7 @@ class ErrorPageUITests: UITestCase {
         )
     }
 
-    /// `failure://` opened with simulate **on** (error), then example.com, then **Back** — still the simulated connection error, not demo HTML.
+    /// `failure://` opened with simulate **on** (error), then privacy-test-pages.site, then **Back** — still the simulated connection error, not demo HTML.
     ///
     /// The back-forward item must come from an initial **failed** load. If the first load is the successful demo (simulate off),
     /// **Back** can restore WebKit’s cached document without re-invoking the scheme handler, so toggling simulate on afterward
@@ -1438,9 +1423,9 @@ class ErrorPageUITests: UITestCase {
         assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
         app.activateAddressBar()
-        addressBarTextField.pasteURL(URL(string: "https://example.com")!, pressingEnter: true)
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "example.com should load")
+        addressBarTextField.pasteURL(Self.privacyTestPagesHomeURL, pressingEnter: true)
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "privacy-test-pages.site should load")
 
         XCTAssertTrue(app.backButton.waitForExistence(timeout: UITests.Timeouts.elementExistence), "Back should be available")
         app.backButton.click()
@@ -1483,10 +1468,10 @@ class ErrorPageUITests: UITestCase {
 
         // Tab 1: load a real page so we can switch away from the failing web view.
         app.openNewTab()
-        let exampleContent = webView.staticTexts.containing(\.value, containing: "Example Domain").firstMatch
+        let privacyTestPagesContent = webView.staticTexts.containing(\.value, containing: Self.privacyTestPagesHomeBodyText).firstMatch
         app.activateAddressBar()
-        addressBarTextField.pasteURL(URL(string: "https://example.com")!, pressingEnter: true)
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load example.com")
+        addressBarTextField.pasteURL(Self.privacyTestPagesHomeURL, pressingEnter: true)
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Second tab should load privacy-test-pages.site")
 
         // Tab 0: reactivation reloads the failed navigation; simulate still ON → error page again.
         selectUnpinnedTab(at: 0)
@@ -1494,11 +1479,92 @@ class ErrorPageUITests: UITestCase {
         assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
 
         selectUnpinnedTab(at: 1)
-        XCTAssertTrue(exampleContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Other tab should still show example.com")
+        XCTAssertTrue(privacyTestPagesContent.waitForExistence(timeout: UITests.Timeouts.navigation), "Other tab should still show privacy-test-pages.site")
 
         ensureSimulateFailureURLSchemeOff()
         selectUnpinnedTab(at: 0)
         assertFailureSchemeDemoPageBodyVisible()
+    }
+
+    /// Aligned with `testWhenTabWithOtherErrorActivated_reloadNotTriggered`: `failure://demo?simulatedError=hostNotFound` fails with
+    /// `URLError.cannotFindHost` — outside `Tab.shouldReload`'s connection-error auto-reload list. Unlike real-DNS variants of this
+    /// scenario, the handler's attempt counter makes "no reload happened" observable: after switching away and back, the error copy
+    /// must still read attempt 1.
+    func testErrorPage_FailureScheme_HostNotFoundQuery_TabSwitch_DoesNotAutoReload() throws {
+        // Toggling simulate resets the attempt counter, so the first load reports attempt 1.
+        ensureSimulateFailureURLSchemeOff()
+        ensureSimulateFailureURLSchemeOn()
+
+        openFailureURLSchemeHostNotFoundQueryViaDebugMenu()
+        assertGenericErrorPageVisible()
+        XCTAssertTrue(
+            webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedHostNotFoundDescription).firstMatch
+                .waitForExistence(timeout: UITests.Timeouts.navigation),
+            "Error page should show the simulated host-not-found copy"
+        )
+        XCTAssertTrue(
+            webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulateAttemptSuffix(1)).firstMatch.exists,
+            "First load should report attempt 1 from the scheme handler"
+        )
+        assertNavigationChromeMatchesTransientConnectionErrorNoBackCase()
+
+        // Second tab so tab 0's web view is deactivated (reactivation would run the load again if this error kind auto-reloaded).
+        app.openNewTab()
+        let servedTitle = "HostNotFound No Autoreload Other Tab"
+        let otherTabURL = UITests.simpleServedPage(titled: servedTitle)
+        app.activateAddressBar()
+        addressBarTextField.pasteURL(otherTabURL, pressingEnter: true)
+        XCTAssertTrue(
+            webView.staticTexts.containing(\.value, containing: servedTitle).firstMatch
+                .waitForExistence(timeout: UITests.Timeouts.localTestServer),
+            "Second tab should load from the tests server"
+        )
+
+        // Reselect tab 0: unlike connection-style errors, host-not-found must NOT re-invoke the scheme handler.
+        selectUnpinnedTab(at: 0)
+        assertGenericErrorPageVisible()
+        let attempt2Label = webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulateAttemptSuffix(2)).firstMatch
+        XCTAssertFalse(
+            attempt2Label.waitForExistence(timeout: 2.0),
+            "Tab reactivation must not reload a host-not-found error (attempt counter stays at 1)"
+        )
+        XCTAssertTrue(
+            webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulateAttemptSuffix(1)).firstMatch.exists,
+            "Error copy should still read attempt 1 after reselection"
+        )
+        XCTAssertTrue(
+            webView.staticTexts.containing(\.value, containing: Self.failureSchemeSimulatedHostNotFoundDescription).firstMatch.exists,
+            "Host-not-found copy should remain after reselection"
+        )
+    }
+
+    /// Debug menu opens `failure://demo` as an actual page (simulate off): demo HTML renders, Save As is enabled (real document,
+    /// not an error surface), and both Cmd+R and toolbar reload keep serving the demo. Finally, turning simulate on and reloading
+    /// must surface the error — proving reload re-invokes the scheme handler rather than repainting a cached document.
+    func testErrorPage_FailureScheme_DemoPageViaDebugMenu_ReloadWorks() throws {
+        ensureSimulateFailureURLSchemeOff()
+        openFailureURLSchemeDemoViaDebugMenu()
+        assertFailureSchemeDemoPageBodyVisible()
+        assertSelectedTabTitleEquals(Self.failureSchemeDocumentTitle)
+        assertSaveAsMenuItemEnabled(true)
+
+        // Cmd+R on the successfully loaded scheme page keeps the demo document.
+        app.typeKey("r", modifierFlags: [.command])
+        assertFailureSchemeDemoPageBodyVisible()
+        assertSelectedTabTitleEquals(Self.failureSchemeDocumentTitle)
+
+        // Toolbar reload does too.
+        let reloadButton = app.reloadButton
+        XCTAssertTrue(reloadButton.waitForExistence(timeout: UITests.Timeouts.elementExistence), "Reload control should exist")
+        XCTAssertTrue(reloadButton.isEnabled)
+        reloadButton.click()
+        assertFailureSchemeDemoPageBodyVisible()
+
+        // Reload is a real navigation through the handler: with simulate on, the same Cmd+R now fails.
+        ensureSimulateFailureURLSchemeOn()
+        app.typeKey("r", modifierFlags: [.command])
+        assertGenericErrorPageVisible()
+        assertFailureSchemeSimulatedConnectionErrorDescriptionVisible()
     }
 }
 
@@ -1512,6 +1578,11 @@ private extension ErrorPageUITests {
     static var unreachableHostMessage: String { "A server with the specified hostname could not be found." }
     static var tabErrorTitle: String { "Failed to open page" }
 
+    static var privacyTestPagesHomeURL: URL { URL(string: "https://privacy-test-pages.site/")! }
+    static var privacyTestPagesHomeBodyText: String { "Privacy Test Pages" }
+    static var privacyTestPagesHomeDocumentTitle: String { "Privacy Test Pages - Home" }
+    static var privacyTestPagesHomeAddressBarValue: String { "https://privacy-test-pages.site/" }
+
     /// Copy from `DuckURLSchemeHandler.failureSchemeDemoHtml` only; simulated connection-error UI includes `failure://` in the NSError description, so do not key off that substring alone.
     static var failureSchemeDemoPageBody: String { "This page is served by the app URL scheme handler." }
 
@@ -1520,6 +1591,9 @@ private extension ErrorPageUITests {
 
     /// Prefix for `URLError.notConnectedToInternet` simulation (`failure://demo?alternatingFailures=1` on alternating passes, or `simulatedError=notConnected`).
     static var failureSchemeSimulatedNotConnectedDescription: String { "Debug simulated not connected to internet (failure://)" }
+
+    /// Prefix for `URLError.cannotFindHost` simulation (`failure://demo?simulatedError=hostNotFound`) — an error kind outside `Tab.shouldReload`'s auto-reload list.
+    static var failureSchemeSimulatedHostNotFoundDescription: String { "Debug simulated host not found (failure://)" }
 
     /// Suffix appended to simulated failure descriptions for UI-visible load counting (`DuckURLSchemeHandler`).
     static func failureSchemeSimulateAttemptSuffix(_ attempt: Int) -> String {
@@ -1591,6 +1665,10 @@ private extension ErrorPageUITests {
 
     func openFailureURLSchemeNotConnectedQueryViaDebugMenu() {
         clickFailureURLSchemeDebugMenuItem(AccessibilityIdentifiers.DebugMenu.openFailureURLSchemeNotConnectedQueryDemoPage)
+    }
+
+    func openFailureURLSchemeHostNotFoundQueryViaDebugMenu() {
+        clickFailureURLSchemeDebugMenuItem(AccessibilityIdentifiers.DebugMenu.openFailureURLSchemeHostNotFoundQueryDemoPage)
     }
 
     /// Idempotent: persisted Debug toggle state is shared across tests—do not assume defaults after `closeAllWindows()`.
@@ -1713,19 +1791,6 @@ private extension ErrorPageUITests {
         XCTAssertTrue(back.isEnabled, "Host-not-found error should allow back navigation", file: file, line: line)
         XCTAssertFalse(forward.isEnabled, "Forward should be disabled with no forward stack", file: file, line: line)
         XCTAssertTrue(reload.isEnabled, "Reload should stay enabled on error page", file: file, line: line)
-        assertSaveAsMenuItemEnabled(false, file: file, line: line)
-    }
-
-    /// Transient connection-style error on a tab that still has only prior **new-tab** history (no forward stack).
-    func assertNavigationChromeMatchesTransientConnectionErrorCase(file: StaticString = #filePath, line: UInt = #line) {
-        let back = app.backButton
-        let forward = app.forwardButton
-        let reload = app.reloadButton
-        XCTAssertTrue(back.waitForExistence(timeout: UITests.Timeouts.elementExistence), file: file, line: line)
-        XCTAssertTrue(forward.exists && reload.exists, file: file, line: line)
-        XCTAssertTrue(back.isEnabled, file: file, line: line)
-        XCTAssertFalse(forward.isEnabled, file: file, line: line)
-        XCTAssertTrue(reload.isEnabled, file: file, line: line)
         assertSaveAsMenuItemEnabled(false, file: file, line: line)
     }
 

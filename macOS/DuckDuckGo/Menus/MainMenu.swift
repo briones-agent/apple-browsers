@@ -946,7 +946,7 @@ final class MainMenu: NSMenu {
                 NSMenuItem(title: "Show Pop Up Window", action: #selector(MainViewController.showPopUpWindow))
                 alwaysShowFirstTimeQuitSurvey
             }
-            if AppVersion.runType == .uiTests {
+            if featureFlagger.isFeatureOn(.failureURLScheme) {
                 NSMenuItem(title: "failure:// URL scheme") {
                     simulateFailureURLSchemeConnectionErrorMenuItem
                     NSMenuItem(
@@ -964,6 +964,11 @@ final class MainMenu: NSMenu {
                         action: #selector(AppDelegate.openFailureURLSchemeNotConnectedQueryDebugPage(_:))
                     )
                     .withAccessibilityIdentifier(AccessibilityIdentifiers.DebugMenu.openFailureURLSchemeNotConnectedQueryDemoPage)
+                    NSMenuItem(
+                        title: "Open failure:// demo (hostNotFound query)",
+                        action: #selector(AppDelegate.openFailureURLSchemeHostNotFoundQueryDebugPage(_:))
+                    )
+                    .withAccessibilityIdentifier(AccessibilityIdentifiers.DebugMenu.openFailureURLSchemeHostNotFoundQueryDemoPage)
                 }.withAccessibilityIdentifier(AccessibilityIdentifiers.DebugMenu.failureURLScheme)
             }
             NSMenuItem(title: "Remote Configuration") {
@@ -1315,7 +1320,7 @@ final class MainMenu: NSMenu {
     @objc private func toggleSimulateFailureURLSchemeConnectionErrorAction(_ sender: NSMenuItem) {
         let keyed = failureURLSchemeDebugKeyedStorage
         keyed.simulateConnectionLost = !(keyed.simulateConnectionLost == true)
-        if AppVersion.runType == .uiTests {
+        if featureFlagger.isFeatureOn(.failureURLScheme) {
             DuckURLSchemeHandler.resetFailureSchemeAlternatingStateForUITests()
         }
         updateSimulateFailureURLSchemeConnectionErrorMenuItem()

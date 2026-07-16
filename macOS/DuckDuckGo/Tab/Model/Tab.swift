@@ -303,7 +303,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         specialPagesUserScript?
             .withAllSubfeatures()
         let configuration = webViewConfiguration ?? WKWebViewConfiguration()
-        configuration.applyStandardConfiguration(contentBlocking: privacyFeatures.contentBlocking,
+        configuration.applyStandardConfiguration(featureFlagger: featureFlagger,
+                                                 contentBlocking: privacyFeatures.contentBlocking,
                                                  burnerMode: burnerMode,
                                                  privateProcessName: featureFlagger.isFeatureOn(.privateProcessName),
                                                  earlyAccessHandlers: specialPagesUserScript.map { [$0] } ?? [])
@@ -1000,7 +1001,8 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
         // In the case of an error only reload web URLs to prevent uxss attacks via redirecting to javascript://
         if let error = error,
            let failingUrl = error.failingUrl ?? content.urlForWebView,
-           failingUrl.isHttpOrHttps,
+           // treat failure:// URLs as valid hypertext URLs for reloading (used in UI tests to simulate connection errors)
+           failingUrl.isHttpOrHttps || (featureFlagger.isFeatureOn(.failureURLScheme) && failingUrl.isFailureDemoURLScheme),
            // navigate in-place to preserve back-forward history
            // launch navigation using javascript: URL navigation to prevent WebView from
             // interpreting the action as user-initiated link navigation causing a new tab opening when Cmd is pressed
@@ -1074,7 +1076,9 @@ protocol TabDelegate: ContentOverlayUserScriptDelegate {
     @MainActor
     private func shouldReload(_ url: URL, source: ReloadIfNeededSource) -> Bool {
         /// Use unified logic if enabled to decide if URL is valid
-        guard url.isValid(usingUnifiedLogic: featureFlagger.isFeatureOn(.unifiedURLPredictor)) || (AppVersion.runType == .uiTests && url.isFailureDemoURLScheme) else { return false }
+        guard url.isValid(usingUnifiedLogic: featureFlagger.isFeatureOn(.unifiedURLPredictor))
+                // treat failure:// URLs as valid hypertext URLs for reloading (used in UI tests to simulate connection errors)
+                || (featureFlagger.isFeatureOn(.failureURLScheme) && url.isFailureDemoURLScheme) else { return false }
 
         switch source {
         // should load when Web View is displayed?

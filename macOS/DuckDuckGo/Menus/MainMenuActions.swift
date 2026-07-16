@@ -123,7 +123,7 @@ extension AppDelegate {
     /// Uses `show(url:newTab:false)` so **Debug → Open demo** does not always append a tab (e.g. pinned-tab UI tests).
     /// Menu targets `AppDelegate` when there is no key window (all closed).
     @objc func openFailureURLSchemeDemoDebugPage(_ sender: Any?) {
-        guard AppVersion.runType == .uiTests else { return }
+        guard featureFlagger.isFeatureOn(.failureURLScheme) else { return }
         DispatchQueue.main.async {
             guard let url = URL(string: "\(URL.failureDemoURLScheme)://demo") else { return }
             self.windowControllersManager.show(url: url, source: .ui, newTab: false)
@@ -131,7 +131,7 @@ extension AppDelegate {
     }
 
     @objc func openFailureURLSchemeAlternatingFailuresDebugPage(_ sender: Any?) {
-        guard AppVersion.runType == .uiTests else { return }
+        guard featureFlagger.isFeatureOn(.failureURLScheme) else { return }
         DispatchQueue.main.async {
             guard let url = URL(string: "\(URL.failureDemoURLScheme)://demo?alternatingFailures=1") else { return }
             self.windowControllersManager.show(url: url, source: .ui, newTab: false)
@@ -139,9 +139,17 @@ extension AppDelegate {
     }
 
     @objc func openFailureURLSchemeNotConnectedQueryDebugPage(_ sender: Any?) {
-        guard AppVersion.runType == .uiTests else { return }
+        guard featureFlagger.isFeatureOn(.failureURLScheme) else { return }
         DispatchQueue.main.async {
             guard let url = URL(string: "\(URL.failureDemoURLScheme)://demo?simulatedError=notConnected") else { return }
+            self.windowControllersManager.show(url: url, source: .ui, newTab: false)
+        }
+    }
+
+    @objc func openFailureURLSchemeHostNotFoundQueryDebugPage(_ sender: Any?) {
+        guard featureFlagger.isFeatureOn(.failureURLScheme) else { return }
+        DispatchQueue.main.async {
+            guard let url = URL(string: "\(URL.failureDemoURLScheme)://demo?simulatedError=hostNotFound") else { return }
             self.windowControllersManager.show(url: url, source: .ui, newTab: false)
         }
     }
@@ -1926,8 +1934,9 @@ extension AppDelegate: NSMenuItemValidation {
 
         case #selector(AppDelegate.openFailureURLSchemeDemoDebugPage(_:)),
             #selector(AppDelegate.openFailureURLSchemeAlternatingFailuresDebugPage(_:)),
-            #selector(AppDelegate.openFailureURLSchemeNotConnectedQueryDebugPage(_:)):
-            guard AppVersion.runType == .uiTests else { return false }
+            #selector(AppDelegate.openFailureURLSchemeNotConnectedQueryDebugPage(_:)),
+            #selector(AppDelegate.openFailureURLSchemeHostNotFoundQueryDebugPage(_:)):
+            guard featureFlagger.isFeatureOn(.failureURLScheme) else { return false }
             return isUserInteractionAllowed || !isDisplayingOneOrMoreWindows
 
         case #selector(AppDelegate.newBurnerWindow(_:)),

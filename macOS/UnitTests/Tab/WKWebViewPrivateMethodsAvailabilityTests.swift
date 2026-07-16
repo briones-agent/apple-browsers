@@ -17,6 +17,7 @@
 //
 
 import Navigation
+import PrivacyConfig
 import WebKit
 import XCTest
 @testable import DuckDuckGo_Privacy_Browser
@@ -81,7 +82,10 @@ final class WKWebViewPrivateMethodsAvailabilityTests: XCTestCase {
     func testApplyStandardConfigurationDoesModifyProcessNameWhenPrivateProcessNameIsEnabled() {
         let configuration = WKWebViewConfiguration()
 
-        configuration.applyStandardConfiguration(contentBlocking: MockContentBlocking(), burnerMode: .regular, privateProcessName: true)
+        configuration.applyStandardConfiguration(featureFlagger: MockFeatureFlagger(),
+                                                 contentBlocking: MockContentBlocking(),
+                                                 burnerMode: .regular,
+                                                 privateProcessName: true)
         XCTAssertEqual(configuration.systemProcessName, "DuckDuckGo Web Content")
     }
 
@@ -89,7 +93,10 @@ final class WKWebViewPrivateMethodsAvailabilityTests: XCTestCase {
     func testApplyStandardConfigurationDoesNotModifyProcessNameWhenPrivateProcessNameIsDisabled() {
         let configuration = WKWebViewConfiguration()
 
-        configuration.applyStandardConfiguration(contentBlocking: MockContentBlocking(), burnerMode: .regular, privateProcessName: false)
+        configuration.applyStandardConfiguration(featureFlagger: MockFeatureFlagger(),
+                                                 contentBlocking: MockContentBlocking(),
+                                                 burnerMode: .regular,
+                                                 privateProcessName: false)
         XCTAssertEqual(configuration.systemProcessName, "")
     }
 }
