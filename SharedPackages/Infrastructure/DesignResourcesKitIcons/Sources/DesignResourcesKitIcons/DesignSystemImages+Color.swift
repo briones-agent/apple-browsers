@@ -52,7 +52,11 @@ public extension DesignSystemImages {
                     ? .init(resource: .appearanceColor16)
                     : .init(resource: .appearanceColor16Legacy)
             }
-            public static var assist: DesignSystemImage { .init(resource: .assistColor16) }
+            public static var assist: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .assistColor16)
+                    : .init(resource: .assistColor16Legacy)
+            }
             public static var autofill: DesignSystemImage { .init(resource: .autofillColor16) }
             public static var bitwarden: DesignSystemImage { .init(resource: .bitwardenColor16) }
             public static var bitwardenLocked: DesignSystemImage { .init(resource: .bitwardenLockedColor16) }
@@ -132,7 +136,11 @@ public extension DesignSystemImages {
             public static var globe: DesignSystemImage { .init(resource: .globeColor16) }
             public static var heart: DesignSystemImage { .init(resource: .heartColor16) }
             public static var heartGrey: DesignSystemImage { .init(resource: .heartGreyColor16) }
-            public static var hideAIGeneratedImages: DesignSystemImage { .init(resource: .imageAIBlocked16) }
+            public static var hideAIGeneratedImages: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .imageAIBlocked16)
+                    : .init(resource: .imageAIBlocked16Legacy)
+            }
             public static var history: DesignSystemImage { .init(resource: .historyColor16) }
             public static var home: DesignSystemImage { .init(resource: .homeColor16) }
             public static var hourglass: DesignSystemImage { .init(resource: .hourglassColor16) }
