@@ -17,6 +17,7 @@
 //
 
 import Common
+import FoundationExtensions
 import History
 import HistoryView
 import PrivacyConfig
@@ -438,10 +439,11 @@ final class ContextualMenuTests: XCTestCase {
                                               fireproofDomains: MockFireproofDomains(),
                                               faviconManagement: FaviconManagerMock(),
                                               windowControllersManager: menu.windowControllersManager,
+                                              dataClearingPreferences: Application.appDelegate.dataClearingPreferences,
                                               pixelFiring: nil,
                                               historyProvider: MockHistoryViewDataProvider())
         let mainViewController = MainViewController(
-            tabCollectionViewModel: TabCollectionViewModel(tabCollection: TabCollection(tabs: [])),
+            tabCollectionViewModel: TabCollectionViewModel(tabCollection: TabCollection()),
             autofillPopoverPresenter: DefaultAutofillPopoverPresenter(pinningManager: MockPinningManager()),
             aiChatSessionStore: AIChatSessionStore(featureFlagger: MockFeatureFlagger()),
             fireCoordinator: fireCoordinator
@@ -490,10 +492,11 @@ final class ContextualMenuTests: XCTestCase {
                                               fireproofDomains: MockFireproofDomains(),
                                               faviconManagement: FaviconManagerMock(),
                                               windowControllersManager: menu.windowControllersManager,
+                                              dataClearingPreferences: Application.appDelegate.dataClearingPreferences,
                                               pixelFiring: nil,
                                               historyProvider: MockHistoryViewDataProvider())
         let mainViewController = MainViewController(
-            tabCollectionViewModel: TabCollectionViewModel(tabCollection: TabCollection(tabs: [])),
+            tabCollectionViewModel: TabCollectionViewModel(tabCollection: TabCollection()),
             autofillPopoverPresenter: DefaultAutofillPopoverPresenter(pinningManager: MockPinningManager()),
             aiChatSessionStore: AIChatSessionStore(featureFlagger: MockFeatureFlagger()),
             fireCoordinator: fireCoordinator

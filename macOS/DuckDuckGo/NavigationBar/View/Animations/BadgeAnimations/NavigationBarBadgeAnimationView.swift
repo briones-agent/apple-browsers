@@ -30,22 +30,27 @@ final class NavigationBarBadgeAnimationView: NSView {
         case cookiePopupManaged
         case cookiePopupHidden
         case trackersBlocked(count: Int)
+        case youTubeAdBlockOn
     }
 
     func prepareAnimation(_ type: AnimationType) {
         removeAnimation()
-        let viewToAnimate: NotificationBarViewAnimated
+        let viewToAnimate: BadgeNotificationContainerView
+        let accessibilityLabel: String
+        let accessibilityIdentifier: String
         switch type {
         case .cookiePopupHidden:
             viewToAnimate = BadgeNotificationContainerView(isCosmetic: true)
+            accessibilityLabel = UserText.cookiePopupHiddenNotification
+            accessibilityIdentifier = "NavigationBar.cookiePopupHiddenNotification"
         case .cookiePopupManaged:
             viewToAnimate = BadgeNotificationContainerView(isCosmetic: false)
+            accessibilityLabel = UserText.cookiePopupManagedNotification
+            accessibilityIdentifier = "NavigationBar.cookiePopupManagedNotification"
         case .trackersBlocked(let count):
-            // Create text generator for proper localization during counting animation
             let textGenerator: (Int) -> String = { currentCount in
                 UserText.omnibarNotificationTrackersBlocked(currentCount)
             }
-            // Use initial text for fallback (same as iOS)
             let text = UserText.omnibarNotificationTrackersBlocked(count)
             viewToAnimate = BadgeNotificationContainerView(
                 customText: text,
@@ -53,7 +58,21 @@ final class NavigationBarBadgeAnimationView: NSView {
                 trackerCount: count,
                 textGenerator: textGenerator
             )
+            accessibilityLabel = text
+            accessibilityIdentifier = "NavigationBar.trackersBlockedNotification"
+        case .youTubeAdBlockOn:
+            viewToAnimate = BadgeNotificationContainerView(
+                customText: UserText.omnibarNotificationYouTubeAdBlockOn,
+                useVideoPlayerIcon: true
+            )
+            accessibilityLabel = UserText.omnibarNotificationYouTubeAdBlockOn
+            accessibilityIdentifier = "NavigationBar.youTubeAdBlockOnNotification"
         }
+
+        viewToAnimate.setAccessibilityElement(true)
+        viewToAnimate.setAccessibilityRole(.staticText)
+        viewToAnimate.setAccessibilityLabel(accessibilityLabel)
+        viewToAnimate.setAccessibilityIdentifier(accessibilityIdentifier)
 
         addSubview(viewToAnimate)
         animatedView = viewToAnimate

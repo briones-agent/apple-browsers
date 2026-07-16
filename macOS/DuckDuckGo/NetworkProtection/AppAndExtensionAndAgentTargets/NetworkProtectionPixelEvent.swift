@@ -29,13 +29,14 @@ enum NetworkProtectionPixelEvent: PixelKitEvent {
 
     case networkProtectionControllerStartAttempt
     case networkProtectionControllerStartSuccess
-    case networkProtectionControllerStartCancelled
+    case networkProtectionControllerStartCancelled(step: CancellationStep)
     case networkProtectionControllerStartFailure(_ error: Error)
 
     case networkProtectionTunnelStartAttempt
-    case networkProtectionTunnelStartAttemptOnDemandWithoutAccessToken
+    case networkProtectionTunnelStartAttemptOnDemandWithoutAccessToken(_ error: Error)
     case networkProtectionTunnelStartSuccess
     case networkProtectionTunnelStartFailure(_ error: Error)
+    case networkProtectionConnectionFailureLoopDetected(_ error: Error)
 
     case networkProtectionTunnelStopAttempt
     case networkProtectionTunnelStopSuccess
@@ -157,6 +158,9 @@ enum NetworkProtectionPixelEvent: PixelKitEvent {
 
         case .networkProtectionTunnelStartFailure:
             return "netp_tunnel_start_failure"
+
+        case .networkProtectionConnectionFailureLoopDetected:
+            return "netp_connection_failure_loop_detected"
 
         case .networkProtectionTunnelStopAttempt:
             return "netp_tunnel_stop_attempt"
@@ -410,6 +414,8 @@ enum NetworkProtectionPixelEvent: PixelKitEvent {
             return error?.pixelParameters
         case .networkProtectionWireguardErrorInvalidState(reason: let reason):
             return [PixelKit.Parameters.reason: reason]
+        case .networkProtectionControllerStartCancelled(let step):
+            return [PixelKit.Parameters.vpnStartCancellationStep: step.rawValue]
         case .networkProtectionServerMigrationFailure:
             return error?.pixelParameters
         case .networkProtectionConfigurationErrorLoadingCachedConfig(let error):
@@ -424,14 +430,16 @@ enum NetworkProtectionPixelEvent: PixelKitEvent {
             return error.pixelParameters
         case .networkProtectionAdapterEndTemporaryShutdownStateRecoveryFailure(let error):
             return error.pixelParameters
+        case .networkProtectionConnectionFailureLoopDetected(let error):
+            return error.pixelParameters
+        case .networkProtectionTunnelStartAttemptOnDemandWithoutAccessToken(let error):
+            return error.pixelParameters
         case .networkProtectionActiveUser,
                 .networkProtectionNewUser,
                 .networkProtectionControllerStartAttempt,
                 .networkProtectionControllerStartSuccess,
-                .networkProtectionControllerStartCancelled,
                 .networkProtectionControllerStartFailure,
                 .networkProtectionTunnelStartAttempt,
-                .networkProtectionTunnelStartAttemptOnDemandWithoutAccessToken,
                 .networkProtectionTunnelStartSuccess,
                 .networkProtectionTunnelStartFailure,
                 .networkProtectionTunnelStopAttempt,
@@ -552,7 +560,8 @@ enum NetworkProtectionPixelEvent: PixelKitEvent {
                 .networkProtectionWireguardErrorCannotSetNetworkSettings,
                 .networkProtectionWireguardErrorCannotSetWireguardConfig,
                 .networkProtectionWireguardErrorCannotStartWireguardBackend,
-                .networkProtectionWireguardErrorInvalidState:
+                .networkProtectionWireguardErrorInvalidState,
+                .networkProtectionConnectionFailureLoopDetected:
             return [.pixelSource]
         }
     }

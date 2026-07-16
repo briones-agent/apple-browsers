@@ -17,6 +17,7 @@
 //  limitations under the License.
 //
 
+import AIChat
 import DDGSync
 import Persistence
 import PrivacyConfig
@@ -51,9 +52,12 @@ enum DebugScreen: Identifiable {
         let databaseDelegate: DBPIOSInterface.DatabaseDelegate?
         let debuggingDelegate: DBPIOSInterface.DebuggingDelegate?
         let runPrequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?
+        let freemiumPIRDebugSettings: FreemiumPIRDebugSettings
+        let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
         let subscriptionDataReporter: SubscriptionDataReporting
         let remoteMessagingDebugHandler: RemoteMessagingDebugHandling
         let webExtensionManager: WebExtensionManaging?
+        let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
 
     }
 

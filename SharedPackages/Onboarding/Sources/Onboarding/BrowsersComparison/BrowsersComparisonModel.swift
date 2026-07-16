@@ -19,50 +19,38 @@
 import Foundation
 import DesignResourcesKitIcons
 import Common
+import FoundationExtensions
 
 public struct BrowsersComparisonModel {
 
     public static var privacyFeatures: [PrivacyFeature] {
-        privacyFeatures(locale: .current)
-    }
-
-    public static func privacyFeatures(locale: Locale) -> [PrivacyFeature] {
-        orderedFeatureTypes(locale: locale).map { featureType in
+        orderedFeatureTypes().map { featureType in
             PrivacyFeature(type: featureType, browsersSupport: browsersSupport(for: featureType))
         }
     }
 
-    // For this iOS copy rollout, English users see an AI chat row in position 2 and the erase-data row removed.
-    // All other locales/platforms keep the original feature order.
-    private static func orderedFeatureTypes(locale: Locale) -> [PrivacyFeature.FeatureType] {
+    // iOS users see an AI chat row in position 2 and the erase-data row removed.
+    // macOS keeps the original feature order.
+    private static func orderedFeatureTypes() -> [PrivacyFeature.FeatureType] {
 #if os(iOS)
-        if isEnglishLanguage(locale: locale) {
-            var featureTypes: [PrivacyFeature.FeatureType] = [
-                .privateSearch,
-                .privateAIChat,
-                .blockThirdPartyTrackers,
-                .blockCookiePopups,
-                .blockCreepyAds
-            ]
-            return featureTypes
-        }
-#endif
-
-        var featureTypes: [PrivacyFeature.FeatureType] = [
+        return [
+            .privateSearch,
+            .privateAIChat,
+            .blockThirdPartyTrackers,
+            .blockCookiePopups,
+            .blockCreepyAds,
+            .duckplayer
+        ]
+#elseif os(macOS)
+        return [
             .privateSearch,
             .blockThirdPartyTrackers,
             .blockCookiePopups,
             .blockCreepyAds,
-            .eraseBrowsingData
+            .eraseBrowsingData,
+            .duckplayer
         ]
-#if os(macOS)
-        featureTypes.append(.duckplayer)
 #endif
-        return featureTypes
-    }
-
-    private static func isEnglishLanguage(locale: Locale) -> Bool {
-        locale.languageCode?.lowercased() == "en"
     }
 
     private static func browsersSupport(for feature: PrivacyFeature.FeatureType) -> [PrivacyFeature.BrowserSupport] {
@@ -111,7 +99,6 @@ public struct BrowsersComparisonModel {
                 case .safari:
                     availability = .unavailable
                 }
-            #if os(macOS)
             case .duckplayer:
                 switch browser {
                 case .ddg:
@@ -119,7 +106,6 @@ public struct BrowsersComparisonModel {
                 case .safari:
                     availability = .unavailable
                 }
-            #endif
             }
 
             return PrivacyFeature.BrowserSupport(browser: browser, availability: availability)
@@ -164,11 +150,12 @@ extension BrowsersComparisonModel.PrivacyFeature {
             public enum Features {
                 public static let privateSearch = NSLocalizedString("onboarding.browsers.features.privateSearch.title", bundle: Bundle.module, value: "Search privately by default", comment: "Message to highlight browser capability of private searches")
                 public static let trackerBlockers = NSLocalizedString("onboarding.highlights.browsers.features.trackerBlocker.title", bundle: Bundle.module, value: "Block 3rd-party trackers", comment: "Message to highlight browser capability of blocking 3rd-party trackers")
+                public static let cookiePopupsAndAds = NSLocalizedString("onboarding.browsers.features.cookiePopupsAndAds.title", bundle: Bundle.module, value: "Block targeted ads & cookie pop-ups", comment: "Message to highlight how the browser allows you to block cookie pop-ups and ads")
                 public static let cookiePopups = NSLocalizedString("onboarding.highlights.browsers.features.cookiePopups.title", bundle: Bundle.module, value: "Block cookie pop-ups", comment: "Message to highlight how the browser allows you to block cookie pop-ups")
                 public static let creepyAds = NSLocalizedString("onboarding.highlights.browsers.features.creepyAds.title", bundle: Bundle.module, value: "Block targeted ads", comment: "Message to highlight browser capability of blocking creepy ads")
                 public static let eraseBrowsingData = NSLocalizedString("onboarding.highlights.browsers.features.eraseBrowsingData.title", bundle: Bundle.module, value: "Delete browsing data with one button", comment: "Message to highlight browser capability of swiftly erase browsing data")
-                public static let privateAIChat = NotLocalizedString("onboarding.highlights.browsers.features.duckAI.title", value: "Use ChatGPT privately with Duck.ai built in", comment: "Message to highlight browser capability of chatting with ChatGPT without sharing data with third parties")
-                public static let duckplayer = NSLocalizedString("onboarding.highlights.browsers.features.duckplayer.title", bundle: Bundle.module, value: "Play YouTube without targeted ads", comment: "Message to highlight browser capability of watching YouTube videos without targeted ads")
+                public static let privateAIChat = NSLocalizedString("onboarding.highlights.browsers.features.duckAI.title", bundle: Bundle.module, value: "Use ChatGPT privately with Duck.ai built in", comment: "Message to highlight browser capability of chatting with ChatGPT without sharing data with third parties")
+                public static let duckplayer = NSLocalizedString("onboarding.highlights.browsers.features.duckplayer.title", bundle: Bundle.module, value: "Play YouTube videos without ads", comment: "Message to highlight browser capability of watching YouTube videos without ads")
             }
         }
     }
@@ -185,9 +172,7 @@ extension BrowsersComparisonModel.PrivacyFeature {
         case blockCreepyAds
         case privateAIChat
         case eraseBrowsingData
-        #if os(macOS)
         case duckplayer
-        #endif
 
         var title: String {
             switch self {
@@ -203,10 +188,8 @@ extension BrowsersComparisonModel.PrivacyFeature {
                 UserText.BrowsersComparison.Features.privateAIChat
             case .eraseBrowsingData:
                 UserText.BrowsersComparison.Features.eraseBrowsingData
-            #if os(macOS)
             case .duckplayer:
                 UserText.BrowsersComparison.Features.duckplayer
-            #endif
             }
         }
 
@@ -224,10 +207,8 @@ extension BrowsersComparisonModel.PrivacyFeature {
                 DesignSystemImages.Glyphs.Size24.chat
             case .eraseBrowsingData:
                 DesignSystemImages.Color.Size24.fire
-            #if os(macOS)
             case .duckplayer:
                 DesignSystemImages.Color.Size24.videoPlayer
-            #endif
             }
         }
     }

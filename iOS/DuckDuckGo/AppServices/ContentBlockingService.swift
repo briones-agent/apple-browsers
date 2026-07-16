@@ -17,7 +17,9 @@
 //  limitations under the License.
 //
 
+import AIChat
 import ContentBlocking
+import Persistence
 import PrivacyConfig
 import Core
 import DDGSync
@@ -28,6 +30,10 @@ final class ContentBlockingService {
     public let common: ContentBlocking
     public let updating: ContentBlockingUpdating
     public let userScriptsDependencies: DefaultScriptSourceProvider.Dependencies
+    public let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+    public let fireModeStorageController: FireModeNativeStorageController?
+    public let adBlockingAvailability: AdBlockingAvailabilityProviding
+    public var duckAiFireModeStorageHandler: DuckAiNativeStorageHandling? { fireModeStorageController }
 
     init(appSettings: AppSettings,
          contentBlocking: ContentBlocking,
@@ -36,8 +42,15 @@ final class ContentBlockingService {
          contentScopeExperimentsManager: ContentScopeExperimentsManaging,
          internalUserDecider: InternalUserDecider,
          syncErrorHandler: SyncErrorHandler,
-         webExtensionAvailability: WebExtensionAvailabilityProviding? = nil) {
+         keyValueStore: ThrowingKeyValueStoring,
+         webExtensionAvailability: WebExtensionAvailabilityProviding? = nil,
+         duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil,
+         fireModeStorageController: FireModeNativeStorageController? = nil,
+         adBlockingAvailability: AdBlockingAvailabilityProviding) {
 
+        self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
+        self.fireModeStorageController = fireModeStorageController
+        self.adBlockingAvailability = adBlockingAvailability
         common = contentBlocking
 
         userScriptsDependencies = DefaultScriptSourceProvider.Dependencies(appSettings: appSettings,
@@ -50,6 +63,9 @@ final class ContentBlockingService {
                                                                            syncErrorHandler: syncErrorHandler,
                                                                            webExtensionAvailability: webExtensionAvailability)
 
-        updating = ContentBlockingUpdating(userScriptsDependencies: userScriptsDependencies)
+        updating = ContentBlockingUpdating(userScriptsDependencies: userScriptsDependencies,
+                                           duckAiNativeStorageHandler: duckAiNativeStorageHandler,
+                                           keyValueStore: keyValueStore,
+                                           adBlockingAvailability: adBlockingAvailability)
     }
 }

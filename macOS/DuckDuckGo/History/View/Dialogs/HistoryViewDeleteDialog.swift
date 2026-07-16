@@ -16,7 +16,9 @@
 //  limitations under the License.
 //
 
+import Common
 import SwiftUIExtensions
+import DesignResourcesKit
 
 struct HistoryViewDeleteDialog: ModalView {
 
@@ -25,7 +27,7 @@ struct HistoryViewDeleteDialog: ModalView {
 
     var body: some View {
         VStack(spacing: 16) {
-            Image(.historyBurn)
+            Image(DesignSystemRebrand.isAppRebranded() ? .historyBurn : .historyBurnLegacy)
 
             VStack(spacing: 12) {
                 Text(model.title)
@@ -78,7 +80,7 @@ struct HistoryViewDeleteDialog: ModalView {
                         .frame(maxWidth: .infinity)
                         .frame(height: 28)
                 }
-                .buttonStyle(StandardButtonStyle(topPadding: 0, bottomPadding: 0))
+                .buttonStyle(StandardButtonStyle(topPadding: 0, bottomPadding: 0, pillShape: true))
                 .keyboardShortcut(.cancelAction)
                 .accessibilityIdentifier("ClearAllHistoryAndDataAlert.cancelButton")
 
@@ -91,13 +93,13 @@ struct HistoryViewDeleteDialog: ModalView {
                         .frame(maxWidth: .infinity)
                         .frame(height: 28)
                 }
-                .buttonStyle(DestructiveActionButtonStyle(enabled: true, topPadding: 0, bottomPadding: 0))
+                .buttonStyle(DestructiveActionButtonStyle(enabled: true, topPadding: 0, bottomPadding: 0, pillShape: true))
                 .keyboardShortcut(.defaultAction)
                 .accessibilityIdentifier("ClearAllHistoryAndDataAlert.clearButton")
 
             }
         }
-        .padding(16)
+        .padding(AppVersion.isLiquidGlassSupported ? 20 : 16)
         .frame(width: 330)
     }
 }

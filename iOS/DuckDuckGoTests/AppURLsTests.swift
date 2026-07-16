@@ -25,8 +25,18 @@ import PrivacyConfigTestsUtils
 
 final class AppURLsTests: XCTestCase {
 
+    func testSearchTokenURLRespectsDebugOverride() {
+        URL.searchTokenURLOverride = nil
+        let base = URL.searchToken.absoluteString // env/default, whatever it currently is
+        URL.searchTokenURLOverride = "https://example.test/tok"
+        XCTAssertEqual(URL.searchToken.absoluteString, "https://example.test/tok")
+        URL.searchTokenURLOverride = nil
+        XCTAssertEqual(URL.searchToken.absoluteString, base)
+    }
+
     var mockStatisticsStore: MockStatisticsStore!
     var appConfig: PrivacyConfiguration!
+    static var searchTokenURLOverride: String?
 
     override func setUp() {
         super.setUp()
@@ -49,6 +59,14 @@ final class AppURLsTests: XCTestCase {
                                             identifier: "",
                                             localProtection: localProtection,
                                             internalUserDecider: MockInternalUserDecider())
+    }
+    
+    override class func setUp() {
+        Self.searchTokenURLOverride = URL.searchTokenURLOverride
+    }
+    
+    override func tearDown() {
+        URL.searchTokenURLOverride = Self.searchTokenURLOverride
     }
 
     func testWhenRemoveInternalSearchParametersFromSearchUrlThenUrlIsChanged() throws {
@@ -218,15 +236,27 @@ final class AppURLsTests: XCTestCase {
     }
 
     func testExtiUrlCreatesUrlWithAtbParam() throws {
-        let url = URL.makeExtiURL(atb: "x")
+        let url = URL.makeExtiURL(atb: "x", isPad: false)
         XCTAssertEqual(url.getParameter(named: "atb"), "x")
+        XCTAssertEqual(url.getParameter(named: "is_tablet"), "0")
+    }
+
+    func testExtiUrlCreatesUrlWithAtbParamForPad() throws {
+        let url = URL.makeExtiURL(atb: "x", isPad: true)
+        XCTAssertEqual(url.getParameter(named: "atb"), "x")
+        XCTAssertEqual(url.getParameter(named: "is_tablet"), "1")
     }
 
     func testSearchUrlCreatesUrlWithSourceParam() throws {
         let url = StatisticsDependentURLFactory(statisticsStore: mockStatisticsStore).makeSearchURL(text: "query")!
         XCTAssertEqual(url.getParameter(named: "t"), "ddg_ios")
     }
-    
+
+    func testSearchUrlCreatesUrlWithSourceParamForiPad() throws {
+        let url = StatisticsDependentURLFactory(statisticsStore: mockStatisticsStore, isPad: true).makeSearchURL(text: "query")!
+        XCTAssertEqual(url.getParameter(named: "t"), "ddg_ios_tablet")
+    }
+
     func testWhenExistingQueryUsesVerticalThenItIsAppliedToNewOne() throws {
         let contextURL = URL(string: "https://duckduckgo.com/?q=query&iar=images&ko=-1&ia=images")!
         let url = StatisticsDependentURLFactory(statisticsStore: mockStatisticsStore)

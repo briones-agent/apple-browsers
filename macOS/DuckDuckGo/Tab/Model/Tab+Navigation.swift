@@ -20,6 +20,7 @@ import AppUpdaterShared
 import BrowserServicesKit
 import Combine
 import Common
+import FoundationExtensions
 import Foundation
 import Navigation
 import WebKit
@@ -32,6 +33,9 @@ extension Tab: NavigationResponder {
         navigationDelegate.setResponders(
             // AI Chat navigations handling
             .weak(nullable: self.aiChat),
+
+            // Re-collect page context/signals once a page finishes loading (sidebar suggestions)
+            .weak(nullable: self.pageContext),
 
             // Pop-ups and Navigation Key Modifiers handling
             .weak(nullable: self.popupHandling),
@@ -96,9 +100,12 @@ extension Tab: NavigationResponder {
             // Internal Feedback Form
             .weak(nullable: self.internalFeedbackForm),
 
+            // Tab Suspension
+            .weak(nullable: self.tabSuspension),
+
             // should be the last, for Unit Tests navigation events tracking
             .struct(nullable: testsClosureNavigationResponder)
-            // !! don‘t add Tab Extensions here !!
+            // !! don't add Tab Extensions after this line !!
         )
 
         newWindowPolicyDecisionMakers = [NewWindowPolicyDecisionMaking?](arrayLiteral:

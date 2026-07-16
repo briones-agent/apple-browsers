@@ -18,6 +18,7 @@
 
 import Foundation
 import Cocoa
+import DesignResourcesKit
 
 extension NSAlert {
 
@@ -153,25 +154,6 @@ extension NSAlert {
         return alert
     }
 
-    static func osNotSupported(_ supportWarning: OSSupportWarning) -> NSAlert {
-        let alert = NSAlert()
-
-        switch supportWarning {
-        case .unsupported(let minVersion):
-            alert.messageText = UserText.aboutUnsupportedDeviceInfo1
-            alert.informativeText = UserText.aboutUnsupportedDeviceInfo2(version: minVersion)
-        case .willDropSupportSoon(let upcomingMinVersion):
-            alert.messageText = UserText.aboutWillSoonBeUnsupportedDeviceInfo1
-            alert.informativeText = UserText.aboutWillSoonBeUnsupportedDeviceInfo2(version: upcomingMinVersion)
-        }
-
-        alert.alertStyle = .warning
-
-        alert.addButton(withTitle: UserText.checkForUpdate)
-        alert.addButton(withTitle: UserText.ok)
-        return alert
-    }
-
     static func syncPaused(title: String, informative: String) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = title
@@ -179,6 +161,16 @@ extension NSAlert {
         alert.alertStyle = .warning
         alert.addButton(withTitle: UserText.ok)
         alert.addButton(withTitle: UserText.syncErrorAlertAction)
+        return alert
+    }
+
+    static func syncPairingV2Confirmation(message: String) -> NSAlert {
+        let alert = NSAlert()
+        alert.messageText = UserText.syncPairingV2ConfirmationTitle
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: UserText.syncPairingV2ConfirmationAction)
+        alert.addButton(withTitle: UserText.cancel)
         return alert
     }
 
@@ -213,7 +205,7 @@ extension NSAlert {
         let alert = NSAlert()
         alert.messageText = UserText.warnBeforeQuitDialogHeader(clearChats)
         alert.alertStyle = .warning
-        alert.icon = .burnAlert
+        alert.icon = DesignSystemRebrand.isAppRebranded() ? .burnAlert : .burnAlertLegacy
         alert.addButton(withTitle: UserText.clearAndQuit)
         alert.addButton(withTitle: UserText.quitWithoutClearing)
         alert.addButton(withTitle: UserText.cancel)

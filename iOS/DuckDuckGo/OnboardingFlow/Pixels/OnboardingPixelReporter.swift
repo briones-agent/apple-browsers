@@ -22,34 +22,7 @@ import BrowserServicesKit
 import Core
 import PrivacyConfig
 import Onboarding
-import PixelKit
-import PixelExperimentKit
-
-/// A protocol that defines a method for firing experiment-related analytics pixels.
-///
-/// Types conforming to this protocol can be used to send experiment data (e.g., metrics and user actions).
-/// This protocol is particularly useful for injecting dependencies to enable testing.
-protocol ExperimentPixelFiring {
-    /// Fires an experiment pixel with the specified parameters.
-    ///
-    /// - Parameters:
-    ///   - subfeatureID: The unique identifier of the subfeature associated with the experiment.
-    ///   - metric: The name of the metric being tracked (e.g., impressions, clicks, conversions).
-    ///   - conversionWindowDays: The time range (in days) to associate the pixel with conversion events.
-    ///   - value: A string representing the value associated with the metric, such as counts or statuses.
-    static func fireExperimentPixel(for subfeatureID: SubfeatureID,
-                                    metric: String,
-                                    conversionWindowDays: ConversionWindow,
-                                    value: String)
-}
-
-/// Conforming `PixelKit` to the `ExperimentPixelFiring` protocol.
-///
-/// `PixelKit` provides the concrete implementation for firing experiment pixels. By extending
-/// `PixelKit` to conform to `ExperimentPixelFiring`, its functionality can be injected and mocked
-/// for testing purposes.
-extension PixelKit: ExperimentPixelFiring {}
-
+import Persistence
 // MARK: - Pixel Fire Interface
 
 protocol OnboardingPixelFiring {
@@ -75,22 +48,32 @@ protocol OnboardingIntroImpressionReporting {
 }
 
 protocol OnboardingIntroPixelReporting: OnboardingIntroImpressionReporting {
+    func measureStartOnboardingCTAAction()
     func measureSkipOnboardingCTAAction()
     func measureConfirmSkipOnboardingCTAAction()
     func measureResumeOnboardingCTAAction()
     func measureAutoRestoreOnboardingPromptShown()
     func measureAutoRestoreOnboardingRestoreCTAAction()
     func measureAutoRestoreOnboardingSkipCTAAction()
-    func measureBrowserComparisonImpression()
+    func measureSetDefaultBrowserImpression()
     func measureChooseBrowserCTAAction()
+    func measureAiIntroImpression()
+    func measureAiIntroCTAAction()
     func measureChooseAppIconImpression()
-    func measureChooseCustomAppIconColor()
+    func measureChooseAppIconColor(_ color: AppIcon)
     func measureAddressBarPositionSelectionImpression()
-    func measureChooseBottomAddressBarPosition()
+    func measureChooseAddressBarPosition(_ position: AddressBarPosition)
     func measureSearchExperienceSelectionImpression()
     func measureChooseAIChat()
     func measureChooseSearchOnly()
+    func measureDuckAIQuerySelectionImpression()
+    func measureDuckAIQueryChooseSearchOnly()
+    func measureDuckAIQueryChooseAIChat()
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource)
+    func measureSkipOnboardingScreenImpression()
+    func measureSetDefaultBrowserSkipped()
 }
+
 
 protocol OnboardingCustomInteractionPixelReporting {
     func measureCustomSearch()
@@ -101,17 +84,31 @@ protocol OnboardingCustomInteractionPixelReporting {
 
 protocol OnboardingDaxDialogsReporting {
     func measureScreenImpression(event: Pixel.Event)
+    func measureScreenImpression(_ event: OnboardingSharedPixelEvent)
+    func measureSearchResultsDialogGotItAction()
+    func measureTrackersDialogGotItAction()
+    func measureSubscriptionPromoDialogShown()
+    func measureSubscriptionPromoEngageCTAAction()
+    func measureFireButtonOnboardingDeleteConfirmed()
+    func measureFireButtonOnboardingDismissButtonTapped()
+    func measureTrySearchDialogSuggestedSearchTapped()
     func measureTrySearchDialogNewTabDismissButtonTapped()
     func measureSearchResultDialogDismissButtonTapped()
+    func measureTryVisitSiteDialogSuggestedSiteTapped()
     func measureTryVisitSiteDialogNewTabDismissButtonTapped()
     func measureTryVisitSiteDialogDismissButtonTapped()
     func measureTrackersDialogDismissButtonTapped()
     func measureFireDialogDismissButtonTapped()
+    func measureDuckAIFireButtonCTAAction()
+    func measureDuckAIFireDialogImpression()
+    func measureDuckAIFinalDialogImpression()
+    func measureDuckAIFinalDialogCTAAction()
     func measureEndOfJourneyDialogNewTabDismissButtonTapped()
     func measureEndOfJourneyDialogDismissButtonTapped()
     func measureSubscriptionDialogNewTabDismissButtonTapped()
     func measureEndOfJourneyDialogCTAAction()
 }
+
 
 protocol OnboardingAddToDockReporting {
     func measureAddToDockPromoImpression()
@@ -129,48 +126,38 @@ final class OnboardingPixelReporter {
     private let pixel: OnboardingPixelFiring.Type
     private let uniquePixel: OnboardingPixelFiring.Type
     private let statisticsStore: StatisticsStore
-    private let experimentPixel: ExperimentPixelFiring.Type
     private let calendar: Calendar
     private let dateProvider: () -> Date
     private let userDefaults: UserDefaults
+    private let sharedPixelHandler: OnboardingSharedPixelHandling
+    private let sharedPixelsStorage: any KeyedStoring<OnboardingSharedPixelsKeys>
     private let siteVisitedUserDefaultsKey = "com.duckduckgo.ios.site-visited"
-
-    private(set) var enqueuedPixels: [EnqueuedPixel] = []
 
     init(
         pixel: OnboardingPixelFiring.Type = Pixel.self,
         uniquePixel: OnboardingPixelFiring.Type = UniquePixel.self,
-        experimentPixel: ExperimentPixelFiring.Type = PixelKit.self,
         statisticsStore: StatisticsStore = StatisticsUserDefaults(),
         calendar: Calendar = .current,
         dateProvider: @escaping () -> Date = Date.init,
-        userDefaults: UserDefaults = UserDefaults.app
+        userDefaults: UserDefaults = UserDefaults.app,
+        sharedPixelHandler: OnboardingSharedPixelHandling? = nil,
+        sharedPixelsStorage: (any KeyedStoring<OnboardingSharedPixelsKeys>)? = nil
     ) {
         self.pixel = pixel
         self.uniquePixel = uniquePixel
-        self.experimentPixel = experimentPixel
         self.statisticsStore = statisticsStore
         self.calendar = calendar
         self.dateProvider = dateProvider
         self.userDefaults = userDefaults
+        self.sharedPixelHandler = sharedPixelHandler ?? OnboardingSharedPixelHandler(
+            platform: .iOS,
+            installTypeProvider: { OnboardingManager().isNewUser ? .newInstall : .reinstall },
+            installDateProvider: { statisticsStore.installDate }
+        )
+        self.sharedPixelsStorage = if let sharedPixelsStorage { sharedPixelsStorage } else { UserDefaults.app.keyedStoring() }
     }
 
     private func fire(event: Pixel.Event, unique: Bool, additionalParameters: [String: String] = [:], includedParameters: [Pixel.QueryParameters] = [.appVersion]) {
-        
-        func enqueue(event: Pixel.Event, unique: Bool, additionalParameters: [String: String], includedParameters: [Pixel.QueryParameters]) {
-            enqueuedPixels.append(.init(event: event, unique: unique, additionalParameters: additionalParameters, includedParameters: includedParameters))
-        }
-
-        // If the Pixel needs the ATB and ATB is available, fire the Pixel immediately. Otherwise enqueue the pixel and process it once the ATB is available.
-        // If the Pixel does not need the ATB there's no need to wait for the ATB to become available.
-        if includedParameters.contains(.atb) && statisticsStore.atb == nil {
-            enqueue(event: event, unique: unique, additionalParameters: additionalParameters, includedParameters: includedParameters)
-        } else {
-            performFire(event: event, unique: unique, additionalParameters: additionalParameters, includedParameters: includedParameters)
-        }
-    }
-
-    private func performFire(event: Pixel.Event, unique: Bool, additionalParameters: [String: String], includedParameters: [Pixel.QueryParameters]) {
         if unique {
             uniquePixel.fire(pixel: event, withAdditionalParameters: additionalParameters, includedParameters: includedParameters)
         } else {
@@ -180,14 +167,23 @@ final class OnboardingPixelReporter {
 
 }
 
-// MARK: - Fire Enqueued Pixels
+enum DuckAIQueryPromptSource: String {
+    case custom
+    case option1
+    case option2
+    case option3
+}
 
-extension OnboardingPixelReporter {
-
-    func fireEnqueuedPixelsIfNeeded() {
-        while !enqueuedPixels.isEmpty {
-            let event = enqueuedPixels.removeFirst()
-            performFire(event: event.event, unique: event.unique, additionalParameters: event.additionalParameters, includedParameters: event.includedParameters)
+extension AppIcon {
+    var pixelValue: OnboardingSharedPixelEvent.AppIconColorEvent.Value {
+        switch self {
+        case .red: .red
+        case .pink: .pink
+        case .yellow: .yellow
+        case .green: .green
+        case .blue: .blue
+        case .purple: .purple
+        case .black: .black
         }
     }
 }
@@ -196,16 +192,31 @@ extension OnboardingPixelReporter {
 
 extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
 
+    func measureStartOnboardingCTAAction() {
+        sharedPixelHandler.fire(.welcome(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
+    }
+
     func measureSkipOnboardingCTAAction() {
         fire(event: .onboardingIntroSkipOnboardingCTAPressed, unique: false)
+        sharedPixelHandler.fire(.welcome(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureConfirmSkipOnboardingCTAAction() {
         fire(event: .onboardingIntroConfirmSkipOnboardingCTAPressed, unique: false)
+        sharedPixelHandler.fire(.skipOnboarding(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureResumeOnboardingCTAAction() {
         fire(event: .onboardingIntroResumeOnboardingCTAPressed, unique: false)
+        sharedPixelHandler.fire(.skipOnboarding(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureAutoRestoreOnboardingPromptShown() {
@@ -222,43 +233,144 @@ extension OnboardingPixelReporter: OnboardingIntroPixelReporting {
 
     func measureOnboardingIntroImpression() {
         fire(event: .onboardingIntroShownUnique, unique: true)
+        sharedPixelHandler.fire(.welcome(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
-    func measureBrowserComparisonImpression() {
+    func measureSetDefaultBrowserImpression() {
         fire(event: .onboardingIntroComparisonChartShownUnique, unique: true)
+        sharedPixelHandler.fire(.setDefault(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureChooseBrowserCTAAction() {
         fire(event: .onboardingIntroChooseBrowserCTAPressed, unique: false)
+        sharedPixelHandler.fire(.setDefault(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
+    }
+
+    func measureAiIntroImpression() {
+        sharedPixelHandler.fire(.aiIntro(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
+    }
+
+    func measureAiIntroCTAAction() {
+        sharedPixelHandler.fire(.aiIntro(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureChooseAppIconImpression() {
         fire(event: .onboardingIntroChooseAppIconImpressionUnique, unique: true)
+        sharedPixelHandler.fire(.appIconColor(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
-    func measureChooseCustomAppIconColor() {
-        fire(event: .onboardingIntroChooseCustomAppIconColorCTAPressed, unique: false)
+    func measureChooseAppIconColor(_ color: AppIcon) {
+        if color != .defaultAppIcon {
+            fire(event: .onboardingIntroChooseCustomAppIconColorCTAPressed, unique: false)
+        }
+        sharedPixelHandler.fire(.appIconColor(.clicked(color.pixelValue)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureAddressBarPositionSelectionImpression() {
         fire(event: .onboardingIntroChooseAddressBarImpressionUnique, unique: true)
+        sharedPixelHandler.fire(.addressBarPosition(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
-    func measureChooseBottomAddressBarPosition() {
-        fire(event: .onboardingIntroBottomAddressBarSelected, unique: false)
+    func measureChooseAddressBarPosition(_ position: AddressBarPosition) {
+        switch position {
+        case .top:
+            sharedPixelHandler.fire(.addressBarPosition(.clicked(.top)),
+                                    source: sharedPixelsStorage.onboardingSource,
+                                    flow: sharedPixelsStorage.onboardingFlow)
+        case .bottom:
+            fire(event: .onboardingIntroBottomAddressBarSelected, unique: false)
+            sharedPixelHandler.fire(.addressBarPosition(.clicked(.bottom)),
+                                    source: sharedPixelsStorage.onboardingSource,
+                                    flow: sharedPixelsStorage.onboardingFlow)
+        }
     }
 
     func measureSearchExperienceSelectionImpression() {
         fire(event: .onboardingIntroChooseSearchExperienceImpressionUnique, unique: true)
+        sharedPixelHandler.fire(.searchExperience(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureChooseAIChat() {
         fire(event: .onboardingIntroAIChatSelected, unique: false)
+        sharedPixelHandler.fire(.searchExperience(.clicked(.searchPlusDuckAI)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
 
     func measureChooseSearchOnly() {
         fire(event: .onboardingIntroSearchOnlySelected, unique: false)
+        sharedPixelHandler.fire(.searchExperience(.clicked(.searchOnly)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
+
+    func measureDuckAIQuerySelectionImpression() {
+        fire(event: .onboardingIntroDuckAIToggleImpressionUnique, unique: true)
+        sharedPixelHandler.fire(.searchChatToggle(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
+    }
+
+    func measureDuckAIQueryChooseSearchOnly() {
+        fire(event: .onboardingIntroDuckAIToggleContinuePressedSearch, unique: false)
+    }
+
+    func measureDuckAIQueryChooseAIChat() {
+        fire(event: .onboardingIntroDuckAIToggleContinuePressedAI, unique: false)
+    }
+
+    func measureDuckAIQuerySubmission(selection: DuckAIQueryMode, promptSource: DuckAIQueryPromptSource) {
+        switch (promptSource, selection) {
+        case (.custom, .duckAI):
+            sharedPixelHandler.fire(.searchChatToggle(.clicked(.customChat)),
+                                    source: sharedPixelsStorage.onboardingSource,
+                                    flow: sharedPixelsStorage.onboardingFlow)
+        case (.custom, .search):
+            sharedPixelHandler.fire(.searchChatToggle(.clicked(.customSearch)),
+                                    source: sharedPixelsStorage.onboardingSource,
+                                    flow: sharedPixelsStorage.onboardingFlow)
+        case (_, .duckAI):
+            sharedPixelHandler.fire(.searchChatToggle(.clicked(.suggestedChat)),
+                                    source: sharedPixelsStorage.onboardingSource,
+                                    flow: sharedPixelsStorage.onboardingFlow)
+        case (_, .search):
+            sharedPixelHandler.fire(.searchChatToggle(.clicked(.suggestedSearch)),
+                                    source: sharedPixelsStorage.onboardingSource,
+                                    flow: sharedPixelsStorage.onboardingFlow)
+        }
+        sharedPixelsStorage.onboardingVariant = OnboardingPixelParameter.Variant(selection)
+    }
+
+    func measureSkipOnboardingScreenImpression() {
+        sharedPixelHandler.fire(.skipOnboarding(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
+    }
+
+    func measureSetDefaultBrowserSkipped() {
+        sharedPixelHandler.fire(.setDefault(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
+    }
+
 }
 
 // MARK: - OnboardingPixelReporter + Custom Interaction
@@ -267,10 +379,18 @@ extension OnboardingPixelReporter: OnboardingCustomInteractionPixelReporting {
 
     func measureCustomSearch() {
         fire(event: .onboardingContextualSearchCustomUnique, unique: true)
+        sharedPixelHandler.fire(.search(.clicked(.custom)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
     
     func measureCustomSite() {
         fire(event: .onboardingContextualSiteCustomUnique, unique: true)
+        sharedPixelHandler.fire(.visitSite(.clicked(.custom)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
     
     func measureSecondSiteVisit() {
@@ -287,7 +407,7 @@ extension OnboardingPixelReporter: OnboardingCustomInteractionPixelReporting {
             PixelParameters.fromOnboarding: "true",
             PixelParameters.daysSinceInstall: String(daysSinceInstall ?? 0)
         ]
-        fire(event: .privacyDashboardFirstTimeOpenedUnique, unique: true, additionalParameters: additionalParameters, includedParameters: [.appVersion])
+        fire(event: .privacyDashboardFirstTimeOpenedUnique, unique: true, additionalParameters: additionalParameters)
     }
 
 }
@@ -295,49 +415,171 @@ extension OnboardingPixelReporter: OnboardingCustomInteractionPixelReporting {
 // MARK: - OnboardingPixelReporter + Screen Impression
 
 extension OnboardingPixelReporter: OnboardingDaxDialogsReporting {
-    
+
     func measureScreenImpression(event: Pixel.Event) {
         fire(event: event, unique: true)
     }
 
+    func measureScreenImpression(_ event: OnboardingSharedPixelEvent) {
+        sharedPixelHandler.fire(event,
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureSearchResultsDialogGotItAction() {
+        sharedPixelHandler.fire(.searchResults(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureTrackersDialogGotItAction() {
+        sharedPixelHandler.fire(.trackersBlocked(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureSubscriptionPromoDialogShown() {
+        sharedPixelHandler.fire(.subscriptionPromo(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureSubscriptionPromoEngageCTAAction() {
+        sharedPixelHandler.fire(.subscriptionPromo(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureFireButtonOnboardingDeleteConfirmed() {
+        sharedPixelHandler.fire(.fireButton(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureFireButtonOnboardingDismissButtonTapped() {
+        sharedPixelHandler.fire(.fireButton(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureTrySearchDialogSuggestedSearchTapped() {
+        sharedPixelHandler.fire(.search(.clicked(.suggested)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
     func measureTrySearchDialogNewTabDismissButtonTapped() {
         fire(event: .onboardingTrySearchDialogNewTabDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.search(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureSearchResultDialogDismissButtonTapped() {
         fire(event: .onboardingSearchResultDialogDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.searchResults(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureTryVisitSiteDialogSuggestedSiteTapped() {
+        sharedPixelHandler.fire(.visitSite(.clicked(.suggested)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureTryVisitSiteDialogNewTabDismissButtonTapped() {
         fire(event: .onboardingTryVisitSiteDialogNewTabDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.visitSite(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureTryVisitSiteDialogDismissButtonTapped() {
         fire(event: .onboardingTryVisitSiteDialogDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.visitSite(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureTrackersDialogDismissButtonTapped() {
         fire(event: .onboardingTrackersDialogDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.trackersBlocked(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureFireDialogDismissButtonTapped() {
         fire(event: .onboardingFireDialogDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.fireButton(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
+    }
+
+    func measureDuckAIFireButtonCTAAction() {
+        fire(event: .onboardingDuckAIFireButtonCTAPressed, unique: false)
+    }
+
+    func measureDuckAIFireDialogImpression() {
+        fire(event: .onboardingDuckAIFireDialogShownUnique, unique: true)
+    }
+
+    func measureDuckAIFinalDialogImpression() {
+        fire(event: .onboardingDuckAIFinalDialogShownUnique, unique: true)
+    }
+
+    func measureDuckAIFinalDialogCTAAction() {
+        sharedPixelHandler.fire(.end(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureEndOfJourneyDialogNewTabDismissButtonTapped() {
         fire(event: .onboardingEndOfJourneyDialogNewTabDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.end(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureEndOfJourneyDialogDismissButtonTapped() {
         fire(event: .onboardingEndOfJourneyDialogDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.end(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureSubscriptionDialogNewTabDismissButtonTapped() {
         fire(event: .onboardingSubscriptionDialogDismissButtonTapped, unique: false)
+        sharedPixelHandler.fire(.subscriptionPromo(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
     func measureEndOfJourneyDialogCTAAction() {
         fire(event: .daxDialogsEndOfJourneyDismissed, unique: false)
+        sharedPixelHandler.fire(.end(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow,
+                                variant: sharedPixelsStorage.onboardingVariant)
     }
 
 }
@@ -348,14 +590,23 @@ extension OnboardingPixelReporter: OnboardingAddToDockReporting {
    
     func measureAddToDockPromoImpression() {
         fire(event: .onboardingAddToDockPromoImpressionsUnique, unique: true)
+        sharedPixelHandler.fire(.addToDock(.shown),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
     
     func measureAddToDockPromoShowTutorialCTAAction() {
         fire(event: .onboardingAddToDockPromoShowTutorialCTATapped, unique: false)
+        sharedPixelHandler.fire(.addToDock(.clicked(.engage)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
     
     func measureAddToDockPromoDismissCTAAction() {
         fire(event: .onboardingAddToDockPromoDismissCTATapped, unique: false)
+        sharedPixelHandler.fire(.addToDock(.clicked(.dismiss)),
+                                source: sharedPixelsStorage.onboardingSource,
+                                flow: sharedPixelsStorage.onboardingFlow)
     }
     
     func measureAddToDockTutorialDismissCTAAction() {
@@ -364,19 +615,15 @@ extension OnboardingPixelReporter: OnboardingAddToDockReporting {
 
 }
 
-struct EnqueuedPixel {
-    let event: Pixel.Event
-    let unique: Bool
-    let additionalParameters: [String: String]
-    let includedParameters: [Pixel.QueryParameters]
-}
+extension OnboardingPixelParameter.Variant {
 
-#if canImport(XCTest) || DEBUG
-extension OnboardingPixelReporter {
-
-    func fireTestPixelWithATB(event: Pixel.Event) {
-        fire(event: event, unique: true, includedParameters: [.appVersion, .atb])
+    init(_ mode: DuckAIQueryMode) {
+        switch mode {
+        case .duckAI:
+            self = .duckAIChat
+        case .search:
+            self = .duckAISearch
+        }
     }
 
 }
-#endif

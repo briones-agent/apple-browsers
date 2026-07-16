@@ -64,6 +64,7 @@ protocol OmniBar: AnyObject {
     func selectTextToEnd(_ offset: Int)
 
     func showOrScheduleCookiesManagedNotification(isCosmetic: Bool)
+    func showYouTubeAdBlockNotification()
 
     func showOrScheduleOnboardingPrivacyIconAnimation()
     func dismissOnboardingPrivacyIconAnimation()
@@ -90,6 +91,17 @@ protocol OmniBar: AnyObject {
 
     /// Sets the selected text entry mode for the toggle (search or aiChat).
     func setSelectedTextEntryMode(_ mode: TextEntryMode)
+
+    /// The values currently selected across the iPad address-bar Duck.ai controls
+    var iPadDuckAIControlValues: IPadDuckAIControlValues { get }
+
+    func prepareForMoveTransition()
+    func moveTransitionCompleted()
+
+    /// Hides (or restores) the Dax logo in the editing state. If the editing state view controller
+    /// does not yet exist, the hidden flag is applied to it on creation so the logo is never visible.
+    /// Used by chat-path onboarding to avoid flashing the Dax while transitioning to the completion dialog.
+    func setEditingStateLogoHidden(_ hidden: Bool)
 }
 
 extension OmniBar {

@@ -25,7 +25,7 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [
         .iOS("15.0"),
-        .macOS("11.4")
+        .macOS("12.3")
     ],
     products: [
         .library(
@@ -36,11 +36,17 @@ let package = Package(
             name: "AIChatTestingUtilities",
             targets: ["AIChatTestingUtilities"]
         ),
+        .library(
+            name: "AIChatDebugServer",
+            targets: ["AIChatDebugServer"]
+        ),
     ],
     dependencies: [
         .package(path: "../Infrastructure/DesignResourcesKit"),
         .package(path: "../Infrastructure/DesignResourcesKitIcons"),
         .package(path: "../BrowserServicesKit"),
+        .package(path: "../Infrastructure/SystemFrameworksExtensions"),
+        .package(path: "../DebugServer"),
         .package(url: "https://github.com/duckduckgo/sync_crypto", exact: "0.7.0")
     ],
     targets: [
@@ -51,11 +57,15 @@ let package = Package(
                 "DesignResourcesKitIcons",
                 .product(name: "BrowserServicesKit", package: "BrowserServicesKit"),
                 .product(name: "Common", package: "BrowserServicesKit"),
+                .product(name: "FoundationExtensions", package: "SystemFrameworksExtensions"),
+                .product(name: "CombineExtensions", package: "SystemFrameworksExtensions"),
+                .product(name: "ConcurrencyExtensions", package: "SystemFrameworksExtensions"),
                 .product(name: "Persistence", package: "BrowserServicesKit"),
                 .product(name: "DDGSync", package: "BrowserServicesKit"),
                 .product(name: "PrivacyConfig", package: "BrowserServicesKit"),
                 .product(name: "UserScript", package: "BrowserServicesKit"),
                 .product(name: "DuckAiDataStore", package: "BrowserServicesKit"),
+                .product(name: "WKAbstractions", package: "BrowserServicesKit"),
                 .product(name: "DDGSyncCrypto", package: "sync_crypto")
             ],
             resources: [
@@ -68,13 +78,23 @@ let package = Package(
                 "AIChat"
             ]
         ),
+        .target(
+            name: "AIChatDebugServer",
+            dependencies: [
+                "AIChat",
+                "DebugServer",
+                .product(name: "DuckAiDataStore", package: "BrowserServicesKit"),
+            ]
+        ),
         .testTarget(
             name: "AIChatTests",
             dependencies: [
                 "AIChat",
+                "AIChatTestingUtilities",
                 .product(name: "BrowserServicesKitTestsUtils", package: "BrowserServicesKit"),
                 .product(name: "PersistenceTestingUtils", package: "BrowserServicesKit"),
-                .product(name: "PrivacyConfigTestsUtils", package: "BrowserServicesKit")
+                .product(name: "PrivacyConfigTestsUtils", package: "BrowserServicesKit"),
+                .product(name: "WKAbstractions", package: "BrowserServicesKit")
             ]
         )
     ]

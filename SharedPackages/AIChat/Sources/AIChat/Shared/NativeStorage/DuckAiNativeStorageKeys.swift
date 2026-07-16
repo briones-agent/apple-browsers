@@ -20,13 +20,20 @@ import Foundation
 import Persistence
 
 public enum DuckAiNativeStorageKeyNames: String, StorageKeyDescribing {
-    case migrationDone = "duckAiNativeStorage-migrationDone"
+    case migrationStatus = "duckAiNativeStorage-migrationStatus"
     case settings = "duckAiNativeStorage-settings"
 }
 
 public struct DuckAiNativeStorageSettings: StoringKeys {
     public init() {}
 
-    public let migrationDone = StorageKey<Bool>(DuckAiNativeStorageKeyNames.migrationDone)
+    public let migrationStatus = StorageKey<Data>(DuckAiNativeStorageKeyNames.migrationStatus)
     public let settings = StorageKey<Data>(DuckAiNativeStorageKeyNames.settings)
+}
+
+/// Well-known entry keys that carry a contract with the Duck.ai web app, which reads them over the storage userscript bridge via `getEntry`.
+public enum DuckAiNativeStorageReservedEntryKeys: String {
+    /// Entry holding the JSON array of chat IDs deleted on the native side.
+    /// The web app reads it to reconcile deletions it did not itself initiate. Value: `[String]`.
+    case locallyDeletedChatIds
 }

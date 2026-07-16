@@ -20,7 +20,9 @@ import Foundation
 import Combine
 import OSLog
 import Common
+import FoundationExtensions
 import Subscription
+import DesignResourcesKit
 import PixelKit
 
 final class WinBackOfferPromotionViewCoordinator: ObservableObject {
@@ -110,7 +112,7 @@ extension WinBackOfferPromotionViewCoordinator {
 
         pixelHandler(.subscriptionWinBackOfferNewTabPageShown)
 
-        return PromotionViewModel(image: .subscriptionClock96,
+        return PromotionViewModel(image: DesignSystemRebrand.isAppRebranded() ? .subscriptionClock96 : .subscriptionClock96Legacy,
                                   title: UserText.winBackCampaignLastDayMessageTitle,
                                   description: UserText.winBackCampaignLastDayMessageText,
                                   proceedButtonText: UserText.winBackCampaignLastDayMessageCTA,

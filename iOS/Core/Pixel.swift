@@ -20,6 +20,7 @@
 import Foundation
 import PrivacyConfig
 import Common
+import FoundationExtensions
 import Networking
 import os.log
 
@@ -28,7 +29,6 @@ public struct PixelParameters {
     public static let duration = "dur"
     static let test = "test"
     public static let appVersion = "appVersion"
-    public static let osVersion = "osVersion"
 
     public static let autocompleteBookmarkCapable = "bc"
     public static let autocompleteIncludedLocalResults = "sb"
@@ -87,6 +87,12 @@ public struct PixelParameters {
 
     public static let count = "count"
     public static let source = "source"
+    public static let cookiePopupPreference = "cookie_popup_preference"
+    public static let autoconsentEnabled = "autoconsent_enabled"
+    public static let timeSinceShown = "time_since_shown"
+    public static let shortcut = "shortcut"
+    public static let browsingMode = "browsing_mode"
+    public static let tabState = "tab_state"
     public static let authVersion = "authVersion"
     public static let lastUsed = "last_used"
 
@@ -163,6 +169,7 @@ public struct PixelParameters {
     public static let isExtension = "is_extension"
 
     // Data Import
+    public static let entryPoint = "entry_point"
     public static let savedCredentials = "saved_credentials"
     public static let skippedCredentials = "skipped_credentials"
     public static let savedCreditCards = "saved_creditcards"
@@ -187,6 +194,7 @@ public struct PixelParameters {
 
     public static let appState = "state"
     public static let appEvent = "event"
+    public static let windowChanged = "windowChanged"
 
     public static let didCallWillEnterForeground = "didCallWillEnterForeground"
 

@@ -21,12 +21,21 @@
 import SwiftUI
 import Combine
 import AIChat
+import AIChatDebugServer
+import DebugServer
 
 struct AIChatDebugView: View {
     @StateObject private var viewModel = AIChatDebugViewModel()
+    private let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+
+    init(duckAiNativeStorageHandler: DuckAiNativeStorageHandling? = nil) {
+        self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
+    }
 
     var body: some View {
         List {
+            AIChatStorageServerSection(duckAiNativeStorageHandler: duckAiNativeStorageHandler)
+
             Section(footer: Text("Stored Hostname: \(viewModel.enteredHostname)")) {
                 NavigationLink(destination: AIChatDebugHostnameEntryView(viewModel: viewModel)) {
                     Text("Message policy hostname")
@@ -291,6 +300,99 @@ private struct AIChatDebugSessionTimerEntryView: View {
                 secondsText = "\(seconds)"
             }
         }
+    }
+}
+
+private struct AIChatStorageServerSection: View {
+    let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+    @ObservedObject private var serverState = StorageServerState.shared
+
+    var body: some View {
+        Section(header: Text(verbatim: "Native Storage Server")) {
+            if serverState.isRunning {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(verbatim: "Server running")
+                        .foregroundColor(.green)
+                    if let ip = serverState.localIPAddress {
+                        Text(verbatim: "http://\(ip):8473")
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                }
+                Button {
+                    serverState.stop()
+                } label: {
+                    Text(verbatim: "Stop Server")
+                }
+                .foregroundColor(.red)
+            } else {
+                if let error = serverState.errorMessage {
+                    Text(error).foregroundColor(.red).font(.caption)
+                }
+                Button {
+                    serverState.start(handler: duckAiNativeStorageHandler)
+                } label: {
+                    Text(verbatim: "Start Server")
+                }
+            }
+        }
+    }
+}
+
+/// Owns the native-storage debug server for the app session.
+@MainActor
+private final class StorageServerState: ObservableObject {
+    /// Deliberate singleton: keeps the server alive across the debug view's lifecycle.
+    /// A DI-based owner would mean threading this through production code, which isn't
+    /// warranted for debug-only tooling.
+    static let shared = StorageServerState()
+
+    @Published var errorMessage: String?
+    @Published var localIPAddress: String?
+
+    var isRunning: Bool { server != nil }
+
+    @Published private var server: DuckAiStorageDebugServer?
+
+    private init() {}
+
+    func start(handler: DuckAiNativeStorageHandling?) {
+        guard let handler else {
+            errorMessage = "Native storage is not available (feature flag may be disabled)"
+            return
+        }
+
+        do {
+            let server = DuckAiStorageDebugServer(storageHandler: handler)
+            server.stateDidChange = { [weak self] state in
+                DispatchQueue.main.async {
+                    self?.handleStateChange(state)
+                }
+            }
+            try server.start()
+            self.server = server
+            self.errorMessage = nil
+            self.localIPAddress = DebugServerNetworkInterface.wiFiAddress()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleStateChange(_ state: ServerState) {
+        switch state {
+        case .failed(let message):
+            errorMessage = message
+            server = nil
+            localIPAddress = nil
+        default:
+            break
+        }
+    }
+
+    func stop() {
+        server?.stop()
+        server = nil
+        localIPAddress = nil
     }
 }
 

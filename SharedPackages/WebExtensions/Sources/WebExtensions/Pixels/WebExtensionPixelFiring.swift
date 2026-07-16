@@ -30,9 +30,23 @@ public enum WebExtensionPixelEvent {
     case loaded
     case loadError(error: Error)
 
+    /// Fired on every consistency check (denominator for the not-loaded rate).
+    case stateChecked
+    /// Fired when an expected, enabled embedded extension is not loaded into the controller.
+    case expectedExtensionNotLoaded(type: DuckDuckGoWebExtensionType)
+    /// Fired when ad blocking is expected but its scriptlets have not been fetched.
+    /// `extensionLoaded` distinguishes "extension also missing" (false) from "loaded but scriptlet-less" (true).
+    case adBlockingScriptletsNotFetched(extensionLoaded: Bool)
+
     case embeddedInstalled(type: DuckDuckGoWebExtensionType)
     case embeddedUpgraded(type: DuckDuckGoWebExtensionType, fromVersion: String?, toVersion: String?)
     case embeddedInstallError(type: DuckDuckGoWebExtensionType, error: Error)
+
+    case scriptletFetchSuccess(type: DuckDuckGoWebExtensionType, version: String, count: Int)
+    case scriptletFetchError(type: DuckDuckGoWebExtensionType, error: Error)
+    case scriptletValidationError(type: DuckDuckGoWebExtensionType, error: Error)
+    case scriptletInstalled(type: DuckDuckGoWebExtensionType, version: String)
+    case scriptletInstallError(type: DuckDuckGoWebExtensionType, error: Error)
 }
 
 /// Protocol for firing web extension pixels.

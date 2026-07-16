@@ -28,6 +28,7 @@ struct BadgeNotificationContentView: View {
     var badgeAnimationModel: BadgeNotificationAnimationModel
     var customText: String?
     var useShieldIcon: Bool
+    var useVideoPlayerIcon: Bool = false
     var trackerCount: Int = 0
     var textGenerator: ((Int) -> String)?
 
@@ -42,8 +43,10 @@ struct BadgeNotificationContentView: View {
     }
 
     private var iconView: AnyView {
-        if useShieldIcon {
-            return AnyView(ShieldIconView())
+        if useVideoPlayerIcon {
+            return AnyView(VideoPlayerIconView())
+        } else if useShieldIcon {
+            return AnyView(ShieldIconView(isAppRebranded: badgeIconAnimationModel.isAppRebranded))
         } else {
             return AnyView(BadgeIconAnimationView(animationModel: badgeIconAnimationModel))
         }
@@ -232,8 +235,26 @@ private struct DotView: View {
 }
 
 struct ShieldIconView: View {
+    let isAppRebranded: Bool
+
     var body: some View {
-        Image(nsImage: DesignSystemImages.Color.Size16.shieldCheck)
+        if isAppRebranded {
+            Image(nsImage: DesignSystemImages.Color.Size24.shieldCheck)
+                .resizable()
+                .frame(width: 20, height: 20)
+                .offset(x: 1)
+        } else {
+            Image(nsImage: DesignSystemImages.Color.Size16.shieldCheck)
+                .resizable()
+                .frame(width: 16, height: 16)
+                .offset(x: 1)
+        }
+    }
+}
+
+struct VideoPlayerIconView: View {
+    var body: some View {
+        Image(nsImage: DesignSystemImages.Color.Size16.videoPlayer)
             .resizable()
             .frame(width: 16, height: 16)
             .offset(x: 1)
@@ -248,6 +269,7 @@ struct BadgeNotificationContentView_Previews: PreviewProvider {
             badgeAnimationModel: BadgeNotificationAnimationModel(),
             customText: nil,
             useShieldIcon: false,
+            useVideoPlayerIcon: false,
             trackerCount: 0,
             textGenerator: nil
         )

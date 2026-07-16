@@ -85,6 +85,7 @@ class WebsiteBreakageReportTests: XCTestCase {
             privacyExperiments: "",
             isPirEnabled: nil,
             isForceDarkModeEnabled: nil,
+            lastTabSuspension: nil,
             pageLoadTiming: nil
         )
 
@@ -134,11 +135,26 @@ class WebsiteBreakageReportTests: XCTestCase {
             vpnOn: false,
             jsPerformance: nil,
             userRefreshCount: 0,
-            cookieConsentInfo: CookieConsentInfo(consentManaged: true, cosmetic: true, optoutFailed: true, selftestFailed: true, consentReloadLoop: true, consentRule: "test-cmp", consentHeuristicEnabled: true),
+            cookieConsentInfo: CookieConsentInfo(
+                consentManaged: true,
+                cosmetic: true,
+                optoutFailed: true,
+                selftestFailed: true,
+                consentReloadLoop: true,
+                consentRule: "test-cmp",
+                consentHeuristicEnabled: true,
+                cpmExtensionDroppedCallbacks: 3,
+                cpmExtensionLoaded: true,
+                cpmDashboardState: .applied,
+                cpmStage: .popupFound,
+                cpmErrors: "multiple_cmps,tab_refreshDashboardState",
+                cpmQueueSize: 2,
+                cpmConfigVersion: "123"),
             debugFlags: "",
             privacyExperiments: "",
             isPirEnabled: true,
             isForceDarkModeEnabled: nil,
+            lastTabSuspension: nil,
             pageLoadTiming: nil
         )
 
@@ -167,7 +183,90 @@ class WebsiteBreakageReportTests: XCTestCase {
         XCTAssertEqual(queryItems[valueFor: "consentReloadLoop"], "1")
         XCTAssertEqual(queryItems[valueFor: "consentHeuristicEnabled"], "1")
         XCTAssertEqual(queryItems[valueFor: "consentRule"], "test-cmp")
+        XCTAssertEqual(queryItems[valueFor: "cpmExtensionDroppedCallbacks"], "3")
+        XCTAssertEqual(queryItems[valueFor: "cpmExtensionLoaded"], "1")
+        XCTAssertEqual(queryItems[valueFor: "cpmDashboardState"], "applied")
+        XCTAssertEqual(queryItems[valueFor: "cpmStage"], "popup_found")
+        XCTAssertEqual(queryItems[valueFor: "cpmErrors"], "multiple_cmps,tab_refreshDashboardState")
+        XCTAssertEqual(queryItems[valueFor: "cpmQueueSize"], "2")
+        XCTAssertEqual(queryItems[valueFor: "cpmConfigVersion"], "123")
         XCTAssertEqual(queryItems[valueFor: "isPirEnabled"], "true")
+    }
+
+    func testWebExtensionFieldsAreIncludedWhenProvided() throws {
+        let breakage = BrokenSiteReport(
+            siteUrl: URL(string: "https://example.test/")!,
+            category: "content",
+            description: nil,
+            osVersion: "15",
+            manufacturer: "Apple",
+            upgradedHttps: false,
+            tdsETag: "abc123",
+            configVersion: "123456789",
+            blockedTrackerDomains: [],
+            installedSurrogates: [],
+            isGPCEnabled: false,
+            ampURL: "",
+            urlParametersRemoved: false,
+            protectionsState: true,
+            reportFlow: .dashboard,
+            errors: nil,
+            httpStatusCodes: nil,
+            openerContext: nil,
+            vpnOn: false,
+            jsPerformance: nil,
+            userRefreshCount: 0,
+            cookieConsentInfo: nil,
+            debugFlags: "",
+            privacyExperiments: "",
+            isPirEnabled: nil,
+            isForceDarkModeEnabled: nil,
+            lastTabSuspension: nil,
+            pageLoadTiming: nil,
+            loadedWebExtensions: "embedded,darkMode,adBlocking",
+            adBlockingExtensionScriptletsVersion: "1.2.3"
+        )
+
+        let params = breakage.requestParameters
+        XCTAssertEqual(params["loadedWebExtensions"], "embedded,darkMode,adBlocking")
+        XCTAssertEqual(params["adBlockingExtensionScriptletsVersion"], "1.2.3")
+    }
+
+    func testWebExtensionFieldsAreOmittedWhenNil() throws {
+        let breakage = BrokenSiteReport(
+            siteUrl: URL(string: "https://example.test/")!,
+            category: "content",
+            description: nil,
+            osVersion: "15",
+            manufacturer: "Apple",
+            upgradedHttps: false,
+            tdsETag: "abc123",
+            configVersion: "123456789",
+            blockedTrackerDomains: [],
+            installedSurrogates: [],
+            isGPCEnabled: false,
+            ampURL: "",
+            urlParametersRemoved: false,
+            protectionsState: true,
+            reportFlow: .dashboard,
+            errors: nil,
+            httpStatusCodes: nil,
+            openerContext: nil,
+            vpnOn: false,
+            jsPerformance: nil,
+            userRefreshCount: 0,
+            cookieConsentInfo: nil,
+            debugFlags: "",
+            privacyExperiments: "",
+            isPirEnabled: nil,
+            isForceDarkModeEnabled: nil,
+            lastTabSuspension: nil,
+            pageLoadTiming: nil
+        )
+
+        let params = breakage.requestParameters
+        XCTAssertNil(params["loadedWebExtensions"])
+        XCTAssertNil(params["adBlockingExtensionScriptletsVersion"])
     }
 
     func makeURLRequest(with parameters: [String: String]) -> URLRequest {

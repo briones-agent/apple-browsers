@@ -18,6 +18,7 @@
 
 import XCTest
 import AIChat
+import WebKit
 import Combine
 import PrivacyConfig
 import FeatureFlags
@@ -30,6 +31,7 @@ final class NewTabPageOmnibarAiChatsProviderTests: XCTestCase {
     private var featureFlagger: MockFeatureFlagger!
     private var suggestionsReader: MockAIChatSuggestionsReader!
     private var configProvider: MockAiChatsConfigProvider!
+    private var searchPreferencesPersistorMock: MockSearchPreferencesPersistor!
     private var provider: NewTabPageOmnibarAiChatsProvider!
 
     override func setUp() {
@@ -37,19 +39,30 @@ final class NewTabPageOmnibarAiChatsProviderTests: XCTestCase {
         featureFlagger = MockFeatureFlagger()
         suggestionsReader = MockAIChatSuggestionsReader()
         configProvider = MockAiChatsConfigProvider()
-        provider = NewTabPageOmnibarAiChatsProvider(
-            featureFlagger: featureFlagger,
-            configProvider: configProvider,
-            suggestionsReader: suggestionsReader
-        )
+        searchPreferencesPersistorMock = MockSearchPreferencesPersistor()
+        searchPreferencesPersistorMock.showAutocompleteSuggestions = true
+        provider = makeProvider()
     }
 
     override func tearDown() {
         provider = nil
+        searchPreferencesPersistorMock = nil
         configProvider = nil
         suggestionsReader = nil
         featureFlagger = nil
         super.tearDown()
+    }
+
+    private func makeProvider() -> NewTabPageOmnibarAiChatsProvider {
+        NewTabPageOmnibarAiChatsProvider(
+            featureFlagger: featureFlagger,
+            configProvider: configProvider,
+            suggestionsReader: suggestionsReader,
+            searchPreferences: SearchPreferences(
+                persistor: searchPreferencesPersistorMock,
+                windowControllersManager: WindowControllersManagerMock()
+            )
+        )
     }
 
     // MARK: - Feature flag
@@ -72,6 +85,21 @@ final class NewTabPageOmnibarAiChatsProviderTests: XCTestCase {
         let result = await provider.aiChats(query: nil)
 
         XCTAssertFalse(result.chats.isEmpty)
+    }
+
+    // MARK: - Autocomplete suggestions setting
+
+    @MainActor
+    func testWhenAutocompleteSuggestionsDisabled_thenReturnsEmpty() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.pinnedChats = [.make(chatId: "1", title: "Pinned")]
+        suggestionsReader.recentChats = [.make(chatId: "2", title: "Recent")]
+        searchPreferencesPersistorMock.showAutocompleteSuggestions = false
+        provider = makeProvider()
+
+        let result = await provider.aiChats(query: nil)
+
+        XCTAssertTrue(result.chats.isEmpty)
     }
 
     // MARK: - Query normalisation
@@ -158,6 +186,73 @@ final class NewTabPageOmnibarAiChatsProviderTests: XCTestCase {
         XCTAssertNil(result.chats.first?.lastEdit)
     }
 
+    // MARK: - hasExcessChats
+
+    @MainActor
+    func testFetchSuggestions_passesMaxCountPlusOneToReader() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.maxHistoryCount = 5
+
+        _ = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(suggestionsReader.receivedMaxChats, 6)
+    }
+
+    @MainActor
+    func testWhenTotalFetchedExceedsMaxCount_hasExcessChatsPublishesTrue() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.maxHistoryCount = 2
+        suggestionsReader.recentChats = [
+            .make(chatId: "1", title: "A"),
+            .make(chatId: "2", title: "B"),
+            .make(chatId: "3", title: "C")
+        ]
+
+        var lastValue: Bool?
+        let cancellable = provider.hasExcessChatsPublisher.sink { lastValue = $0 }
+        _ = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(lastValue, true)
+        cancellable.cancel()
+    }
+
+    @MainActor
+    func testWhenTotalFetchedEqualsMaxCount_hasExcessChatsPublishesFalse() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.maxHistoryCount = 2
+        suggestionsReader.recentChats = [
+            .make(chatId: "1", title: "A"),
+            .make(chatId: "2", title: "B")
+        ]
+
+        var lastValue: Bool?
+        let cancellable = provider.hasExcessChatsPublisher.sink { lastValue = $0 }
+        _ = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(lastValue, false)
+        cancellable.cancel()
+    }
+
+    @MainActor
+    func testWhenFeatureFlagOff_hasExcessChatsPublishesFalse() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": false]
+        suggestionsReader.maxHistoryCount = 2
+        suggestionsReader.recentChats = [
+            .make(chatId: "1", title: "A"),
+            .make(chatId: "2", title: "B"),
+            .make(chatId: "3", title: "C")
+        ]
+
+        var lastValue: Bool?
+        let cancellable = provider.hasExcessChatsPublisher.sink { lastValue = $0 }
+        _ = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(lastValue, false)
+        cancellable.cancel()
+    }
+
+    // MARK: - Mapping
+
     @MainActor
     func testPinnedFlagIsMappedCorrectly() async {
         featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
@@ -168,6 +263,46 @@ final class NewTabPageOmnibarAiChatsProviderTests: XCTestCase {
 
         XCTAssertEqual(result.chats.first(where: { $0.chatId == "p" })?.pinned, true)
         XCTAssertEqual(result.chats.first(where: { $0.chatId == "r" })?.pinned, false)
+    }
+
+    @MainActor
+    func testVoiceModeModelIsForwardedToWirePayload() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.recentChats = [.make(chatId: "v", title: "Voice", model: AIChatNativePrompt.voiceMode)]
+
+        let result = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(result.chats.first(where: { $0.chatId == "v" })?.model, "voice-mode")
+    }
+
+    @MainActor
+    func testImageGenerationModelIsForwardedToWirePayload() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.recentChats = [.make(chatId: "i", title: "Image", model: AIChatNativePrompt.imageGenerationMode)]
+
+        let result = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(result.chats.first(where: { $0.chatId == "i" })?.model, "image-generation")
+    }
+
+    @MainActor
+    func testArbitraryModelIdentifierIsForwardedToWirePayload() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.recentChats = [.make(chatId: "t", title: "Text", model: "gpt-4o-mini")]
+
+        let result = await provider.aiChats(query: nil)
+
+        XCTAssertEqual(result.chats.first(where: { $0.chatId == "t" })?.model, "gpt-4o-mini")
+    }
+
+    @MainActor
+    func testWhenSuggestionHasNilModel_thenWirePayloadModelIsNil() async {
+        featureFlagger.featuresStub = ["aiChatNtpRecentChats": true]
+        suggestionsReader.recentChats = [.make(chatId: "n", title: "No model", model: nil)]
+
+        let result = await provider.aiChats(query: nil)
+
+        XCTAssertNil(result.chats.first(where: { $0.chatId == "n" })?.model)
     }
 }
 
@@ -180,9 +315,11 @@ private final class MockAIChatSuggestionsReader: AIChatSuggestionsReading {
     var pinnedChats: [AIChatSuggestion] = []
     var recentChats: [AIChatSuggestion] = []
     var receivedQuery: String?
+    var receivedMaxChats: Int?
 
     func fetchSuggestions(query: String?, maxChats: Int) async -> (pinned: [AIChatSuggestion], recent: [AIChatSuggestion]) {
         receivedQuery = query
+        receivedMaxChats = maxChats
         return (pinned: pinnedChats, recent: recentChats)
     }
 
@@ -190,7 +327,6 @@ private final class MockAIChatSuggestionsReader: AIChatSuggestionsReading {
 }
 
 private final class MockAiChatsConfigProvider: NewTabPageOmnibarConfigProviding {
-
     @MainActor var mode: NewTabPageDataModel.OmnibarMode = .ai
     private let modeSubject = PassthroughSubject<NewTabPageDataModel.OmnibarMode, Never>()
     var modePublisher: AnyPublisher<NewTabPageDataModel.OmnibarMode, Never> { modeSubject.eraseToAnyPublisher() }
@@ -203,8 +339,27 @@ private final class MockAiChatsConfigProvider: NewTabPageOmnibarConfigProviding 
 
     var showCustomizePopover: Bool = false
     var isAIChatRecentChatsEnabled: Bool = true
+    var showViewAllAiChats: Bool = false
+    var showViewAllAiChatsPublisher: AnyPublisher<Bool, Never> { Just(false).eraseToAnyPublisher() }
     var isAIChatToolsEnabled: Bool = false
+    var isImageGenerationEnabled: Bool = false
+    var isWebSearchEnabled: Bool = false
+    var isCustomizeResponsesEnabled: Bool = false
+    @MainActor
+    func customizeResponsesState(requestingWebView: WKWebView?) -> NewTabPageDataModel.OmnibarCustomizeResponsesState { .none }
+    var customizeResponsesStatePublisher: AnyPublisher<Void, Never> { Empty<Void, Never>().eraseToAnyPublisher() }
+    var isAttachTabsEnabled: Bool = false
+    var isAttachTabsEnabledPublisher: AnyPublisher<Bool, Never> { Just(false).eraseToAnyPublisher() }
     var selectedModelId: String?
+    var selectedModelIdPublisher: AnyPublisher<String?, Never> {Just(nil).eraseToAnyPublisher() }
+    var selectedModelShortName: String?
+    var isReasoningEffortEnabled: Bool = false
+    var selectedReasoningEffort: String?
+    var selectedReasoningEffortPublisher: AnyPublisher<String?, Never> { Just(nil).eraseToAnyPublisher() }
+    var isVoiceChatAccessEnabled: Bool = false
+    var isVoiceChatAccessEnabledPublisher: AnyPublisher<Bool, Never> { Just(false).eraseToAnyPublisher() }
+    var showAskAiSuggestion: Bool = true
+    var showAskAiSuggestionPublisher: AnyPublisher<Bool, Never> { Just(true).eraseToAnyPublisher() }
 }
 
 private extension AIChatSuggestion {
@@ -213,8 +368,9 @@ private extension AIChatSuggestion {
         chatId: String,
         title: String,
         isPinned: Bool = false,
-        timestamp: Date? = nil
+        timestamp: Date? = nil,
+        model: String? = nil
     ) -> AIChatSuggestion {
-        AIChatSuggestion(id: chatId, title: title, isPinned: isPinned, chatId: chatId, timestamp: timestamp)
+        AIChatSuggestion(id: chatId, title: title, isPinned: isPinned, chatId: chatId, timestamp: timestamp, model: model)
     }
 }

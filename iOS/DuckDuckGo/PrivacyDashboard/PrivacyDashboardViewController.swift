@@ -25,13 +25,13 @@ import BrowserServicesKit
 import PrivacyConfig
 import PrivacyDashboard
 import Common
+import FoundationExtensions
 import os.log
 import PixelExperimentKit
 
 final class PrivacyDashboardViewController: UIViewController {
 
-    @IBOutlet private(set) weak var webView: WKWebView!
-
+    let webView: WKWebView = WKWebView()
     public var breakageAdditionalInfo: BreakageAdditionalInfo?
 
     private let privacyDashboardController: PrivacyDashboardController
@@ -70,7 +70,7 @@ final class PrivacyDashboardViewController: UIViewController {
         }
     }
 
-    init?(coder: NSCoder,
+    init(
           privacyInfo: PrivacyInfo?,
           entryPoint: PrivacyDashboardEntryPoint,
           privacyConfigurationManager: PrivacyConfigurationManaging,
@@ -88,8 +88,9 @@ final class PrivacyDashboardViewController: UIViewController {
         self.contentBlockingManager = contentBlockingManager
         self.breakageAdditionalInfo = breakageAdditionalInfo
         self.entryPoint = entryPoint
-        super.init(coder: coder)
-        
+
+        super.init(nibName: nil, bundle: nil)
+
         privacyDashboardController.delegate = self
     }
 
@@ -99,10 +100,26 @@ final class PrivacyDashboardViewController: UIViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+
+        setupWebView()
+
         privacyDashboardController.setup(for: webView)
         privacyDashboardController.preferredLocale = Bundle.main.preferredLocalizations.first
         
         decorate()
+    }
+
+    private func setupWebView() {
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        webView.preventFlashOnLoad()
+
+        view.addSubview(webView)
+        NSLayoutConstraint.activate([
+            webView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            webView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            webView.topAnchor.constraint(equalTo: view.topAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
     }
 
     public override func viewDidDisappear(_ animated: Bool) {
@@ -289,6 +306,10 @@ extension PrivacyDashboardViewController {
         let isForceDarkModeEnabled: Bool?
         let autoplayBlockingMode: String?
         let isAfterSuppressedXSafariRedirect: Bool
+        let loadedWebExtensions: String?
+        let adBlockingExtensionScriptletsVersion: String?
+        let cpmExtensionLoaded: Bool
+        let cpmExtensionDroppedCallbacks: Int
     }
     
     enum BrokenSiteReportError: Error {
@@ -323,6 +344,10 @@ extension PrivacyDashboardViewController {
         let blockedTrackerDomains = privacyInfo.trackerInfo.trackersBlocked.compactMap { $0.domain }
         let protectionsState = privacyConfigurationManager.privacyConfig.isFeature(.contentBlocking,
                                                                                    enabledForDomain: breakageAdditionalInfo.currentURL.host)
+        let cookieConsentInfo = privacyInfo.cookieConsentManaged?.withCPMRuntimeInfo(
+            extensionLoaded: breakageAdditionalInfo.cpmExtensionLoaded,
+            droppedCallbacks: breakageAdditionalInfo.cpmExtensionDroppedCallbacks
+        )
 
         var errors: [Error]?
         var statusCodes: [Int]?
@@ -349,7 +374,6 @@ extension PrivacyDashboardViewController {
                                 protectionsState: protectionsState,
                                 reportFlow: source,
                                 siteType: breakageAdditionalInfo.isDesktop ? .desktop : .mobile,
-                                atb: StatisticsUserDefaults().atb ?? "",
                                 model: UIDevice.current.model,
                                 errors: errors,
                                 httpStatusCodes: statusCodes,
@@ -359,14 +383,16 @@ extension PrivacyDashboardViewController {
                                 extendedPerformanceMetrics: privacyAwareWebVitals,
                                 userRefreshCount: breakageAdditionalInfo.userRefreshCount,
                                 variant: "",
-                                cookieConsentInfo: privacyInfo.cookieConsentManaged,
+                                cookieConsentInfo: cookieConsentInfo,
                                 debugFlags: privacyInfo.debugFlags,
                                 privacyExperiments: privacyInfo.privacyExperimentCohorts,
                                 isPirEnabled: nil,
                                 isForceDarkModeEnabled: breakageAdditionalInfo.isForceDarkModeEnabled,
                                 autoplayBlockingMode: breakageAdditionalInfo.autoplayBlockingMode,
                                 isAfterSuppressedXSafariRedirect: breakageAdditionalInfo.isAfterSuppressedXSafariRedirect,
-                                breakageData: breakageData)
+                                breakageData: breakageData,
+                                loadedWebExtensions: breakageAdditionalInfo.loadedWebExtensions,
+                                adBlockingExtensionScriptletsVersion: breakageAdditionalInfo.adBlockingExtensionScriptletsVersion)
     }
 
 }

@@ -22,15 +22,31 @@ import UIKit
 protocol BrowserChromeDelegate: AnyObject {
     
     func setBarsHidden(_ hidden: Bool, animated: Bool, customAnimationDuration: CGFloat?)
+    func resetBars(animated: Bool)
     func setNavigationBarHidden(_ hidden: Bool)
     func setRefreshControlEnabled(_ isEnabled: Bool)
+    func setUnifiedInputContentOverlaySuppressed(_ suppressed: Bool)
     
     func setBarsVisibility(_ percent: CGFloat, animated: Bool, animationDuration: CGFloat?)
     
     var canHideBars: Bool { get }
+
+    /// True = scroll must not move bars. Used when bar hides behind web keyboard.
+    var isChromeScrollInteractionDisabled: Bool { get }
+
     var isToolbarHidden: Bool { get }
     var toolbarHeight: CGFloat { get }
     var barsMaxHeight: CGFloat { get }
+    var isInMinimalChromeLayout: Bool { get }
+
+    /// Height (from the screen bottom) obscured by the visible bottom chrome at the given chrome
+    /// visibility fraction, used to resize the floating web view so page-fixed footers pin to the top
+    /// of whatever is on screen (toolbar -> capsule -> safe area).
+    func floatingWebViewBottomObscuredHeight(for barsVisibilityPercent: CGFloat) -> CGFloat
+
+    /// Chrome-obscured insets (measured from the full-bleed web view's edges) for the given chrome
+    /// visibility, used to drive `WKWebView.obscuredContentInsets` on iOS 26.
+    func floatingWebViewObscuredInsets(for barsVisibilityPercent: CGFloat) -> UIEdgeInsets
 
     var omniBar: any OmniBar { get }
     var tabBarContainer: UIView { get }
@@ -49,7 +65,9 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
             animator.delegate = delegate
         }
     }
-    
+
+    var onUserScrolled: (() -> Void)?
+
     private let animator = BarsAnimator()
     
     private var observation: NSKeyValueObservation?
@@ -75,6 +93,7 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
     }
     
     private func scrollViewDidResizeContent(_ scrollView: UIScrollView) {
+        guard delegate?.isChromeScrollInteractionDisabled != true else { return }
         if !canHideBars(for: scrollView) && animator.barsState != .revealed {
             animator.revealBars(animated: true)
         }
@@ -82,8 +101,13 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
         
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !scrollView.isZooming else { return }
-        
+
         guard scrollView.isDragging else { return }
+        onUserScrolled?()
+
+        // Bar hidden behind web keyboard. Do not touch bars, else page jerks.
+        guard delegate?.isChromeScrollInteractionDisabled != true else { return }
+
         guard canHideBars(for: scrollView) else {
             if animator.barsState != .revealed {
                 animator.revealBars(animated: true)
@@ -97,10 +121,11 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
         guard scrollView.isTracking else { return }
         guard !scrollView.isZoomBouncing else { return }
+        guard delegate?.isChromeScrollInteractionDisabled != true else { return }
         
         if scrollView.fullyZoomedOut {
             animator.revealBars(animated: true)
-        } else if abs(scrollView.zoomScale - startZoomScale) > Constants.zoomThreshold {
+        } else if abs(scrollView.zoomScale - startZoomScale) > Constants.zoomThreshold, delegate?.canHideBars ?? true {
             animator.hideBars(animated: true)
         }
     }
@@ -122,6 +147,7 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
     
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         guard !scrollView.isZooming else { return }
+        guard delegate?.isChromeScrollInteractionDisabled != true else { return }
         guard canHideBars(for: scrollView) else { return }
         
         animator.didFinishScrolling(in: scrollView, velocity: velocity.y)
@@ -157,8 +183,8 @@ class BrowserChromeManager: NSObject, UIScrollViewDelegate {
         return heightAllowsHide && (delegate?.canHideBars ?? true)
     }
 
-    func reset() {
-        animator.revealBars(animated: true)
+    func reset(animated: Bool = true) {
+        animator.revealBars(animated: animated)
     }
 }
 
