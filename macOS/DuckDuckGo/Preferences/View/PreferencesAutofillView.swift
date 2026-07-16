@@ -18,6 +18,7 @@
 
 import BWManagementShared
 import Combine
+import DesignResourcesKit
 import PixelKit
 import PreferencesUI_macOS
 import SwiftUI
@@ -183,6 +184,7 @@ extension Preferences {
                         Text(UserText.autofillNeverLock).tag(false)
                     }, label: {})
                     .pickerStyle(.radioGroup)
+                    .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
                     .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
                     TextMenuItemCaption(UserText.autofillNeverLockWarning)
                 }
@@ -206,6 +208,7 @@ extension Preferences {
                 content()
             }, label: {})
             .pickerStyle(.radioGroup)
+            .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
             .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
         }
 
