@@ -325,6 +325,23 @@ public struct AIChatAttachmentValidator {
         return nil
     }
 
+    /// Message naming the image cap that binds when no headroom is left (conversation cap prioritized); `nil` while another image can still be added.
+    public func imageCapacityValidationMessage() -> String? {
+        guard model?.supportsImageUpload == true,
+              let maxImagesPerTurn,
+              let maxImagesPerConversation else {
+            return messages.unavailable
+        }
+
+        guard remainingImagesForPicker == 0 else { return nil }
+
+        if remainingImagesInConversation - pendingImageCount <= 0 {
+            return messages.imageCountLimit(maxImagesPerConversation)
+        }
+
+        return messages.imageTurnLimit(maxImagesPerTurn)
+    }
+
     public func promptValidationMessage(for text: String) -> String? {
         let promptLength = text.trimmingCharacters(in: .whitespacesAndNewlines).count
         guard !(pendingFiles.isEmpty && pendingImageCount == 0),

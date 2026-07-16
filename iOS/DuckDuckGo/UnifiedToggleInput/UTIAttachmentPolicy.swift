@@ -102,6 +102,10 @@ struct UTIAttachmentPolicy {
         validator.imageSubmissionValidationMessage()
     }
 
+    func imageCapacityValidationMessage() -> String? {
+        validator.imageCapacityValidationMessage()
+    }
+
     func isAttachmentSupported(_ attachment: UnifiedToggleInputAttachment) -> Bool {
         switch attachment {
         case .image:

@@ -71,7 +71,8 @@ final class AIChatContextualUTIHost: UnifiedToggleInputDelegate {
             lastUsedModelProvider: lastUsedModelProvider,
             duckAIWideEventInstrumentation: wideEventInstrumentation,
             duckAIWideEventFlowScope: duckAIWideEventFlowScope,
-            contextualStartsPreSubmit: startsPreSubmit
+            contextualStartsPreSubmit: startsPreSubmit,
+            attachmentPasteEnabled: UnifiedToggleInputFeature().isAttachmentPasteEnabled
         )
         self.chipViewModel = UnifiedToggleInputPageContextChipViewModel(
             originatingURLPublisher: originatingURLPublisher,

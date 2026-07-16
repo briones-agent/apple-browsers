@@ -348,6 +348,7 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     private let reasoningAccessResolver: ReasoningModeAccessResolving = ReasoningModeAccessResolver()
     private let subscriptionUpsellPresenter: DuckAISubscriptionUpselling = DuckAISubscriptionUpsellPresenter()
     private let attachmentPresenter = UnifiedToggleInputAttachmentPresenter()
+    private let pasteHandler = UnifiedToggleInputPasteHandler()
 
     private let intentSubject = PassthroughSubject<UnifiedToggleInputIntent, Never>()
     var intentPublisher: AnyPublisher<UnifiedToggleInputIntent, Never> {
@@ -396,7 +397,8 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         sessionStateMetrics: SessionStateMetricsProviding = SessionStateMetrics(storage: UserDefaults.standard),
         duckAIWideEventInstrumentation: DuckAIWideEventInstrumentation? = nil,
         duckAIWideEventFlowScope: DuckAIWideEventFlowScope? = nil,
-        contextualStartsPreSubmit: Bool = false
+        contextualStartsPreSubmit: Bool = false,
+        attachmentPasteEnabled: Bool = false
     ) {
         self.host = host
         self.isToggleEnabled = isToggleEnabled
@@ -432,6 +434,8 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         floatingReturnKeyViewController = UnifiedToggleInputFloatingReturnKeyViewController()
         super.init()
         viewController.delegate = self
+        pasteHandler.delegate = self
+        viewController.attachmentPasteHandler = attachmentPasteEnabled ? pasteHandler : nil
         attachmentPresenter.onExpandIfNeeded = { [weak self] in
             self?.expandIfOnAITab()
         }
@@ -454,7 +458,7 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
             }
             DailyPixel.fireDailyAndCount(
                 pixel: .unifiedToggleInputFileValidationFailed,
-                withAdditionalParameters: ["reason": reason.rawValue]
+                withAdditionalParameters: ["reason": reason.rawValue, "source": "file_picker"]
             )
             self.addInvalidFileAttachment(metadata: metadata, validationMessage: message)
         }
@@ -1683,11 +1687,11 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         updateAttachButtonPresentation()
     }
 
-    func addFileAttachment(_ fileAttachment: AIChatFileAttachment, sourceURL: URL? = nil) {
+    func addFileAttachment(_ fileAttachment: AIChatFileAttachment, sourceURL: URL? = nil, source: String = "file_picker") {
         if let validationError = attachmentPolicy.fileValidationError(for: fileAttachment) {
             DailyPixel.fireDailyAndCount(
                 pixel: .unifiedToggleInputFileValidationFailed,
-                withAdditionalParameters: ["reason": validationError.reason.rawValue]
+                withAdditionalParameters: ["reason": validationError.reason.rawValue, "source": source]
             )
             viewController.addAttachment(.invalidFile(
                 UnifiedToggleInputInvalidFileAttachment(
@@ -1705,7 +1709,7 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
             return
         }
 
-        DailyPixel.fireDailyAndCount(pixel: .unifiedToggleInputFileAttached)
+        DailyPixel.fireDailyAndCount(pixel: .unifiedToggleInputFileAttached, withAdditionalParameters: ["source": source])
         viewController.addAttachment(.file(fileAttachment))
         persistDraftToStore()
         clearAttachmentValidationErrorIfPossible()
@@ -2532,6 +2536,43 @@ private extension UnifiedToggleInputCoordinator {
             "default_position": aiChatSettings.defaultOmnibarMode.rawValue
         ]
         Pixel.fire(pixel: .aiChatExperimentalOmnibarModeSwitched, withAdditionalParameters: parameters)
+    }
+}
+
+// MARK: - Paste-to-Attach
+
+extension UnifiedToggleInputCoordinator: UnifiedToggleInputPasteDelegate {
+
+    /// Keys off model capability (not remaining room) so an over-limit paste is consumed and reported here rather than falling through to UIKit's inline-image insert.
+    var pasteAttachmentSupport: UnifiedToggleInputPasteSupport {
+        UnifiedToggleInputPasteSupport(
+            isEnabled: inputMode == .aiChat && !viewController.isGenerating,
+            acceptsImages: selectedModelSupportsImageUpload,
+            fileTypes: allowedFileUTTypes
+        )
+    }
+
+    func imageCapacityMessage() -> String? {
+        attachmentPolicy.imageCapacityValidationMessage()
+    }
+
+    func pasteWillBeginExpandingIfNeeded() {
+        expandIfOnAITab()
+    }
+
+    @discardableResult
+    func addPastedImage(_ image: UIImage, fileName: String) -> Bool {
+        guard attachmentPolicy.canAttachImages else { return false }
+        addImageAttachment(image: image, fileName: fileName)
+        return true
+    }
+
+    func addPastedFile(_ file: AIChatFileAttachment) {
+        addFileAttachment(file, source: "paste")
+    }
+
+    func presentPasteError(_ message: String) {
+        presentAttachmentValidationError(message)
     }
 }
 

@@ -148,6 +148,30 @@ final class AIChatAttachmentValidatorTests: XCTestCase {
         XCTAssertNil(validator.imageSubmissionValidationMessage())
     }
 
+    func testImageCapacity_WithHeadroom_ThenNil() {
+        let validator = makeValidator(limits: makeLimits(maxImagesPerTurn: 3, maxImagesPerConversation: 10), pendingImageCount: 1)
+        XCTAssertNil(validator.imageCapacityValidationMessage())
+    }
+
+    func testImageCapacity_PerTurnExhaustedButConversationHasRoom_ThenTurnLimit() {
+        let validator = makeValidator(limits: makeLimits(maxImagesPerTurn: 3, maxImagesPerConversation: 10), pendingImageCount: 3)
+        XCTAssertEqual(validator.imageCapacityValidationMessage(), "imageTurn:3")
+    }
+
+    func testImageCapacity_ConversationExhausted_ThenCountLimit() {
+        let validator = makeValidator(
+            limits: makeLimits(maxImagesPerTurn: 5, maxImagesPerConversation: 5),
+            usage: .init(imagesUsed: 4),
+            pendingImageCount: 1
+        )
+        XCTAssertEqual(validator.imageCapacityValidationMessage(), "imageCount:5")
+    }
+
+    func testImageCapacity_ModelWithoutImageSupport_ThenUnavailable() {
+        let validator = makeValidator(model: makeModel(supportsImageUpload: false))
+        XCTAssertEqual(validator.imageCapacityValidationMessage(), "unavailable")
+    }
+
     // MARK: - Prompt length
 
     func testPrompt_LongTextWithoutAttachments_ThenNil() {

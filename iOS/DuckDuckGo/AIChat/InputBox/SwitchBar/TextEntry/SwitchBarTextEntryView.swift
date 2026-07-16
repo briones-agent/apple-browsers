@@ -237,6 +237,14 @@ class SwitchBarTextEntryView: UIView {
     var onTextInputActivated: (() -> Void)?
     var onAIChatShortcutTapped: (() -> Void)?
 
+    /// Injected paste handler forwarded to whichever control is active. Nil leaves default paste.
+    weak var attachmentPasteHandler: AttachmentPasteHandling? {
+        didSet {
+            textView.attachmentPasteHandler = attachmentPasteHandler
+            textField.attachmentPasteHandler = attachmentPasteHandler
+        }
+    }
+
     var isExpandable: Bool = false {
         didSet {
             updatePoseForCurrentState()
