@@ -18,6 +18,7 @@
 
 import SwiftUI
 import SwiftUIExtensions
+import DesignResourcesKit
 
 struct SyncSetupView<ViewModel>: View where ViewModel: ManagementViewModel {
     @EnvironmentObject var model: ViewModel
@@ -106,12 +107,21 @@ private struct SyncWithAnotherDeviceButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Self.Configuration) -> some View {
+        let enabledBackgroundColor: Color
+        let disabledBackgroundColor: Color
+        let labelColor: Color
 
-        let enabledBackgroundColor = configuration.isPressed ? Color(NSColor.controlAccentColor).opacity(0.5) : Color(NSColor.controlAccentColor)
-        let disabledBackgroundColor = Color.gray.opacity(0.1)
-        let labelColor = enabled ? Color.white : Color.primary.opacity(0.3)
+        if isAppRebranded {
+            enabledBackgroundColor = configuration.isPressed ? Color(designSystemColor: .accentSecondary) : Color(designSystemColor: .accentPrimary)
+            disabledBackgroundColor = Color(designSystemColor: .controlsFillTertiary)
+            labelColor = enabled ? Color(designSystemColor: .accentContentPrimary) : Color(designSystemColor: .textTertiary)
+        } else {
+            enabledBackgroundColor = configuration.isPressed ? Color(NSColor.controlAccentColor).opacity(0.5) : Color(NSColor.controlAccentColor)
+            disabledBackgroundColor = Color.gray.opacity(0.1)
+            labelColor = enabled ? Color.white : Color.primary.opacity(0.3)
+        }
 
-        configuration.label
+        return configuration.label
             .lineLimit(1)
             .font(.body.bold())
             .frame(height: 32)
