@@ -973,6 +973,7 @@
 		85BA55DC2FFBA17B00271125 /* AIChat in Frameworks */ = {isa = PBXBuildFile; productRef = 85BA55DB2FFBA17B00271125 /* AIChat */; };
 		85BA58551F34F49E00C6E8CA /* AppUserDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BA58541F34F49E00C6E8CA /* AppUserDefaults.swift */; };
 		85BA58581F34F72F00C6E8CA /* AppUserDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BA58561F34F61C00C6E8CA /* AppUserDefaultsTests.swift */; };
+		DDCC0FF100000000A0A0A002 /* SettingsNextStepsDismissalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDCC0FF100000000A0A0A001 /* SettingsNextStepsDismissalTests.swift */; };
 		85BA585A1F3506AE00C6E8CA /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BA58591F3506AE00C6E8CA /* AppSettings.swift */; };
 		85BA79911F6FF75000F59015 /* ContentBlockerStoreConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BA79901F6FF75000F59015 /* ContentBlockerStoreConstants.swift */; };
 		85BDC310243359040053DB07 /* FindInPageUserScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BDC30F243359040053DB07 /* FindInPageUserScript.swift */; };
@@ -3658,6 +3659,7 @@
 		85B9814D2B5EB618009AC9A6 /* SwipeTabsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeTabsCoordinator.swift; sourceTree = "<group>"; };
 		85BA58541F34F49E00C6E8CA /* AppUserDefaults.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppUserDefaults.swift; sourceTree = "<group>"; };
 		85BA58561F34F61C00C6E8CA /* AppUserDefaultsTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppUserDefaultsTests.swift; sourceTree = "<group>"; };
+		DDCC0FF100000000A0A0A001 /* SettingsNextStepsDismissalTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsNextStepsDismissalTests.swift; sourceTree = "<group>"; };
 		85BA58591F3506AE00C6E8CA /* AppSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		85BA79901F6FF75000F59015 /* ContentBlockerStoreConstants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContentBlockerStoreConstants.swift; sourceTree = "<group>"; };
 		85BDC30F243359040053DB07 /* FindInPageUserScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindInPageUserScript.swift; sourceTree = "<group>"; };
@@ -11253,6 +11255,7 @@
 				369E692B2E5F6E9F00F98A8F /* AppServices */,
 				CB3B4D572D64AA9C006DAD63 /* Mocks */,
 				85BA58561F34F61C00C6E8CA /* AppUserDefaultsTests.swift */,
+				DDCC0FF100000000A0A0A001 /* SettingsNextStepsDismissalTests.swift */,
 				4B62C4B925B930DD008912C6 /* AppConfigurationFetchTests.swift */,
 				85AFA1202B45D14F0028A504 /* BookmarksMigrationAssertionTests.swift */,
 				987243132C5232B5007ECC76 /* BookmarksDatabaseSetupTests.swift */,
@@ -14146,6 +14149,7 @@
 				9FC0E3D72FAB050600B11ECD /* OnboardingIntroContentProviderTests.swift in Sources */,
 				CBE77C772FD2F3B300CB7C6D /* SuggestionRowMapperTests.swift in Sources */,
 				85BA58581F34F72F00C6E8CA /* AppUserDefaultsTests.swift in Sources */,
+				DDCC0FF100000000A0A0A002 /* SettingsNextStepsDismissalTests.swift in Sources */,
 				986CD53E2DE8FA1400AFA98A /* ConfigurationMocks.swift in Sources */,
 				9FCFCD802C6AF56D006EB7A0 /* LaunchOptionsHandlerTests.swift in Sources */,
 				983C52E72C2C0ACB007B5747 /* BookmarkStateRepairTests.swift in Sources */,

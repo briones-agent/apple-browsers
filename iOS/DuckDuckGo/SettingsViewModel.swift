@@ -266,6 +266,11 @@ final class SettingsViewModel: ObservableObject {
     @Published var shouldShowSetAsDefaultBrowser: Bool = false
     @Published var shouldShowImportPasswords: Bool = false
 
+    // Next Steps section — tap-then-wait items. See `updateNextStepsVisibility()`.
+    // (The address-bar and voice-search items derive from `state`, so they are computed properties instead.)
+    @Published var shouldShowAddToDockNextStep: Bool = true
+    @Published var shouldShowAddWidgetNextStep: Bool = true
+
     // MARK: - Deep linking
     // Used to automatically navigate to a specific section
     // immediately after loading the Settings View
@@ -1230,6 +1235,7 @@ extension SettingsViewModel {
             .store(in: &cancellables)
 
         updateRecentlyVisitedSitesVisibility()
+        updateNextStepsVisibility()
 
         if #available(iOS 18.2, *) {
             updateCompleteSetupSectionVisiblity()
@@ -1412,6 +1418,12 @@ extension SettingsViewModel {
         static let didDismissSetAsDefaultBrowserKey = "com.duckduckgo.settings.setup.browser-default-dismissed"
         static let didDismissImportPasswordsKey = "com.duckduckgo.settings.setup.import-passwords-dismissed"
         static let shouldCheckIfDefaultBrowserKey = "com.duckduckgo.settings.setup.check-browser-default"
+
+        // Next Steps section: timestamp (Double, timeIntervalSinceReferenceDate) of the first tap on each item.
+        static let didTapAddToDockNextStepKey = "com.duckduckgo.settings.next-steps.add-to-dock-tapped-at"
+        static let didTapAddWidgetNextStepKey = "com.duckduckgo.settings.next-steps.add-widget-tapped-at"
+        // How long after tapping an instructional Next Steps item (Add to Dock / Add Widget) it stays visible.
+        static let nextStepTapDismissalInterval: TimeInterval = 24 * 60 * 60 // 1 day
     }
 
     func onFirstAppear() {
@@ -1450,6 +1462,65 @@ extension SettingsViewModel {
     func dismissImportPasswords() {
         try? keyValueStore.set(true, forKey: Constants.didDismissImportPasswordsKey)
         updateCompleteSetupSectionVisiblity()
+    }
+
+    // MARK: Next Steps section
+
+    /// Whether the "Set your address bar position" step is shown. Hidden once the user moves the
+    /// address bar off its default (top) position. Derived from `state`, so it updates live when the
+    /// user changes the setting in the pushed sub-view and pops back (the binding writes `state`).
+    var shouldShowSetAddressBarPositionNextStep: Bool {
+        state.addressBar.enabled && state.addressBar.position == .top
+    }
+
+    /// Whether the "Enable Voice Search" step is shown. Hidden once voice search is enabled.
+    /// Derived from `state`, so it updates live (the voice-search binding writes `state`).
+    var shouldShowEnableVoiceSearchNextStep: Bool {
+        !state.voiceSearchEnabled
+    }
+
+    /// Whether the whole Next Steps section should render. Hiding the section when every item is
+    /// gone avoids leaving a dangling header behind.
+    var shouldShowNextStepsSection: Bool {
+        shouldShowAddToDockNextStep
+            || shouldShowAddWidgetNextStep
+            || shouldShowSetAddressBarPositionNextStep
+            || shouldShowEnableVoiceSearchNextStep
+    }
+
+    /// Recomputes the tap-then-wait items (Add to Dock / Add Widget), which dismiss one day after
+    /// the user first taps them. Called on every Settings open from `initState()`.
+    private func updateNextStepsVisibility() {
+        shouldShowAddToDockNextStep = !Self.hasTapDismissalElapsed(
+            tappedAt: try? keyValueStore.object(forKey: Constants.didTapAddToDockNextStepKey) as? Double,
+            interval: Constants.nextStepTapDismissalInterval)
+        shouldShowAddWidgetNextStep = !Self.hasTapDismissalElapsed(
+            tappedAt: try? keyValueStore.object(forKey: Constants.didTapAddWidgetNextStepKey) as? Double,
+            interval: Constants.nextStepTapDismissalInterval)
+    }
+
+    func recordAddToDockNextStepTapped() {
+        recordNextStepTapIfNeeded(forKey: Constants.didTapAddToDockNextStepKey)
+    }
+
+    func recordAddWidgetNextStepTapped() {
+        recordNextStepTapIfNeeded(forKey: Constants.didTapAddWidgetNextStepKey)
+    }
+
+    /// Persists the first-tap timestamp for a Next Steps item. Later taps are ignored so the
+    /// one-day window stays anchored to the user's initial engagement.
+    private func recordNextStepTapIfNeeded(forKey key: String) {
+        guard (try? keyValueStore.object(forKey: key) as? Double) == nil else { return }
+        try? keyValueStore.set(Date().timeIntervalSinceReferenceDate, forKey: key)
+    }
+
+    /// Pure, testable helper: `true` once `interval` seconds have elapsed since `tappedAt`.
+    /// Returns `false` when `tappedAt` is `nil` (item never tapped).
+    static func hasTapDismissalElapsed(tappedAt: Double?,
+                                       now: TimeInterval = Date().timeIntervalSinceReferenceDate,
+                                       interval: TimeInterval) -> Bool {
+        guard let tappedAt else { return false }
+        return now - tappedAt >= interval
     }
 
     @MainActor func shouldPresentAutofillViewWith(accountDetails: SecureVaultModels.WebsiteAccount?, card: SecureVaultModels.CreditCard?, showCreditCardManagement: Bool, showSettingsScreen: AutofillSettingsDestination? = nil, source: AutofillSettingsSource? = nil) {
