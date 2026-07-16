@@ -46,6 +46,10 @@ public enum AIChatURLParameters {
     public static let settingsName = "settings"
     public static let settingsOpenValue = "open"
 
+    /// Tells the Duck.ai FE to render only the Customize Responses card.
+    public static let customizeResponsesName = "customize-responses"
+    public static let customizeResponsesValue = "full"
+
     /// Appends `?mode=voice` to the given base URL.
     public static func voiceModeURL(from baseURL: URL) -> URL {
         modeURL(from: baseURL, mode: voiceModeValue)
@@ -64,6 +68,11 @@ public enum AIChatURLParameters {
     /// Appends `?settings=open` to the given base URL.
     public static func settingsOpenURL(from baseURL: URL) -> URL {
         baseURL.addingOrReplacing(URLQueryItem(name: settingsName, value: settingsOpenValue))
+    }
+
+    /// Appends `?customize-responses=full` to the given base URL.
+    public static func nativeCustomizeModalURL(from baseURL: URL) -> URL {
+        baseURL.addingOrReplacing(URLQueryItem(name: customizeResponsesName, value: customizeResponsesValue))
     }
 
     /// Appends `?native-input=true` to the given base URL.

@@ -30,6 +30,7 @@ import Subscription
 final class DBPService: NSObject {
     private let dbpIOSManager: DataBrokerProtectionIOSManager?
     public let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
+    public let profileStateManager: DBPProfileStateManaging
     public var dbpIOSPublicInterface: DBPIOSInterface.PublicInterface? {
         return dbpIOSManager
     }
@@ -49,6 +50,8 @@ final class DBPService: NSObject {
             isFreemiumEnabled: { [featureFlagger] in featureFlagger.isFreemiumPIREnabled }
         )
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
+        let profileStateManager = DefaultDBPProfileStateManager(keyValueStore: UserDefaults.dbp)
+        self.profileStateManager = profileStateManager
 
         guard appDependencies.featureFlagger.isFeatureOn(.personalInformationRemoval) else {
             self.dbpIOSManager = nil
@@ -84,17 +87,25 @@ final class DBPService: NSObject {
                 wideEvent: appDependencies.wideEvent,
                 subscriptionManager: dbpSubscriptionManager,
                 quickLinkOpenURLHandler: { url in
-                    if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                       SubscriptionPurchaseFlowPath.contains(components.path) {
-                        let urlInterceptor = TabURLInterceptorDefault(featureFlagger: appDependencies.featureFlagger) {
-                            appDependencies.subscriptionManager.isSubscriptionPurchaseEligible
-                        }
-
-                        guard urlInterceptor.allowsNavigatingTo(url: url) else { return }
+                    func openQuickLink() {
+                        let quickLinkURLString = AppDeepLinkSchemes.quickLink.appending(url.absoluteString)
+                        guard let quickLinkURL = URL(string: quickLinkURLString) else { return }
+                        UIApplication.shared.open(quickLinkURL)
                     }
 
-                    guard let quickLinkURL = URL(string: AppDeepLinkSchemes.quickLink.appending(url.absoluteString)) else { return }
-                    UIApplication.shared.open(quickLinkURL)
+                    switch FreemiumDBPPurchaseURLRouter().route(
+                        for: url,
+                        isPurchaseEligible: appDependencies.subscriptionManager.isSubscriptionPurchaseEligible
+                    ) {
+                    case .subscriptionPurchaseFlow(let components):
+                        NotificationCenter.default.post(
+                            name: .dataBrokerProtectionOpenSubscriptionFlow,
+                            object: nil,
+                            userInfo: [DataBrokerProtectionSubscriptionFlowParameter.redirectURLComponents: components]
+                        )
+                    case .quickLink:
+                        openQuickLink()
+                    }
                 },
                 feedbackViewCreator: {
                     let viewModel = UnifiedFeedbackFormViewModel(
@@ -110,6 +121,7 @@ final class DBPService: NSObject {
                 eventsHandler: eventsHandler,
                 applicationNameForUserAgentProvider: { DefaultUserAgentManager.shared.applicationNameForUserAgent },
                 freemiumDBPUserStateManager: freemiumDBPUserStateManager,
+                profileStateManager: profileStateManager,
                 isWebViewInspectable: isWebViewInspectable,
                 freeTrialConversionService: appDependencies.freeTrialConversionService,
                 contentBlocking: dbpContentBlocking)
@@ -129,6 +141,16 @@ final class DBPService: NSObject {
             await dbpIOSManager?.appDidBecomeActive()
         }
     }
+}
+
+extension NSNotification.Name {
+    static let dataBrokerProtectionOpenSubscriptionFlow = Notification.Name(
+        rawValue: "com.duckduckgo.notification.dataBrokerProtectionOpenSubscriptionFlow"
+    )
+}
+
+enum DataBrokerProtectionSubscriptionFlowParameter {
+    static let redirectURLComponents = "redirectURLComponents"
 }
 
 final class DBPFeatureFlagger: DBPFeatureFlagging, FreemiumPIRFeatureFlagging {

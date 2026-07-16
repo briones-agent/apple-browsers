@@ -173,6 +173,9 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 guard await self.performDeferredPreservedAccountCleanupIfNeeded() else {
                     return
                 }
+                if useSimplifiedLayoutV2 {
+                    optionsViewModel.connectingSheetPhase = .connecting
+                }
                 try await self.syncService.createAccount(deviceName: self.deviceName, deviceType: self.deviceType)
                 let additionalParameters = self.source.map { ["source": $0] } ?? [:]
                 try await Pixel.fire(pixel: .syncSignupDirect, withAdditionalParameters: additionalParameters, includedParameters: [.appVersion])
@@ -184,13 +187,20 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 self.enableAutoRestoreByDefaultIfNeeded()
                 await self.refreshDevicesAfterSimplifiedSyncEnable()
 
-                let didShowPrompt = optionsViewModel.checkAndShowSyncWithAnotherDevicePrompt()
-                if didShowPrompt {
-                    optionsViewModel.scheduleSyncEnabledToastAfterSyncWithAnotherDevicePromptDismissal()
+                if useSimplifiedLayoutV2 {
+                    optionsViewModel.showSyncWithAnotherDeviceInConnectingSheet()
                 } else {
-                    self.showSimplifiedSyncEnabledToast()
+                    let didShowPrompt = optionsViewModel.checkAndShowSyncWithAnotherDevicePrompt()
+                    if didShowPrompt {
+                        optionsViewModel.scheduleSyncEnabledToastAfterSyncWithAnotherDevicePromptDismissal()
+                    } else {
+                        self.showSimplifiedSyncEnabledToast()
+                    }
                 }
             } catch {
+                if useSimplifiedLayoutV2 {
+                    optionsViewModel.connectingSheetPhase = nil
+                }
                 self.firePixelIfNeededFor(event: .syncSignupError, error: error)
                 ActionMessageView.present(message: UserText.simplifiedSyncSetupFailedToast)
             }
@@ -455,6 +465,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
         navigationController.present(controller, animated: true, completion: completion)
     }
 
+
     @MainActor
     func performDeferredPreservedAccountCleanupIfNeeded() async -> Bool {
         guard needsPreservedAccountCleanupBeforeServerOperation else {
@@ -602,8 +613,11 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             qrCodeString: stringForQRCode,
             source: CodeCollectionSource(syncSetupSource: source))
         model.delegate = self
-        
-        let controller = UIHostingController(rootView: AnyView(SimplifiedScanOrShowCodeView(model: model)))
+
+        let rootView = useSimplifiedLayoutV2
+            ? AnyView(ScanQRCodeViewV2(model: model))
+            : AnyView(SimplifiedScanOrShowCodeView(model: model))
+        let controller = UIHostingController(rootView: rootView)
 
         let navController = UIDevice.current.userInterfaceIdiom == .phone
         ? PortraitNavigationController(rootViewController: controller)
@@ -622,7 +636,9 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             navController.modalPresentationStyle = .fullScreen
         }
         navigationController?.present(navController, animated: true) {
-            self.checkCameraPermission(model: model)
+            if !self.useSimplifiedLayoutV2 {
+                self.checkCameraPermission(model: model)
+            }
             if let onPresentPixelInfo {
                 let pixelSource = self.source ?? onPresentPixelInfo.source.rawValue
                 var parameters = [
@@ -633,6 +649,10 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 Pixel.fire(pixel: onPresentPixelInfo.pixel, withAdditionalParameters: parameters, includedParameters: [.appVersion])
             }
         }
+    }
+
+    func requestCameraPermission(for model: ScanOrPasteCodeViewModel) {
+        checkCameraPermission(model: model)
     }
 
     func checkCameraPermission(model: ScanOrPasteCodeViewModel) {
@@ -682,9 +702,11 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             alert.addAction(UIAlertAction(title: UserText.actionCancel, style: .cancel) { _ in
                 continuation.resume(returning: false)
             })
-            alert.addAction(UIAlertAction(title: UserText.syncPairingV2ConfirmationAction, style: .default) { _ in
+            let confirmAction = UIAlertAction(title: UserText.syncPairingV2ConfirmationAction, style: .default) { _ in
                 continuation.resume(returning: true)
-            })
+            }
+            alert.addAction(confirmAction)
+            alert.preferredAction = confirmAction
 
             let viewControllerToPresentFrom = navigationController?.presentedViewController ?? presentedViewController ?? self
             viewControllerToPresentFrom.present(alert, animated: true)

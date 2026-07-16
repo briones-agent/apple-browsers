@@ -139,8 +139,12 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     /// attachments error label and cleared when the user next changes attachments or the model.
     private var lastAttachmentError: String?
 
+    private var customizeResponsesModal: CustomizeResponsesModalController?
+
     let themeManager: ThemeManaging
     let omnibarController: AIChatOmnibarController
+    private let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
+    private let burnerMode: BurnerMode
     var themeUpdateCancellable: AnyCancellable?
     private var appearanceCancellable: AnyCancellable?
     private var textChangeCancellable: AnyCancellable?
@@ -159,7 +163,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     private lazy var historyCleaner: HistoryCleaning = HistoryCleaner(
         featureFlagger: NSApp.delegateTyped.featureFlagger,
         privacyConfig: NSApp.delegateTyped.privacyFeatures.contentBlocking.privacyConfigurationManager,
-        nativeStorageHandler: NSApp.delegateTyped.duckAiNativeStorageHandler,
+        nativeStorageHandler: duckAiNativeStorageHandler,
         featureFlagProvider: AIChatFeatureFlagProvider(featureFlagger: NSApp.delegateTyped.featureFlagger)
     )
 
@@ -302,9 +306,14 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         fatalError("AIChatOmnibarContainerViewController: Bad initializer")
     }
 
-    required init(themeManager: ThemeManaging, omnibarController: AIChatOmnibarController) {
+    required init(themeManager: ThemeManaging,
+                  omnibarController: AIChatOmnibarController,
+                  duckAiNativeStorageHandler: DuckAiNativeStorageHandling?,
+                  burnerMode: BurnerMode) {
         self.themeManager = themeManager
         self.omnibarController = omnibarController
+        self.duckAiNativeStorageHandler = duckAiNativeStorageHandler
+        self.burnerMode = burnerMode
 
         super.init(nibName: nil, bundle: nil)
     }
@@ -484,15 +493,19 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     // MARK: - Tool Button Visibility
 
     private var shouldShowToolsButton: Bool {
-        omnibarController.isOmnibarToolsEnabled && (isImageGenerationItemVisible || isWebSearchItemVisible)
+        omnibarController.isOmnibarToolsEnabled && (isImageGenerationItemVisible || isWebSearchItemVisible || isCustomizeResponsesItemVisible)
     }
 
     private var isImageGenerationItemVisible: Bool {
-        omnibarController.isImageGenerationEnabled
+        omnibarController.isImageGenerationEnabled && omnibarController.selectedModelSupportsImageGeneration
     }
 
     private var isWebSearchItemVisible: Bool {
         omnibarController.isWebSearchEnabled && omnibarController.selectedModelSupportsWebSearch
+    }
+
+    private var isCustomizeResponsesItemVisible: Bool {
+        omnibarController.isCustomizeResponsesEnabled
     }
 
     private var shouldShowWebSearchChip: Bool {
@@ -1093,13 +1106,13 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        if omnibarController.isImageGenerationEnabled {
+        if isImageGenerationItemVisible {
             let createImageItem = NSMenuItem()
             createImageItem.attributedTitle = toolsMenuItemAttributedTitle(
                 title: UserText.aiChatImageGenButtonLabel,
                 subtitle: UserText.aiChatImageGenToolSubtitle
             )
-            createImageItem.image = DesignSystemImages.Glyphs.Size16.image
+            createImageItem.image = DesignSystemImages.Glyphs.Size16.images
             createImageItem.target = self
             createImageItem.action = #selector(toolsMenuCreateImageClicked)
             if omnibarController.isImageGenerationMode {
@@ -1121,6 +1134,31 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 webSearchItem.state = .on
             }
             menu.addItem(webSearchItem)
+        }
+
+        if isCustomizeResponsesItemVisible {
+            if menu.numberOfItems > 0 {
+                menu.addItem(.separator())
+            }
+            let store = CustomizeResponsesStore(storageHandler: duckAiNativeStorageHandler)
+            let state = store.currentState()
+            let subtitle = (state.hasCustomization ? state.subLabel : nil) ?? UserText.aiChatCustomizeResponsesToolSubtitle
+            let rowView = CustomizeResponsesMenuRowView(
+                title: UserText.aiChatCustomizeResponsesButtonLabel,
+                subtitle: subtitle,
+                icon: DesignSystemImages.Glyphs.Size16.glasses,
+                showsToggle: state.hasCustomization,
+                isActive: state.isActive,
+                isEnabled: !omnibarController.isImageGenerationMode,
+                onOpen: { [weak self] in self?.presentCustomizeResponsesModal() },
+                onToggle: { active in
+                    store.setActive(active)
+                    NotificationCenter.default.post(name: .aiChatCustomizeResponsesDidChange, object: nil)
+                }
+            )
+            let customizeItem = NSMenuItem()
+            customizeItem.view = rowView
+            menu.addItem(customizeItem)
         }
 
         return menu
@@ -1153,6 +1191,23 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             PixelKit.fire(AIChatPixel.aiChatAddressBarWebSearchActivated, frequency: .dailyAndCount, includeAppVersionParameter: true)
         }
         omnibarController.toggleWebSearchMode()
+    }
+
+    private func presentCustomizeResponsesModal() {
+        guard customizeResponsesModal == nil else { return }
+        PixelKit.fire(AIChatPixel.aiChatAddressBarCustomizeResponsesOpened, frequency: .dailyAndCount, includeAppVersionParameter: true)
+        guard let parentWindow = view.window else {
+            omnibarController.openCustomizeResponses()
+            return
+        }
+        let modal = CustomizeResponsesModalController(burnerMode: burnerMode)
+        modal.onClose = { [weak self] in
+            self?.customizeResponsesModal = nil
+            // Fires on every dismissal path (FE close, backdrop, Esc) so open NTPs re-push their config.
+            NotificationCenter.default.post(name: .aiChatCustomizeResponsesDidChange, object: nil)
+        }
+        customizeResponsesModal = modal
+        modal.present(over: parentWindow)
     }
 
     /// Routes the attach-button click. When the omnibar tab picker is enabled, opens a menu

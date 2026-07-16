@@ -145,7 +145,7 @@ final class AIChatContextualWebViewController: UIViewController {
          isFireTab: Bool = false,
          duckAiFireModeStorageHandler: DuckAiNativeStorageHandling? = nil,
          downloadHandler: DownloadHandling,
-         getPageContext: ((PageContextRequestReason) -> AIChatPageContextData?)?,
+         getPageContext: PageContextAsyncProvider?,
          pixelHandler: AIChatContextualModePixelFiring,
          debugSettings: AIChatDebugSettingsHandling = AIChatDebugSettings(),
          userAgentManager: UserAgentManaging = DefaultUserAgentManager.shared,
@@ -212,7 +212,7 @@ final class AIChatContextualWebViewController: UIViewController {
     func submitPrompt(_ prompt: String, pageContext: AIChatPageContextData? = nil) {
         Logger.aiChat.debug("[ContextualWebVC] submitPrompt called - isPageReady: \(self.isPageReady), isContentHandlerReady: \(self.isContentHandlerReady)")
         if pageContext != nil {
-            utiHost?.markPromptSubmitted()
+            utiHost?.notifyPromptDelivered()
         }
         if isPageReady && isContentHandlerReady {
             Logger.aiChat.debug("[ContextualWebVC] Submitting prompt immediately")
@@ -261,7 +261,9 @@ final class AIChatContextualWebViewController: UIViewController {
     }
 
     func startNewChat() {
-        aiChatContentHandler.submitStartChatAction()
+        Task { @MainActor in
+            await aiChatContentHandler.submitStartChatAction()
+        }
     }
 
     func pushPageContext(_ context: AIChatPageContextData?) {

@@ -133,6 +133,13 @@ protocol OmniBarView: UIView, OmniBarStatusUpdateable {
 
     func makeGlass()
     func makeOpaque()
+
+    /// Swaps the omnibar Duck.ai button glyph to reflect whether the contextual AI chat sheet is open.
+    func updateAIChatButtonForContextualSheet(isPresented: Bool)
+
+    /// In floating UI minimal chrome, wraps the button groups in their own glass capsules (the field
+    /// keeps its glass). Pass `false` to restore the standard per-position appearance.
+    func setFloatingMinimalChromeBar(_ enabled: Bool)
 }
 
 /// iPad-specific extension for the duck.ai mode toggle and expandable search area.
@@ -146,7 +153,7 @@ protocol ExpandableOmniBarView: OmniBarView {
     var selectedModeToggleState: TextEntryMode { get set }
     var isModeToggleHidden: Bool { get set }
     func setSearchAreaExpanded(_ expanded: Bool, animated: Bool)
-    var aiChatTextView: UITextView { get }
+    var aiChatTextView: ResignSuppressingTextView { get }
     var onAIChatSendPressed: (() -> Void)? { get set }
     func updateTextFieldPlaceholderVisibility(hasText: Bool)
     func updateAIChatSendButton(hasText: Bool)

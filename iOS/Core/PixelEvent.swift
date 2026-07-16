@@ -1801,8 +1801,6 @@ extension Pixel {
         case aiChatContextualExpandButtonTapped
         case aiChatContextualNewChatButtonTapped
         case aiChatContextualQuickActionSummarizeSelected
-        case aiChatContextualPageContextPlaceholderShown
-        case aiChatContextualPageContextPlaceholderTapped
         case aiChatContextualPageContextAutoAttached
         case aiChatContextualPageContextUpdatedOnNavigation
         case aiChatContextualPageContextManuallyAttachedNative
@@ -1927,8 +1925,14 @@ extension Pixel {
         // MARK: - Push Notifications
         case inactiveUserProvisionalPushNotificationTapped
         case userNotificationAuthorizationStatusDaily
+        case subscriptionExpirationReminderScheduled
+        case subscriptionExpirationReminderNotificationTapped
+        case subscriptionExpirationReminderNotificationDismissed
+        case subscriptionExpirationReminderCancelled
+        case subscriptionExpirationReminderSchedulingError
 
         // MARK: - Freemium Personal Information Removal
+        case freemiumPIRSettingsEntryPointImpression
         case freemiumPIRSettingsEntryPointClicked
 
         // MARK: - Data Broker Protection Notifications
@@ -3707,8 +3711,6 @@ extension Pixel.Event {
         case .aiChatContextualExpandButtonTapped: return "m_aichat_contextual_expand_button_tapped"
         case .aiChatContextualNewChatButtonTapped: return "m_aichat_contextual_new_chat_button_tapped"
         case .aiChatContextualQuickActionSummarizeSelected: return "m_aichat_contextual_quick_action_summarize_selected"
-        case .aiChatContextualPageContextPlaceholderShown: return "m_aichat_contextual_page_context_placeholder_shown"
-        case .aiChatContextualPageContextPlaceholderTapped: return "m_aichat_contextual_page_context_placeholder_tapped"
         case .aiChatContextualPageContextAutoAttached: return "m_aichat_contextual_page_context_auto_attached"
         case .aiChatContextualPageContextUpdatedOnNavigation: return "m_aichat_contextual_page_context_updated_on_navigation"
         case .aiChatContextualPageContextManuallyAttachedNative: return "m_aichat_contextual_page_context_manually_attached_native"
@@ -3887,8 +3889,14 @@ extension Pixel.Event {
         // MARK: Push Notification
         case .inactiveUserProvisionalPushNotificationTapped: return "m_push-notification_local-provisional_inactive-user-tap"
         case .userNotificationAuthorizationStatusDaily: return "m_push-notification_user-notification-authorization-status"
+        case .subscriptionExpirationReminderScheduled: return "push-notification_subscription-expiration-reminder_scheduled"
+        case .subscriptionExpirationReminderNotificationTapped: return "push-notification_subscription-expiration-reminder_tapped"
+        case .subscriptionExpirationReminderNotificationDismissed: return "push-notification_subscription-expiration-reminder_dismissed"
+        case .subscriptionExpirationReminderCancelled: return "push-notification_subscription-expiration-reminder_cancelled"
+        case .subscriptionExpirationReminderSchedulingError: return "push-notification_subscription-expiration-reminder_scheduling-error"
 
         // MARK: Freemium Personal Information Removal
+        case .freemiumPIRSettingsEntryPointImpression: return "m_dbp_freemium_settings_entry_point_impression"
         case .freemiumPIRSettingsEntryPointClicked: return "m_dbp_freemium_settings_entry_point_clicked"
 
         // MARK: Data Broker Protection Notifications

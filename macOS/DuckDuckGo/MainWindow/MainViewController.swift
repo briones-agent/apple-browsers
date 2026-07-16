@@ -309,8 +309,7 @@ final class MainViewController: NSViewController {
             tabCollectionViewModel: tabCollectionViewModel,
             bookmarkManager: bookmarkManager,
             dragDropManager: bookmarkDragDropManager,
-            pinningManager: pinningManager,
-            featureFlagger: featureFlagger
+            pinningManager: pinningManager
         )
 
         // Create the shared AI Chat omnibar controller
@@ -332,7 +331,10 @@ final class MainViewController: NSViewController {
 
         aiChatOmnibarContainerViewController = AIChatOmnibarContainerViewController(
             themeManager: themeManager,
-            omnibarController: aiChatOmnibarController
+            omnibarController: aiChatOmnibarController,
+            duckAiNativeStorageHandler: NSApp.delegateTyped.burnerDuckAiStorageRegistry?.handler(for: tabCollectionViewModel.burnerMode)
+                ?? NSApp.delegateTyped.duckAiNativeStorageHandler,
+            burnerMode: tabCollectionViewModel.burnerMode
         )
         aiChatOmnibarTextContainerViewController = AIChatOmnibarTextContainerViewController(
             omnibarController: aiChatOmnibarController,

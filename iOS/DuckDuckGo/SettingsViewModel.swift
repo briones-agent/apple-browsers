@@ -85,6 +85,8 @@ final class SettingsViewModel: ObservableObject {
     private weak var runPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?
     var dataBrokerProtectionViewControllerProvider: DBPIOSInterface.DataBrokerProtectionViewControllerProvider?
     private let freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking
+    private let profileStateManager: DBPProfileStateManaging
+    private let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
     weak var autoClearActionDelegate: SettingsAutoClearActionDelegate?
     let mobileCustomization: MobileCustomization
     let userScriptsDependencies: DefaultScriptSourceProvider.Dependencies
@@ -202,10 +204,18 @@ final class SettingsViewModel: ObservableObject {
             && dataBrokerProtectionViewControllerProvider != nil
     }
 
-    var dbpMeetsProfileRunPrequisite: Bool {
-        get {
-            (try? runPrerequisitesDelegate?.meetsProfileRunPrequisite) ?? false
+    var dbpProfileStatusIndicator: StatusIndicator? {
+        switch profileStateManager.profileState {
+        case .hasProfile: return .on
+        case .noProfile: return .off
+        case .unknown: return nil
         }
+    }
+
+    /// True once the user's first freemium scan has finished (results exist, even if no
+    /// matches). Used to switch the entry-point CTA from "start scan" to "show results".
+    var hasCompletedFreemiumScan: Bool {
+        freemiumDBPUserStateManager.firstScanResult != nil
     }
 
     var isDefaultOmnibarModeEnabled: Bool {
@@ -413,10 +423,6 @@ final class SettingsViewModel: ObservableObject {
 
     var shouldShowNTPAfterIdleSetting: Bool {
         featureFlagger.isFeatureOn(.showNTPAfterIdleReturn)
-    }
-
-    var shouldShowLastTabShortcutSetting: Bool {
-        featureFlagger.isFeatureOn(.escapeHatchHideShortcut)
     }
 
     var lastTabShortcutEnabledBinding: Binding<Bool> {
@@ -1032,6 +1038,8 @@ final class SettingsViewModel: ObservableObject {
          runPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?,
          dataBrokerProtectionViewControllerProvider: DBPIOSInterface.DataBrokerProtectionViewControllerProvider?,
          freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking,
+         profileStateManager: DBPProfileStateManaging,
+         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
          winBackOfferVisibilityManager: WinBackOfferVisibilityManaging,
          mobileCustomization: MobileCustomization,
          userScriptsDependencies: DefaultScriptSourceProvider.Dependencies,
@@ -1075,6 +1083,8 @@ final class SettingsViewModel: ObservableObject {
         self.runPrerequisitesDelegate = runPrerequisitesDelegate
         self.dataBrokerProtectionViewControllerProvider = dataBrokerProtectionViewControllerProvider
         self.freemiumPIREligibilityChecker = freemiumPIREligibilityChecker
+        self.profileStateManager = profileStateManager
+        self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
         self.winBackOfferVisibilityManager = winBackOfferVisibilityManager
         self.mobileCustomization = mobileCustomization
         self.userScriptsDependencies = userScriptsDependencies
@@ -1649,6 +1659,7 @@ extension SettingsViewModel {
         case aiChat
         case privateSearch
         case subscriptionSettings
+        case subscriptionWelcome
         case customizeToolbarButton
         case customizeAddressBarButton
         case appearance
@@ -1667,6 +1678,7 @@ extension SettingsViewModel {
             case .aiChat: return "aiChat"
             case .privateSearch: return "privateSearch"
             case .subscriptionSettings: return "subscriptionSettings"
+            case .subscriptionWelcome: return "subscriptionWelcome"
             case .customizeToolbarButton: return "customizeToolbarButton"
             case .customizeAddressBarButton: return "customizeAddressButton"
             case .appearance: return "appearance"
@@ -1679,7 +1691,7 @@ extension SettingsViewModel {
         // Default to .sheet, specify .push where needed
         var type: DeepLinkType {
             switch self {
-            case .netP, .dbp, .itr, .subscriptionFlow, .subscriptionPlanChangeFlow, .restoreFlow, .duckPlayer, .aiChat, .privateSearch, .subscriptionSettings, .customizeToolbarButton, .customizeAddressBarButton, .appearance, .general:
+            case .netP, .dbp, .itr, .subscriptionFlow, .subscriptionPlanChangeFlow, .restoreFlow, .duckPlayer, .aiChat, .privateSearch, .subscriptionSettings, .subscriptionWelcome, .customizeToolbarButton, .customizeAddressBarButton, .appearance, .general:
                 return .navigationLink
             }
         }
