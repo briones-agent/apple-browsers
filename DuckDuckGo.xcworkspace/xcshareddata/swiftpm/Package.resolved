@@ -1,5 +1,5 @@
 {
-  "originHash" : "502693115b0ec50c6dc895e084a0517147489147550fd9a7ebb4ea9ce279c6d7",
+  "originHash" : "8688d27a810181a9feef97fe24cf7ac8be5800efc74403bb5f1b6f5c7b4a814f",
   "pins" : [
     {
       "identity" : "apple-toolbox",
@@ -249,8 +249,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/scinfu/SwiftSoup",
       "state" : {
-        "revision" : "ead56133a693d0184d8c2db1a6d6394410cacfd6",
-        "version" : "2.13.6"
+        "revision" : "83336847e47b2f499330c15426ad2fb180e72d9b"
       }
     },
     {
