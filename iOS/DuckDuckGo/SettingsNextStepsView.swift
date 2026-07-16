@@ -52,7 +52,8 @@ struct SettingsNextStepsView: View {
 
                 // Set Your Address Bar Position — dismisses once the position is changed from default.
                 if viewModel.shouldShowSetAddressBarPositionNextStep {
-                    NavigationLink(destination: SettingsAppearanceView().environmentObject(viewModel)) {
+                    NavigationLink(destination: SettingsAppearanceView().environmentObject(viewModel)
+                        .onDisappear { viewModel.refreshNextStepsVisibility(animated: true) }) {
                         SettingsCellView(label: UserText.setYourAddressBarPosition,
                                          image: Image(uiImage: DesignSystemImages.Color.Size24.addressBarBottom))
                     }
@@ -60,7 +61,8 @@ struct SettingsNextStepsView: View {
 
                 // Enable Voice Search — dismisses once voice search is enabled.
                 if viewModel.shouldShowEnableVoiceSearchNextStep {
-                    NavigationLink(destination: SettingsAccessibilityView().environmentObject(viewModel)) {
+                    NavigationLink(destination: SettingsAccessibilityView().environmentObject(viewModel)
+                        .onDisappear { viewModel.refreshNextStepsVisibility(animated: true) }) {
                         SettingsCellView(label: UserText.enableVoiceSearch,
                                          image: Image(uiImage: AppRebrand.isAppRebranded()
                                                       ? DesignSystemImages.Color.Size24.microphoneAdd

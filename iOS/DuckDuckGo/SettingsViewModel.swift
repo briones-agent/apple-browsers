@@ -266,10 +266,13 @@ final class SettingsViewModel: ObservableObject {
     @Published var shouldShowSetAsDefaultBrowser: Bool = false
     @Published var shouldShowImportPasswords: Bool = false
 
-    // Next Steps section — tap-then-wait items. See `updateNextStepsVisibility()`.
-    // (The address-bar and voice-search items derive from `state`, so they are computed properties instead.)
+    // Next Steps section visibility. Recomputed by `refreshNextStepsVisibility(animated:)`.
+    // Stored (not computed) so a finished row stays visible until the section re-appears and can
+    // then animate away when the user returns from changing the corresponding setting.
     @Published var shouldShowAddToDockNextStep: Bool = true
     @Published var shouldShowAddWidgetNextStep: Bool = true
+    @Published var shouldShowSetAddressBarPositionNextStep: Bool = true
+    @Published var shouldShowEnableVoiceSearchNextStep: Bool = true
 
     // MARK: - Deep linking
     // Used to automatically navigate to a specific section
@@ -1235,7 +1238,7 @@ extension SettingsViewModel {
             .store(in: &cancellables)
 
         updateRecentlyVisitedSitesVisibility()
-        updateNextStepsVisibility()
+        refreshNextStepsVisibility(animated: false)
 
         if #available(iOS 18.2, *) {
             updateCompleteSetupSectionVisiblity()
@@ -1466,19 +1469,6 @@ extension SettingsViewModel {
 
     // MARK: Next Steps section
 
-    /// Whether the "Set your address bar position" step is shown. Hidden once the user moves the
-    /// address bar off its default (top) position. Derived from `state`, so it updates live when the
-    /// user changes the setting in the pushed sub-view and pops back (the binding writes `state`).
-    var shouldShowSetAddressBarPositionNextStep: Bool {
-        state.addressBar.enabled && state.addressBar.position == .top
-    }
-
-    /// Whether the "Enable Voice Search" step is shown. Hidden once voice search is enabled.
-    /// Derived from `state`, so it updates live (the voice-search binding writes `state`).
-    var shouldShowEnableVoiceSearchNextStep: Bool {
-        !state.voiceSearchEnabled
-    }
-
     /// Whether the whole Next Steps section should render. Hiding the section when every item is
     /// gone avoids leaving a dangling header behind.
     var shouldShowNextStepsSection: Bool {
@@ -1488,15 +1478,30 @@ extension SettingsViewModel {
             || shouldShowEnableVoiceSearchNextStep
     }
 
-    /// Recomputes the tap-then-wait items (Add to Dock / Add Widget), which dismiss one day after
-    /// the user first taps them. Called on every Settings open from `initState()`.
-    private func updateNextStepsVisibility() {
-        shouldShowAddToDockNextStep = !Self.hasTapDismissalElapsed(
-            tappedAt: try? keyValueStore.object(forKey: Constants.didTapAddToDockNextStepKey) as? Double,
-            interval: Constants.nextStepTapDismissalInterval)
-        shouldShowAddWidgetNextStep = !Self.hasTapDismissalElapsed(
-            tappedAt: try? keyValueStore.object(forKey: Constants.didTapAddWidgetNextStepKey) as? Double,
-            interval: Constants.nextStepTapDismissalInterval)
+    /// Recomputes visibility for all four Next Steps items from the current settings and the
+    /// persisted tap timestamps. Pass `animated: true` when returning to Settings (e.g. after the
+    /// user changes a setting in a pushed sub-view) so the finished row animates away; the initial
+    /// Settings render passes `animated: false`.
+    ///
+    /// - Set address bar position: hidden once moved off the default (top) position.
+    /// - Enable Voice Search: hidden once voice search is enabled.
+    /// - Add to Dock / Add Widget: hidden one day after the user first taps them.
+    func refreshNextStepsVisibility(animated: Bool) {
+        let apply = {
+            self.shouldShowSetAddressBarPositionNextStep = self.state.addressBar.enabled && self.state.addressBar.position == .top
+            self.shouldShowEnableVoiceSearchNextStep = !self.state.voiceSearchEnabled
+            self.shouldShowAddToDockNextStep = !Self.hasTapDismissalElapsed(
+                tappedAt: try? self.keyValueStore.object(forKey: Constants.didTapAddToDockNextStepKey) as? Double,
+                interval: Constants.nextStepTapDismissalInterval)
+            self.shouldShowAddWidgetNextStep = !Self.hasTapDismissalElapsed(
+                tappedAt: try? self.keyValueStore.object(forKey: Constants.didTapAddWidgetNextStepKey) as? Double,
+                interval: Constants.nextStepTapDismissalInterval)
+        }
+        if animated {
+            withAnimation { apply() }
+        } else {
+            apply()
+        }
     }
 
     func recordAddToDockNextStepTapped() {
