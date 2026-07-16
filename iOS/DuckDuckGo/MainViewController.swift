@@ -2828,10 +2828,12 @@ class MainViewController: UIViewController {
     }
 
     private func isMinimalChromeMode(for size: CGSize? = nil) -> Bool {
-        guard minimalChromeSettings.shouldApplyMinimalChrome(isCurrentTabAITab: currentTab?.isAITab ?? false) else { return false }
         let size = size ?? view.bounds.size
-        return !AppWidthObserver.shared.isPad
-            && (size.width > size.height)
+        return MinimalChromeModeDecision.isActive(
+            minimalChromeEnabled: minimalChromeSettings.shouldApplyMinimalChrome(isCurrentTabAITab: currentTab?.isAITab ?? false),
+            isPad: AppWidthObserver.shared.isPad,
+            isLandscape: size.width > size.height
+        )
     }
 
     private var isApplyingWidth = false
@@ -4268,7 +4270,7 @@ extension MainViewController: BrowserChromeDelegate {
     }
 
     // 1.0 - full size, 0.0 - hidden
-    private func updateToolbarConstant(_ ratio: CGFloat) {
+    func updateToolbarConstant(_ ratio: CGFloat) {
         var bottomHeight = toolbarHeight
         if viewCoordinator.addressBarPosition.isBottom && !isInMinimalChromeLayout {
             // When position is set to bottom, contentContainer is pinned to top
