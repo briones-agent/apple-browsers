@@ -273,6 +273,9 @@ final class SettingsViewModel: ObservableObject {
     @Published var shouldShowAddWidgetNextStep: Bool = true
     @Published var shouldShowSetAddressBarPositionNextStep: Bool = true
     @Published var shouldShowEnableVoiceSearchNextStep: Bool = true
+    // Whether the user has permanently hidden the entire Next Steps section. Persisted; refreshed
+    // from storage by `refreshNextStepsVisibility(animated:)`.
+    @Published var nextStepsSectionHidden: Bool = false
 
     // MARK: - Deep linking
     // Used to automatically navigate to a specific section
@@ -1427,6 +1430,10 @@ extension SettingsViewModel {
         static let didTapAddWidgetNextStepKey = "com.duckduckgo.settings.next-steps.add-widget-tapped-at"
         // How long after tapping an instructional Next Steps item (Add to Dock / Add Widget) it stays visible.
         static let nextStepTapDismissalInterval: TimeInterval = 24 * 60 * 60 // 1 day
+        // Whether the user has permanently hidden the entire Next Steps section.
+        static let nextStepsSectionHiddenKey = "com.duckduckgo.settings.next-steps.section-hidden"
+        // How long after install the "Hide" affordance for the Next Steps section becomes available.
+        static let nextStepsHideMinimumInstallAge: TimeInterval = 14 * 24 * 60 * 60 // 14 days
     }
 
     func onFirstAppear() {
@@ -1472,10 +1479,19 @@ extension SettingsViewModel {
     /// Whether the whole Next Steps section should render. Hiding the section when every item is
     /// gone avoids leaving a dangling header behind.
     var shouldShowNextStepsSection: Bool {
-        shouldShowAddToDockNextStep
-            || shouldShowAddWidgetNextStep
-            || shouldShowSetAddressBarPositionNextStep
-            || shouldShowEnableVoiceSearchNextStep
+        !nextStepsSectionHidden && (
+            shouldShowAddToDockNextStep
+                || shouldShowAddWidgetNextStep
+                || shouldShowSetAddressBarPositionNextStep
+                || shouldShowEnableVoiceSearchNextStep
+        )
+    }
+
+    /// Whether the "Hide" affordance on the Next Steps header should be offered. Gated on the app
+    /// having been installed for at least `nextStepsHideMinimumInstallAge`.
+    var shouldShowNextStepsHideButton: Bool {
+        Self.hasInstallGracePeriodElapsed(installDate: StatisticsUserDefaults().installDate,
+                                          requiredInterval: Constants.nextStepsHideMinimumInstallAge)
     }
 
     /// Recomputes visibility for all four Next Steps items from the current settings and the
@@ -1488,6 +1504,7 @@ extension SettingsViewModel {
     /// - Add to Dock / Add Widget: hidden one day after the user first taps them.
     func refreshNextStepsVisibility(animated: Bool) {
         let apply = {
+            self.nextStepsSectionHidden = (try? self.keyValueStore.object(forKey: Constants.nextStepsSectionHiddenKey) as? Bool) ?? false
             self.shouldShowSetAddressBarPositionNextStep = self.state.addressBar.enabled && self.state.addressBar.position == .top
             self.shouldShowEnableVoiceSearchNextStep = !self.state.voiceSearchEnabled
             self.shouldShowAddToDockNextStep = !Self.hasTapDismissalElapsed(
@@ -1502,6 +1519,13 @@ extension SettingsViewModel {
         } else {
             apply()
         }
+    }
+
+    /// Permanently hides the entire Next Steps section. Persists the choice and animates the
+    /// section away consistent with the existing row-removal animation.
+    func hideNextStepsSection() {
+        try? keyValueStore.set(true, forKey: Constants.nextStepsSectionHiddenKey)
+        withAnimation { nextStepsSectionHidden = true }
     }
 
     func recordAddToDockNextStepTapped() {
@@ -1526,6 +1550,15 @@ extension SettingsViewModel {
                                        interval: TimeInterval) -> Bool {
         guard let tappedAt else { return false }
         return now - tappedAt >= interval
+    }
+
+    /// Pure, testable helper: `true` once at least `requiredInterval` seconds have elapsed since
+    /// `installDate`. Returns `false` when `installDate` is `nil` (install date unknown).
+    static func hasInstallGracePeriodElapsed(installDate: Date?,
+                                             now: Date = Date(),
+                                             requiredInterval: TimeInterval) -> Bool {
+        guard let installDate else { return false }
+        return now.timeIntervalSince(installDate) >= requiredInterval
     }
 
     @MainActor func shouldPresentAutofillViewWith(accountDetails: SecureVaultModels.WebsiteAccount?, card: SecureVaultModels.CreditCard?, showCreditCardManagement: Bool, showSettingsScreen: AutofillSettingsDestination? = nil, source: AutofillSettingsSource? = nil) {

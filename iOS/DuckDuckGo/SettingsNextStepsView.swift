@@ -28,7 +28,7 @@ struct SettingsNextStepsView: View {
 
     var body: some View {
         if viewModel.shouldShowNextStepsSection {
-            Section(header: Text(UserText.nextSteps)) {
+            Section(header: header) {
                 // Add App to Your Dock — dismisses one day after the user taps it.
                 if viewModel.shouldShowAddToDockNextStep {
                     SettingsCellView(label: UserText.settingsAddToDock,
@@ -69,6 +69,24 @@ struct SettingsNextStepsView: View {
                                                       : DesignSystemImages.Color.Size24.microphone))
                     }
                 }
+            }
+        }
+    }
+
+    // Shows a "Hide" affordance next to the section title once the app has been installed long
+    // enough (see `SettingsViewModel.shouldShowNextStepsHideButton`). An image glyph is used rather
+    // than a text button to avoid the section-header uppercasing applied to `Text`.
+    private var header: some View {
+        HStack {
+            Text(UserText.nextSteps)
+            Spacer()
+            if viewModel.shouldShowNextStepsHideButton {
+                Button {
+                    viewModel.hideNextStepsSection()
+                } label: {
+                    Image(uiImage: DesignSystemImages.Glyphs.Size24.eyeClosed)
+                }
+                .accessibilityLabel(UserText.nextStepsHide)
             }
         }
     }

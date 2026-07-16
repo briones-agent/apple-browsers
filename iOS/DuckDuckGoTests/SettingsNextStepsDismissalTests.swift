@@ -55,4 +55,44 @@ final class SettingsNextStepsDismissalTests: XCTestCase {
                                                                 now: tappedAt - 500,
                                                                 interval: oneDay))
     }
+
+    // MARK: - hasInstallGracePeriodElapsed (Next Steps "Hide" 14-day install gate)
+
+    private let fourteenDays: TimeInterval = 14 * 24 * 60 * 60
+    private let installedAt = Date(timeIntervalSinceReferenceDate: 1_000_000)
+
+    func testHideButtonHiddenWhenInstallDateMissing() {
+        XCTAssertFalse(SettingsViewModel.hasInstallGracePeriodElapsed(installDate: nil,
+                                                                      now: installedAt,
+                                                                      requiredInterval: fourteenDays))
+    }
+
+    func testHideButtonHiddenJustBeforeGracePeriodElapses() {
+        let now = Date(timeIntervalSinceReferenceDate: installedAt.timeIntervalSinceReferenceDate + fourteenDays - 1)
+        XCTAssertFalse(SettingsViewModel.hasInstallGracePeriodElapsed(installDate: installedAt,
+                                                                      now: now,
+                                                                      requiredInterval: fourteenDays))
+    }
+
+    func testHideButtonAppearsExactlyAtGracePeriod() {
+        let now = Date(timeIntervalSinceReferenceDate: installedAt.timeIntervalSinceReferenceDate + fourteenDays)
+        XCTAssertTrue(SettingsViewModel.hasInstallGracePeriodElapsed(installDate: installedAt,
+                                                                     now: now,
+                                                                     requiredInterval: fourteenDays))
+    }
+
+    func testHideButtonAppearsWellAfterGracePeriod() {
+        let now = Date(timeIntervalSinceReferenceDate: installedAt.timeIntervalSinceReferenceDate + fourteenDays * 3)
+        XCTAssertTrue(SettingsViewModel.hasInstallGracePeriodElapsed(installDate: installedAt,
+                                                                     now: now,
+                                                                     requiredInterval: fourteenDays))
+    }
+
+    func testHideButtonHiddenWhenClockMovesBackwardsBeforeInstall() {
+        // Defensive: if the device clock reads earlier than the install date, keep the button hidden.
+        let now = Date(timeIntervalSinceReferenceDate: installedAt.timeIntervalSinceReferenceDate - 500)
+        XCTAssertFalse(SettingsViewModel.hasInstallGracePeriodElapsed(installDate: installedAt,
+                                                                      now: now,
+                                                                      requiredInterval: fourteenDays))
+    }
 }
