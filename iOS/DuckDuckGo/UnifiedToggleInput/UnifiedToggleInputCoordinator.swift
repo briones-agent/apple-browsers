@@ -376,6 +376,8 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     private let subscriptionUpsellPresenter: DuckAISubscriptionUpselling = DuckAISubscriptionUpsellPresenter()
     private let attachmentPresenter = UnifiedToggleInputAttachmentPresenter()
     private let pasteHandler = UnifiedToggleInputPasteHandler()
+    /// Bumped on New Chat so an in-flight paste from the previous conversation is dropped even within the same tab.
+    private var pasteConversationToken = UUID()
 
     private let intentSubject = PassthroughSubject<UnifiedToggleInputIntent, Never>()
     var intentPublisher: AnyPublisher<UnifiedToggleInputIntent, Never> {
@@ -1441,6 +1443,7 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     }
 
     func startNewChat() {
+        pasteConversationToken = UUID()
         isNewChatPending = true
         hasSubmittedPrompt = false
         isModelPickerForcedVisible = false
@@ -2646,17 +2649,24 @@ private extension UnifiedToggleInputCoordinator {
 
 extension UnifiedToggleInputCoordinator: UnifiedToggleInputPasteDelegate {
 
-    /// Keys off model capability (not remaining room) so an over-limit paste is consumed and reported here rather than falling through to UIKit's inline-image insert. Text types are excluded so an ordinary copied string pastes as text rather than a `.txt` attachment.
+    /// Keys off model capability (not remaining room) so an over-limit paste is consumed and reported here rather than falling through to UIKit's inline-image insert. Text types are excluded so an ordinary copied string/table pastes as text rather than an attachment; files are only offered when the model's attachment limits are known (so the loader can preflight sizes).
     var pasteAttachmentSupport: UnifiedToggleInputPasteSupport {
-        UnifiedToggleInputPasteSupport(
+        let limits = modelStore.attachmentLimits
+        let fileTypes = limits == nil ? [] : allowedFileUTTypes.filter { !$0.conforms(to: .text) }
+        return UnifiedToggleInputPasteSupport(
             isEnabled: inputMode == .aiChat && !viewController.isGenerating,
             acceptsImages: selectedModelSupportsImageUpload,
-            fileTypes: allowedFileUTTypes.filter { !UTType.plainText.conforms(to: $0) },
-            maxFileSizeBytes: (modelStore.attachmentLimits?.files.maxFileSizeMB).map { $0 * 1_048_576 }
+            fileTypes: fileTypes,
+            maxFileSizeBytes: limits.map { $0.files.maxFileSizeMB * 1_048_576 },
+            remainingFileCount: fileTypes.isEmpty ? nil : attachmentPolicy.remainingFilesInConversation,
+            remainingTotalFileBytes: fileTypes.isEmpty ? nil : attachmentPolicy.remainingFileSizeBytes
         )
     }
 
-    var pasteContextIdentity: String? { currentTabUID }
+    /// Identifies the tab AND the conversation, so a paste in flight is dropped if the user starts a New Chat in the same tab (not just on a tab switch).
+    var pasteContextIdentity: String? {
+        "\(currentTabUID ?? "-"):\(pasteConversationToken.uuidString)"
+    }
 
     func imageCapacityMessage() -> String? {
         attachmentPolicy.imageCapacityValidationMessage()

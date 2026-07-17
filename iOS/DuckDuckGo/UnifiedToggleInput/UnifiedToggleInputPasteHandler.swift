@@ -55,12 +55,25 @@ struct UnifiedToggleInputPasteSupport {
     let fileTypes: [UTType]
     /// Per-file byte limit, used to reject an oversized paste from its size alone before reading it into memory.
     let maxFileSizeBytes: Int?
+    /// Remaining conversation file slots; the loader stops reading once exhausted so a large multi-file paste can't over-allocate.
+    let remainingFileCount: Int?
+    /// Remaining conversation file bytes; the loader reads only files that fit within this budget.
+    let remainingTotalFileBytes: Int?
 
-    init(isEnabled: Bool, acceptsImages: Bool, fileTypes: [UTType], maxFileSizeBytes: Int? = nil) {
+    init(
+        isEnabled: Bool,
+        acceptsImages: Bool,
+        fileTypes: [UTType],
+        maxFileSizeBytes: Int? = nil,
+        remainingFileCount: Int? = nil,
+        remainingTotalFileBytes: Int? = nil
+    ) {
         self.isEnabled = isEnabled
         self.acceptsImages = acceptsImages
         self.fileTypes = fileTypes
         self.maxFileSizeBytes = maxFileSizeBytes
+        self.remainingFileCount = remainingFileCount
+        self.remainingTotalFileBytes = remainingTotalFileBytes
     }
 
     var acceptsAnyAttachment: Bool { acceptsImages || !fileTypes.isEmpty }
@@ -107,7 +120,9 @@ final class UnifiedToggleInputPasteHandler: AttachmentPasteHandling {
                 from: providers,
                 allowsImages: support.acceptsImages,
                 allowedFileTypes: support.fileTypes,
-                maxFileSizeBytes: support.maxFileSizeBytes
+                maxFileSizeBytes: support.maxFileSizeBytes,
+                remainingFileCount: support.remainingFileCount,
+                remainingTotalFileBytes: support.remainingTotalFileBytes
             )
             self?.applyLoadedAttachments(result, expectedContext: context)
         }
@@ -161,22 +176,48 @@ enum PasteboardAttachmentReader {
         }
     }
 
-    /// Reads the pasteboard bytes (surfaces the banner) and builds attachments; file bytes are inspected off the main actor.
+    private enum LoadedFile {
+        /// Bytes were read into memory; counts against the running budget.
+        case read(AIChatFileAttachment)
+        /// Rejected from metadata alone (per-file/total/count) without reading bytes; the policy surfaces the error.
+        case rejected(AIChatFileAttachment)
+    }
+
+    /// Reads the pasteboard bytes (surfaces the banner) and builds attachments. Files are size/count-preflighted from
+    /// metadata against the remaining budget so a large multi-file paste only ever loads what can actually be accepted.
     static func loadAttachments(
         from providers: [NSItemProvider],
         allowsImages: Bool,
         allowedFileTypes: [UTType],
-        maxFileSizeBytes: Int? = nil
+        maxFileSizeBytes: Int? = nil,
+        remainingFileCount: Int? = nil,
+        remainingTotalFileBytes: Int? = nil
     ) async -> Result {
         var result = Result()
+        var readFileCount = 0
+        var readFileBytes = 0
         for provider in providers {
             if allowsImages, provider.canLoadObject(ofClass: UIImage.self) {
                 if let image = await loadImage(from: provider) {
                     result.images.append((image, provider.suggestedName ?? "image"))
                 }
             } else if let type = allowedFileTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0.identifier) }) {
-                if let file = await loadFile(from: provider, type: type, maxFileSizeBytes: maxFileSizeBytes) {
+                let loaded = await loadFile(
+                    from: provider,
+                    type: type,
+                    maxFileSizeBytes: maxFileSizeBytes,
+                    remainingCount: remainingFileCount.map { $0 - readFileCount },
+                    remainingBytes: remainingTotalFileBytes.map { $0 - readFileBytes }
+                )
+                switch loaded {
+                case .read(let file):
+                    readFileCount += 1
+                    readFileBytes += file.fileSizeBytes
                     result.files.append(file)
+                case .rejected(let file):
+                    result.files.append(file)
+                case nil:
+                    break
                 }
             }
         }
@@ -191,8 +232,16 @@ enum PasteboardAttachmentReader {
         }
     }
 
-    /// Loads via a file representation so an oversized file can be rejected from its size alone (empty-data attachment the policy fails on) without reading the whole file into memory — matching the picker's metadata preflight.
-    private static func loadFile(from provider: NSItemProvider, type: UTType, maxFileSizeBytes: Int?) async -> AIChatFileAttachment? {
+    /// Loads via a file representation and preflights per-file size, remaining count, and remaining total bytes from
+    /// metadata; anything over budget becomes an empty-data attachment the policy rejects, so bytes are read only for
+    /// files that can be accepted. `nil` limits mean files aren't offered at all, so a missing limit can't cause a read.
+    private static func loadFile(
+        from provider: NSItemProvider,
+        type: UTType,
+        maxFileSizeBytes: Int?,
+        remainingCount: Int?,
+        remainingBytes: Int?
+    ) async -> LoadedFile? {
         let baseName = provider.suggestedName ?? "file"
         let fileName = (baseName as NSString).pathExtension.isEmpty
             ? type.preferredFilenameExtension.map { "\(baseName).\($0)" } ?? baseName
@@ -205,16 +254,31 @@ enum PasteboardAttachmentReader {
                     continuation.resume(returning: nil)
                     return
                 }
-                let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
-                if let maxFileSizeBytes, let fileSize, fileSize > maxFileSizeBytes {
-                    continuation.resume(returning: AIChatFileAttachment(data: Data(), fileName: fileName, mimeType: mimeType, fileSizeBytes: fileSize))
+
+                func reject(size: Int) {
+                    continuation.resume(returning: .rejected(AIChatFileAttachment(data: Data(), fileName: fileName, mimeType: mimeType, fileSizeBytes: size)))
+                }
+
+                if let remainingCount, remainingCount <= 0 {
+                    reject(size: 0)
                     return
                 }
+
+                let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+                if let fileSize {
+                    let overPerFile = maxFileSizeBytes.map { fileSize > $0 } ?? false
+                    let overTotal = remainingBytes.map { fileSize > $0 } ?? false
+                    if overPerFile || overTotal {
+                        reject(size: fileSize)
+                        return
+                    }
+                }
+
                 guard let data = try? Data(contentsOf: url) else {
                     continuation.resume(returning: nil)
                     return
                 }
-                continuation.resume(returning: UnifiedToggleInputAttachmentPresenter.makeFileAttachment(data: data, fileName: fileName, mimeType: mimeType))
+                continuation.resume(returning: .read(UnifiedToggleInputAttachmentPresenter.makeFileAttachment(data: data, fileName: fileName, mimeType: mimeType)))
             }
         }
     }

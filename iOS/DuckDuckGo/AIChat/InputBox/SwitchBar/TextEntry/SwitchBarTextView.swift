@@ -38,8 +38,13 @@ final class SwitchBarTextView: UITextView {
     }
 
     override func paste(_ sender: Any?) {
-        if AttachmentPasteRouting.routePaste(with: attachmentPasteHandler) { return }
-        super.paste(sender)
+        guard AttachmentPasteRouting.routePaste(with: attachmentPasteHandler) else {
+            super.paste(sender)
+            return
+        }
+        if let text = UIPasteboard.general.string, !text.isEmpty {
+            insertText(text)
+        }
     }
 
     /// You'd think a gesture would be useful here, but it stops the menu from appearing, even if you tell it not to cancel touches, or if you tell it to delay touch begin/end.

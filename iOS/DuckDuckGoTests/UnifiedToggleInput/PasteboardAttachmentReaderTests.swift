@@ -130,6 +130,44 @@ final class PasteboardAttachmentReaderTests: XCTestCase {
         XCTAssertTrue(result.files.isEmpty)
     }
 
+    func testLoadAttachmentsRejectsFileOverRemainingCountWithoutReading() async {
+        let provider = makePDFProvider(data: Data("%PDF-1.4".utf8))
+
+        let result = await PasteboardAttachmentReader.loadAttachments(
+            from: [provider], allowsImages: false, allowedFileTypes: [.pdf], remainingFileCount: 0
+        )
+
+        XCTAssertEqual(result.files.count, 1)
+        XCTAssertTrue(result.files.first?.data.isEmpty ?? false, "over-count file should not be read into memory")
+    }
+
+    func testLoadAttachmentsRejectsFileOverRemainingBytesWithoutReading() async {
+        let data = Data("%PDF-1.4 larger than budget".utf8)
+        let provider = makePDFProvider(data: data)
+
+        let result = await PasteboardAttachmentReader.loadAttachments(
+            from: [provider], allowsImages: false, allowedFileTypes: [.pdf], maxFileSizeBytes: 10_000, remainingTotalFileBytes: 4
+        )
+
+        XCTAssertEqual(result.files.count, 1)
+        let file = result.files.first
+        XCTAssertTrue(file?.data.isEmpty ?? false, "over-total file should not be read into memory")
+        XCTAssertEqual(file?.fileSizeBytes, data.count, "sentinel keeps the real size so the policy rejects it")
+    }
+
+    func testLoadAttachmentsStopsReadingOnceBudgetExhausted() async {
+        let data = Data("%PDF-1.4".utf8) // 8 bytes each
+        let providers = [makePDFProvider(data: data, suggestedName: "a"), makePDFProvider(data: data, suggestedName: "b")]
+
+        let result = await PasteboardAttachmentReader.loadAttachments(
+            from: providers, allowsImages: false, allowedFileTypes: [.pdf], maxFileSizeBytes: 10_000, remainingTotalFileBytes: data.count
+        )
+
+        XCTAssertEqual(result.files.count, 2)
+        XCTAssertFalse(result.files[0].data.isEmpty, "first file fits the budget and is read")
+        XCTAssertTrue(result.files[1].data.isEmpty, "second file exceeds the remaining budget and is not read")
+    }
+
     // MARK: - Helpers
 
     private func makeTestImage(size: CGSize = CGSize(width: 10, height: 10)) -> UIImage {

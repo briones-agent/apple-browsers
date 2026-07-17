@@ -73,6 +73,10 @@ struct UTIAttachmentPolicy {
         validator.remainingFileSizeBytes
     }
 
+    var remainingFilesInConversation: Int {
+        validator.remainingFilesInConversation
+    }
+
     func fileValidationMessage(for attachment: AIChatFileAttachment) -> String? {
         validator.fileValidationMessage(for: .init(attachment))
     }

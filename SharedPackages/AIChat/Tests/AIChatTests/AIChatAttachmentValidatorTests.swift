@@ -75,6 +75,16 @@ final class AIChatAttachmentValidatorTests: XCTestCase {
         XCTAssertEqual(error?.message, "fileCount:2")
     }
 
+    func testRemainingFilesInConversation_BoundedByUsageAndPending() {
+        let pending = [AIChatAttachmentValidator.FileDescriptor(mimeType: "application/pdf", fileSizeBytes: 10, pageCount: 1)]
+        let validator = makeValidator(
+            limits: makeLimits(maxFilesPerConversation: 3),
+            usage: .init(filesUsed: 1),
+            pendingFiles: pending
+        )
+        XCTAssertEqual(validator.remainingFilesInConversation, 1)
+    }
+
     // MARK: - Page validation
 
     func testWhenPDFUnderPageLimit_ThenValid() {
