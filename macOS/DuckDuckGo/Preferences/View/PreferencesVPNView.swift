@@ -16,7 +16,6 @@
 //  limitations under the License.
 //
 
-import DesignResourcesKit
 import VPN
 import PixelKit
 import PreferencesUI_macOS
@@ -177,7 +176,7 @@ extension Preferences {
                             }.tag(true)
                         }
                         .pickerStyle(.radioGroup)
-                        .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
+                        .rebrandedControlTint()
                         .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
                         .onChange(of: model.isCustomDNSSelected) { isCustomDNSSelected in
                             if isCustomDNSSelected && (model.customDNSServers?.isEmpty ?? true) {

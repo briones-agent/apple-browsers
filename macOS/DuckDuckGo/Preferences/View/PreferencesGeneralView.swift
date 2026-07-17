@@ -24,7 +24,6 @@ import PixelKit
 import PreferencesUI_macOS
 import SwiftUI
 import SwiftUIExtensions
-import DesignResourcesKit
 import DesignResourcesKitIcons
 
 extension Preferences {
@@ -84,7 +83,7 @@ extension Preferences {
                                 } else {
                                     HStack {
                                         Image(nsImage: DesignSystemImages.Glyphs.Size16.exclamation)
-                                            .foregroundStyle(DesignSystemRebrand.isAppRebranded() ? Color(.accentTextPrimary) : Color(.linkBlue))
+                                            .foregroundStyle(Color.rebrandableLink)
 
                                         Text(UserText.isNotAddedToDock)
                                     }
@@ -156,7 +155,7 @@ extension Preferences {
                                 .accessibilityIdentifier("PreferencesGeneralView.stateRestorePicker.reopenAllWindowsFromLastSession")
                         }, label: {})
                         .pickerStyle(.radioGroup)
-                        .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
+                        .rebrandedControlTint()
                         .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
                         .accessibilityIdentifier("PreferencesGeneralView.stateRestorePicker")
 
@@ -257,7 +256,7 @@ extension Preferences {
                             }.tag(true)
                         }
                         .pickerStyle(.radioGroup)
-                        .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
+                        .rebrandedControlTint()
                         .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
                     }
 

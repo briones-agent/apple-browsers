@@ -16,7 +16,6 @@
 //  limitations under the License.
 //
 
-import DesignResourcesKit
 import PreferencesUI_macOS
 import PixelKit
 import SwiftUI
@@ -86,7 +85,7 @@ extension Preferences {
 
                     }, label: {})
                     .pickerStyle(.radioGroup)
-                    .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
+                    .rebrandedControlTint()
                     .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
 
                     TextMenuItemCaption(UserText.duckPlayerExplanation)

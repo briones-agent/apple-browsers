@@ -413,7 +413,7 @@ extension Preferences {
                             .accessibilityIdentifier("PreferencesAboutView.automaticUpdatesPicker.manually")
                     }, label: {})
                     .pickerStyle(.radioGroup)
-                    .tint(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentPrimary) : nil)
+                    .rebrandedControlTint()
                     .offset(x: PreferencesUI_macOS.Const.pickerHorizontalOffset)
                     .accessibilityIdentifier("PreferencesAboutView.automaticUpdatesPicker")
                     .onChange(of: areAutomaticUpdatesEnabled) { newValue in

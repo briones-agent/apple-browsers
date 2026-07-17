@@ -176,7 +176,7 @@ extension Preferences {
                     Image(.reset)
                     Text(UserText.themeReset)
                 }
-                .foregroundColor(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentTextPrimary) : Color.linkBlue)
+                .foregroundColor(.rebrandableLink)
                 .cursor(.pointingHand)
             }
             .buttonStyle(.plain)
@@ -252,7 +252,7 @@ extension Preferences {
                                 Text(UserText.customizeBackground)
                                 Image(.externalAppScheme)
                             }
-                            .foregroundColor(DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentTextPrimary) : Color.linkBlue)
+                            .foregroundColor(.rebrandableLink)
                             .cursor(.pointingHand)
                         }
                         .buttonStyle(.plain)

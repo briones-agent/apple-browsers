@@ -17,7 +17,6 @@
 //
 
 import SwiftUI
-import DesignResourcesKit
 
 public typealias LinkButton = TextButton
 public struct TextButton: View {
@@ -30,7 +29,7 @@ public struct TextButton: View {
 
     public init(_ title: String, textColor: Color? = nil, fontSize: CGFloat = NSFont.systemFontSize, weight: Font.Weight = .regular, action: @escaping () -> Void) {
         self.title = title
-        self.textColor = textColor ?? (DesignSystemRebrand.isAppRebranded() ? Color(designSystemColor: .accentTextPrimary) : Color(.linkBlue))
+        self.textColor = textColor ?? .rebrandableLink
         self.fontSize = fontSize
         self.fontWeight = weight
         self.action = action
