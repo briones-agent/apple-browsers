@@ -1028,6 +1028,25 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         guard tabCollectionViewModel.isBurner,
               !tabCollectionViewModel.isPopup else { return }
 
+        if themeManager.isAppRebranded {
+            rebrandingSetupAsBurnerWindow(theme: theme)
+            return
+        }
+
+        legacySetupAsBurnerWindow(theme: theme)
+    }
+
+    private func rebrandingSetupAsBurnerWindow(theme: (any ThemeStyleProviding)? = nil) {
+        fireButton.isAnimationEnabled = false
+        fireButton.backgroundColor = NSColor(designSystemColor: .accentFirePrimary)
+        fireButton.mouseOverColor = NSColor(designSystemColor: .accentFireSecondary)
+        fireButton.mouseDownColor = NSColor(designSystemColor: .accentFireTertiary)
+        fireButton.normalTintColor = NSColor.white
+        fireButton.mouseDownTintColor = NSColor.white
+        fireButton.mouseOverTintColor = NSColor.white
+    }
+
+    private func legacySetupAsBurnerWindow(theme: (any ThemeStyleProviding)? = nil) {
         fireButton.isAnimationEnabled = false
         fireButton.backgroundColor = NSColor.fireButtonRedBackground
         fireButton.mouseOverColor = NSColor.fireButtonRedHover
