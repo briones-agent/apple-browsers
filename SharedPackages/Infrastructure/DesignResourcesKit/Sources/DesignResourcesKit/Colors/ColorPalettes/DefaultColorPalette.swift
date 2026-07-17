@@ -399,6 +399,8 @@ private extension DefaultColorPalette {
             return DynamicColor(lightColor: RebrandingColor.Eggshell.eggshell90.opacity(0.16), darkColor: RebrandingColor.GrayScale.white.opacity(0.09))
         case .alertGreen:
             return DynamicColor(staticColor: RebrandingColor.Green.green40)
+        case .calendarStripYellow:
+            return DynamicColor(staticColor: RebrandingColor.Pollen.pollen20)
         }
     }
 
