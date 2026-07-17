@@ -1679,8 +1679,9 @@ extension TabBarViewController: ThemeUpdateListening {
 
         backgroundColorView.backgroundColor = colorsProvider.baseBackgroundColor
 
+        let fireWindowHoverColor = themeManager.isAppRebranded ? NSColor(designSystemColor: .accentFireSecondary) : .fireButtonRedHover
         fireButton.normalTintColor = isFireWindow ? .white : colorsProvider.iconsColor
-        fireButton.mouseOverColor = isFireWindow ? .fireButtonRedHover : colorsProvider.buttonMouseOverColor
+        fireButton.mouseOverColor = isFireWindow ? fireWindowHoverColor : colorsProvider.buttonMouseOverColor
 
         leftScrollButton.normalTintColor = colorsProvider.iconsColor
         leftScrollButton.mouseOverColor = colorsProvider.buttonMouseOverColor
