@@ -344,7 +344,6 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216049537026986
     case aiChatContextualUnifiedToggleInput
 
-    /// Native image/file paste into the unified input attachment strip. Internal-only by default; ship a privacy-config entry to roll out further. See `UnifiedToggleInputFeatureProviding.isAttachmentPasteEnabled`.
     /// https://app.asana.com/1/137249556945/project/1206488453854252/task/1216575765851990
     case unifiedToggleInputAttachmentPaste
 

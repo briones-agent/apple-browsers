@@ -22,21 +22,6 @@ import UIKit
 /// Single-line UITextField used in place of `SwitchBarTextView` when Duck.ai is off or toggle is disabled.
 final class SwitchBarTextField: UITextField {
 
-    /// When set, a native image/file paste is routed into the attachment strip; `nil` keeps default paste.
-    weak var attachmentPasteHandler: AttachmentPasteHandling?
-
-    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-        if action == #selector(paste(_:)), AttachmentPasteRouting.canPaste(with: attachmentPasteHandler) {
-            return true
-        }
-        return super.canPerformAction(action, withSender: sender)
-    }
-
-    override func paste(_ sender: Any?) {
-        if AttachmentPasteRouting.routePaste(with: attachmentPasteHandler) { return }
-        super.paste(sender)
-    }
-
     var textLeftInset: CGFloat = 0 {
         didSet {
             guard textLeftInset != oldValue else {

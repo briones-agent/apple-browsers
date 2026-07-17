@@ -59,6 +59,7 @@ final class AIChatContextualUTIHost: UnifiedToggleInputDelegate {
         isFireTab: Bool,
         lastUsedModelProvider: DuckAiLastUsedModelProviding? = nil,
         voiceShortcutFeature: DuckAIVoiceShortcutFeatureProviding = DuckAIVoiceShortcutFeature(),
+        unifiedToggleInputFeature: UnifiedToggleInputFeatureProviding = UnifiedToggleInputFeature(),
         startsPreSubmit: Bool = false
     ) {
         self.hasActiveChat = hasActiveChat
@@ -76,7 +77,7 @@ final class AIChatContextualUTIHost: UnifiedToggleInputDelegate {
             duckAIWideEventInstrumentation: wideEventInstrumentation,
             duckAIWideEventFlowScope: duckAIWideEventFlowScope,
             contextualStartsPreSubmit: startsPreSubmit,
-            attachmentPasteEnabled: UnifiedToggleInputFeature().isAttachmentPasteEnabled
+            attachmentPasteEnabled: unifiedToggleInputFeature.isAttachmentPasteEnabled
         )
         self.chipViewModel = UnifiedToggleInputPageContextChipViewModel(
             originatingURLPublisher: originatingURLPublisher,

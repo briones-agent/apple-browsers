@@ -237,11 +237,10 @@ class SwitchBarTextEntryView: UIView {
     var onTextInputActivated: (() -> Void)?
     var onAIChatShortcutTapped: (() -> Void)?
 
-    /// Injected paste handler forwarded to whichever control is active. Nil leaves default paste.
+    /// Injected paste handler for the multi-line (Duck.ai) control. Attachments are Duck.ai-only, so the single-line search field doesn't receive it. Nil leaves default paste.
     weak var attachmentPasteHandler: AttachmentPasteHandling? {
         didSet {
             textView.attachmentPasteHandler = attachmentPasteHandler
-            textField.attachmentPasteHandler = attachmentPasteHandler
         }
     }
 
