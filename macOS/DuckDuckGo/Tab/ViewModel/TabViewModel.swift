@@ -29,7 +29,6 @@ import PrivacyDashboard
 import WebKit
 import DesignResourcesKitIcons
 import WebExtensions
-import DesignResourcesKitIcons
 
 final class TabViewModel: NSObject {
 
