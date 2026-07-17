@@ -365,8 +365,7 @@ final class TabViewModelTests: XCTestCase {
     @MainActor
     func testDisplayedFaviconForBookmarks() {
         let tabViewModel = TabViewModel.forTabWithURL(URL.bookmarks)
-
-        let expectedFavicon = DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.bookmarksNew : NSImage.bookmarksFolder
+        let expectedFavicon = NSImage.bookmarksFolder
         XCTAssertImagesEqual(tabViewModel.favicon, expectedFavicon)
     }
 
