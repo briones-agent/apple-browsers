@@ -2767,14 +2767,18 @@ extension TabViewController: WKNavigationDelegate {
             }
         }
 
+        // Compose the synchronous main-frame request mutations (referrer trimming -> GPC -> search-token
+        // signals) in one pass and reload at most once.
+        var modifiedRequest = navigationAction.request
+        var didModifyRequest = false
+
         if navigationAction.isTargetingMainFrame(),
            !(navigationAction.request.url?.isCustomURLScheme() ?? false),
            navigationAction.navigationType != .backForward,
-           let newRequest = referrerTrimming.trimReferrer(forNavigation: navigationAction,
-                                                          originUrl: webView.url ?? navigationAction.sourceFrame.webView?.url) {
-            wrappedHandler(.cancel)
-            load(urlRequest: newRequest)
-            return
+           let trimmed = referrerTrimming.trimReferrer(forNavigation: navigationAction,
+                                                       originUrl: webView.url ?? navigationAction.sourceFrame.webView?.url) {
+            modifiedRequest = trimmed
+            didModifyRequest = true
         }
 
         if navigationAction.isTargetingMainFrame(),
@@ -2782,9 +2786,30 @@ extension TabViewController: WKNavigationDelegate {
            !navigationAction.shouldDownload,
            !(navigationAction.request.url?.isCustomURLScheme() ?? false),
            navigationAction.navigationType != .backForward,
-           let request = requestForDoNotSell(basedOn: navigationAction.request) {
+           let gpcRequest = requestForDoNotSell(basedOn: modifiedRequest) {
+            modifiedRequest = gpcRequest
+            didModifyRequest = true
+        }
+
+        // Attach Search Token experiment signals (dindexexp param + token header) to SERP navigations.
+        // Enrolled devices only, skipping back/forward so we don't wipe forward history.
+        if navigationAction.isTargetingMainFrame(),
+           navigationAction.navigationType != .backForward,
+           let url = navigationAction.request.url,
+           SerpSearchTokenInterceptor.isSerpURL(url),
+           let cohort = featureFlagger.assignedCohort(for: FeatureFlag.searchTokenExperiment) as? FeatureFlag.SearchTokenExperimentCohort {
+            let token = cohort == .treatment ? delegate?.searchToken(for: self) : nil
+            if let signalled = SerpSearchTokenInterceptor.signalledRequest(for: modifiedRequest,
+                                                                           cohort: cohort,
+                                                                           token: token) {
+                modifiedRequest = signalled
+                didModifyRequest = true
+            }
+        }
+
+        if didModifyRequest {
             wrappedHandler(.cancel)
-            load(urlRequest: request)
+            load(urlRequest: modifiedRequest)
             return
         }
 

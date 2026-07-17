@@ -5703,6 +5703,10 @@ extension MainViewController: NewTabPageControllerDelegate {
 
 extension MainViewController: TabDelegate {
 
+    func searchToken(for tab: TabViewController) -> String? {
+        searchTokenFetcher.retrieveToken()
+    }
+
     var isEmailProtectionSignedIn: Bool {
         emailManager.isSignedIn
     }

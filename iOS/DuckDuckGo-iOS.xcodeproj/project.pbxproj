@@ -704,6 +704,8 @@
 		805674FB2EEF790700152470 /* SettingsDataClearingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805674FA2EEF790700152470 /* SettingsDataClearingView.swift */; };
 		805674FF2EEFA0A500152470 /* DataClearingSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805674FD2EEFA0A500152470 /* DataClearingSettingsViewModel.swift */; };
 		8058982E300088EF00A4EA69 /* AIChat in Frameworks */ = {isa = PBXBuildFile; productRef = 85BA55DB2FFBA17B00271125 /* AIChat */; };
+		805898333006C59900A4EA69 /* SerpSearchTokenInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805898323006C59900A4EA69 /* SerpSearchTokenInterceptor.swift */; };
+		805898353006C5BA00A4EA69 /* SerpSearchTokenInterceptorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805898343006C5BA00A4EA69 /* SerpSearchTokenInterceptorTests.swift */; };
 		805DF6B12F28E807004F1F41 /* GranularFireConfirmationViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805DF6B02F28E807004F1F41 /* GranularFireConfirmationViewModelTests.swift */; };
 		8065741D2ED917410001497A /* FireExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8065741C2ED917350001497A /* FireExecutor.swift */; };
 		806DF4092F3B89BD00FBCA3F /* DataClearingCapability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 806DF4082F3B89BD00FBCA3F /* DataClearingCapability.swift */; };
@@ -2151,7 +2153,6 @@
 		CB258D1D29A52AF900DEBA24 /* EtagStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9896632322C56716007BE4FE /* EtagStorage.swift */; };
 		CB258D1E29A52AF900DEBA24 /* FileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85A53EC9200D1FA20010D13F /* FileStore.swift */; };
 		CB258D1F29A52B2500DEBA24 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB258D0C29A4CD0500DEBA24 /* Configuration.swift */; };
-		CB27DAE52FFFE54A00EEEADB /* AIChat in Frameworks */ = {isa = PBXBuildFile; productRef = 85BA55DB2FFBA17B00271125 /* AIChat */; };
 		CB27DAE72FFFE65200EEEADB /* WebViewTransitionGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB27DAE62FFFE65200EEEADB /* WebViewTransitionGeometry.swift */; };
 		CB27DAE92FFFE6BC00EEEADB /* WebViewTransitionGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB27DAE82FFFE6BC00EEEADB /* WebViewTransitionGeometryTests.swift */; };
 		CB27DAF330063B4600EEEADB /* ToolbarVisibilityDecision.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB27DAF230063B4600EEEADB /* ToolbarVisibilityDecision.swift */; };
@@ -3369,6 +3370,8 @@
 		804BC3F02F7CB43D0048FFB6 /* TabSwitcherPageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSwitcherPageViewController.swift; sourceTree = "<group>"; };
 		805674FA2EEF790700152470 /* SettingsDataClearingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDataClearingView.swift; sourceTree = "<group>"; };
 		805674FD2EEFA0A500152470 /* DataClearingSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataClearingSettingsViewModel.swift; sourceTree = "<group>"; };
+		805898323006C59900A4EA69 /* SerpSearchTokenInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SerpSearchTokenInterceptor.swift; sourceTree = "<group>"; };
+		805898343006C5BA00A4EA69 /* SerpSearchTokenInterceptorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SerpSearchTokenInterceptorTests.swift; sourceTree = "<group>"; };
 		805DF6B02F28E807004F1F41 /* GranularFireConfirmationViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GranularFireConfirmationViewModelTests.swift; sourceTree = "<group>"; };
 		8065741C2ED917350001497A /* FireExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireExecutor.swift; sourceTree = "<group>"; };
 		806DF4082F3B89BD00FBCA3F /* DataClearingCapability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataClearingCapability.swift; sourceTree = "<group>"; };
@@ -7222,11 +7225,12 @@
 		8058982F300089C600A4EA69 /* SearchToken */ = {
 			isa = PBXGroup;
 			children = (
-				A8E195E64C4FA98412110685 /* SearchTokenExperiment.swift */,
-				266425160539100F0F848B95 /* SearchTokenFetcher.swift */,
-				FD63EDD2D1E5E97F3084B04F /* SearchTokenRequest.swift */,
-				4DF9CB391BF7042CDB857788 /* SearchTokenExperimentSettings.swift */,
 				AD5CCC4AE7E388D27D0689A8 /* SearchTokenDebugView.swift */,
+				A8E195E64C4FA98412110685 /* SearchTokenExperiment.swift */,
+				4DF9CB391BF7042CDB857788 /* SearchTokenExperimentSettings.swift */,
+				266425160539100F0F848B95 /* SearchTokenFetcher.swift */,
+				805898323006C59900A4EA69 /* SerpSearchTokenInterceptor.swift */,
+				FD63EDD2D1E5E97F3084B04F /* SearchTokenRequest.swift */,
 			);
 			path = SearchToken;
 			sourceTree = "<group>";
@@ -7234,6 +7238,7 @@
 		8058983030008A5200A4EA69 /* SearchToken */ = {
 			isa = PBXGroup;
 			children = (
+				805898343006C5BA00A4EA69 /* SerpSearchTokenInterceptorTests.swift */,
 				E893A63A6D9BB66F042D3770 /* SearchTokenExperimentTests.swift */,
 				F5B8A4C2A6FBE678C5A92ABF /* SearchTokenFetcherTests.swift */,
 				4CBE907E9CAC75F8561B75D4 /* SearchTokenRequestTests.swift */,
@@ -11407,7 +11412,6 @@
 				85B9814D2B5EB618009AC9A6 /* SwipeTabsCoordinator.swift */,
 				85DE68192B6A8BB000DED4FE /* MainViewCoordinator.swift */,
 				CBDEDA152D8079E500123E00 /* RoundedCornersMaskView.swift */,
-				A8E195E64C4FA98412110685 /* SearchTokenExperiment.swift */,
 				858E45A02FEC713D0078B671 /* ChromeMorphAnimator.swift */,
 			);
 			name = Main;
@@ -12191,10 +12195,10 @@
 				4BC8948A2C7902E6009AA141 /* XCRemoteSwiftPackageReference "wireguard-apple" */,
 				84EFBCCA2D817CB500706739 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 				9FDD72032D895D8C0016246B /* XCRemoteSwiftPackageReference "combine-schedulers" */,
-				BD0C4D872DC54508001F034F /* XCLocalSwiftPackageReference "DuckUI" */,
-				7B0752DA2F21BFDB00ACA559 /* XCLocalSwiftPackageReference "AutomationServer" */,
+				BD0C4D872DC54508001F034F /* XCLocalSwiftPackageReference "LocalPackages/DuckUI" */,
+				7B0752DA2F21BFDB00ACA559 /* XCLocalSwiftPackageReference "../SharedPackages/AutomationServer" */,
 				9FADFC482F5FC56400CA16F7 /* XCRemoteSwiftPackageReference "native-apps-ducksans" */,
-				315E39632F86ABE100D2289D /* XCLocalSwiftPackageReference "DebugServer" */,
+				315E39632F86ABE100D2289D /* XCLocalSwiftPackageReference "../SharedPackages/DebugServer" */,
 			);
 			productRefGroup = 84E341931E2F7EFB00BDBA6F /* Products */;
 			projectDirPath = "";
@@ -13783,6 +13787,7 @@
 				BDF8D0022C1B87F4003E3B27 /* NetworkProtectionDNSSettingsViewModel.swift in Sources */,
 				85CD91C42EBCE998006A0F7C /* ListBasedPickerWithHeaderImage.swift in Sources */,
 				9838059F2228208E00385F1A /* PositiveFeedbackViewController.swift in Sources */,
+				805898333006C59900A4EA69 /* SerpSearchTokenInterceptor.swift in Sources */,
 				46DD3D5A2D0A29F600F33D49 /* CrashReportSenderExtensions.swift in Sources */,
 				1DEAADEA2BA4539800E25A97 /* SettingsAppearanceView.swift in Sources */,
 				B623C1C22862CA9E0043013E /* DownloadSession.swift in Sources */,
@@ -14312,6 +14317,7 @@
 				986CD54F2DE9139400AFA98A /* HomePageMessagesConfigurationMock.swift in Sources */,
 				6F5AA3EF2CC1588400685CB4 /* FavoritesListInteractingAdapterTests.swift in Sources */,
 				9FA0AF282EB844C800713387 /* MockParameterRandomiser.swift in Sources */,
+				805898353006C5BA00A4EA69 /* SerpSearchTokenInterceptorTests.swift in Sources */,
 				80E8D5D32EEA655900820EB0 /* FireExecutorTests.swift in Sources */,
 				8582D7282E58A11D00A356FD /* AutocompleteViewModelTests.swift in Sources */,
 				981FED7422046017008488D7 /* AutoClearTests.swift in Sources */,
@@ -18141,15 +18147,15 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		315E39632F86ABE100D2289D /* XCLocalSwiftPackageReference "DebugServer" */ = {
+		315E39632F86ABE100D2289D /* XCLocalSwiftPackageReference "../SharedPackages/DebugServer" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../SharedPackages/DebugServer;
 		};
-		7B0752DA2F21BFDB00ACA559 /* XCLocalSwiftPackageReference "AutomationServer" */ = {
+		7B0752DA2F21BFDB00ACA559 /* XCLocalSwiftPackageReference "../SharedPackages/AutomationServer" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../SharedPackages/AutomationServer;
 		};
-		BD0C4D872DC54508001F034F /* XCLocalSwiftPackageReference "DuckUI" */ = {
+		BD0C4D872DC54508001F034F /* XCLocalSwiftPackageReference "LocalPackages/DuckUI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = LocalPackages/DuckUI;
 		};
@@ -18533,7 +18539,7 @@
 		};
 		7B0752D82F21BFDB00ACA559 /* AutomationServer */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7B0752DA2F21BFDB00ACA559 /* XCLocalSwiftPackageReference "AutomationServer" */;
+			package = 7B0752DA2F21BFDB00ACA559 /* XCLocalSwiftPackageReference "../SharedPackages/AutomationServer" */;
 			productName = AutomationServer;
 		};
 		7B2CCBA22D11ABB100FE5852 /* VPNWidgetSupport */ = {
