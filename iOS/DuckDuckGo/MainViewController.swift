@@ -5836,6 +5836,7 @@ extension MainViewController: TabDelegate {
              didRequestNewWebViewWithConfiguration configuration: WKWebViewConfiguration,
              for navigationAction: WKNavigationAction,
              inheritingAttribution: AdClickAttributionLogic.State?) -> WKWebView? {
+        capturePreviewForTab(tab)
         hideNotificationBarIfBrokenSitePromptShown()
         showBars()
         currentTab?.dismiss()
@@ -5957,6 +5958,12 @@ extension MainViewController: TabDelegate {
         loadUrlInNewTab(url, inheritedAttribution: attribution)
     }
 
+    func capturePreviewForTab(_ tab: TabViewController) {
+        // Capture source tab preview now; otherwise its thumbnail stays stale once we switch to the new tab.
+        guard tab.link != nil, let image = tab.preparePreviewSync() else { return }
+        previewsSource.update(preview: image, forTab: tab.tabModel)
+    }
+
     func tab(_ tab: TabViewController,
              didRequestNewTabForUrl url: URL,
              openedByPage: Bool,
@@ -5965,6 +5972,7 @@ extension MainViewController: TabDelegate {
         hideNotificationBarIfBrokenSitePromptShown()
         tab.aiChatContextualSheetCoordinator.dismissSheet()
         if openedByPage {
+            capturePreviewForTab(tab)
             showBars()
             newTabAnimation {
                 self.loadUrlInNewTab(url, inheritedAttribution: attribution)
