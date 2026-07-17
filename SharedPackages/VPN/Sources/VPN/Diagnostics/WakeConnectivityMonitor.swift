@@ -20,18 +20,13 @@ import Foundation
 import Network
 import os.log
 
-/// The outcome of a post-wake connectivity confirmation.
-///
-/// This is what we actually care about after the device wakes: did VPN connectivity come back? It replaces the
-/// old "wake failure" signal, which fired on the connection tester failing to *start* (usually a benign wake-time
-/// race) and stayed silent when the tunnel was genuinely dead.
+/// The outcome of a post-wake connectivity confirmation: did VPN connectivity come back after the device woke?
 public enum WakeConnectivityResult: Equatable {
     case restored
     case notRestored(reason: Reason)
 
-    /// Why connectivity couldn't be confirmed. `handshakeStale` is only trustworthy alongside a running tester:
-    /// WireGuard handshakes on demand, so a healthy tunnel after a short sleep can legitimately carry an old
-    /// handshake — keep it separate from the tester reasons in analysis.
+    /// Why connectivity couldn't be confirmed. `handshakeStale` is the weakest signal: WireGuard handshakes on
+    /// demand, so a healthy tunnel after a short sleep can still carry an old handshake.
     public enum Reason: String, Equatable {
         /// The connection tester failed to start after wake, so it never produced a verdict.
         case testerNotRunning = "tester_not_running"

@@ -1543,8 +1543,7 @@ open class PacketTunnelProvider: NEPacketTunnelProvider {
             return
         }
 
-        // Open a window to confirm connectivity actually returns after this wake. The tester result and/or a
-        // fresh handshake resolve it; a real post-wake outage surfaces as `.wakeConnectivity(.notRestored)`.
+        // Open a window to confirm connectivity actually returns after this wake.
         wakeConnectivityMonitor.noteWake()
 
         Task {
@@ -1558,8 +1557,7 @@ open class PacketTunnelProvider: NEPacketTunnelProvider {
             } catch {
                 Logger.networkProtection.error("🔴 Wake error: \(error.localizedDescription, privacy: .public)")
                 providerEvents.fire(.tunnelWakeAttempt(.failure(error)))
-                // Monitors (incl. the connection tester) didn't fully start, so there'll be no tester verdict
-                // this window — the confirmation falls back to the handshake check.
+                // Monitors (incl. the connection tester) didn't fully start, so there'll be no tester verdict this window.
                 wakeConnectivityMonitor.noteMonitorStartFailed()
             }
         }

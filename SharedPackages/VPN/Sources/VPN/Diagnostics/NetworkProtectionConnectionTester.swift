@@ -175,8 +175,7 @@ final class NetworkProtectionConnectionTester: ConnectionTesting {
                 if let tunnelInterface = path.availableInterfaces.first(where: { $0.name == interfaceName }) {
                     resume(with: .success(tunnelInterface))
                 } else {
-                    // The utun may not be visible in the first snapshot right after wake. Keep waiting for
-                    // a subsequent path update until the timeout fires below.
+                    // Not visible yet; keep waiting for a later path update until the timeout below fires.
                     Logger.networkProtectionConnectionTester.log("VPN interface \(interfaceName, privacy: .public) not visible yet; waiting for a path update")
                 }
             }
