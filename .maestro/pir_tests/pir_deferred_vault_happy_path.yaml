@@ -16,6 +16,7 @@ tags:
         isRunningUITests: "true"
         isInternalUser: "false"
         "ff.personalInformationRemoval": "true"
+        "ff.dbpDeferredSecureVaultInit": "true"
         "pir.profileState": "noProfile"
         "pir.debugServer": "true"
 
@@ -40,6 +41,7 @@ tags:
         isRunningUITests: "true"
         isInternalUser: "false"
         "ff.personalInformationRemoval": "true"
+        "ff.dbpDeferredSecureVaultInit": "true"
         "pir.profileState": "noProfile"
         "pir.debugServer": "true"
         "pir.openDashboardForTesting": "true"
@@ -68,6 +70,7 @@ tags:
         isRunningUITests: "true"
         isInternalUser: "false"
         "ff.personalInformationRemoval": "true"
+        "ff.dbpDeferredSecureVaultInit": "true"
         "pir.profileState": "hasProfile"
         "pir.debugServer": "true"
 
@@ -93,6 +96,7 @@ tags:
         isRunningUITests: "true"
         isInternalUser: "false"
         "ff.personalInformationRemoval": "true"
+        "ff.dbpDeferredSecureVaultInit": "true"
         "pir.profileState": "unknown"
         "pir.debugServer": "true"
 
@@ -104,3 +108,31 @@ tags:
     env:
         EXPECT_INITIALIZED: "true"
         EXPECT_LAST_INIT_REASON: "launch,appActive"
+
+- stopApp
+
+# Cold launch with no profile, deferred init disabled (eager init)
+- launchApp:
+    appId: "com.duckduckgo.mobile.ios"
+    clearState: true
+    clearKeychain: true
+    arguments:
+        isOnboardingCompleted: "true"
+        currentAppVariant: "null"
+        isRunningUITests: "true"
+        isInternalUser: "false"
+        "ff.personalInformationRemoval": "true"
+        "ff.dbpDeferredSecureVaultInit": "false"
+        "pir.profileState": "noProfile"
+        "pir.debugServer": "true"
+
+- runFlow:
+    file: ../shared/delay.yaml
+
+- runScript:
+    file: ../shared/scripts/assert_pir_runtime_status.js
+    env:
+        EXPECT_PROFILE_STATE: "noProfile"
+        EXPECT_INITIALIZED: "true"
+
+- stopApp

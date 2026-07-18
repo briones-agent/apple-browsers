@@ -34,9 +34,9 @@ function assertExpectedStatus(body) {
 }
 
 function getWithRetry(url, isExpected) {
-    let lastError = null
+    var lastError = null
 
-    for (let attempt = 0; attempt < 30; attempt++) {
+    for (var attempt = 0; attempt < 30; attempt++) {
         try {
             const response = http.get(url)
             if (response.status === 200) {
