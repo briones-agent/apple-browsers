@@ -1590,6 +1590,31 @@ struct UserText {
     static let importChromeAllowKeychainIntructions = NSLocalizedString("import.chrome.allow-keychain.instructions", value: "Enter your device password and click **Allow** to complete the import. DuckDuckGo won't see your password.", comment: "Instructions shown to the user when Chrome needs to access their Keychain. Contains markdown for bold text.")
     static let importChromeAllowButtonTitle = NSLocalizedString("import.chrome.allow-keychain.allow.button.title", value: "Allow", comment: "Button title of example dialog demonstrating to the user what to click when the system needs to access their Keychain.")
 
+    // MARK: - Browser data directory access (macOS 27+)
+
+    static func importBrowserDataAccessTitle(source: DataImport.Source) -> String {
+        let localized = NSLocalizedString("import.browser.data.access.title", value: "Allow access to your %@ data", comment: "Title asking the user to grant the app access to another browser's data (e.g. Chrome, Firefox) so it can be imported")
+        return String(format: localized, source.importSourceName)
+    }
+
+    static func importBrowserDataAccessInfo(source: DataImport.Source) -> String {
+        let localized = NSLocalizedString("import.browser.data.access.info", value: "To import your data from %@, DuckDuckGo needs your permission to access it. Open System Settings, then turn on access for DuckDuckGo under Privacy & Security → Files & Folders.", comment: "Instructions telling the user how to grant DuckDuckGo access to another browser's data (e.g. Chrome, Firefox) in System Settings")
+        return String(format: localized, source.importSourceName)
+    }
+
+    static let importBrowserDataAccessOpenSettingsButton = NSLocalizedString("import.browser.data.access.open-settings.button", value: "Open System Settings", comment: "Button that opens the macOS System Settings so the user can grant the app access to another browser's data")
+
+    static let importBrowserDataAccessWaiting = NSLocalizedString("import.browser.data.access.waiting", value: "Waiting for access…", comment: "Status text shown while the app waits for the user to grant access to another browser's data in System Settings")
+
+    static func importBrowserDataAccessGrantedTitle(source: DataImport.Source) -> String {
+        let localized = NSLocalizedString("import.browser.data.access.granted.title", value: "Access to %@ granted", comment: "Confirmation title shown once the user has granted the app access to another browser's data (e.g. Chrome, Firefox)")
+        return String(format: localized, source.importSourceName)
+    }
+
+    static let importBrowserDataAccessGrantedInfo = NSLocalizedString("import.browser.data.access.granted.info", value: "You can now continue importing your data.", comment: "Confirmation text shown once the user has granted the app access to another browser's data")
+
+    static let importBrowserDataAccessRequiredBadge = NSLocalizedString("import.browser.data.access.required.badge", value: "Requires permission to access data", comment: "Accessibility label for the warning icon shown next to a browser that needs the user to grant data access before importing")
+
     static let importLoginsCSV = NSLocalizedString("import.logins.csv.title", value: "CSV Passwords File (for other browsers)", comment: "Title text for the CSV importer")
     static let importLoginsCSVShort = NSLocalizedString("import.logins.csv.short.title", value: "CSV Passwords", comment: "Short title text for the CSV importer")
     static let importBookmarksHTML = NSLocalizedString("import.bookmarks.html.title", value: "HTML Bookmarks File (for other browsers)", comment: "Title text for the HTML Bookmarks importer")

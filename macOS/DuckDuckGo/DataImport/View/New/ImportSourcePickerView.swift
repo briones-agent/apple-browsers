@@ -38,6 +38,7 @@ struct ImportSourcePickerView: View {
          selectableImportTypes: [DataImport.DataType],
          shouldShowSyncFeature: Bool,
          isPickerExpanded: Bool,
+         sourcesRequiringPermission: Set<DataImport.Source> = [],
          onSourceSelected: @escaping (DataImport.Source) -> Void,
          onTypeSelected: @escaping (DataImport.DataType, Bool) -> Void,
          onSyncSelected: @escaping () -> Void,
@@ -51,6 +52,7 @@ struct ImportSourcePickerView: View {
             selectedImportTypes: selectedImportTypes,
             selectableImportTypes: selectableImportTypes,
             shouldShowSyncButton: shouldShowSyncFeature,
+            sourcesRequiringPermission: sourcesRequiringPermission,
             initialPickerExpanded: isPickerExpanded,
             onSourceSelected: onSourceSelected,
             onTypeSelected: onTypeSelected,
@@ -189,22 +191,30 @@ private struct RadioGridPicker: View {
             ForEach(viewModel.visibleOptions) { option in
                 let icon = Image(nsImage: option.importSourceImage ?? DesignSystemImages.Color.Size24.document)
 
+                let requiresPermission = viewModel.sourcesRequiringPermission.contains(option)
+
                 Button {
                     viewModel.selectSource(option)   // fires on mouse-up inside
                 } label: {
                     RadioCard(
                         isSelected: viewModel.selectedSource == option,
                         icon: icon,
-                        title: option.importSourceName
+                        title: option.importSourceName,
+                        requiresPermission: requiresPermission
                     )
                 }
                 .buttonStyle(CardPressStyle()) // gives us configuration.isPressed
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(option.importSourceName.replacingOccurrences(of: "\n", with: " "))
+                .accessibilityLabel(accessibilityLabel(for: option, requiresPermission: requiresPermission))
                 .accessibilityAddTraits(option == viewModel.selectedSource ? [.isSelected] : [])
                 .accessibilityHint("Activate to select")
             }
         }
+    }
+
+    private func accessibilityLabel(for source: DataImport.Source, requiresPermission: Bool) -> String {
+        let name = source.importSourceName.replacingOccurrences(of: "\n", with: " ")
+        return requiresPermission ? "\(name), \(UserText.importBrowserDataAccessRequiredBadge)" : name
     }
 }
 
@@ -232,6 +242,7 @@ private struct RadioCard: View {
     let isSelected: Bool
     let icon: Image
     let title: String
+    var requiresPermission: Bool = false
     @Environment(\.cardIsPressed) private var isPressed   // <- from CardPressStyle
     @State private var isHovering = false
 
@@ -240,6 +251,15 @@ private struct RadioCard: View {
             icon
                 .resizable()
                 .frame(width: 32, height: 32)
+                .overlay(alignment: .bottomTrailing) {
+                    if requiresPermission {
+                        // Small warning badge indicating the browser's data isn't accessible yet (macOS 27+).
+                        Image(nsImage: DesignSystemImages.Color.Size16.exclamation)
+                            .resizable()
+                            .frame(width: 16, height: 16)
+                            .offset(x: 3, y: 3)
+                    }
+                }
                 .padding(.trailing, 10)
 
             Text(title)

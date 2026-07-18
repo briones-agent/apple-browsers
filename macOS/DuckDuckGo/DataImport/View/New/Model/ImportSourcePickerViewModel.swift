@@ -52,6 +52,9 @@ final class ImportSourcePickerViewModel: ObservableObject {
 
     let shouldShowSyncButton: Bool
 
+    /// Sources whose data directory isn't accessible yet (macOS 27+); shown with a warning badge.
+    let sourcesRequiringPermission: Set<DataImport.Source>
+
     private let onSourceSelected: (DataImport.Source) -> Void
     private let onTypeSelected: (DataImport.DataType, Bool) -> Void
     private let onSyncSelected: () -> Void
@@ -61,6 +64,7 @@ final class ImportSourcePickerViewModel: ObservableObject {
          selectedImportTypes: [DataImport.DataType],
          selectableImportTypes: [DataImport.DataType],
          shouldShowSyncButton: Bool,
+         sourcesRequiringPermission: Set<DataImport.Source> = [],
          initialPickerExpanded: Bool = false,
          onSourceSelected: @escaping (DataImport.Source) -> Void,
          onTypeSelected: @escaping (DataImport.DataType, Bool) -> Void,
@@ -70,6 +74,7 @@ final class ImportSourcePickerViewModel: ObservableObject {
         self.selectedImportTypes = selectedImportTypes
         self.selectableImportTypes = selectableImportTypes
         self.shouldShowSyncButton = shouldShowSyncButton
+        self.sourcesRequiringPermission = sourcesRequiringPermission
         self.onSourceSelected = onSourceSelected
         self.onTypeSelected = onTypeSelected
         self.onSyncSelected = onSyncSelected

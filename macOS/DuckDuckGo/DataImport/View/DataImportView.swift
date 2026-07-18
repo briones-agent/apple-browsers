@@ -77,6 +77,7 @@ struct DataImportView: ModalView {
                     selectableImportTypes: Array(model.selectableImportTypes),
                     shouldShowSyncFeature: syncFeatureVisibility.shouldShowSyncFeature,
                     isPickerExpanded: model.isPickerExpanded,
+                    sourcesRequiringPermission: model.sourcesRequiringDataDirectoryPermission,
                     onSourceSelected: { source in
                         model.update(with: source)
                     },
@@ -125,6 +126,14 @@ struct DataImportView: ModalView {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
+            case .requestDataDirectoryPermission(let profile):
+                RequestDataDirectoryPermissionView(
+                    source: model.importSource,
+                    profileURL: profile.profileURL,
+                    accessGranted: model.isDataDirectoryAccessGranted,
+                    onAccessGranted: { model.markDataDirectoryAccessGranted() },
+                    onProceed: { model.completeDataDirectoryPermissionGrant() }
+                )
             case .passwordEntryHelp:
                 PasswordEntryRetryPromptView(
                     onRetry: {

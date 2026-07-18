@@ -1175,6 +1175,76 @@ final class DataImportViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Browser data directory permission (macOS 27+)
+
+    func testInit_whenSourceHasOnlyPermissionDeniedProfile_thenSourceIsAvailableAndFlagged() {
+        // WHEN
+        model = DataImportViewModel(
+            importSource: .chrome,
+            availableImportSources: [.chrome, .firefox],
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                if browser == .chrome {
+                    return .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
+                }
+                return .init(browser: browser, profiles: [BrowserProfile.default(fileStore: self.fileStore)(browser)])
+            }
+        )
+
+        // THEN
+        XCTAssertTrue(model.availableImportSources.contains(.chrome))
+        XCTAssertTrue(model.sourcesRequiringDataDirectoryPermission.contains(.chrome))
+        XCTAssertFalse(model.sourcesRequiringDataDirectoryPermission.contains(.firefox))
+        XCTAssertEqual(model.selectedProfile?.accessState, .permissionDenied)
+    }
+
+    @MainActor
+    func testImportButtonPressed_whenSelectedProfileRequiresPermission_thenRoutesToPermissionScreen() {
+        // GIVEN
+        model = DataImportViewModel(
+            importSource: .chrome,
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
+            }
+        )
+        XCTAssertEqual(model.screen, .sourceAndDataTypesPicker)
+
+        // WHEN
+        model.importButtonPressed()
+
+        // THEN
+        guard case .requestDataDirectoryPermission(let profile) = model.screen else {
+            return XCTFail("Expected requestDataDirectoryPermission screen, got \(model.screen)")
+        }
+        XCTAssertEqual(profile.accessState, .permissionDenied)
+        XCTAssertNil(model.importTaskId)
+    }
+
+    @MainActor
+    func testRequestDataDirectoryPermission_hidesBackButtonOnceAccessGranted() {
+        // GIVEN
+        model = DataImportViewModel(
+            importSource: .chrome,
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
+            }
+        )
+        model.importButtonPressed()
+
+        // THEN the waiting state offers a Back button
+        XCTAssertEqual(model.secondaryButton, .back)
+        XCTAssertFalse(model.isDataDirectoryAccessGranted)
+
+        // WHEN access is granted
+        model.markDataDirectoryAccessGranted()
+
+        // THEN the success state hides the Back button
+        XCTAssertTrue(model.isDataDirectoryAccessGranted)
+        XCTAssertNil(model.secondaryButton)
+    }
+
     @MainActor
     func testImportButtonPressed_showsProfilePickerWhenMultipleValidProfiles() {
         // GIVEN
@@ -2562,6 +2632,17 @@ private extension DataImport.BrowserProfile {
             let profile = Self(browser: browser, profileURL: .profile(named: "Test Profile 3"), fileStore: fileStore)
             Self.configureFileStore(fileStore, for: profile)
             return profile
+        }
+    }
+
+    /// A profile whose data directory exists but is access-restricted (macOS 27+ TCC). The mock file store has
+    /// no contents for it, so it has no importable data and must be surfaced via `.permissionDenied`.
+    static func permissionDenied(fileStore: FileStoreMock) -> (ThirdPartyBrowser) -> Self {
+        return { browser in
+            Self(browser: browser,
+                 profileURL: .profile(named: DataImport.BrowserProfileList.Constants.chromiumDefaultProfileName),
+                 fileStore: fileStore,
+                 accessState: .permissionDenied)
         }
     }
 

@@ -37,6 +37,14 @@ struct DataImportViewModel {
 
     let availableImportSources: [DataImport.Source]
 
+    /// Sources whose data directory exists but can't be accessed yet (macOS 27+ TCC restriction).
+    /// These are still offered in the source picker (with a warning) so the user can be guided to grant access.
+    let sourcesRequiringDataDirectoryPermission: Set<Source>
+
+    /// Whether access to the selected browser's data directory has been granted while on the
+    /// `.requestDataDirectoryPermission` screen. Drives the success state and hides the footer Back button.
+    private(set) var isDataDirectoryAccessGranted: Bool = false
+
     let selectableImportTypes: Set<DataType>
 
     /// Browser to import data from
@@ -72,6 +80,9 @@ struct DataImportViewModel {
         case moreInfo
         case passwordEntryHelp
         case getReadPermission(URL)
+        /// macOS 27+: the selected browser's data directory exists but is not accessible; guide the user to
+        /// grant access in System Settings before continuing with the import.
+        case requestDataDirectoryPermission(BrowserProfile)
         case fileImport(dataType: DataType, summary: DataImportSummary = [:])
         case archiveImport(dataTypes: Set<DataType>, summary: DataImportSummary? = nil)
         case summary(DataImportSummary)
@@ -180,7 +191,7 @@ struct DataImportViewModel {
 
     var shouldHidePasswordExplainerView: Bool {
         switch screen {
-        case .moreInfo, .profilePicker:
+        case .moreInfo, .profilePicker, .requestDataDirectoryPermission:
             return true
         default:
             return false
@@ -223,22 +234,31 @@ struct DataImportViewModel {
          wideEvent: WideEventManaging = Application.appDelegate.wideEvent,
          onFinished: @escaping () -> Void = {},
          onCancelled: @escaping () -> Void = {}) {
-        let filteredAvailableSources = availableImportSources.filter {
+        var sourcesRequiringDataDirectoryPermission: Set<Source> = []
+        let filteredAvailableSources = availableImportSources.filter { source in
             // Filter out CSV and HTML as we're using the new combined file import option
-             if $0 == .bookmarksHTML || $0 == .csv {
+             if source == .bookmarksHTML || source == .csv {
                  return false
              }
 
-            let browser = ThirdPartyBrowser.browser(for: $0)
+            let browser = ThirdPartyBrowser.browser(for: source)
             guard browser?.isWebBrowser == true else {
                 // Don't filter out password managers or file imports
                 return true
             }
-            let profiles = browser.map(loadProfiles)
-            return profiles?.defaultProfile != nil
+            guard let profiles = browser.map(loadProfiles), profiles.defaultProfile != nil else {
+                return false
+            }
+            // macOS 27+: the browser is installed and its data directory exists but isn't accessible yet.
+            // Keep it in the list and flag it so the picker can show a warning and route to the access flow.
+            if profiles.requiresDataDirectoryPermission {
+                sourcesRequiringDataDirectoryPermission.insert(source)
+            }
+            return true
         }
 
         self.availableImportSources = filteredAvailableSources
+        self.sourcesRequiringDataDirectoryPermission = sourcesRequiringDataDirectoryPermission
         let importSource = importSource ?? preferredImportSources.first(where: { filteredAvailableSources.contains($0) }) ?? filteredAvailableSources.first ?? .csv
 
         self.importSource = importSource
@@ -852,6 +872,9 @@ extension DataImportViewModel {
             return initiateImport()
         case .getReadPermission:
             return nil
+        case .requestDataDirectoryPermission:
+            // The permission screen manages its own controls (Open System Settings / Continue).
+            return nil
         case .passwordEntryHelp:
             return nil
 
@@ -881,6 +904,9 @@ extension DataImportViewModel {
                 return .cancel
             case .archiveImport, .profilePicker, .moreInfo, .getReadPermission:
                 return .back
+            case .requestDataDirectoryPermission:
+                // Once access is granted the screen only offers "Continue"; no Back button.
+                return isDataDirectoryAccessGranted ? nil : .back
             case .passwordEntryHelp:
                 return .cancel
             case .fileImport(_, let summary):
@@ -947,6 +973,34 @@ extension DataImportViewModel {
         selectedDataTypes = selectedDataTypes.intersection(availableTypesForProfile)
     }
 
+    /// Called by the permission screen once it detects that access to the data directory has been granted.
+    /// Switches the screen to its success state and hides the footer Back button.
+    mutating func markDataDirectoryAccessGranted() {
+        isDataDirectoryAccessGranted = true
+    }
+
+    /// Called once the user has granted access to a previously-inaccessible browser data directory (macOS 27+).
+    /// Rebuilds the model so the now-readable profiles are re-read, then continues the import flow — showing the
+    /// profile picker when there are multiple profiles, otherwise proceeding straight to the import.
+    @MainActor
+    mutating func completeDataDirectoryPermissionGrant() {
+        self = .init(importSource: importSource,
+                     selectedDataTypes: hasUserModifiedDataTypeSelection ? selectedDataTypes : nil,
+                     hasUserModifiedDataTypeSelection: hasUserModifiedDataTypeSelection,
+                     isPickerExpanded: isPickerExpanded,
+                     isPasswordManagerAutolockEnabled: isPasswordManagerAutolockEnabled,
+                     syncFeatureVisibility: syncFeatureVisibility,
+                     loadProfiles: loadProfiles,
+                     dataImporterFactory: dataImporterFactory,
+                     requestPrimaryPasswordCallback: requestPrimaryPasswordCallback,
+                     openPanelCallback: openPanelCallback,
+                     reportSenderFactory: reportSenderFactory,
+                     wideEvent: wideEvent,
+                     onFinished: onFinished,
+                     onCancelled: onCancelled)
+        importButtonPressed()
+    }
+
     @MainActor
     mutating func performAction(for buttonType: ButtonType, dismiss: @escaping () -> Void) {
         switch buttonType {
@@ -983,6 +1037,14 @@ extension DataImportViewModel {
 
     @MainActor
     mutating func importButtonPressed() {
+        // macOS 27+: the selected browser's data directory exists but isn't accessible yet. Guide the user to
+        // grant access in System Settings before starting the import (and before starting the wide event flow).
+        if let selectedProfile, selectedProfile.requiresDataDirectoryPermission {
+            isDataDirectoryAccessGranted = false
+            screen = .requestDataDirectoryPermission(selectedProfile)
+            return
+        }
+
         setupAndStartWideEventIfNeeded()
         guard let importer = selectedProfile.map({
             dataImporterFactory(/* importSource: */ importSource,

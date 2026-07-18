@@ -4351,7 +4351,9 @@
 		EE5F09A82E7C2EF200341531 /* NewFileImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5F09A72E7C2EEE00341531 /* NewFileImportView.swift */; };
 		EE5F09A92E7C2EF200341531 /* NewFileImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5F09A72E7C2EEE00341531 /* NewFileImportView.swift */; };
 		EE650D5E2EB112CA00B3D1D7 /* NewProfilePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE650D5D2EB112BD00B3D1D7 /* NewProfilePickerView.swift */; };
+		DD27DA7A000000000000FEF2 /* RequestDataDirectoryPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD27DA7A000000000000FEF1 /* RequestDataDirectoryPermissionView.swift */; };
 		EE650D5F2EB112CA00B3D1D7 /* NewProfilePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE650D5D2EB112BD00B3D1D7 /* NewProfilePickerView.swift */; };
+		DD27DA7A000000000000FEF3 /* RequestDataDirectoryPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD27DA7A000000000000FEF1 /* RequestDataDirectoryPermissionView.swift */; };
 		EE66666F2B56EDE4001D898D /* VPNLocationsHostingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE66666E2B56EDE4001D898D /* VPNLocationsHostingViewController.swift */; };
 		EE6666702B56EDE4001D898D /* VPNLocationsHostingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE66666E2B56EDE4001D898D /* VPNLocationsHostingViewController.swift */; };
 		EE72DCA62EA91C9F0052661B /* ImportSourcePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE72DCA52EA91C9F0052661B /* ImportSourcePickerView.swift */; };
@@ -6970,6 +6972,7 @@
 		EE54F7B22BBFEA48006218DB /* BookmarksAndFavoritesTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BookmarksAndFavoritesTests.swift; sourceTree = "<group>"; };
 		EE5F09A72E7C2EEE00341531 /* NewFileImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFileImportView.swift; sourceTree = "<group>"; };
 		EE650D5D2EB112BD00B3D1D7 /* NewProfilePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewProfilePickerView.swift; sourceTree = "<group>"; };
+		DD27DA7A000000000000FEF1 /* RequestDataDirectoryPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestDataDirectoryPermissionView.swift; sourceTree = "<group>"; };
 		EE66666E2B56EDE4001D898D /* VPNLocationsHostingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VPNLocationsHostingViewController.swift; sourceTree = "<group>"; };
 		EE72DCA52EA91C9F0052661B /* ImportSourcePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSourcePickerView.swift; sourceTree = "<group>"; };
 		EE72DCA82EAA7E9C0052661B /* ImportSourcePickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSourcePickerViewModel.swift; sourceTree = "<group>"; };
@@ -13080,6 +13083,7 @@
 				EDD982B62EBB735E00FA281B /* DataImportSummaryDetailView.swift */,
 				EE1886512EB3BA3F00A46272 /* NewImportSummaryView.swift */,
 				EE650D5D2EB112BD00B3D1D7 /* NewProfilePickerView.swift */,
+				DD27DA7A000000000000FEF1 /* RequestDataDirectoryPermissionView.swift */,
 				EE72DCA92EAA7E9C0052661B /* Model */,
 				EE8C11D82E9FE768002FFD72 /* NewImportErrorView.swift */,
 				EE8C11D52E9E8336002FFD72 /* FileImportScreenView.swift */,
@@ -15402,6 +15406,7 @@
 				467D16672D0C98D5007C020A /* CrashReportSenderExtensions.swift in Sources */,
 				3706FB3D293F65D500E42796 /* FocusRingView.swift in Sources */,
 				EE650D5E2EB112CA00B3D1D7 /* NewProfilePickerView.swift in Sources */,
+				DD27DA7A000000000000FEF2 /* RequestDataDirectoryPermissionView.swift in Sources */,
 				3706FB3E293F65D500E42796 /* BookmarksBarViewModel.swift in Sources */,
 				3706FB3F293F65D500E42796 /* NSPopUpButtonView.swift in Sources */,
 				84E720682EAA1A44002618BD /* PermissionManagerMock.swift in Sources */,
@@ -18117,6 +18122,7 @@
 				4B65143E263924B5005B46EB /* EmailUrlExtensions.swift in Sources */,
 				3727A5A72F17F57A002E10E1 /* MemoryPressureReporter.swift in Sources */,
 				EE650D5F2EB112CA00B3D1D7 /* NewProfilePickerView.swift in Sources */,
+				DD27DA7A000000000000FEF3 /* RequestDataDirectoryPermissionView.swift in Sources */,
 				CC82ABB92F520E4D00AD9807 /* PromoTrigger.swift in Sources */,
 				1DBFD9132D6C7387003F8D98 /* PinnedTabsManagerProvider.swift in Sources */,
 				85CC1D7D26A05F250062F04E /* PasswordManagementItemModel.swift in Sources */,

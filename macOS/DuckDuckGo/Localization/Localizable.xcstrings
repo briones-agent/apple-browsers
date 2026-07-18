@@ -52626,6 +52626,90 @@
         }
       }
     },
+    "import.browser.data.access.granted.info" : {
+      "comment" : "Confirmation text shown once the user has granted the app access to another browser's data",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You can now continue importing your data."
+          }
+        }
+      }
+    },
+    "import.browser.data.access.granted.title" : {
+      "comment" : "Confirmation title shown once the user has granted the app access to another browser's data (e.g. Chrome, Firefox)",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Access to %@ granted"
+          }
+        }
+      }
+    },
+    "import.browser.data.access.info" : {
+      "comment" : "Instructions telling the user how to grant DuckDuckGo access to another browser's data (e.g. Chrome, Firefox) in System Settings",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "To import your data from %@, DuckDuckGo needs your permission to access it. Open System Settings, then turn on access for DuckDuckGo under Privacy & Security → Files & Folders."
+          }
+        }
+      }
+    },
+    "import.browser.data.access.open-settings.button" : {
+      "comment" : "Button that opens the macOS System Settings so the user can grant the app access to another browser's data",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open System Settings"
+          }
+        }
+      }
+    },
+    "import.browser.data.access.required.badge" : {
+      "comment" : "Accessibility label for the warning icon shown next to a browser that needs the user to grant data access before importing",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Requires permission to access data"
+          }
+        }
+      }
+    },
+    "import.browser.data.access.title" : {
+      "comment" : "Title asking the user to grant the app access to another browser's data (e.g. Chrome, Firefox) so it can be imported",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Allow access to your %@ data"
+          }
+        }
+      }
+    },
+    "import.browser.data.access.waiting" : {
+      "comment" : "Status text shown while the app waits for the user to grant access to another browser's data in System Settings",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Waiting for access…"
+          }
+        }
+      }
+    },
     "import.browser.data.bookmarks" : {
       "comment" : "Opens Import Browser Data dialog",
       "extractionState" : "extracted_with_value",

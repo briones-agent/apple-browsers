@@ -829,6 +829,8 @@ extension URL {
 
     static var fullDiskAccess = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
 
+    static var filesAndFolders = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")!
+
     static var touchIDAndPassword = URL(string: "x-apple.systempreferences:com.apple.preferences.password")!
 
     // MARK: - Blob URLs
