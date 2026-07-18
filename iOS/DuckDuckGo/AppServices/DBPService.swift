@@ -53,6 +53,16 @@ final class DBPService: NSObject {
         )
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
         let profileStateManager = DefaultDBPProfileStateManager(keyValueStore: UserDefaults.dbp)
+
+#if DEBUG
+        let launchOptionsHandler = LaunchOptionsHandler()
+        if let profileStateRawValue = launchOptionsHandler.pirProfileStateOverride,
+           let profileState = DBPProfileState(rawValue: profileStateRawValue) {
+            profileStateManager.setProfileStateForTesting(profileState)
+        }
+        let shouldAutostartPIRDebugServer = launchOptionsHandler.shouldAutostartPIRDebugServer
+#endif
+
         self.profileStateManager = profileStateManager
 
         guard appDependencies.featureFlagger.isFeatureOn(.personalInformationRemoval) else {
@@ -133,6 +143,14 @@ final class DBPService: NSObject {
             self.dbpIOSManager = nil
         }
         super.init()
+
+#if DEBUG
+        if shouldAutostartPIRDebugServer {
+            Task { [weak self] in
+                await self?.dbpIOSManager?.startDebugServer()
+            }
+        }
+#endif
     }
 
     func onBackground() {

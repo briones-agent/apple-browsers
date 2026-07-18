@@ -218,6 +218,11 @@ public final class DataBrokerProtectionIOSManager {
         }
     }
 
+    private struct VaultInitDebugState {
+        var error: String?
+        var reason: String?
+    }
+
     private struct Constants {
         /// Maximum delay before the next background task must run
         static let defaultMaxBackgroundTaskWaitTime: TimeInterval = .hours(48)
@@ -241,6 +246,7 @@ public final class DataBrokerProtectionIOSManager {
     private let vaultResourcesLock = NSLock()
     private var cachedVaultResources: DBPVaultResources?
     private var ongoingVaultResourcesInitTask: Task<DBPVaultResources, Error>?
+    private var vaultInitDebugState = VaultInitDebugState()
     private let vaultResourcesProvider: (() throws -> DBPVaultResources)?
     private let authenticationManager: DataBrokerProtectionAuthenticationManaging
     private let userNotificationService: DataBrokerProtectionUserNotificationService
@@ -511,9 +517,13 @@ public final class DataBrokerProtectionIOSManager {
             }
 
             if reason.skipsWhenNoProfile, profileStateManager.profileState == .noProfile {
+                vaultInitDebugState.error = nil
+                vaultInitDebugState.reason = reason.rawValue
                 return .skipped
             }
 
+            vaultInitDebugState.error = nil
+            vaultInitDebugState.reason = reason.rawValue
             let task = Task {
                 Logger.dataBrokerProtection.log("PIR Secure Vault initialization triggered, reason: \(reason.rawValue, privacy: .public)")
                 let signpostState = Self.secureVaultSignposter.beginInterval(
@@ -527,7 +537,7 @@ public final class DataBrokerProtectionIOSManager {
                     Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: success")
                     return resources
                 } catch {
-                    clearVaultResourcesInitAttempt()
+                    clearVaultResourcesInitAttempt(error: error)
                     Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: failure")
                     throw error
                 }
@@ -586,12 +596,14 @@ public final class DataBrokerProtectionIOSManager {
             resources.queueManager.delegate = self
             cachedVaultResources = resources
             ongoingVaultResourcesInitTask = nil
+            vaultInitDebugState.error = nil
         }
     }
 
-    private func clearVaultResourcesInitAttempt() {
+    private func clearVaultResourcesInitAttempt(error: Error? = nil) {
         vaultResourcesLock.withLock {
             ongoingVaultResourcesInitTask = nil
+            vaultInitDebugState.error = error.map { String(describing: $0) }
         }
     }
 }
@@ -995,6 +1007,16 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DebugCommandsDelegate 
 // MARK: - Debug HTTP server read access
 
 extension DataBrokerProtectionIOSManager: DataBrokerProtectionDebugReadProviding {
+
+    public var iOSRuntimeStatus: DBPDebugIOSRuntimeStatus? {
+        vaultResourcesLock.withLock {
+            DBPDebugIOSRuntimeStatus(profileState: profileStateManager.profileState.rawValue,
+                                     vault: DBPDebugIOSRuntimeStatus.VaultStatus(initialized: cachedVaultResources != nil,
+                                                                                 initInFlight: ongoingVaultResourcesInitTask != nil,
+                                                                                 lastError: vaultInitDebugState.error,
+                                                                                 lastInitReason: vaultInitDebugState.reason))
+        }
+    }
 
     public var agentVersion: String {
         let version = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "unknown"
