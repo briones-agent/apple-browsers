@@ -29,7 +29,6 @@ import Subscription
 import os.log
 
 final class DBPService: NSObject {
-    private let shouldDeferSecureVaultInitialization = true
     private let dbpIOSManager: DataBrokerProtectionIOSManager?
     public let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
     public let profileStateManager: DBPProfileStateManaging
@@ -137,7 +136,7 @@ final class DBPService: NSObject {
                 isWebViewInspectable: isWebViewInspectable,
                 freeTrialConversionService: appDependencies.freeTrialConversionService,
                 contentBlocking: dbpContentBlocking,
-                shouldDeferSecureVaultInitialization: shouldDeferSecureVaultInitialization)
+                shouldDeferSecureVaultInitialization: appDependencies.featureFlagger.isFeatureOn(.dbpDeferredSecureVaultInit))
         } else {
             assertionFailure("PixelKit not set up")
             self.dbpIOSManager = nil
