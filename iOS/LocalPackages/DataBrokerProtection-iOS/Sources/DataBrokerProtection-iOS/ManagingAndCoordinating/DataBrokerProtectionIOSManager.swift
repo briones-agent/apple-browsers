@@ -98,6 +98,9 @@ public class DBPIOSInterface {
         var meetsLocaleRequirement: Bool { get }
 
         func validateRunPrerequisites() async -> Bool
+
+        /// Use this lightweight variant when the caller wants to avoid opening the secure vault and only needs cached profile state.
+        func validateRunPrerequisites(usingCachedProfileState profileState: DBPProfileState) async -> Bool
     }
 
     public protocol DatabaseDelegate: AnyObject {
@@ -469,7 +472,7 @@ public final class DataBrokerProtectionIOSManager {
 
     public func prepareSecureVaultResourcesAtLaunch() async throws {
         do {
-            _ = try await vaultResources(reason: .launch)
+            try await vaultResources(reason: .launch)
         } catch DataBrokerProtectionError.secureVaultNotNeeded {
             Logger.dataBrokerProtection.log("Skipping Secure Vault initialization at launch (no profile)")
         }
@@ -490,6 +493,7 @@ public final class DataBrokerProtectionIOSManager {
     /// Central gate for Secure Vault-backed resources. Every caller either starts initialization
     /// or joins one already in progress; the gate ensures a single initialization even when
     /// multiple entry points (launch, app-active, background task) arrive concurrently.
+    @discardableResult
     private func vaultResources(reason: VaultInitReason) async throws -> DBPVaultResources {
         enum Resolution {
             case ready(DBPVaultResources)
@@ -603,9 +607,6 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.AppLifecycleEventsDele
     public func appDidBecomeActive() async {
         let resources: DBPVaultResources
         do {
-            // App-active work depends on vault resources. The launch task's init runs on a
-            // low-priority background queue and can lose the race to the foreground transition,
-            // so app-active must be able to start (or join) initialization rather than only wait.
             resources = try await vaultResources(reason: .appActive)
             Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up App Active")
         } catch DataBrokerProtectionError.secureVaultNotNeeded {
@@ -1057,6 +1058,12 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.RunPrerequisitesDelega
         }
     }
 
+    public func validateRunPrerequisites(usingCachedProfileState profileState: DBPProfileState) async -> Bool {
+        await validateRunPrerequisites {
+            profileState == .hasProfile
+        }
+    }
+
     private func validateRunPrerequisites(meetsProfileRunPrequisite: () throws -> Bool) async -> Bool {
         do {
             guard try meetsProfileRunPrequisite() else {
@@ -1164,7 +1171,6 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
         Task {
             let resources: DBPVaultResources?
             do {
-                // Scheduling needs database state to choose the next eligible run.
                 resources = try await vaultResources(reason: .backgroundTask)
                 Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Scheduling")
             } catch DataBrokerProtectionError.secureVaultNotNeeded {
@@ -1303,8 +1309,6 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.BackgroundTaskHandling
         Task {
             let resources: DBPVaultResources
             do {
-                // iOS may launch the app directly for this task, so BG handling initializes the
-                // vault resources if the normal launch path has not completed.
                 resources = try await vaultResources(reason: .backgroundTask)
                 Self.secureVaultSignposter.emitEvent("PIR Secure Vault Follow-Up Background Task")
             } catch DataBrokerProtectionError.secureVaultNotNeeded {

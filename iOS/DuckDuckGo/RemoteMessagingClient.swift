@@ -69,7 +69,8 @@ final class RemoteMessagingClient: RemoteMessagingProcessing {
         freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking,
         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
         profileStateManager: DBPProfileStateManaging,
-        idleReturnEligibilityManager: IdleReturnEligibilityManaging
+        idleReturnEligibilityManager: IdleReturnEligibilityManaging,
+        dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate? = nil
     ) {
         let provider = RemoteMessagingConfigMatcherProvider(
             bookmarksDatabase: bookmarksDatabase,
@@ -78,6 +79,7 @@ final class RemoteMessagingClient: RemoteMessagingProcessing {
             duckPlayerStorage: duckPlayerStorage,
             syncService: syncService,
             winBackOfferService: winBackOfferService,
+            dbpRunPrerequisitesDelegate: dbpRunPrerequisitesDelegate,
             freemiumPIREligibilityChecker: freemiumPIREligibilityChecker,
             freemiumDBPUserStateManager: freemiumDBPUserStateManager,
             profileStateManager: profileStateManager,

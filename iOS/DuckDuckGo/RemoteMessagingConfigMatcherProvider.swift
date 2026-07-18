@@ -44,6 +44,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         themeManager: ThemeManaging = ThemeManager.shared,
         syncService: DDGSyncing,
         winBackOfferService: WinBackOfferService,
+        dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate? = nil,
         freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking,
         freemiumDBPUserStateManager: FreemiumDBPUserStateManaging,
         profileStateManager: DBPProfileStateManaging,
@@ -57,6 +58,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         self.themeManager = themeManager
         self.syncService = syncService
         self.winBackOfferService = winBackOfferService
+        self.dbpRunPrerequisitesDelegate = dbpRunPrerequisitesDelegate
         self.freemiumPIREligibilityChecker = freemiumPIREligibilityChecker
         self.freemiumDBPUserStateManager = freemiumDBPUserStateManager
         self.profileStateManager = profileStateManager
@@ -71,6 +73,7 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
     let themeManager: ThemeManaging
     let syncService: DDGSyncing
     let winBackOfferService: WinBackOfferService
+    let dbpRunPrerequisitesDelegate: DBPIOSInterface.RunPrerequisitesDelegate?
     let freemiumPIREligibilityChecker: FreemiumPIREligibilityChecking
     let freemiumDBPUserStateManager: FreemiumDBPUserStateManaging
     let profileStateManager: DBPProfileStateManaging
@@ -119,10 +122,12 @@ final class RemoteMessagingConfigMatcherProvider: RemoteMessagingConfigMatcherPr
         let isCurrentPIRUser: Bool?
 
         if featureFlagger.isFeatureOn(.personalInformationRemoval) {
-            switch profileStateManager.profileState {
-            case .hasProfile: isCurrentPIRUser = true
-            case .noProfile: isCurrentPIRUser = false
-            case .unknown: isCurrentPIRUser = nil
+            let profileState = profileStateManager.profileState
+            switch profileState {
+            case .hasProfile, .noProfile:
+                isCurrentPIRUser = (await dbpRunPrerequisitesDelegate?.validateRunPrerequisites(usingCachedProfileState: profileState)) ?? false
+            case .unknown:
+                isCurrentPIRUser = nil
             }
         } else {
             isCurrentPIRUser = false
