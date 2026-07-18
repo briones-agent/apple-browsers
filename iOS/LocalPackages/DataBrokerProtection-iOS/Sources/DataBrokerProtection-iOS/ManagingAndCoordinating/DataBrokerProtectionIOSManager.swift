@@ -219,7 +219,6 @@ public final class DataBrokerProtectionIOSManager {
     }
 
     private struct VaultInitDebugState {
-        var error: String?
         var reason: String?
     }
 
@@ -517,12 +516,10 @@ public final class DataBrokerProtectionIOSManager {
             }
 
             if reason.skipsWhenNoProfile, profileStateManager.profileState == .noProfile {
-                vaultInitDebugState.error = nil
                 vaultInitDebugState.reason = reason.rawValue
                 return .skipped
             }
 
-            vaultInitDebugState.error = nil
             vaultInitDebugState.reason = reason.rawValue
             let task = Task {
                 Logger.dataBrokerProtection.log("PIR Secure Vault initialization triggered, reason: \(reason.rawValue, privacy: .public)")
@@ -537,7 +534,7 @@ public final class DataBrokerProtectionIOSManager {
                     Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: success")
                     return resources
                 } catch {
-                    clearVaultResourcesInitAttempt(error: error)
+                    clearVaultResourcesInitAttempt()
                     Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: failure")
                     throw error
                 }
@@ -596,14 +593,12 @@ public final class DataBrokerProtectionIOSManager {
             resources.queueManager.delegate = self
             cachedVaultResources = resources
             ongoingVaultResourcesInitTask = nil
-            vaultInitDebugState.error = nil
         }
     }
 
-    private func clearVaultResourcesInitAttempt(error: Error? = nil) {
+    private func clearVaultResourcesInitAttempt() {
         vaultResourcesLock.withLock {
             ongoingVaultResourcesInitTask = nil
-            vaultInitDebugState.error = error.map { String(describing: $0) }
         }
     }
 }
@@ -1012,8 +1007,6 @@ extension DataBrokerProtectionIOSManager: DataBrokerProtectionDebugReadProviding
         vaultResourcesLock.withLock {
             DBPDebugIOSRuntimeStatus(profileState: profileStateManager.profileState.rawValue,
                                      vault: DBPDebugIOSRuntimeStatus.VaultStatus(initialized: cachedVaultResources != nil,
-                                                                                 initInFlight: ongoingVaultResourcesInitTask != nil,
-                                                                                 lastError: vaultInitDebugState.error,
                                                                                  lastInitReason: vaultInitDebugState.reason))
         }
     }
