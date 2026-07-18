@@ -37,7 +37,7 @@ struct IOSManagerTestDependencies {
 }
 
 @MainActor
-enum DBPContinuedProcessingTestUtils {
+enum DBPIOSManagerTestUtils {
     static func makeTestIOSManager(
         featureFlagger: MockDBPFeatureFlagger = MockDBPFeatureFlagger(),
         continuedProcessingCoordinator: MockContinuedProcessingCoordinator = MockContinuedProcessingCoordinator(),

@@ -31,7 +31,7 @@ final class DataBrokerProtectionIOSManagerVaultResourcesTests: XCTestCase {
         let releaseProvider = DispatchSemaphore(value: 0)
         let providerCallCount = LockedValue(0)
 
-        let (sut, _) = DBPContinuedProcessingTestUtils.makeDeferredTestIOSManager { resources in
+        let (sut, _) = DBPIOSManagerTestUtils.makeDeferredTestIOSManager { resources in
             {
                 providerCallCount.withValue { $0 += 1 }
                 providerStarted.fulfill()
@@ -61,7 +61,7 @@ final class DataBrokerProtectionIOSManagerVaultResourcesTests: XCTestCase {
     func testPrepareSecureVaultResourcesAtLaunch_afterFailureRetriesInitialization() async throws {
         let providerCallCount = LockedValue(0)
 
-        let (sut, _) = DBPContinuedProcessingTestUtils.makeDeferredTestIOSManager { resources in
+        let (sut, _) = DBPIOSManagerTestUtils.makeDeferredTestIOSManager { resources in
             {
                 let callCount = providerCallCount.withValue { count in
                     count += 1
