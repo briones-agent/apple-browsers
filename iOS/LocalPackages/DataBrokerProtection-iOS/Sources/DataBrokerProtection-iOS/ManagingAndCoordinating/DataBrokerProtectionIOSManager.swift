@@ -218,7 +218,6 @@ public final class DataBrokerProtectionIOSManager {
     }
 
     private struct VaultInitDebugState {
-        var error: String?
         var reason: String?
     }
 
@@ -510,12 +509,10 @@ public final class DataBrokerProtectionIOSManager {
             }
 
             if reason.skipsWhenNoProfile, profileStateManager.profileState == .noProfile {
-                vaultInitDebugState.error = nil
                 vaultInitDebugState.reason = reason.rawValue
                 return .skipped
             }
 
-            vaultInitDebugState.error = nil
             vaultInitDebugState.reason = reason.rawValue
             let task = Task {
                 do {
@@ -523,7 +520,7 @@ public final class DataBrokerProtectionIOSManager {
                     publishVaultResources(resources)
                     return resources
                 } catch {
-                    clearVaultResourcesInitAttempt(error: error)
+                    clearVaultResourcesInitAttempt()
                     throw error
                 }
             }
@@ -562,14 +559,12 @@ public final class DataBrokerProtectionIOSManager {
             resources.queueManager.delegate = self
             cachedVaultResources = resources
             ongoingVaultResourcesInitTask = nil
-            vaultInitDebugState.error = nil
         }
     }
 
-    private func clearVaultResourcesInitAttempt(error: Error? = nil) {
+    private func clearVaultResourcesInitAttempt() {
         vaultResourcesLock.withLock {
             ongoingVaultResourcesInitTask = nil
-            vaultInitDebugState.error = error.map { String(describing: $0) }
         }
     }
 }
@@ -976,8 +971,6 @@ extension DataBrokerProtectionIOSManager: DataBrokerProtectionDebugReadProviding
         vaultResourcesLock.withLock {
             DBPDebugIOSRuntimeStatus(profileState: profileStateManager.profileState.rawValue,
                                      vault: DBPDebugIOSRuntimeStatus.VaultStatus(initialized: cachedVaultResources != nil,
-                                                                                 initInFlight: ongoingVaultResourcesInitTask != nil,
-                                                                                 lastError: vaultInitDebugState.error,
                                                                                  lastInitReason: vaultInitDebugState.reason))
         }
     }

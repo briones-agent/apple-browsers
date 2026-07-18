@@ -35,14 +35,10 @@ public struct DBPDebugIOSRuntimeStatus: Encodable, Equatable {
 
     public struct VaultStatus: Encodable, Equatable {
         public let initialized: Bool
-        public let initInFlight: Bool
-        public let lastError: String?
         public let lastInitReason: String?
 
-        public init(initialized: Bool, initInFlight: Bool, lastError: String?, lastInitReason: String?) {
+        public init(initialized: Bool, lastInitReason: String?) {
             self.initialized = initialized
-            self.initInFlight = initInFlight
-            self.lastError = lastError
             self.lastInitReason = lastInitReason
         }
     }
