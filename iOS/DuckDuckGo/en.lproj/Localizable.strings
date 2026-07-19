@@ -4033,6 +4033,12 @@ Take back control of your personal information with the browser designed for dat
 /* Accessibility label / title for the button that hides the Settings Next Steps section */
 "settings.next.steps.hide" = "Hide";
 
+/* Message of the confirmation alert warning that hiding the Settings Next Steps section is permanent */
+"settings.next.steps.hide.confirm.message" = "The Next Steps section will be permanently hidden and cannot be shown again.";
+
+/* Title of the confirmation alert shown before permanently hiding the Settings Next Steps section */
+"settings.next.steps.hide.confirm.title" = "Hide Next Steps?";
+
 /* Label describing a feature which is turned off */
 "settings.off" = "Off";
 

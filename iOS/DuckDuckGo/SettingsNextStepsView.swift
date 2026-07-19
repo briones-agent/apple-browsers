@@ -26,6 +26,8 @@ struct SettingsNextStepsView: View {
 
     @EnvironmentObject var viewModel: SettingsViewModel
 
+    @State private var isShowingHideConfirmation = false
+
     var body: some View {
         if viewModel.shouldShowNextStepsSection {
             Section(header: header) {
@@ -82,12 +84,20 @@ struct SettingsNextStepsView: View {
             Spacer()
             if viewModel.shouldShowNextStepsHideButton {
                 Button {
-                    viewModel.hideNextStepsSection()
+                    isShowingHideConfirmation = true
                 } label: {
                     Image(uiImage: DesignSystemImages.Glyphs.Size24.eyeClosed)
                 }
                 .accessibilityLabel(UserText.nextStepsHide)
             }
+        }
+        .alert(UserText.nextStepsHideConfirmationTitle, isPresented: $isShowingHideConfirmation) {
+            Button(UserText.actionCancel, role: .cancel) {}
+            Button(UserText.nextStepsHide, role: .destructive) {
+                viewModel.hideNextStepsSection()
+            }
+        } message: {
+            Text(UserText.nextStepsHideConfirmationMessage)
         }
     }
 

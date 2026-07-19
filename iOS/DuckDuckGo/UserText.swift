@@ -1614,6 +1614,8 @@ public struct UserText {
     // Next Steps
     public static let nextSteps = NSLocalizedString("settings.next.steps", value: "Next Steps", comment: "The name of a settings category listing next steps")
     public static let nextStepsHide = NSLocalizedString("settings.next.steps.hide", value: "Hide", comment: "Accessibility label / title for the button that hides the Settings Next Steps section")
+    public static let nextStepsHideConfirmationTitle = NSLocalizedString("settings.next.steps.hide.confirm.title", value: "Hide Next Steps?", comment: "Title of the confirmation alert shown before permanently hiding the Settings Next Steps section")
+    public static let nextStepsHideConfirmationMessage = NSLocalizedString("settings.next.steps.hide.confirm.message", value: "The Next Steps section will be permanently hidden and cannot be shown again.", comment: "Message of the confirmation alert warning that hiding the Settings Next Steps section is permanent")
     public static let settingsAddToDock = NSLocalizedString("settings.add.to.dock", value: "Add App to Your Dock", comment: "Settings screen cell text for adding the app to the dock")
     public static let settingsAddWidget = NSLocalizedString("settings.add.widget", value: "Add Widget to Home Screen", comment: "Settings screen cell text for add widget to the home screen")
     public static let settingsAddVPNWidget = NSLocalizedString("settings.add.widget.vpn", value: "Add DuckDuckGo VPN Widget to Your Home Screen", comment: "Title for the settings VPN subsection where the user can learn how to add the VPN to their home screen")
