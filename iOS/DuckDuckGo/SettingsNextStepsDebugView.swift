@@ -67,7 +67,7 @@ struct SettingsNextStepsDebugView: View {
                 Text(verbatim: "Debug only: these change the GLOBAL app install date, which affects other install-gated features.")
             }
         }
-        .navigationTitle(Text(verbatim: "Next Steps"))
+        .navigationTitle(Text(verbatim: "Next Steps Dismissal"))
     }
 
     /// Clears the tap timestamps and the section-hidden flag so all rows and the section reappear.
