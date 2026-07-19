@@ -5,10 +5,11 @@
 
 ## Current handoff
 - **Goal:** Make items in the iOS Settings **"Next Steps"** section dismiss automatically once the user has acted on them, so the section stops feeling "stuck" (items currently never go away even after the setting is changed).
-- **Status:** DONE — all four tasks committed atomically on `bartosz/next-steps` and verified (full app compiles; 10 Next Steps unit tests pass). Nothing pushed.
-- **Completed:** #1/#2 dismissal (`a190ece03a`) · animation (`33dd09c07f`) · 14-day Hide button (`2580af341e`) · debug screen (`db0f3184bb`).
-- **Next:** (optional) manual simulator smoke-test of the Hide button + animations (the new debug screen makes this quick); push + open PR when ready. Awaiting user decision on whether to commit / gitignore `project_log.md` + `project_lessons/` (currently untracked).
+- **Status:** DONE and pushed. Draft PR open: https://github.com/duckduckgo/apple-browsers/pull/5898 (`bartosz/next-steps` → `main`). Full app compiles; 10 Next Steps unit tests pass.
+- **Completed:** dismissal (#1/#2) · row-removal animation · 14-day Hide button · debug screen · debug-entry rename ("Next Steps Dismissal") · confirmation alert before hiding.
+- **Next:** (optional) manual simulator smoke-test of the Hide button + animations. Address PR review feedback as it arrives.
 - **Blockers:** None.
+- **Note:** commit hashes were rebased at least once (e.g. the base is now `135cf995b7`); don't rely on specific hashes recorded earlier in this log.
 
 ### Verification done
 - `xcodebuild test -scheme "iOS Unit Tests" -destination 'id=E4AA621C…' (iPhone SE 2nd gen, iOS 18.6) -only-testing:UnitTests/SettingsNextStepsDismissalTests` → **BUILD + TEST SUCCEEDED**, 5/5 passing.
@@ -132,4 +133,6 @@
 - Verified: `xcodebuild test` (iOS Unit Tests scheme, iPhone SE 2nd gen / iOS 18.6, `-only-testing:UnitTests/SettingsNextStepsDismissalTests`) → BUILD + TEST SUCCEEDED, 5/5 passing, 0 compile errors. (Two earlier failures were bad xcodebuild args — unavailable simulator, then wrong test-target name — not code issues.)
 - Committed #1/#2 as `a190ece03a`; user confirmed it works in the app.
 - Added, per user request: row-removal animation (`33dd09c07f`), 14-day Hide button + tests (`2580af341e`), and a Next Steps debug screen (`db0f3184bb`). Tasks 4 & 2 were implemented by delegated subagents; each verified (full app compiles, 10 Next Steps tests pass) and committed atomically.
-- `project_log.md` + `project_lessons/` remain untracked pending user decision on committing/gitignoring them.
+- Committed `project_log.md` + `project_lessons/` per user choice.
+- Follow-up (user request): renamed the debug screen to "Next Steps Dismissal"; added a confirmation alert before the irreversible Hide action (reuses `UserText.actionCancel`, matches the app's destructive-confirmation pattern). Build + 10 tests green.
+- Pushed `bartosz/next-steps`; opened draft PR #5898 → `main`.
