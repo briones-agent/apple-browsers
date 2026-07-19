@@ -17,6 +17,8 @@
 //
 
 import AppKit
+import BrowserServicesKit
+import Combine
 import PersistenceTestingUtils
 import PrivacyConfig
 import PrivacyConfigTestsUtils
@@ -168,7 +170,7 @@ final class BrowserTabViewControllerContentOverlayDismissalTests: XCTestCase {
                 windowControllersManager: windowControllersManager,
                 keyValueStore: InMemoryThrowingKeyValueStore()),
             dockPreferences: DockPreferencesModel(
-                dockCustomizer: DockCustomizerMock(),
+                dockCustomizer: ContentOverlayDockCustomizerMock(),
                 pixelFiring: nil),
             accessibilityPreferences: AccessibilityPreferences(),
             duckPlayer: DuckPlayer(
@@ -205,6 +207,24 @@ private final class ContentOverlayDismissalSpy {
     func reset() {
         callCount = 0
     }
+}
+
+private final class ContentOverlayDockCustomizerMock: DockCustomization {
+    var supportsAddingToDock: Bool { false }
+    var isAddedToDock: Bool { false }
+    var shouldShowNotification: Bool { false }
+    var shouldShowNotificationPublisher: AnyPublisher<Bool, Never> {
+        Just(false).eraseToAnyPublisher()
+    }
+
+    @discardableResult
+    func addToDock() -> Bool { false }
+
+    func didCloseMoreOptionsMenu() {}
+
+    func synchronizeNotificationVisibilityWithFirstLaunchDate() {}
+
+    func resetData() {}
 }
 
 private struct TestContext {
