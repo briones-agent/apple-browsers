@@ -27,49 +27,47 @@ final class DataBrokerProtectionIOSManagerVaultResourcesTests: XCTestCase {
     }
 
     func testPrepareSecureVaultResourcesAtLaunch_concurrentCallsShareInitialization() async throws {
-        let providerStarted = expectation(description: "Provider started")
-        let releaseProvider = DispatchSemaphore(value: 0)
-        let providerCallCount = LockedValue(0)
+        let expectation = expectation(description: "Vault init started")
+        let semaphore = DispatchSemaphore(value: 0)
+        let initAttemptCount = LockedCount()
 
         let (sut, _) = DBPIOSManagerTestUtils.makeDeferredTestIOSManager { resources in
             {
-                providerCallCount.withValue { $0 += 1 }
-                providerStarted.fulfill()
-                releaseProvider.wait()
+                initAttemptCount.increment()
+                expectation.fulfill() // The first initialization attempt is now in flight.
+                semaphore.wait() // Hold it while second caller starts
                 return resources
             }
         }
 
-        let first = Task {
-            try await sut.prepareSecureVaultResourcesAtLaunch()
+        let firstTask = Task {
+            try await sut.prepareSecureVaultResourcesAtLaunch() // Start initialization.
         }
-        await fulfillment(of: [providerStarted], timeout: 1)
+        await fulfillment(of: [expectation], timeout: 1) // The first initialization attempt has started.
 
-        let second = Task {
-            try await sut.prepareSecureVaultResourcesAtLaunch()
+        let secondTask = Task {
+            try await sut.prepareSecureVaultResourcesAtLaunch() // Should join the in-flight initialization.
         }
-        await Task.yield()
 
-        releaseProvider.signal()
-        releaseProvider.signal()
-        try await first.value
-        try await second.value
+        // Allow second to reach the manager and join before initialization completes.
+        try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(providerCallCount.value, 1)
+        semaphore.signal() // Allow initialization to finish.
+        try await firstTask.value
+        try await secondTask.value
+
+        XCTAssertEqual(initAttemptCount.value, 1)
     }
 
     func testPrepareSecureVaultResourcesAtLaunch_afterFailureRetriesInitialization() async throws {
-        let providerCallCount = LockedValue(0)
+        let initAttemptCount = LockedCount()
 
         let (sut, _) = DBPIOSManagerTestUtils.makeDeferredTestIOSManager { resources in
             {
-                let callCount = providerCallCount.withValue { count in
-                    count += 1
-                    return count
-                }
+                let attemptNumber = initAttemptCount.increment()
 
-                if callCount == 1 {
-                    throw TestError.initializationFailed
+                if attemptNumber == 1 {
+                    throw TestError.initializationFailed // Intentionally fails the first attempt
                 }
 
                 return resources
@@ -87,27 +85,6 @@ final class DataBrokerProtectionIOSManagerVaultResourcesTests: XCTestCase {
 
         try await sut.prepareSecureVaultResourcesAtLaunch()
 
-        XCTAssertEqual(providerCallCount.value, 2)
-    }
-}
-
-private final class LockedValue<Value> {
-    private let lock = NSLock()
-    private var storage: Value
-
-    var value: Value {
-        lock.withLock {
-            storage
-        }
-    }
-
-    init(_ value: Value) {
-        storage = value
-    }
-
-    func withValue<Result>(_ body: (inout Value) throws -> Result) rethrows -> Result {
-        try lock.withLock {
-            try body(&storage)
-        }
+        XCTAssertEqual(initAttemptCount.value, 2) // Second attempt succeeds
     }
 }
