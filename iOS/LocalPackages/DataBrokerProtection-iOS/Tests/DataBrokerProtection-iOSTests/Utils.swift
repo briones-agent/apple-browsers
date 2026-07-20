@@ -36,6 +36,23 @@ struct IOSManagerTestDependencies {
     let profileStateManager: DBPProfileStateManaging
 }
 
+final class LockedCount {
+    private let lock = NSLock()
+    private var count = 0
+
+    var value: Int {
+        lock.withLock { count }
+    }
+
+    @discardableResult
+    func increment() -> Int {
+        lock.withLock {
+            count += 1
+            return count
+        }
+    }
+}
+
 @MainActor
 enum DBPIOSManagerTestUtils {
     static func makeTestIOSManager(

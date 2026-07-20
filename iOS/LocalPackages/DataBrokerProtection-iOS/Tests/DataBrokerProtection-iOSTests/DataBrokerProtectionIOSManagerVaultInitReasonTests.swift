@@ -30,49 +30,49 @@ final class DataBrokerProtectionIOSManagerVaultInitReasonTests: XCTestCase {
     // MARK: - launch (skips when no profile)
 
     func test_launch_noProfile_skipsInitialization() async throws {
-        let providerCallCount = LockedCount()
-        let (sut, dependencies) = makeDeferredManager(countingInto: providerCallCount)
+        let initAttemptCount = LockedCount()
+        let (sut, dependencies) = makeDeferredManager(countingInto: initAttemptCount)
         dependencies.profileStateManager.recordProfileDeleted()
 
         try await sut.prepareSecureVaultResourcesAtLaunch()
 
-        XCTAssertEqual(providerCallCount.value, 0)
+        XCTAssertEqual(initAttemptCount.value, 0)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.initialized, false)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.lastInitReason, "launch")
     }
 
     func test_launch_hasProfile_initializes() async throws {
-        let providerCallCount = LockedCount()
-        let (sut, dependencies) = makeDeferredManager(countingInto: providerCallCount)
+        let initAttemptCount = LockedCount()
+        let (sut, dependencies) = makeDeferredManager(countingInto: initAttemptCount)
         dependencies.profileStateManager.recordProfileSaved()
 
         try await sut.prepareSecureVaultResourcesAtLaunch()
 
-        XCTAssertEqual(providerCallCount.value, 1)
+        XCTAssertEqual(initAttemptCount.value, 1)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.initialized, true)
     }
 
     func test_launch_unknownProfile_initializes() async throws {
-        let providerCallCount = LockedCount()
-        let (sut, dependencies) = makeDeferredManager(countingInto: providerCallCount)
+        let initAttemptCount = LockedCount()
+        let (sut, dependencies) = makeDeferredManager(countingInto: initAttemptCount)
         dependencies.profileStateManager.recordProfileStateUnknown()
 
         try await sut.prepareSecureVaultResourcesAtLaunch()
 
-        XCTAssertEqual(providerCallCount.value, 1)
+        XCTAssertEqual(initAttemptCount.value, 1)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.initialized, true)
     }
 
     // MARK: - appActive (skips when no profile, starts no operations)
 
     func test_appActive_noProfile_skipsInitializationAndStartsNoOperations() async {
-        let providerCallCount = LockedCount()
-        let (sut, dependencies) = makeDeferredManager(countingInto: providerCallCount)
+        let initAttemptCount = LockedCount()
+        let (sut, dependencies) = makeDeferredManager(countingInto: initAttemptCount)
         dependencies.profileStateManager.recordProfileDeleted()
 
         await sut.appDidBecomeActive()
 
-        XCTAssertEqual(providerCallCount.value, 0)
+        XCTAssertEqual(initAttemptCount.value, 0)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.initialized, false)
         XCTAssertFalse(dependencies.queueManager.didCallStartImmediateScanOperationsIfPermitted)
         XCTAssertFalse(dependencies.queueManager.didCallStartScheduledScanOperationsIfPermitted)
@@ -82,13 +82,13 @@ final class DataBrokerProtectionIOSManagerVaultInitReasonTests: XCTestCase {
     // MARK: - dashboard (never skips, even with no profile)
 
     func test_dashboard_noProfile_initializesAnyway() async throws {
-        let providerCallCount = LockedCount()
-        let (sut, dependencies) = makeDeferredManager(countingInto: providerCallCount)
+        let initAttemptCount = LockedCount()
+        let (sut, dependencies) = makeDeferredManager(countingInto: initAttemptCount)
         dependencies.profileStateManager.recordProfileDeleted()
 
         try await sut.prepareDatabaseAccess()
 
-        XCTAssertEqual(providerCallCount.value, 1)
+        XCTAssertEqual(initAttemptCount.value, 1)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.initialized, true)
         XCTAssertEqual(sut.iOSRuntimeStatus?.vault.lastInitReason, "dashboard")
     }
@@ -96,26 +96,13 @@ final class DataBrokerProtectionIOSManagerVaultInitReasonTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeDeferredManager(
-        countingInto providerCallCount: LockedCount
+        countingInto initAttemptCount: LockedCount
     ) -> (DataBrokerProtectionIOSManager, IOSManagerTestDependencies) {
         DBPIOSManagerTestUtils.makeDeferredTestIOSManager { resources in
             {
-                providerCallCount.increment()
+                initAttemptCount.increment()
                 return resources
             }
         }
-    }
-}
-
-private final class LockedCount {
-    private let lock = NSLock()
-    private var count = 0
-
-    var value: Int {
-        lock.withLock { count }
-    }
-
-    func increment() {
-        lock.withLock { count += 1 }
     }
 }
