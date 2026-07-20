@@ -4166,6 +4166,7 @@ extension MainViewController: BrowserChromeDelegate {
     }
 
     var canHideBars: Bool {
+        if currentTab?.isLoading == true { return false }
         // Keep bars shown on the error page: the webView is hidden, so scroll can't self-heal a stuck-hidden bar.
         if currentTab?.isError == true { return false }
         return !shouldPinChrome && !daxDialogsManager.shouldShowFireButtonPulse
@@ -6004,6 +6005,10 @@ extension MainViewController: TabDelegate {
 
     }
 
+    func tab(_ tab: TabViewController, didRequestReopenClosedTabAt url: URL) {
+        self.tab(tab, didRequestNewTabForUrl: url, openedByPage: true, inheritingAttribution: nil)
+    }
+
     func tab(_ tab: TabViewController, didChangePrivacyInfo privacyInfo: PrivacyInfo?) {
         if currentTab == tab {
             viewCoordinator.omniBar.updatePrivacyIcon(for: privacyInfo)
@@ -6272,40 +6277,6 @@ extension MainViewController: TabDelegate {
         hideNotificationBarIfBrokenSitePromptShown()
     }
 
-}
-
-// MARK: - AIChatHistoryViewModelDelegate
-
-extension MainViewController: AIChatHistoryViewModelDelegate {
-
-    func viewModelDidRequestOpenNewChat() {
-        dismiss(animated: true) { [weak self] in
-            self?.openAIChat()
-        }
-    }
-
-    func viewModelDidRequestOpenChat(chatId: String) {
-        let url = aiChatSettings.aiChatURL.withChatID(chatId)
-        dismiss(animated: true) { [weak self] in
-            self?.onChatHistorySelected(url: url)
-        }
-    }
-
-    func viewModelDidExportChat(filename: String) {
-        let message = DownloadActionMessageViewHelper.makeDownloadFinishedMessage(forFilename: filename)
-        let addressBarBottom = appSettings.currentAddressBarPosition.isBottom
-        ActionMessageView.present(
-            message: message,
-            numberOfLines: 2,
-            actionTitle: UserText.actionGenericShow,
-            presentationLocation: .withBottomBar(andAddressBarBottom: addressBarBottom),
-            onAction: { [weak self] in
-                self?.dismiss(animated: true) { [weak self] in
-                    self?.segueToDownloads()
-                }
-            }
-        )
-    }
 }
 
 extension MainViewController: TabSwitcherDelegate {
