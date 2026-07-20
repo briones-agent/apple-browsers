@@ -176,7 +176,7 @@ extension Preferences {
                     Image(.reset)
                     Text(UserText.themeReset)
                 }
-                .foregroundColor(.rebrandableLink)
+                .rebrandableLinkForeground()
                 .cursor(.pointingHand)
             }
             .buttonStyle(.plain)
@@ -252,7 +252,7 @@ extension Preferences {
                                 Text(UserText.customizeBackground)
                                 Image(.externalAppScheme)
                             }
-                            .foregroundColor(.rebrandableLink)
+                            .rebrandableLinkForeground()
                             .cursor(.pointingHand)
                         }
                         .buttonStyle(.plain)
