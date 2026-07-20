@@ -2367,6 +2367,7 @@ final class AddressBarButtonsViewController: NSViewController {
         toggleControl.borderColor = borderColor
         toggleControl.focusedBackgroundColor = backgroundColor
         toggleControl.selectionColor = selectionBackgroundColor
+        toggleControl.selectionInnerBorderColor = selectionBorder
 
         if tabCollectionViewModel.isBurner {
             toggleControl.focusBorderColor = NSColor.burnerAccent.withAlphaComponent(0.8)
@@ -2381,7 +2382,6 @@ final class AddressBarButtonsViewController: NSViewController {
         toggleControl.indicatorHorizontalInset = styleProvider.addressBarToggleIndicatorHorizontalInset
 
         toggleControl.outerBorderWidth = 2.0
-        toggleControl.selectionInnerBorderColor = selectionBorder
 
         toggleControl.leftImage = DesignSystemImages.Glyphs.Size16.findSearch.tinted(with: themeManager.theme.colorsProvider.iconsColor)
         toggleControl.rightImage = DesignSystemImages.Glyphs.Size16.aiChat.tinted(with: themeManager.theme.colorsProvider.iconsColor)
