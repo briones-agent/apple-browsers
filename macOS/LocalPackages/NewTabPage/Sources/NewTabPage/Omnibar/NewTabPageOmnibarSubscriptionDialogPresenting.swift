@@ -16,11 +16,8 @@
 //  limitations under the License.
 //
 
-/// Presents native subscription dialogs on behalf of the NTP omnibar, in response to
-/// `omnibar_showSubscriptionUpsell`/`omnibar_showSubscriptionUpgrade`. Which flow to run is
-/// determined entirely by which method is called — both messages are param-less, since the web
-/// side already knows (from a gated model/reasoning-effort's own `upsell` field) whether the user
-/// needs to subscribe or upgrade.
+/// Presents native subscription dialogs on behalf of the NTP omnibar. Both methods are param-less —
+/// which flow to run is determined entirely by which one the web side calls.
 @MainActor
 public protocol NewTabPageOmnibarSubscriptionDialogPresenting {
     func showSubscriptionUpsellDialog()

@@ -17,7 +17,6 @@
 //
 
 import AIChat
-import Foundation
 import NewTabPage
 import os.log
 import Subscription

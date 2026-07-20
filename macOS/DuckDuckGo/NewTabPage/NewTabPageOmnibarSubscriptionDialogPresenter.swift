@@ -20,12 +20,10 @@ import NewTabPage
 import PixelKit
 import Subscription
 
-/// Presents the shared `AIChatSubscriptionUpsellDialog` for `omnibar_showSubscriptionUpsell`/
-/// `omnibar_showSubscriptionUpgrade`. Unlike the address-bar's `AIChatOmnibarSubscriptionUpsellPresenter`,
-/// there's no `requiredTier`/`userTier` to infer a flow from — the NTP web app already knows
-/// (from a gated model/reasoning-effort's own `upsell` field) whether to subscribe or upgrade, and
-/// picks the matching message accordingly. So this presenter just shows the right dialog copy and
-/// routes straight to the coordinator, rather than going through `routeGatedSelection`.
+/// Presents the shared `AIChatSubscriptionUpsellDialog` for the NTP omnibar's upsell/upgrade messages.
+/// Unlike the address bar's `AIChatOmnibarSubscriptionUpsellPresenter`, the web already knows which
+/// flow to use (from a gated item's own `upsell` field) and calls the matching message directly —
+/// no `requiredTier`/`userTier` to route from, so this skips `routeGatedSelection` entirely.
 @MainActor
 final class NewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubscriptionDialogPresenting {
 
@@ -47,13 +45,9 @@ final class NewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubsc
         makeUpgradeDialog().show()
     }
 
-    /// Split out from `showSubscriptionUpsellDialog()` so tests can exercise the routing
-    /// (`onSubscribe`/`onHaveSubscription`) without going through `ModalView.show()`, which needs
-    /// a real key window. `omnibar_showSubscriptionUpsell` only fires for a free user (the web
-    /// picks this message over the upgrade one based on tier), so title/message stay generic —
-    /// matching the address bar's own free-tier dialog, only the primary button follows free-trial
-    /// eligibility ("Try for Free" vs "Upgrade"), since the native purchase flow presents the trial
-    /// terms itself.
+    /// Split from `showSubscriptionUpsellDialog()` so tests can exercise `onSubscribe`/
+    /// `onHaveSubscription` without `ModalView.show()`. Fires only for free users, so title/message
+    /// stay generic; the primary button follows free-trial eligibility.
     func makeUpsellDialog() -> AIChatSubscriptionUpsellDialog {
         var dialog = AIChatSubscriptionUpsellDialog()
         dialog.primaryButtonText = subscriptionManager.isUserEligibleForFreeTrial()
@@ -69,9 +63,8 @@ final class NewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubsc
         return dialog
     }
 
-    /// `omnibar_showSubscriptionUpgrade` only fires for an existing Plus subscriber gated to Pro —
-    /// matches the address bar's Plus/Pro/internal dialog: distinct title/message, and no "I Have
-    /// a Subscription" button since that doesn't apply to someone upgrading an active subscription.
+    /// Fires only for an existing Plus subscriber gated to Pro — distinct title/message from the
+    /// free-tier dialog, and no "I Have a Subscription" button since that doesn't apply here.
     func makeUpgradeDialog() -> AIChatSubscriptionUpsellDialog {
         var dialog = AIChatSubscriptionUpsellDialog()
         dialog.title = UserText.aiChatSubscriptionUpsellDialogProTitle
