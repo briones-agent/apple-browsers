@@ -48,8 +48,90 @@ internal class ColorView: DraggingDestinationView {
                 return
             }
 
-            updateBackgroundColor()
-            updateBorderColor()
+            updateShape()
+        }
+    }
+
+    // Fill + border are drawn as a single CAShapeLayer path so they share identical
+    // geometry — avoids the antialiasing seam where CALayer.backgroundColor bleeds
+    // past a CALayer.borderColor stroke at rounded corners.
+    private let shapeLayer = CAShapeLayer()
+
+    @IBInspectable var backgroundColor: NSColor? = NSColor.clear {
+        didSet {
+            updateShape()
+        }
+    }
+
+    @IBInspectable var cornerRadius: CGFloat = 0 {
+        didSet {
+            updateShape()
+        }
+    }
+
+    var roundedCorners: RoundedCorners = .all {
+        didSet {
+            updateShape()
+        }
+    }
+
+    @IBInspectable var borderColor: NSColor? {
+        didSet {
+            updateShape()
+        }
+    }
+
+    @IBInspectable var borderWidth: CGFloat = 0 {
+        didSet {
+            updateShape()
+        }
+    }
+
+    @IBInspectable var interceptClickEvents: Bool = false
+
+    func setupView() {
+        self.wantsLayer = true
+        layer?.addSublayer(shapeLayer)
+        updateShape()
+    }
+
+    override func layout() {
+        super.layout()
+        updateShape()
+    }
+
+    override func updateLayer() {
+        super.updateLayer()
+        updateShape()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        updateShape()
+    }
+
+    private func updateShape() {
+        let inset = borderWidth * 0.5
+        let shapeFrame = bounds.insetBy(dx: inset, dy: inset)
+
+        // Unlike a view's backing layer, a manually-added sublayer keeps CoreAnimation's
+        // implicit actions enabled, so path/frame/color changes cross-fade over ~0.25s.
+        // Disable actions for the whole update so the shape changes instantly.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+
+        // A manually-added sublayer does not inherit contentsScale from the view's
+        // backing layer, so it defaults to 1.0 and renders the path at half resolution
+        // (pixellated) on Retina displays. Match the window's backing scale factor.
+        shapeLayer.contentsScale = window?.backingScaleFactor ?? NSScreen.defaultBackingScaleFactor
+        shapeLayer.frame = bounds
+        shapeLayer.path = roundedPath(in: shapeFrame)
+        shapeLayer.lineWidth = borderWidth
+
+        NSAppearance.withAppearance(targetAppearance) {
+            shapeLayer.fillColor = backgroundColor?.cgColor
+            shapeLayer.strokeColor = borderColor?.cgColor
         }
     }
 
@@ -57,71 +139,23 @@ internal class ColorView: DraggingDestinationView {
         resolvesStyleWithEffectiveAppearance ? effectiveAppearance : nil
     }
 
-    @IBInspectable var backgroundColor: NSColor? = NSColor.clear {
-        didSet {
-            updateBackgroundColor()
-        }
-    }
-    private func updateBackgroundColor() {
-        NSAppearance.withAppearance(targetAppearance) {
-            layer?.backgroundColor = backgroundColor?.cgColor
-        }
-    }
+    private func roundedPath(in rect: NSRect) -> CGPath {
+        let tl = roundedCorners.contains(.topLeft) ? cornerRadius : 0
+        let tr = roundedCorners.contains(.topRight) ? cornerRadius : 0
+        let bl = roundedCorners.contains(.bottomLeft) ? cornerRadius : 0
+        let br = roundedCorners.contains(.bottomRight) ? cornerRadius : 0
 
-    @IBInspectable var cornerRadius: CGFloat = 0 {
-        didSet {
-            updateCornerRadius()
-        }
-    }
-
-    var roundedCorners: RoundedCorners = .all {
-        didSet {
-            updateCornerRadius()
-        }
-    }
-
-    private func updateCornerRadius() {
-        layer?.cornerRadius = cornerRadius
-        layer?.maskedCorners = roundedCorners.cornerMask
-        layer?.masksToBounds = true
-    }
-
-    @IBInspectable var borderColor: NSColor? {
-        didSet {
-            updateBorderColor()
-        }
-    }
-    private func updateBorderColor() {
-        NSAppearance.withAppearance(targetAppearance) {
-            layer?.borderColor = borderColor?.cgColor
-        }
-    }
-
-    @IBInspectable var borderWidth: CGFloat = 0 {
-        didSet {
-            updateBorderWidth()
-        }
-    }
-    private func updateBorderWidth() {
-        layer?.borderWidth = borderWidth
-    }
-
-    @IBInspectable var interceptClickEvents: Bool = false
-
-    func setupView() {
-        self.wantsLayer = true
-        updateBackgroundColor()
-        updateCornerRadius()
-        updateBorderColor()
-        updateBorderWidth()
-    }
-
-    override func updateLayer() {
-        super.updateLayer()
-        NSAppearance.withAppearance(targetAppearance) {
-            layer?.backgroundColor = backgroundColor?.cgColor
-            layer?.borderColor = borderColor?.cgColor
-        }
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + bl))
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX + tl, y: rect.maxY), radius: tl)
+        path.addLine(to: CGPoint(x: rect.maxX - tr, y: rect.maxY))
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX, y: rect.maxY - tr), radius: tr)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + br))
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX - br, y: rect.minY), radius: br)
+        path.addLine(to: CGPoint(x: rect.minX + bl, y: rect.minY))
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.minX, y: rect.minY + bl), radius: bl)
+        path.closeSubpath()
+        return path
     }
 
     // MARK: - Click Event Interception
