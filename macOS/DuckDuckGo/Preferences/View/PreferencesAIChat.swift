@@ -60,7 +60,7 @@ extension Preferences {
                                         Text(UserText.duckAiSettingsLink)
                                         Image(.externalAppScheme)
                                     }
-                                    .foregroundColor(.rebrandableLink)
+                                    .rebrandableLinkForeground()
                                     .cursor(.pointingHand)
                                 }
                                 .buttonStyle(.plain)
@@ -246,7 +246,7 @@ extension Preferences {
                                     Text(UserText.searchAssistSettingsLink)
                                     Image(.externalAppScheme)
                                 }
-                                .foregroundColor(.rebrandableLink)
+                                .rebrandableLinkForeground()
                                 .cursor(.pointingHand)
                             }
                             .buttonStyle(.plain)
@@ -269,7 +269,7 @@ extension Preferences {
                                     Text(UserText.searchAIFeaturesSettingsLink)
                                     Image(.externalAppScheme)
                                 }
-                                .foregroundColor(.rebrandableLink)
+                                .rebrandableLinkForeground()
                                 .cursor(.pointingHand)
                             }
                             .buttonStyle(.plain)

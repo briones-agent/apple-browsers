@@ -83,7 +83,7 @@ extension Preferences {
                                 } else {
                                     HStack {
                                         Image(nsImage: DesignSystemImages.Glyphs.Size16.exclamation)
-                                            .foregroundStyle(Color.rebrandableLink)
+                                            .rebrandableLinkForeground()
 
                                         Text(UserText.isNotAddedToDock)
                                     }
