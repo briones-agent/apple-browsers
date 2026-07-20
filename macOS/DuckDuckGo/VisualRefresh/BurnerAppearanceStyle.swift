@@ -34,9 +34,15 @@ struct BurnerAppearanceStyle {
 
 private extension BurnerAppearanceStyle {
 
+    /// `ColorView` uses `CALayer` to render its background and border.
+    /// As such, it relies upon `NSAppearance.withAppearance` to resolve the right effective color.
+    ///
+    /// When forcing darkAqua, we must hint `ColorView` to resolve agains the `.effectiveAppearance` property.
+    /// Otherwise, it'll pick up `NSApp.effectiveAppearance`, rendering our darkAqua override ineffective.
+    ///
     func updateResolvesStyleWithEffectiveAppearance(view: NSView, value: Bool) {
         if let colorView = view as? ColorView {
-            colorView.resolvesStyleWithEffectiveAppearance = true
+            colorView.resolvesStyleWithEffectiveAppearance = value
         }
 
         updateResolvesStyleWithEffectiveAppearance(views: view.subviews, value: value)

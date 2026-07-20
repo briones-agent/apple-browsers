@@ -19,14 +19,23 @@
 import Cocoa
 
 extension NSAppearance {
+
+    /// Executes a given closure, while resolving the Colors against `NSApp.effectiveAppearance`
+    ///
     static func withAppAppearance(_ closure: () -> Void) {
         NSApp.effectiveAppearance.performAsCurrentDrawingAppearance(closure)
     }
 
+    /// Executes a given closure, while resolving the Colors against the specified `NSView.appearance` value.
+    /// Otherwise, we'll fallback to `NSApp.effectiveAppearance`.
+    ///
     static func withAppearance(from view: NSView, _ closure: () -> Void) {
         withAppearance(view.appearance, closure)
     }
 
+    /// Executes a given closure, while resolving the Colors against the explicitly specified Appearance.
+    /// Otherwise, we'll fallback to `NSApp.effectiveAppearance`.
+    ///
     static func withAppearance(_ appearance: NSAppearance?, _ closure: () -> Void) {
         guard let appearance else {
             withAppAppearance(closure)
@@ -36,6 +45,8 @@ extension NSAppearance {
         appearance.performAsCurrentDrawingAppearance(closure)
     }
 
+    /// Indicates what's the current ThemeAppearance
+    ///
     var effectiveThemeAppearance: ThemeAppearance {
         bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
     }
