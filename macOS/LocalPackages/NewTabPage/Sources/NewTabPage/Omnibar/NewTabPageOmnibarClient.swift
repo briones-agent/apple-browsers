@@ -155,21 +155,19 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             configProvider.showCustomizePopover = showCustomizePopover
         }
         if let selectedModelId = config.selectedModelId {
-            let matchedItem = modelsProvider?.lastFetchedSections?
-                .flatMap(\.items)
-                .first(where: { $0.id == selectedModelId })
+            let item = matchedItem(forModelId: selectedModelId)
             // Reject a model we know is gated (found and isEnabled == false) — a stale or forged
             // selection could otherwise persist a model the user's tier doesn't actually grant.
             // An unmatched id (e.g. sections not fetched yet) is let through unchanged, same as
             // before this check existed.
-            if matchedItem?.isEnabled != false {
+            if item?.isEnabled != false {
                 // Only refresh the cached short name when the id actually changes. Echoing back the
                 // same id (e.g. on web launch) must not overwrite a valid cache with `nil` just
                 // because `lastFetchedSections` hasn't been populated yet on this side.
                 let didChangeModelId = configProvider.selectedModelId != selectedModelId
                 configProvider.selectedModelId = selectedModelId
                 if didChangeModelId {
-                    configProvider.selectedModelShortName = matchedItem?.shortName
+                    configProvider.selectedModelShortName = item?.shortName
                 }
             }
         }
@@ -177,9 +175,10 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         return nil
     }
 
-    /// Persists the incoming reasoning effort only when the feature is enabled and the value is
-    /// supported by the currently selected model. This prevents a stale or unsupported value
-    /// (e.g. from a web state that predates a model switch or a tier change) from being stored.
+    /// Persists the incoming reasoning effort only when the feature is enabled, the currently
+    /// selected model isn't itself gated, and the value is supported by that model. This prevents a
+    /// stale or unsupported value (e.g. from a web state that predates a model switch or a tier
+    /// change) from being stored.
     @MainActor
     private func persistReasoningEffort(from config: NewTabPageDataModel.OmnibarConfig) {
         guard configProvider.isReasoningEffortEnabled else { return }
@@ -188,14 +187,10 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             configProvider.selectedReasoningEffort = nil
             return
         }
-        let selectedModelId = configProvider.selectedModelId
-        let availableForCurrentModel = modelsProvider?.lastFetchedSections?
-            .flatMap(\.items)
-            .first(where: { $0.id == selectedModelId })?
-            .reasoningEfforts
-            .filter(\.isAvailable)
-            .map(\.id) ?? []
-        guard availableForCurrentModel.contains(incoming) else { return }
+        let item = matchedItem(forModelId: configProvider.selectedModelId)
+        guard item?.isEnabled != false,
+              item?.reasoningEfforts.filter(\.isAvailable).map(\.id).contains(incoming) == true
+        else { return }
         configProvider.selectedReasoningEffort = incoming
     }
 
@@ -302,6 +297,15 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         return nil
     }
 
+    /// Single shared lookup for the gating checks below — avoids re-flattening
+    /// `lastFetchedSections` at every call site.
+    @MainActor
+    private func matchedItem(forModelId modelId: String?) -> NewTabPageDataModel.AIModelItem? {
+        modelsProvider?.lastFetchedSections?
+            .flatMap(\.items)
+            .first(where: { $0.id == modelId })
+    }
+
     /// Returns the model id to attach to this submission, or `nil` if it's a model we know is
     /// gated (found in the fetched sections and `isEnabled == false`) — same stale-state guard as
     /// `reasoningEffortForSubmission`, but for the model itself: without it, a stale or forged
@@ -309,10 +313,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
     @MainActor
     private func modelIdForSubmission(action: NewTabPageDataModel.SubmitChatAction) -> String? {
         guard let modelId = action.modelId else { return nil }
-        let matchedItem = modelsProvider?.lastFetchedSections?
-            .flatMap(\.items)
-            .first(where: { $0.id == modelId })
-        return matchedItem?.isEnabled == false ? nil : modelId
+        return matchedItem(forModelId: modelId)?.isEnabled == false ? nil : modelId
     }
 
     @MainActor
@@ -329,20 +330,17 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
     }
 
     /// Returns the reasoning effort to attach to this submission, or `nil` if the feature is
-    /// disabled, the web didn't send a value, or the value isn't supported by the submission's
-    /// model. Enforcing support at submit time catches stale web state where the models list
-    /// changed between a selection and a submission.
+    /// disabled, the web didn't send a value, the submission's model is itself gated, or the value
+    /// isn't supported by that model. Enforcing support at submit time catches stale web state
+    /// where the models list changed between a selection and a submission.
     @MainActor
     private func reasoningEffortForSubmission(action: NewTabPageDataModel.SubmitChatAction) -> String? {
         guard configProvider.isReasoningEffortEnabled else { return nil }
         guard let incoming = action.reasoningEffort else { return nil }
         let modelId = action.modelId ?? configProvider.selectedModelId
-        let available = modelsProvider?.lastFetchedSections?
-            .flatMap(\.items)
-            .first(where: { $0.id == modelId })?
-            .reasoningEfforts
-            .filter(\.isAvailable)
-            .map(\.id) ?? []
+        let item = matchedItem(forModelId: modelId)
+        guard item?.isEnabled != false else { return nil }
+        let available = item?.reasoningEfforts.filter(\.isAvailable).map(\.id) ?? []
         return available.contains(incoming) ? incoming : nil
     }
 
@@ -371,7 +369,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
 
     @MainActor
     private func showSubscriptionUpsell(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        subscriptionDialogPresenter?.showSubscriptionUpsellDialog()
+        await subscriptionDialogPresenter?.showSubscriptionUpsellDialog()
         return nil
     }
 

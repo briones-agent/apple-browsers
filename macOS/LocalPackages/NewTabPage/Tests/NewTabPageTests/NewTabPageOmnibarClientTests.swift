@@ -321,6 +321,30 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertEqual(configProvider.selectedModelShortName, "Free")
     }
 
+    /// A gated model's reasoning effort must not persist either, even when that effort's own
+    /// `isAvailable` is `true` (e.g. the backend omitted per-effort access data) — the model-level
+    /// gate has to win over the per-effort one.
+    @MainActor
+    func testWhenSetConfigWithGatedModelIdThenReasoningEffortIsAlsoIgnored() async throws {
+        configProvider.isReasoningEffortEnabled = true
+        configProvider.selectedReasoningEffort = nil
+        configProvider.selectedModelId = "gated-model"
+        modelsProvider.lastFetchedSections = [
+            NewTabPageDataModel.AIModelSection(header: nil, items: [
+                NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
+                                                 isEnabled: false, supportsImageUpload: false,
+                                                 reasoningEfforts: [
+                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "high", name: "Extended Reasoning", isAvailable: true)
+                                                 ], upsell: "upgrade")
+            ])
+        ]
+        let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableCustomizeResponses: nil, customizeSubLabel: nil, hasCustomization: nil, customizationActive: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "gated-model", aiModelSections: nil, selectedReasoningEffort: "high", enableAttachTabs: nil, attachmentLimits: nil)
+
+        try await messageHelper.handleMessageExpectingNilResponse(named: .setConfig, parameters: newConfig)
+
+        XCTAssertNil(configProvider.selectedReasoningEffort)
+    }
+
     @MainActor
     func testWhenSetConfigAndReasoningEffortDisabledThenValueIsIgnored() async throws {
         configProvider.isReasoningEffortEnabled = false
@@ -442,6 +466,39 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         await fulfillment(of: [expectation], timeout: 1)
 
         XCTAssertNil(forwardedModelId)
+    }
+
+    /// A gated model's reasoning effort must be dropped too, even when that effort's own
+    /// `isAvailable` is `true` (e.g. the backend omitted per-effort access data) — the model-level
+    /// gate has to win, or a stale/forged submission could carry a gated effort to the backend
+    /// alongside the (correctly) dropped `modelId`.
+    @MainActor
+    func testWhenSubmitChatWithGatedModelIdThenReasoningEffortIsAlsoDropped() async throws {
+        configProvider.isReasoningEffortEnabled = true
+        modelsProvider.lastFetchedSections = [
+            NewTabPageDataModel.AIModelSection(header: nil, items: [
+                NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
+                                                 isEnabled: false, supportsImageUpload: false,
+                                                 reasoningEfforts: [
+                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "high", name: "Extended Reasoning", isAvailable: true)
+                                                 ], upsell: "upgrade")
+            ])
+        ]
+        let expectation = expectation(description: "submitChatCalled")
+        var forwardedModelId: String?
+        var forwardedEffort: String?
+        (actionHandler as? MockNewTabPageOmnibarActionsHandler)?.submitChatHandler = { _, _, modelId, _, _, _, reasoningEffort, _, _ in
+            forwardedModelId = modelId
+            forwardedEffort = reasoningEffort
+            expectation.fulfill()
+        }
+
+        let action = NewTabPageDataModel.SubmitChatAction(chat: "Hi", target: .sameTab, modelId: "gated-model", images: nil, mode: nil, toolChoice: nil, reasoningEffort: "high", pageContext: nil, files: nil)
+        try await messageHelper.handleMessageExpectingNilResponse(named: .submitChat, parameters: action)
+        await fulfillment(of: [expectation], timeout: 1)
+
+        XCTAssertNil(forwardedModelId)
+        XCTAssertNil(forwardedEffort)
     }
 
     @MainActor
