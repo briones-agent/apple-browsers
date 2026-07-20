@@ -382,7 +382,6 @@ struct CustomHomePageSheet: View {
                 }
                 .padding(8)
             }
-            .roundedBorder()
             .padding(EdgeInsets(top: 10, leading: 15, bottom: 10, trailing: 15))
 
             Divider()
