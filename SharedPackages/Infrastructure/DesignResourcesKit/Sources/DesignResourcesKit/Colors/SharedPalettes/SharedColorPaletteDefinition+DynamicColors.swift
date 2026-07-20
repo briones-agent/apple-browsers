@@ -313,6 +313,15 @@ extension SharedColorPaletteDefinition {
 
     static func dynamicColor(for singleUseColor: SingleUseColor) -> DynamicColor {
         switch singleUseColor {
+        case .aiToggleBorder:
+            return dynamicColor(for: .shadowPrimary)
+        case .aiToggleBackground:
+            return DynamicColor(lightHex: 0x000000, lightOpacity: 0.04, darkHex: 0xFFFFFF, darkOpacity: 0.04)
+        case .aiToggleSelectionBackground:
+            return dynamicColor(for: .controlsRaisedFillPrimary)
+        case .aiToggleSelectionBorder:
+            return DynamicColor(staticColorHex: 0x000000, opacity: 0.11)
+
         case .fireModeAccent:
             return DynamicColor(lightColor: RebrandingColor.Mandarin.mandarin50, darkColor: RebrandingColor.Mandarin.mandarin40)
         case .fireButtonGradientStart:

@@ -84,6 +84,14 @@ public final class CustomToggleControl: NSControl {
         didSet { needsDisplay = true }
     }
 
+    public var borderColor: NSColor? {
+        didSet { needsDisplay = true }
+    }
+
+    public var borderWidth: CGFloat = 1.0 {
+        didSet { needsDisplay = true }
+    }
+
     public var focusedBackgroundColor: NSColor = NSColor(white: 0.85, alpha: 1.0) {
         didSet { needsDisplay = true }
     }
@@ -488,6 +496,8 @@ public final class CustomToggleControl: NSControl {
         backgroundPath.lineJoinStyle = .round
         backgroundPath.fill()
 
+        drawOuterBorder()
+
         let leftRect = NSRect(x: 0, y: 0, width: bounds.width / 2, height: bounds.height)
         let rightRect = NSRect(x: bounds.width / 2, y: 0, width: bounds.width / 2, height: bounds.height)
 
@@ -532,6 +542,20 @@ public final class CustomToggleControl: NSControl {
         // Focus ring is rendered by `focusInnerRingLayer` / `focusOuterRingLayer` sublayers
         // (see `setup()` / `layout()`). Drawing it here would be clipped to bounds on
         // macOS Monterey.
+    }
+
+    /// Strokes the pill's outer border entirely inside `bounds`. Insetting by half the line
+    /// width keeps the stroke's outer edge on `bounds` rather than straddling it (which would
+    /// spill outward).
+    private func drawOuterBorder() {
+        guard let borderColor, borderWidth > 0 else { return }
+
+        let borderRect = bounds.insetBy(dx: borderWidth / 2, dy: borderWidth / 2)
+        let borderPath = NSBezierPath(roundedRect: borderRect, xRadius: borderRect.height / 2, yRadius: borderRect.height / 2)
+        borderPath.lineWidth = borderWidth
+        borderPath.lineJoinStyle = .round
+        borderColor.setStroke()
+        borderPath.stroke()
     }
 
     private func drawSegmentContent(image: NSImage, label: String?, in rect: NSRect, isSelected: Bool) {
