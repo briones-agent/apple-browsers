@@ -88,15 +88,19 @@ echo "poetry: $(poetry --version)"
 #    A fresh install gets latest already; an existing install is upgraded here so
 #    we don't drift behind (rather than relying on Keystone's background schedule).
 log "Google Chrome"
-if [ ! -d "/Applications/Google Chrome.app" ]; then
-  brew install --cask google-chrome
-else
-  # Explicit `brew update` first: HOMEBREW_NO_AUTO_UPDATE=1 (set above) freezes
-  # brew's cask index to the last tap sync, so upgrade alone would never see a
-  # newer version. --greedy because Chrome's cask is auto_updates and a plain
-  # `brew upgrade` skips such casks.
-  brew update
+# Explicit `brew update` first: HOMEBREW_NO_AUTO_UPDATE=1 (set above) freezes
+# brew's cask index to the last tap sync, so an upgrade would never see a newer
+# version.
+brew update
+if brew list --cask google-chrome >/dev/null 2>&1; then
+  # brew-managed: upgrade to latest. --greedy because Chrome's cask is
+  # auto_updates and a plain `brew upgrade` skips such casks.
   brew upgrade --cask --greedy google-chrome
+else
+  # Fresh machine, or Chrome present but not installed via brew (so brew can't
+  # upgrade it). --force (re)installs the latest cask and brings it under brew
+  # management, so subsequent runs take the upgrade path above.
+  brew install --cask --force google-chrome
 fi
 echo "chrome: $('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --version 2>/dev/null || echo 'version unavailable')"
 
