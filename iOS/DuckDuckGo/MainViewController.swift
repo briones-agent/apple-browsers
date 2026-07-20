@@ -6005,6 +6005,10 @@ extension MainViewController: TabDelegate {
 
     }
 
+    func tab(_ tab: TabViewController, didRequestReopenClosedTabAt url: URL) {
+        self.tab(tab, didRequestNewTabForUrl: url, openedByPage: true, inheritingAttribution: nil)
+    }
+
     func tab(_ tab: TabViewController, didChangePrivacyInfo privacyInfo: PrivacyInfo?) {
         if currentTab == tab {
             viewCoordinator.omniBar.updatePrivacyIcon(for: privacyInfo)
