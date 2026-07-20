@@ -595,7 +595,7 @@ struct PasswordManagementStyle {
         let controlTextColor = Color(NSColor.controlTextColor)
 
         guard isAppRebranded else {
-            return PasswordManagementStyle(headerImageName: .syncCheck56,
+            return PasswordManagementStyle(headerImageName: .syncOK32Legacy,
                                            backgroundColor: clearBackgroundColor,
                                            backgroundCornerRadius: 3,
                                            buttonCornerRadius: 3,
@@ -605,7 +605,7 @@ struct PasswordManagementStyle {
         }
 
         let selectedBackgroundColor = Color(theme.palette.controlsFillTertiary)
-        return PasswordManagementStyle(headerImageName: .syncOK32Legacy,
+        return PasswordManagementStyle(headerImageName: .syncCheck56,
                                        backgroundColor: clearBackgroundColor,
                                        backgroundCornerRadius: 5,
                                        buttonCornerRadius: 5,
