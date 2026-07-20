@@ -12,10 +12,33 @@ checkout of this directory; `git pull` updates the harness.
 | Path | Purpose |
 |------|---------|
 | `commission-macos.sh` | One-time, human/sudo setup of a fresh box (CLT, Homebrew). |
-| `provision-macos.sh` | Per-job, passwordless provisioning (brew formulae, Chrome, wpr build, poetry deps) + self-heals the crossbench extras & patch below. |
+| `provision-macos.sh` | Per-job, passwordless provisioning (brew formulae, Chrome, wpr build, poetry deps) + pins crossbench to a known revision + self-heals the crossbench extras & patch below. |
 | `test-chrome.sh` | Runs the Chrome LCP suite over the top-sites list against recorded network (WPR) and summarises per-site LCP. |
 | `crossbench-extras/` | Fork-only crossbench files the LCP run needs but a plain clone doesn't ship. Mirrors crossbench-relative paths so provisioning copies them in place. |
 | `patches/cpu_freq-attributeerror.patch` | Reference patch for the `crossbench/plt/macos.py` cpu_freq fix (applied idempotently by provision). |
+
+### crossbench revision pin
+
+`CROSSBENCH_DIR` is a checkout of upstream crossbench, and `provision-macos.sh`
+force-checks it out to a pinned commit (`CROSSBENCH_REV` in the script) on
+every run, rather than letting it drift to whatever the clone happens to be
+on. Tip-of-tree crossbench is fragile: upstream can rename or refactor code
+that the extras/patch below target, breaking provisioning with no warning.
+
+The pin tracks the `crossbench_revision` that Chromium's **current stable**
+release branch vendors in its `DEPS` file — the closest thing to a
+"known-good, shipped-through-a-release" revision. Currently pinned to the rev
+Chrome M150 stable (`chromium refs/branch-heads/7871`) vendors, committed
+~Jun 1 2026. `WEBPAGEREPLAY_REV` (same file) is read from the same DEPS pin,
+so the two stay coherent.
+
+To bump: pick a newer stable branch-head number from
+[chromiumdash](https://chromiumdash.appspot.com/branches), read its `DEPS`
+file (`https://chromium.googlesource.com/chromium/src/+/refs/branch-heads/<N>/DEPS`),
+and copy the new `crossbench_revision` (and `webpagereplay_revision`) values
+into `CROSSBENCH_REV` / `WEBPAGEREPLAY_REV`. Re-run provisioning and re-verify
+the extras + cpu_freq patch still apply cleanly (grep-guarded, so a WARNING
+means the target text changed upstream and the patch needs reconciling).
 
 ### The crossbench extras (load-bearing)
 
@@ -40,8 +63,9 @@ the LCP run silently returns no rows / `-1`:
    prompts for a password.
 2. **provision** (every job, no password): `CROSSBENCH_DIR=... ./provision-macos.sh`
    installs python@3.11 + poetry, Google Chrome, screenresolution, the Go
-   toolchain, builds the pinned `wpr` binary, self-heals the crossbench extras +
-   patch, and runs `poetry install`. Idempotent.
+   toolchain, builds the pinned `wpr` binary, pins the crossbench checkout to
+   `CROSSBENCH_REV`, self-heals the crossbench extras + patch, and runs
+   `poetry install`. Idempotent.
 3. **test** (every job): `./test-chrome.sh [--reps N] [--sites a.com,b.com]`.
    Fetches WPR archives, runs crossbench per site with `--bin-override wpr=...`,
    and prints `lcp_ms=[...] mean=... n=...` per site.

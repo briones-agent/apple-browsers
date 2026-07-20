@@ -34,6 +34,22 @@ CPU_FREQ_PATCH="$SCRIPT_DIR/patches/cpu_freq-attributeerror.patch"
 CROSSBENCH_DIR="${CROSSBENCH_DIR:-$HOME/Developer/crossbench-upstream}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.11}"   # matches Windows (poetry env use 3.11)
 
+# crossbench is pinned, not tip-of-tree: upstream can rename/refactor code our
+# extras + cpu_freq patch target underneath us with no warning. Pin to the
+# crossbench_revision that Chromium's CURRENT STABLE release branch vendors —
+# the closest thing to a "known-good, shipped-through-a-release" rev. This is
+# below the Chrome-version pin, so a Chrome bump (step 4) never silently drags
+# crossbench along with it.
+#   Currently: Chrome M150 stable (chromium refs/branch-heads/7871), DEPS
+#   'crossbench_revision', commit dated ~Jun 1 2026.
+#   To bump: pick a newer stable branch-head number from
+#   https://chromiumdash.appspot.com/branches, then read its DEPS file, e.g.
+#     https://chromium.googlesource.com/chromium/src/+/refs/branch-heads/<N>/DEPS
+#   and copy the 'crossbench_revision' value here. Bump WEBPAGEREPLAY_REV
+#   (below) from the SAME DEPS file at the same time, so the pair stays
+#   coherent — they're read together.
+CROSSBENCH_REV="${CROSSBENCH_REV:-7d52b4ffbc319a7d5a0e0a0ebff744e5281d60c5}"
+
 # WPR (Web Page Replay) source, pinned to the same revision as crossbench's
 # DEPS file (crossbench doesn't ship it; gclient would normally sync it).
 WEBPAGEREPLAY_GIT="https://chromium.googlesource.com/webpagereplay"
@@ -141,7 +157,29 @@ mkdir -p "$(dirname "$WPR_BIN")"
 go build -C "$WPR_SRC/src" -trimpath -buildvcs=false -o "$WPR_BIN" wpr.go
 echo "wpr: $WPR_BIN"
 
-# 7. Self-heal the fork-only crossbench extras + cpu_freq patch.
+# 7. Pin crossbench to CROSSBENCH_REV (see comment above the variable).
+#    Force the clone to that exact commit regardless of what it's currently
+#    on. `checkout -f` (not a plain checkout) is required: a previous run's
+#    self-heal step (next) leaves crossbench/plt/macos.py with an uncommitted
+#    modification (the cpu_freq patch), and a plain checkout would refuse to
+#    clobber it. -f discards that modification here; self-heal re-applies it
+#    immediately after, against the pinned rev. This does NOT touch untracked
+#    files, so the copied-in extras survive the checkout untouched — do not
+#    add `git clean` here.
+log "Pin crossbench to $CROSSBENCH_REV"
+if [ ! -d "$CROSSBENCH_DIR/.git" ]; then
+  echo "ERROR: crossbench checkout not found at $CROSSBENCH_DIR (no .git dir)." >&2
+  echo "Clone it there first (e.g. git clone https://chromium.googlesource.com/crossbench $CROSSBENCH_DIR)." >&2
+  exit 1
+fi
+if ! git -C "$CROSSBENCH_DIR" cat-file -e "${CROSSBENCH_REV}^{commit}" 2>/dev/null; then
+  echo "rev not present locally; fetching..."
+  git -C "$CROSSBENCH_DIR" fetch --quiet origin "$CROSSBENCH_REV"
+fi
+git -C "$CROSSBENCH_DIR" -c advice.detachedHead=false checkout --quiet -f "$CROSSBENCH_REV"
+echo "crossbench: checked out $(git -C "$CROSSBENCH_DIR" rev-parse HEAD)"
+
+# 8. Self-heal the fork-only crossbench extras + cpu_freq patch.
 #    These are the pieces a plain `git clone` of crossbench does NOT provide but
 #    the LCP run depends on. They live versioned next to this script and are
 #    (re)installed into CROSSBENCH_DIR here, idempotently, so a fresh or updated
@@ -176,7 +214,7 @@ else
   echo "         Reconcile patches/cpu_freq-attributeerror.patch against the new source." >&2
 fi
 
-# 8. crossbench Python deps.
+# 9. crossbench Python deps.
 #    NOTE: crossbench ships a git-tracked '.vpython3' marker that makes it re-exec
 #    under Chromium's vpython instead of our poetry venv. It must be removed, but
 #    that belongs in the RUN step (right before invoking cb.py), not here — a
