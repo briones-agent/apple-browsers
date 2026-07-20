@@ -130,7 +130,7 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212843034975366
     case dbpOptOutRetryError96Hours
 
-    /// https://app.asana.com/1/137249556945/project/481882893211075/task/1213637541182444
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216731632905182
     case dbpDeferredSecureVaultInit
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866711635701
@@ -469,10 +469,6 @@ public enum FeatureFlag: String {
     /// Kill switch in case the new path regresses persistence reliability or hang counts.
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215099690878849
     case tabsSaveOptimization
-
-    /// Failsafe feature flag. Routes tapped .ics calendar links through EKEventEditViewController.
-    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214740849233380
-    case icsCalendarLinks
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1215169783702336
     case walletPassDownload
@@ -848,8 +844,6 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(iOSBrowserConfigSubfeature.defaultExistingIPhoneUsersToNewTabAfterIdle))
         case .tabsSaveOptimization:
             Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.tabsSaveOptimization))
-        case .icsCalendarLinks:
-            Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.icsCalendarLinks))
         case .walletPassDownload:
             Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.walletPassDownload))
         case .aiChatChromeShortcutIPad:
