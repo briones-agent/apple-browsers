@@ -47,9 +47,7 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
             let models = response.models.map { AIChatModel(remoteModel: $0, userTier: userTier) }
             let hasActiveSubscription = userTier != .free
 
-            // Split off models the user's tier can't reach so they can still be shown, disabled,
-            // with an upsell affordance — `buildSections` below would otherwise drop them entirely
-            // for subscribed users (e.g. a Pro-only model for a Plus subscriber).
+            // Split off gated models rather than letting `buildSections` drop them for subscribers.
             let (accessible, gated) = AIChatModelSectionBuilder.groupByAccess(models: models)
 
             var result = AIChatModelSectionBuilder.buildSections(
@@ -96,11 +94,8 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
         )
     }
 
-    /// The single lowest/most-inclusive tier that grants access to `model`, as the wire's flat
-    /// `accessTier` string — `nil` for a model with no tier requirement (i.e. free). Delegates the
-    /// free/plus/pro precedence to the shared `lowestPublicAccessTier`; `AIChatModelPublicAccessTier`
-    /// doesn't cover "internal" (deliberately scoped to publicly-marketed tiers), so that one case
-    /// is checked separately.
+    /// `nil` for a free model. `AIChatModelPublicAccessTier` excludes "internal", so that case is
+    /// checked separately.
     private func accessTierString(for model: AIChatModel) -> String? {
         guard model.isAdvanced else { return nil }
         return model.lowestPublicAccessTier?.rawValue ?? (model.accessTier.contains("internal") ? "internal" : nil)

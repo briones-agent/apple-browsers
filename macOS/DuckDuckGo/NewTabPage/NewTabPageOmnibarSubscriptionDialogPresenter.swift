@@ -21,10 +21,8 @@ import NewTabPage
 import PixelKit
 import Subscription
 
-/// Presents the shared `AIChatSubscriptionUpsellDialog` for the NTP omnibar's upsell/upgrade messages.
-/// Unlike the address bar's `AIChatOmnibarSubscriptionUpsellPresenter`, the web already knows which
-/// flow to use (from a gated item's own `upsell` field) and calls the matching message directly —
-/// no `requiredTier`/`userTier` to route from, so this skips `routeGatedSelection` entirely.
+/// Unlike the address bar's presenter, the web already knows which flow to use, so this skips
+/// `routeGatedSelection` and calls the matching message directly.
 @MainActor
 final class NewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubscriptionDialogPresenting {
 
@@ -46,11 +44,8 @@ final class NewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubsc
         makeUpgradeDialog().show()
     }
 
-    /// Split from `showSubscriptionUpsellDialog()` so tests can exercise `onSubscribe`/
-    /// `onHaveSubscription` without `ModalView.show()`. Fires only for free users, so title/message
-    /// stay generic; the primary button follows free-trial eligibility, but only when `userTier` is
-    /// actually `.free` — StoreKit trial eligibility is independent of subscription tier, so an
-    /// existing subscriber could otherwise still read as trial-eligible.
+    /// Checks `userTier == .free` before trusting StoreKit eligibility — trial eligibility is
+    /// independent of subscription tier, so an existing subscriber could otherwise still read as eligible.
     func makeUpsellDialog(userTier: AIChatUserTier) -> AIChatSubscriptionUpsellDialog {
         let primaryButtonText = (userTier == .free && subscriptionManager.isUserEligibleForFreeTrial())
             ? UserText.aiChatSubscriptionUpsellDialogTryForFreeButton
@@ -94,9 +89,8 @@ final class NewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubsc
         return dialog
     }
 
-    /// Mirrors `NewTabPageOmnibarModelsProvider.resolveUserTier()` — re-resolved here rather than
-    /// shared, since the two run at unrelated times (model fetch vs. dialog presentation) and a
-    /// cached value from one could be stale for the other.
+    /// Mirrors `NewTabPageOmnibarModelsProvider.resolveUserTier()`; not shared since a cached value
+    /// from one could be stale for the other's unrelated call timing.
     private func resolveUserTier() async -> AIChatUserTier {
         do {
             guard let subscription = try await subscriptionManager.getSubscription(),

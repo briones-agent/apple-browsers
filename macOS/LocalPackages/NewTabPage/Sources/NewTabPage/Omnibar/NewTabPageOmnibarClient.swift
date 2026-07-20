@@ -156,14 +156,10 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         }
         if let selectedModelId = config.selectedModelId {
             let item = matchedItem(forModelId: selectedModelId)
-            // Reject a model we know is gated (found and isEnabled == false) — a stale or forged
-            // selection could otherwise persist a model the user's tier doesn't actually grant.
-            // An unmatched id (e.g. sections not fetched yet) is let through unchanged, same as
-            // before this check existed.
+            // Reject a model we know is gated; an unmatched id (sections not fetched yet) passes through.
             if item?.isEnabled != false {
-                // Only refresh the cached short name when the id actually changes. Echoing back the
-                // same id (e.g. on web launch) must not overwrite a valid cache with `nil` just
-                // because `lastFetchedSections` hasn't been populated yet on this side.
+                // Only refresh the cached short name when the id changes, so echoing back the same
+                // id doesn't null out a valid cache before `lastFetchedSections` is populated.
                 let didChangeModelId = configProvider.selectedModelId != selectedModelId
                 configProvider.selectedModelId = selectedModelId
                 if didChangeModelId {
@@ -175,10 +171,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         return nil
     }
 
-    /// Persists the incoming reasoning effort only when the feature is enabled, the currently
-    /// selected model isn't itself gated, and the value is supported by that model. This prevents a
-    /// stale or unsupported value (e.g. from a web state that predates a model switch or a tier
-    /// change) from being stored.
+    /// Only persists when the feature is on, the selected model isn't gated, and the value is
+    /// supported by that model — guards against a stale value surviving a model/tier change.
     @MainActor
     private func persistReasoningEffort(from config: NewTabPageDataModel.OmnibarConfig) {
         guard configProvider.isReasoningEffortEnabled else { return }
@@ -228,9 +222,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         pushMessage(named: MessageName.onConfigUpdate.rawValue, params: config)
     }
 
-    /// Native is the single point of control for rollout: strip `reasoningEfforts` from every item
-    /// when the feature is disabled, so the web app never sees a non-empty list and the picker
-    /// stays hidden without any flag check on the web side.
+    /// Strips `reasoningEfforts` when the feature is off, so the web hides the picker with no
+    /// flag check of its own.
     @MainActor
     private func sectionsForWeb(_ sections: [NewTabPageDataModel.AIModelSection]?) -> [NewTabPageDataModel.AIModelSection]? {
         guard let sections else { return nil }
@@ -306,10 +299,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             .first(where: { $0.id == modelId })
     }
 
-    /// Returns the model id to attach to this submission, or `nil` if it's a model we know is
-    /// gated (found in the fetched sections and `isEnabled == false`) — same stale-state guard as
-    /// `reasoningEffortForSubmission`, but for the model itself: without it, a stale or forged
-    /// `modelId` could submit against a model the user's tier doesn't grant.
+    /// `nil` if the model is gated — guards a stale or forged `modelId` from reaching a model the
+    /// user's tier doesn't grant.
     @MainActor
     private func modelIdForSubmission(action: NewTabPageDataModel.SubmitChatAction) -> String? {
         guard let modelId = action.modelId else { return nil }
@@ -329,10 +320,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         return NewTabPageDataModel.OmnibarGetTabContentResponse(pageContext: await tabsProvider.tabContent(tabId: request.tabId, requestingWebView: original.webView))
     }
 
-    /// Returns the reasoning effort to attach to this submission, or `nil` if the feature is
-    /// disabled, the web didn't send a value, the submission's model is itself gated, or the value
-    /// isn't supported by that model. Enforcing support at submit time catches stale web state
-    /// where the models list changed between a selection and a submission.
+    /// `nil` if the feature is off, no value was sent, the model is gated, or the value isn't
+    /// supported by that model — catches stale web state from between a selection and a submission.
     @MainActor
     private func reasoningEffortForSubmission(action: NewTabPageDataModel.SubmitChatAction) -> String? {
         guard configProvider.isReasoningEffortEnabled else { return nil }

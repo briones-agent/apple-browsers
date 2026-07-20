@@ -96,9 +96,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         XCTAssertTrue(allItems.allSatisfy(\.isEnabled))
     }
 
-    /// A Pro-only model must still be shown (disabled, with an upsell affordance) to a Plus
-    /// subscriber, not silently dropped — the NTP web app groups every disabled item into its own
-    /// "subscriber exclusive" section and needs `accessTier`/`upsell` to render the CTA.
+    /// A Pro-only model must still show (disabled, with an upsell) to a Plus subscriber, not be dropped.
     func testWhenSubscribedPlusUserThenProOnlyModelIsShownDisabledWithUpgradeUpsell() async {
         mockSubscriptionManager.resultSubscription = .success(makeSubscription(tier: .plus))
         mockModelsService.modelsToReturn = [
@@ -168,10 +166,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
 
     // MARK: - Reasoning Effort Tests
 
-    /// One `reasoningEfforts` entry per conceptual mode (Fast/Reasoning/Extended Reasoning), not
-    /// per raw effort — `id` is the mode's representative effort so it round-trips correctly on
-    /// `omnibar_submitChat`, `name`/`description` are the same localized copy already shipped for
-    /// the address-bar picker.
+    /// One entry per conceptual mode, not per raw effort — `id` is the mode's representative effort.
     func testWhenModelHasSupportedReasoningEffortThenItIsMappedToItem() async {
         mockModelsService.modelsToReturn = [
             makeRemoteModel(id: "reasoning-model", supportedReasoningEffort: [.none, .low, .medium], accessTier: ["free"])

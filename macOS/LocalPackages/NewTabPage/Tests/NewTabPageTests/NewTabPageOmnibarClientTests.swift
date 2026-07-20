@@ -273,9 +273,8 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertEqual(configProvider.selectedReasoningEffort, "low")
     }
 
-    /// A reasoning effort that's present but gated (`status == "unavailable"`) must be rejected
-    /// just like one that's entirely unsupported — otherwise a stale web selection made before a
-    /// tier change could still get persisted and reach the backend on submit.
+    /// A gated (`isAvailable == false`) effort must be rejected same as an unsupported one — a
+    /// stale web selection from before a tier change shouldn't persist.
     @MainActor
     func testWhenSetConfigWithGatedReasoningEffortThenItIsIgnored() async throws {
         configProvider.isReasoningEffortEnabled = true
@@ -298,9 +297,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertEqual(configProvider.selectedReasoningEffort, "none")
     }
 
-    /// A model that's present but gated (`isEnabled == false`) must be rejected the same way — a
-    /// stale or forged `selectedModelId` shouldn't be able to persist a model the user's tier
-    /// doesn't grant, now that gated models stay in `aiModelSections` instead of being dropped.
+    /// A stale or forged `selectedModelId` shouldn't persist a model the user's tier doesn't grant.
     @MainActor
     func testWhenSetConfigWithGatedModelIdThenItIsIgnored() async throws {
         configProvider.selectedModelId = "free-model"
@@ -321,9 +318,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertEqual(configProvider.selectedModelShortName, "Free")
     }
 
-    /// A gated model's reasoning effort must not persist either, even when that effort's own
-    /// `isAvailable` is `true` (e.g. the backend omitted per-effort access data) — the model-level
-    /// gate has to win over the per-effort one.
+    /// The model-level gate has to win even when the effort's own `isAvailable` is `true`.
     @MainActor
     func testWhenSetConfigWithGatedModelIdThenReasoningEffortIsAlsoIgnored() async throws {
         configProvider.isReasoningEffortEnabled = true
@@ -413,9 +408,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertNil(forwardedEffort)
     }
 
-    /// A gated reasoning effort (`status == "unavailable"`) must be dropped at submit time even if
-    /// it's still listed among the model's `reasoningEfforts` — this is the exact bug class the
-    /// address-bar work fixed (a gated selection silently reaching the backend and erroring).
+    /// A gated effort must be dropped at submit time too, not just at selection time.
     @MainActor
     func testWhenSubmitChatWithGatedReasoningEffortThenItIsDropped() async throws {
         configProvider.isReasoningEffortEnabled = true
@@ -443,9 +436,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertNil(forwardedEffort)
     }
 
-    /// A gated model (`isEnabled == false`) must be dropped at submit time too — a stale or forged
-    /// `modelId` shouldn't be able to submit against a model the user's tier doesn't grant, now
-    /// that gated models stay in `aiModelSections` instead of being dropped.
+    /// A stale or forged `modelId` shouldn't submit against a model the user's tier doesn't grant.
     @MainActor
     func testWhenSubmitChatWithGatedModelIdThenModelIdIsDropped() async throws {
         modelsProvider.lastFetchedSections = [
@@ -468,10 +459,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         XCTAssertNil(forwardedModelId)
     }
 
-    /// A gated model's reasoning effort must be dropped too, even when that effort's own
-    /// `isAvailable` is `true` (e.g. the backend omitted per-effort access data) — the model-level
-    /// gate has to win, or a stale/forged submission could carry a gated effort to the backend
-    /// alongside the (correctly) dropped `modelId`.
+    /// The model-level gate has to win even when the effort's own `isAvailable` is `true`.
     @MainActor
     func testWhenSubmitChatWithGatedModelIdThenReasoningEffortIsAlsoDropped() async throws {
         configProvider.isReasoningEffortEnabled = true

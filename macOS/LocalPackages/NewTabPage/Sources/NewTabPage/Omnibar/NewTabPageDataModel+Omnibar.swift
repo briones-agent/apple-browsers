@@ -55,13 +55,9 @@ public extension NewTabPageDataModel {
         public let isEnabled: Bool
         public let supportsImageUpload: Bool
         public let supportedTools: [String]
-        /// The single access tier that grants this model (e.g. `"plus"`, `"pro"`, `"internal"`).
-        /// `nil` for a model with no tier requirement (i.e. free). Set on every item, not just
-        /// gated ones — the web derives its own tier badge from this.
+        /// `nil` for a model with no tier requirement; set on every item, not just gated ones.
         public let accessTier: String?
-        /// Reasoning-effort options this model supports, each with localized copy and availability.
-        /// Empty when the model does not support reasoning, or when the reasoning-effort feature is
-        /// disabled natively — in which case the picker is hidden web-side.
+        /// Empty when reasoning isn't supported, or when disabled natively (picker stays hidden).
         public let reasoningEfforts: [AIModelReasoningEffort]
         /// MIME types the model accepts as file attachments (e.g. `["application/pdf"]`). Empty
         /// when the model accepts no files; the web uses this to drive the file picker's `accept`
