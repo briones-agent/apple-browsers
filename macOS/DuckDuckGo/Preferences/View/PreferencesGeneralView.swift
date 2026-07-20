@@ -148,6 +148,9 @@ extension Preferences {
                                     .disabled(startupModel.restorePreviousSession)
                                 }
                             }
+                            // Reset the tint so only the radio button (from rebrandedControlTint below)
+                            // is tinted, not the StartupWindowType picker/text in the label.
+                            .tint(nil)
                             .tag(false)
                             .padding(.bottom, 4)
 
@@ -247,7 +250,9 @@ extension Preferences {
                                         .accessibilityIdentifier("PreferencesGeneralView.homePage.specificPage")
                                     Button(UserText.setPage) {
                                         showingCustomHomePageSheet.toggle()
-                                    }.disabled(!startupModel.launchToCustomHomePage)
+                                    }
+                                    .disabled(!startupModel.launchToCustomHomePage)
+                                    .tint(nil)
                                 }
                                 TextMenuItemCaption(startupModel.friendlyURL)
                                     .padding(.top, 0)
