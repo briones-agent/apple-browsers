@@ -25,20 +25,33 @@ every run, rather than letting it drift to whatever the clone happens to be
 on. Tip-of-tree crossbench is fragile: upstream can rename or refactor code
 that the extras/patch below target, breaking provisioning with no warning.
 
-The pin tracks the `crossbench_revision` that Chromium's **current stable**
-release branch vendors in its `DEPS` file — the closest thing to a
-"known-good, shipped-through-a-release" revision. Currently pinned to the rev
-Chrome M150 stable (`chromium refs/branch-heads/7871`) vendors, committed
-~Jun 1 2026. `WEBPAGEREPLAY_REV` (same file) is read from the same DEPS pin,
-so the two stay coherent.
+The pin anchors to the `crossbench_revision` that Chromium's **current
+stable** release branch vendors in its `DEPS` file — the closest thing to a
+"known-good, shipped-through-a-release" revision. Chrome M150 stable
+(`chromium refs/branch-heads/7871`) pins crossbench at
+`7d52b4ffbc319a7d5a0e0a0ebff744e5281d60c5` (~Jun 1 2026). `WEBPAGEREPLAY_REV`
+(same file) is read from the same DEPS pin, so the two stay coherent.
+
+**Actually pinned commit is newer than that DEPS SHA**: the literal DEPS
+rev predates `--bin-override` (added 16 days later, crossbench commit
+`be14dbfb884747ea577e2e65b6a4a77d7ecd807d`, "Add --binary-override flag for
+tool paths", Jun 17 2026), which `test-chrome.sh` needs to hand crossbench
+the pre-built `wpr` binary without going through crossbench's own
+hermetic-Go-toolchain build (which needs a `gclient sync` this harness never
+runs). `CROSSBENCH_REV` is pinned to that commit instead — the oldest
+post-DEPS commit that adds the flag — rather than the exact DEPS SHA.
 
 To bump: pick a newer stable branch-head number from
 [chromiumdash](https://chromiumdash.appspot.com/branches), read its `DEPS`
 file (`https://chromium.googlesource.com/chromium/src/+/refs/branch-heads/<N>/DEPS`),
-and copy the new `crossbench_revision` (and `webpagereplay_revision`) values
-into `CROSSBENCH_REV` / `WEBPAGEREPLAY_REV`. Re-run provisioning and re-verify
-the extras + cpu_freq patch still apply cleanly (grep-guarded, so a WARNING
-means the target text changed upstream and the patch needs reconciling).
+and check whether its `crossbench_revision` already postdates
+`--bin-override` (a later Chrome stable may not need this workaround at
+all). Copy the new `crossbench_revision` (and `webpagereplay_revision`)
+values into `CROSSBENCH_REV` / `WEBPAGEREPLAY_REV`. Re-run provisioning and
+re-verify the extras + cpu_freq patch still apply cleanly (grep-guarded, so
+a WARNING means the target text changed upstream and the patch needs
+reconciling), and that `test-chrome.sh` still runs (in case of another
+similar gap between the DEPS SHA and a flag/behavior the harness relies on).
 
 ### The crossbench extras (load-bearing)
 

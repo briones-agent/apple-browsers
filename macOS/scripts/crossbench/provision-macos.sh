@@ -35,20 +35,30 @@ CROSSBENCH_DIR="${CROSSBENCH_DIR:-$HOME/Developer/crossbench-upstream}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.11}"   # matches Windows (poetry env use 3.11)
 
 # crossbench is pinned, not tip-of-tree: upstream can rename/refactor code our
-# extras + cpu_freq patch target underneath us with no warning. Pin to the
+# extras + cpu_freq patch target underneath us with no warning. Anchor to the
 # crossbench_revision that Chromium's CURRENT STABLE release branch vendors —
 # the closest thing to a "known-good, shipped-through-a-release" rev. This is
 # below the Chrome-version pin, so a Chrome bump (step 4) never silently drags
 # crossbench along with it.
-#   Currently: Chrome M150 stable (chromium refs/branch-heads/7871), DEPS
-#   'crossbench_revision', commit dated ~Jun 1 2026.
+#   DEPS anchor: Chrome M150 stable (chromium refs/branch-heads/7871) pins
+#   crossbench_revision 7d52b4ffbc319a7d5a0e0a0ebff744e5281d60c5 (~Jun 1 2026).
+#   THIS SCRIPT PINS SLIGHTLY NEWER: that DEPS rev predates --bin-override
+#   (crossbench added it 16 days later, commit be14dbfb884747ea577e2e65b6a4a77d7ecd807d,
+#   "Add --binary-override flag for tool paths", Jun 17 2026), which
+#   test-chrome.sh depends on to hand crossbench the pre-built wpr binary
+#   without going through crossbench's own hermetic-Go-toolchain build
+#   machinery (which requires a gclient sync we deliberately don't do — see
+#   step 6). Without it, `cb.py loading` rejects --bin-override outright.
+#   So: pinned to the oldest post-DEPS-anchor commit that adds the flag,
+#   rather than the literal DEPS SHA.
 #   To bump: pick a newer stable branch-head number from
-#   https://chromiumdash.appspot.com/branches, then read its DEPS file, e.g.
+#   https://chromiumdash.appspot.com/branches, read its DEPS file, e.g.
 #     https://chromium.googlesource.com/chromium/src/+/refs/branch-heads/<N>/DEPS
-#   and copy the 'crossbench_revision' value here. Bump WEBPAGEREPLAY_REV
-#   (below) from the SAME DEPS file at the same time, so the pair stays
-#   coherent — they're read together.
-CROSSBENCH_REV="${CROSSBENCH_REV:-7d52b4ffbc319a7d5a0e0a0ebff744e5281d60c5}"
+#   and check whether ITS 'crossbench_revision' already postdates
+#   --bin-override (i.e. this workaround may no longer be needed for a
+#   later Chrome stable). Bump WEBPAGEREPLAY_REV (below) from the SAME DEPS
+#   file at the same time, so the pair stays coherent — they're read together.
+CROSSBENCH_REV="${CROSSBENCH_REV:-be14dbfb884747ea577e2e65b6a4a77d7ecd807d}"
 
 # WPR (Web Page Replay) source, pinned to the same revision as crossbench's
 # DEPS file (crossbench doesn't ship it; gclient would normally sync it).
