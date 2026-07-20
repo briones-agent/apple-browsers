@@ -82,14 +82,21 @@ echo "python: $("$PY_BIN" --version)"
 echo "poetry: $(poetry --version)"
 
 # 4. Google Chrome — baseline browser for the comparison run.
-#    Note: the cask installs latest and Keystone auto-updates it thereafter.
-#    For a stable baseline, decide explicitly whether to freeze Chrome's version.
-#    Alternative: skip this and use --browser=chrome-latest (crossbench auto-downloads).
+#    Chrome is deliberately NOT pinned: every run uses the latest stable so the
+#    baseline tracks what users actually run. crossbench stamps the exact version
+#    into each result, so a baseline step caused by a Chrome bump stays traceable.
+#    A fresh install gets latest already; an existing install is upgraded here so
+#    we don't drift behind (rather than relying on Keystone's background schedule).
 log "Google Chrome"
 if [ ! -d "/Applications/Google Chrome.app" ]; then
   brew install --cask google-chrome
 else
-  echo "present"
+  # Explicit `brew update` first: HOMEBREW_NO_AUTO_UPDATE=1 (set above) freezes
+  # brew's cask index to the last tap sync, so upgrade alone would never see a
+  # newer version. --greedy because Chrome's cask is auto_updates and a plain
+  # `brew upgrade` skips such casks.
+  brew update
+  brew upgrade --cask --greedy google-chrome
 fi
 echo "chrome: $('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --version 2>/dev/null || echo 'version unavailable')"
 
