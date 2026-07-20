@@ -146,7 +146,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     let omnibarController: AIChatOmnibarController
     private let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
     private let burnerMode: BurnerMode
-    private var isBurner: Bool { burnerMode.isBurner }
     var themeUpdateCancellable: AnyCancellable?
     private var appearanceCancellable: AnyCancellable?
     private var textChangeCancellable: AnyCancellable?
@@ -873,7 +872,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     // MARK: - Burner Style
 
     private func setupBurnerStyleIfNeeded() {
-        guard isBurner, themeManager.isAppRebranded else { return }
+        guard burnerMode.isBurner, themeManager.isAppRebranded else { return }
 
         let style = BurnerAppearanceStyle()
         style.enableDarkModeOverride(in: view)
