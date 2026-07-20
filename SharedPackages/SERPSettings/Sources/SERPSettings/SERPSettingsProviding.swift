@@ -46,7 +46,7 @@ import FoundationExtensions
 /// - Platform-specific AI chat preference providers
 /// - Message origin rules for security validation
 /// - Optional event mapper for error analytics
-public protocol SERPSettingsProviding {
+public protocol SERPSettingsProviding: AnyObject {
 
     /// Builds message origin rules for validating SERP communication.
     ///
@@ -265,6 +265,23 @@ public extension SERPSettingsProviding {
         set {
             let value = newValue == HideAIGeneratedImages.defaultValue ? nil : HideAIGeneratedImages.rawValue(forHidden: newValue)
             setSERPSetting(value, forKey: SERPSettingsConstants.hideAIGeneratedImagesKey)
+        }
+    }
+
+    var safeSearch: SafeSearch {
+        get {
+            guard let rawValue = serpSettingValue(forKey: SERPSettingsConstants.safeSearch) else {
+                return .defaultValue
+            }
+            guard let safeSearch = SafeSearch(storageValue: rawValue) else {
+                // Key is present but holds a value the native enum doesn't recognize (contract mismatch).
+                eventMapper?.fire(.unrecognizedValue)
+                return .defaultValue
+            }
+            return safeSearch
+        }
+        set {
+            setSERPSetting(newValue.storageValue, forKey: SERPSettingsConstants.safeSearch)
         }
     }
 

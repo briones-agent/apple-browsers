@@ -61,3 +61,38 @@ public enum HideAIGeneratedImages {
         }
     }
 }
+
+/// Value encoding for the SERP "Safe Search" setting (`kp`)
+public enum SafeSearch {
+    case strict
+    case moderate
+    case off
+
+    public static let strictRawValue = "1"
+    public static let offRawValue = "-2"
+
+    // Bundled default used when the key is absent from native storage.
+    public static let defaultValue: SafeSearch = .moderate
+
+    var storageValue: String? {
+        switch self {
+        case .strict: 
+            return "1"
+        case .moderate:
+            return nil
+        case .off: 
+            return "-2"
+        }
+    }
+
+    init?(storageValue: String) {
+        switch storageValue {
+        case Self.strictRawValue:
+            self = .strict
+        case Self.offRawValue:
+            self = .off
+        default:
+            return nil
+        }
+    }
+}
