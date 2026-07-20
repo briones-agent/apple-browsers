@@ -2649,10 +2649,10 @@ private extension UnifiedToggleInputCoordinator {
 
 extension UnifiedToggleInputCoordinator: UnifiedToggleInputPasteDelegate {
 
-    /// Keys off model capability (not remaining room) so an over-limit paste is consumed and reported here rather than falling through to UIKit's inline-image insert. Files are only offered when the model's attachment limits are known, so the loader can preflight sizes; the loader excludes text types when a copied string is present.
+    /// Keys off model capability (not remaining room) so an over-limit paste is consumed and reported here rather than falling through to UIKit's inline-image insert. Text types are excluded so a copied string always pastes as text (text files remain picker-only); files are only offered when the model's attachment limits are known, so the loader can preflight sizes.
     var pasteAttachmentSupport: UnifiedToggleInputPasteSupport {
         let limits = modelStore.attachmentLimits
-        let fileTypes = limits == nil ? [] : allowedFileUTTypes
+        let fileTypes = limits == nil ? [] : allowedFileUTTypes.filter { !$0.conforms(to: .text) }
         return UnifiedToggleInputPasteSupport(
             isEnabled: inputMode == .aiChat && !viewController.isGenerating,
             acceptsImages: selectedModelSupportsImageUpload,
@@ -2692,28 +2692,28 @@ extension UnifiedToggleInputCoordinator: UnifiedToggleInputPasteDelegate {
         addFileAttachment(file, source: "paste")
     }
 
-    /// Adds a load-time-rejected file as an invalid attachment without re-validating (it was never read), so a slot freeing up mid-load can't turn it into a valid empty-byte file.
-    func addRejectedPastedFile(fileName: String, mimeType: String, fileSizeBytes: Int) {
-        let validationError = attachmentPolicy.fileMetadataValidationError(mimeType: mimeType, fileSizeBytes: fileSizeBytes)
-        let message = validationError?.message
-            ?? UserText.aiChatAttachmentFileCountLimit(maxFilesPerConversation: modelStore.attachmentLimits?.files.maxPerConversation ?? 0)
-        let reason = validationError?.reason ?? .countExceeded
+    /// Reports a load-time-rejected paste as an error banner (no chip, no revalidation) using the reason the loader recorded, so the message and pixel reflect why it was actually rejected.
+    func reportRejectedPaste(reason: PasteRejectionReason) {
+        let files = modelStore.attachmentLimits?.files
+        let message: String
+        let pixelReason: String
+        switch reason {
+        case .fileTooLarge:
+            message = UserText.aiChatAttachmentFileTooLarge(maxFileSizeMB: files?.maxFileSizeMB ?? 0)
+            pixelReason = "size_exceeded"
+        case .filesExceedTotalSize:
+            let maxTotalMB = files.map { Int(ceil(Double($0.maxTotalFileSizeBytes) / 1_048_576)) } ?? 0
+            message = UserText.aiChatAttachmentFilesExceedTotalSizeLimit(maxTotalFileSizeMB: maxTotalMB)
+            pixelReason = "size_exceeded"
+        case .fileCountLimit:
+            message = UserText.aiChatAttachmentFileCountLimit(maxFilesPerConversation: files?.maxPerConversation ?? 0)
+            pixelReason = "count_exceeded"
+        }
         DailyPixel.fireDailyAndCount(
             pixel: .unifiedToggleInputFileValidationFailed,
-            withAdditionalParameters: ["reason": reason.rawValue, "surface": pixelSurface.rawValue, "source": "paste"]
+            withAdditionalParameters: ["reason": pixelReason, "surface": pixelSurface.rawValue, "source": "paste"]
         )
-        viewController.addAttachment(.invalidFile(
-            UnifiedToggleInputInvalidFileAttachment(
-                fileName: fileName,
-                mimeType: mimeType,
-                fileSizeBytes: fileSizeBytes,
-                validationMessage: message,
-                sourceURL: nil
-            )
-        ))
         presentAttachmentValidationError(message)
-        persistDraftToStore()
-        updateAttachButtonPresentation()
     }
 
     func presentPasteError(_ message: String) {

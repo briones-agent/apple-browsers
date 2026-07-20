@@ -114,17 +114,16 @@ final class UnifiedToggleInputPasteHandlerTests: XCTestCase {
         XCTAssertTrue(delegate.presentedErrors.isEmpty)
     }
 
-    func testApplyRoutesRejectedFileToInvalidWithoutAddingAValidFile() {
+    func testApplyReportsRejectionWithoutAddingAFile() {
         let delegate = MockPasteDelegate()
         let handler = makeHandler(delegate)
         var result = makeResult()
-        result.rejectedFile = .init(fileName: "big.pdf", mimeType: "application/pdf", fileSizeBytes: 999_999)
+        result.rejection = .fileTooLarge
 
         handler.applyLoadedAttachments(result)
 
         XCTAssertEqual(delegate.addedFiles, 0)
-        XCTAssertEqual(delegate.rejectedFiles.count, 1)
-        XCTAssertEqual(delegate.rejectedFiles.first?.fileName, "big.pdf")
+        XCTAssertEqual(delegate.rejectionReasons, [.fileTooLarge])
     }
 
     func testApplyShowsCapacityMessageWhenImagesTruncated() {
@@ -238,7 +237,7 @@ private final class MockPasteDelegate: UnifiedToggleInputPasteDelegate {
     private(set) var callLog: [String] = []
     private(set) var addedImages = 0
     private(set) var addedFiles = 0
-    private(set) var rejectedFiles: [(fileName: String, mimeType: String, fileSizeBytes: Int)] = []
+    private(set) var rejectionReasons: [PasteRejectionReason] = []
     private(set) var presentedErrors: [String] = []
 
     var pasteAttachmentSupport: UnifiedToggleInputPasteSupport { support }
@@ -260,9 +259,9 @@ private final class MockPasteDelegate: UnifiedToggleInputPasteDelegate {
         callLog.append("file")
     }
 
-    func addRejectedPastedFile(fileName: String, mimeType: String, fileSizeBytes: Int) {
-        rejectedFiles.append((fileName, mimeType, fileSizeBytes))
-        callLog.append("rejectedFile")
+    func reportRejectedPaste(reason: PasteRejectionReason) {
+        rejectionReasons.append(reason)
+        callLog.append("rejected")
     }
 
     func presentPasteError(_ message: String) {

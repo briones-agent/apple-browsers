@@ -138,23 +138,33 @@ final class PasteboardAttachmentReaderTests: XCTestCase {
         )
 
         XCTAssertTrue(result.files.isEmpty, "over-count file should not be read into memory")
-        XCTAssertNotNil(result.rejectedFile)
+        XCTAssertEqual(result.rejection, .fileCountLimit)
     }
 
     func testLoadAttachmentsRejectsFileOverRemainingBytesWithoutReading() async {
-        let data = Data("%PDF-1.4 larger than budget".utf8)
-        let provider = makePDFProvider(data: data)
+        let provider = makePDFProvider(data: Data("%PDF-1.4 larger than budget".utf8))
 
         let result = await PasteboardAttachmentReader.loadAttachments(
             from: [provider], allowsImages: false, allowedFileTypes: [.pdf], maxFileSizeBytes: 10_000, remainingTotalFileBytes: 4
         )
 
         XCTAssertTrue(result.files.isEmpty, "over-total file should not be read into memory")
-        XCTAssertEqual(result.rejectedFile?.fileSizeBytes, data.count, "rejection keeps the real size so the policy reports it")
+        XCTAssertEqual(result.rejection, .filesExceedTotalSize)
+    }
+
+    func testLoadAttachmentsRejectsFileOverPerFileSizeWithoutReading() async {
+        let provider = makePDFProvider(data: Data("%PDF-1.4 larger than the per-file limit".utf8))
+
+        let result = await PasteboardAttachmentReader.loadAttachments(
+            from: [provider], allowsImages: false, allowedFileTypes: [.pdf], maxFileSizeBytes: 4, remainingTotalFileBytes: 10_000
+        )
+
+        XCTAssertTrue(result.files.isEmpty)
+        XCTAssertEqual(result.rejection, .fileTooLarge)
     }
 
     func testLoadAttachmentsStopsReadingOnceBudgetExhausted() async {
-        let data = Data("%PDF-1.4".utf8) // 8 bytes each
+        let data = Data("%PDF-1.4".utf8)
         let providers = [makePDFProvider(data: data, suggestedName: "a"), makePDFProvider(data: data, suggestedName: "b")]
 
         let result = await PasteboardAttachmentReader.loadAttachments(
@@ -163,36 +173,18 @@ final class PasteboardAttachmentReaderTests: XCTestCase {
 
         XCTAssertEqual(result.files.count, 1, "only the first file fits the budget and is read")
         XCTAssertFalse(result.files[0].data.isEmpty)
-        XCTAssertNotNil(result.rejectedFile, "the second file exceeds the remaining budget and is rejected without reading")
+        XCTAssertEqual(result.rejection, .filesExceedTotalSize, "the second file exceeds the remaining budget and is rejected without reading")
     }
 
     func testLoadAttachmentsCapsRejectionsToOne() async {
-        let data = Data("%PDF-1.4".utf8)
-        let providers = (0..<5).map { makePDFProvider(data: data, suggestedName: "f\($0)") }
+        let providers = (0..<5).map { makePDFProvider(data: Data("%PDF-1.4".utf8), suggestedName: "f\($0)") }
 
         let result = await PasteboardAttachmentReader.loadAttachments(
             from: providers, allowsImages: false, allowedFileTypes: [.pdf], remainingFileCount: 0
         )
 
         XCTAssertTrue(result.files.isEmpty)
-        XCTAssertNotNil(result.rejectedFile, "five over-capacity files surface a single rejection, not five")
-    }
-
-    func testLoadAttachmentsExcludesTextFilesWhenPasteboardHasStrings() async {
-        // A copied table exposes CSV + a string; CSV should not route to a file.
-        let withStrings = await PasteboardAttachmentReader.loadAttachments(
-            from: [makeFileProvider(type: .commaSeparatedText, data: Data("a,b,c".utf8), suggestedName: "table")],
-            allowsImages: false, allowedFileTypes: [.commaSeparatedText], remainingFileCount: 3, remainingTotalFileBytes: 10_000, pasteboardHasStrings: true
-        )
-        XCTAssertTrue(withStrings.files.isEmpty)
-        XCTAssertNil(withStrings.rejectedFile)
-
-        // A copied .csv file (no string) still attaches.
-        let withoutStrings = await PasteboardAttachmentReader.loadAttachments(
-            from: [makeFileProvider(type: .commaSeparatedText, data: Data("a,b,c".utf8), suggestedName: "table")],
-            allowsImages: false, allowedFileTypes: [.commaSeparatedText], remainingFileCount: 3, remainingTotalFileBytes: 10_000, pasteboardHasStrings: false
-        )
-        XCTAssertEqual(withoutStrings.files.count, 1)
+        XCTAssertEqual(result.rejection, .fileCountLimit, "five over-capacity files surface a single rejection, not five")
     }
 
     func testLoadAttachmentsCapsImagesToAllowanceAndFlagsTruncation() async {

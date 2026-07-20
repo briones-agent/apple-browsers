@@ -32,7 +32,7 @@ protocol AttachmentPasteHandling: AnyObject {
     func pasteAttachments(from pasteboard: UIPasteboard)
 }
 
-/// Shared `paste(_:)` / `canPerformAction(_:)` routing so the two text controls don't duplicate the logic.
+/// Shared `paste(_:)` / `canPerformAction(_:)` routing that keeps the paste-intercept logic in one place for the text control.
 @MainActor
 enum AttachmentPasteRouting {
 
@@ -46,6 +46,13 @@ enum AttachmentPasteRouting {
         handler.pasteAttachments(from: .general)
         return true
     }
+}
+
+/// Why a pasted file couldn't be attached, carried from the loader so the error is reported for the actual reason (not recomputed against later state).
+enum PasteRejectionReason: Equatable {
+    case fileTooLarge
+    case filesExceedTotalSize
+    case fileCountLimit
 }
 
 /// What the current model accepts plus the remaining headroom, snapshotted once per paste so the loader can preflight sizes/counts.
@@ -94,8 +101,8 @@ protocol UnifiedToggleInputPasteDelegate: AnyObject {
     /// Adds the image if there is headroom; returns `false` when the image limit is reached.
     @discardableResult func addPastedImage(_ image: UIImage, fileName: String) -> Bool
     func addPastedFile(_ file: AIChatFileAttachment)
-    /// Adds a file that was rejected during load (over size/count/total) as an invalid attachment; never becomes a valid file.
-    func addRejectedPastedFile(fileName: String, mimeType: String, fileSizeBytes: Int)
+    /// Reports a file rejected during load (over size/count/total) with an error for the given reason; never adds an attachment.
+    func reportRejectedPaste(reason: PasteRejectionReason)
     func presentPasteError(_ message: String)
 }
 
@@ -119,7 +126,6 @@ final class UnifiedToggleInputPasteHandler: AttachmentPasteHandling {
         let support = delegate.pasteAttachmentSupport
         guard support.isEnabled, support.acceptsAnyAttachment else { return }
         let providers = pasteboard.itemProviders
-        let hasStrings = pasteboard.hasStrings
         let context = delegate.pasteContextIdentity
         delegate.pasteWillBeginExpandingIfNeeded()
         Task { [weak self] in
@@ -130,8 +136,7 @@ final class UnifiedToggleInputPasteHandler: AttachmentPasteHandling {
                 maxImageCount: support.maxImageCount,
                 maxFileSizeBytes: support.maxFileSizeBytes,
                 remainingFileCount: support.remainingFileCount,
-                remainingTotalFileBytes: support.remainingTotalFileBytes,
-                pasteboardHasStrings: hasStrings
+                remainingTotalFileBytes: support.remainingTotalFileBytes
             )
             self?.applyLoadedAttachments(result, expectedContext: context)
         }
@@ -147,8 +152,8 @@ final class UnifiedToggleInputPasteHandler: AttachmentPasteHandling {
             delegate.addPastedFile(file)
         }
 
-        if let rejected = result.rejectedFile {
-            delegate.addRejectedPastedFile(fileName: rejected.fileName, mimeType: rejected.mimeType, fileSizeBytes: rejected.fileSizeBytes)
+        if let rejection = result.rejection {
+            delegate.reportRejectedPaste(reason: rejection)
         }
 
         var didExceedImageLimit = false
@@ -169,34 +174,27 @@ final class UnifiedToggleInputPasteHandler: AttachmentPasteHandling {
 @MainActor
 enum PasteboardAttachmentReader {
 
-    /// A file that couldn't be accepted at load time (over size/count/total). Carried as metadata only — never read into memory and never able to become a valid file.
-    struct RejectedFile: Equatable {
-        let fileName: String
-        let mimeType: String
-        let fileSizeBytes: Int
-    }
-
     struct Result {
         var images: [(image: UIImage, fileName: String)] = []
         var files: [AIChatFileAttachment] = []
-        /// The first file that didn't fit the budget; capped at one so an exhausted capacity can't flood the strip.
-        var rejectedFile: RejectedFile?
+        /// The reason the first over-budget file was rejected; capped at one so an exhausted capacity can't flood the strip.
+        var rejection: PasteRejectionReason?
         /// More image providers were present than the allowance, so some were dropped without decoding.
         var imagesTruncated = false
     }
 
     private enum LoadedFile {
         case read(AIChatFileAttachment)
-        case rejected(RejectedFile)
+        case rejected(PasteRejectionReason)
     }
 
-    /// Metadata-only probe (no byte reads, so no paste banner) that mirrors `loadAttachments`' per-provider classification, so a "yes" here means the loader will actually find something. Text types are ignored when the pasteboard also holds a string, so copied text/tables paste as text rather than a file.
+    /// Metadata-only probe (no byte reads, so no paste banner) that mirrors `loadAttachments`' per-provider classification, so a "yes" here means the loader will actually find something.
     static func hasSupportedAttachments(
         in pasteboard: UIPasteboard,
         allowsImages: Bool,
         allowedFileTypes: [UTType]
     ) -> Bool {
-        let fileIdentifiers = fileTypesRoutable(from: allowedFileTypes, pasteboardHasStrings: pasteboard.hasStrings).map(\.identifier)
+        let fileIdentifiers = allowedFileTypes.map(\.identifier)
         return pasteboard.itemProviders.contains { provider in
             if allowsImages, provider.canLoadObject(ofClass: UIImage.self) {
                 return true
@@ -214,11 +212,9 @@ enum PasteboardAttachmentReader {
         maxImageCount: Int? = nil,
         maxFileSizeBytes: Int? = nil,
         remainingFileCount: Int? = nil,
-        remainingTotalFileBytes: Int? = nil,
-        pasteboardHasStrings: Bool = false
+        remainingTotalFileBytes: Int? = nil
     ) async -> Result {
         var result = Result()
-        let routableFileTypes = fileTypesRoutable(from: allowedFileTypes, pasteboardHasStrings: pasteboardHasStrings)
         var loadedImageCount = 0
         var readFileCount = 0
         var readFileBytes = 0
@@ -234,14 +230,19 @@ enum PasteboardAttachmentReader {
                     result.images.append((image, provider.suggestedName ?? "image"))
                     loadedImageCount += 1
                 }
-            } else if let type = routableFileTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0.identifier) }) {
+            } else if let type = allowedFileTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0.identifier) }) {
                 guard !fileCapacityExhausted else { continue }
 
                 let remainingCount = remainingFileCount.map { $0 - readFileCount }
                 let remainingBytes = remainingTotalFileBytes.map { $0 - readFileBytes }
-                if (remainingCount.map { $0 <= 0 } ?? false) || (remainingBytes.map { $0 <= 0 } ?? false) {
+                if remainingCount.map({ $0 <= 0 }) ?? false {
                     fileCapacityExhausted = true
-                    recordRejection(RejectedFile(fileName: fileName(for: provider, type: type), mimeType: mimeType(for: type), fileSizeBytes: 0), in: &result)
+                    recordRejection(.fileCountLimit, in: &result)
+                    continue
+                }
+                if remainingBytes.map({ $0 <= 0 }) ?? false {
+                    fileCapacityExhausted = true
+                    recordRejection(.filesExceedTotalSize, in: &result)
                     continue
                 }
 
@@ -250,8 +251,8 @@ enum PasteboardAttachmentReader {
                     readFileCount += 1
                     readFileBytes += file.fileSizeBytes
                     result.files.append(file)
-                case .rejected(let rejected):
-                    recordRejection(rejected, in: &result)
+                case .rejected(let reason):
+                    recordRejection(reason, in: &result)
                 case nil:
                     break
                 }
@@ -260,14 +261,9 @@ enum PasteboardAttachmentReader {
         return result
     }
 
-    /// Text types route to a file only when the pasteboard has no string — a copied string/table becomes text, a real text file (no string) still attaches.
-    private static func fileTypesRoutable(from allowedFileTypes: [UTType], pasteboardHasStrings: Bool) -> [UTType] {
-        pasteboardHasStrings ? allowedFileTypes.filter { !$0.conforms(to: .text) } : allowedFileTypes
-    }
-
-    private static func recordRejection(_ rejected: RejectedFile, in result: inout Result) {
-        if result.rejectedFile == nil {
-            result.rejectedFile = rejected
+    private static func recordRejection(_ reason: PasteRejectionReason, in result: inout Result) {
+        if result.rejection == nil {
+            result.rejection = reason
         }
     }
 
@@ -299,10 +295,12 @@ enum PasteboardAttachmentReader {
 
                 let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
                 if let fileSize {
-                    let overPerFile = maxFileSizeBytes.map { fileSize > $0 } ?? false
-                    let overTotal = remainingBytes.map { fileSize > $0 } ?? false
-                    if overPerFile || overTotal {
-                        continuation.resume(returning: .rejected(RejectedFile(fileName: fileName, mimeType: mimeType, fileSizeBytes: fileSize)))
+                    if let maxFileSizeBytes, fileSize > maxFileSizeBytes {
+                        continuation.resume(returning: .rejected(.fileTooLarge))
+                        return
+                    }
+                    if let remainingBytes, fileSize > remainingBytes {
+                        continuation.resume(returning: .rejected(.filesExceedTotalSize))
                         return
                     }
                 }
