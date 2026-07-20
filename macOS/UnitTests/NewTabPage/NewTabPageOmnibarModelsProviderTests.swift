@@ -113,7 +113,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         XCTAssertTrue(allItems.contains(where: { $0.id == "plus-model" }))
         XCTAssertTrue(allItems.contains(where: { $0.id == "free-model" }))
         XCTAssertEqual(proOnlyItem?.isEnabled, false)
-        XCTAssertEqual(proOnlyItem?.accessTier, ["pro"])
+        XCTAssertEqual(proOnlyItem?.accessTier, "pro")
         XCTAssertEqual(proOnlyItem?.upsell, "upgrade")
     }
 
@@ -180,7 +180,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         let item = sections.flatMap(\.items).first(where: { $0.id == "reasoning-model" })
 
         XCTAssertEqual(item?.reasoningEfforts.map(\.id), ["none", "low", "medium"])
-        XCTAssertEqual(item?.reasoningEfforts.map(\.status), ["available", "available", "available"])
+        XCTAssertEqual(item?.reasoningEfforts.map(\.isAvailable), [true, true, true])
         XCTAssertEqual(item?.reasoningEfforts.map(\.upsell), [nil, nil, nil])
         XCTAssertEqual(item?.reasoningEfforts.first?.name, UserText.aiChatReasoningEffortFastTitle)
         XCTAssertEqual(item?.reasoningEfforts.first?.description, UserText.aiChatReasoningEffortFastSubtitle)
@@ -218,7 +218,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         let efforts = sections.flatMap(\.items).first(where: { $0.id == "reasoning-model" })?.reasoningEfforts
 
         XCTAssertEqual(efforts?.map(\.id), ["none", "low", "medium"])
-        XCTAssertEqual(efforts?.map(\.status), ["available", "available", "unavailable"])
+        XCTAssertEqual(efforts?.map(\.isAvailable), [true, true, false])
         XCTAssertEqual(efforts?.last?.upsell, "upgrade")
         XCTAssertEqual(efforts?.last?.name, UserText.aiChatReasoningEffortMediumTitle)
     }
@@ -240,7 +240,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         let sections = await provider.fetchAIModelSections()
         let efforts = sections.flatMap(\.items).first(where: { $0.id == "reasoning-model" })?.reasoningEfforts
 
-        XCTAssertEqual(efforts?.last?.status, "unavailable")
+        XCTAssertEqual(efforts?.last?.isAvailable, false)
         XCTAssertEqual(efforts?.last?.upsell, "subscribe")
     }
 

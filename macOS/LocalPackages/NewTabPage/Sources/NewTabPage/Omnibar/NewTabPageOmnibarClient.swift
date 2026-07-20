@@ -193,7 +193,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             .flatMap(\.items)
             .first(where: { $0.id == selectedModelId })?
             .reasoningEfforts
-            .filter { $0.status == "available" }
+            .filter(\.isAvailable)
             .map(\.id) ?? []
         guard availableForCurrentModel.contains(incoming) else { return }
         configProvider.selectedReasoningEffort = incoming
@@ -341,7 +341,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             .flatMap(\.items)
             .first(where: { $0.id == modelId })?
             .reasoningEfforts
-            .filter { $0.status == "available" }
+            .filter(\.isAvailable)
             .map(\.id) ?? []
         return available.contains(incoming) ? incoming : nil
     }

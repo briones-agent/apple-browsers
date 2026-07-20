@@ -286,12 +286,12 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
                                                  isEnabled: true, supportsImageUpload: false,
                                                  reasoningEfforts: [
-                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "none", name: "Fast", status: "available"),
-                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "medium", name: "Extended Reasoning", status: "unavailable", upsell: "upgrade")
+                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "none", name: "Fast", isAvailable: true),
+                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "medium", name: "Extended Reasoning", isAvailable: false, upsell: "upgrade")
                                                  ])
             ])
         ]
-        let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "reasoning-model", aiModelSections: nil, selectedReasoningEffort: "medium", enableAttachTabs: nil, attachmentLimits: nil)
+        let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableCustomizeResponses: nil, customizeSubLabel: nil, hasCustomization: nil, customizationActive: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "reasoning-model", aiModelSections: nil, selectedReasoningEffort: "medium", enableAttachTabs: nil, attachmentLimits: nil)
 
         try await messageHelper.handleMessageExpectingNilResponse(named: .setConfig, parameters: newConfig)
 
@@ -313,7 +313,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
                                                  isEnabled: false, supportsImageUpload: false, upsell: "upgrade")
             ])
         ]
-        let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "gated-model", aiModelSections: nil, selectedReasoningEffort: nil, enableAttachTabs: nil, attachmentLimits: nil)
+        let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableCustomizeResponses: nil, customizeSubLabel: nil, hasCustomization: nil, customizationActive: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "gated-model", aiModelSections: nil, selectedReasoningEffort: nil, enableAttachTabs: nil, attachmentLimits: nil)
 
         try await messageHelper.handleMessageExpectingNilResponse(named: .setConfig, parameters: newConfig)
 
@@ -400,8 +400,8 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
                                                  isEnabled: true, supportsImageUpload: false,
                                                  reasoningEfforts: [
-                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "low", name: "Reasoning", status: "available"),
-                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "medium", name: "Extended Reasoning", status: "unavailable", upsell: "upgrade")
+                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "low", name: "Reasoning", isAvailable: true),
+                                                    NewTabPageDataModel.AIModelReasoningEffort(id: "medium", name: "Extended Reasoning", isAvailable: false, upsell: "upgrade")
                                                  ])
             ])
         ]
@@ -798,7 +798,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
     // MARK: - Helpers
 
     private func availableEfforts(_ ids: [String]) -> [NewTabPageDataModel.AIModelReasoningEffort] {
-        ids.map { NewTabPageDataModel.AIModelReasoningEffort(id: $0, name: $0, status: "available") }
+        ids.map { NewTabPageDataModel.AIModelReasoningEffort(id: $0, name: $0, isAvailable: true) }
     }
 
 }

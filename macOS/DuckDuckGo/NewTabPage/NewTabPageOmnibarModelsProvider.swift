@@ -90,11 +90,19 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
             isEnabled: model.entityHasAccess,
             supportsImageUpload: model.supportsImageUpload,
             supportedTools: model.supportedTools.map(\.rawValue),
-            accessTier: model.accessTier,
+            accessTier: accessTierString(for: model),
             reasoningEfforts: reasoningEfforts(for: model, userTier: userTier),
             supportedFileTypes: model.supportedFileTypes,
             upsell: requiredTier.flatMap { upsellString(for: userTier.upgradeFlow(for: $0)) }
         )
+    }
+
+    /// The single lowest/most-inclusive tier that grants access to `model`, as the wire's flat
+    /// `accessTier` string. `AIChatModelPublicAccessTier` doesn't cover "internal" (it's deliberately
+    /// scoped to publicly-marketed tiers for upsell-flow purposes), so this checks the model's raw
+    /// tier list directly rather than reusing that type.
+    private func accessTierString(for model: AIChatModel) -> String? {
+        ["free", "plus", "pro", "internal"].first { model.accessTier.contains($0) }
     }
 
     private func reasoningEfforts(for model: AIChatModel, userTier: AIChatUserTier) -> [NewTabPageDataModel.AIModelReasoningEffort] {
@@ -106,7 +114,7 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
                 id: effort.rawValue,
                 name: effort.title,
                 description: effort.subtitle,
-                status: isAvailable ? "available" : "unavailable",
+                isAvailable: isAvailable,
                 upsell: upsell
             )
         }
@@ -138,12 +146,6 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
     }
 
     private func resolveUserTier() async -> AIChatUserTier {
-        // Honor the Debug ▸ AI Chat ▸ "Simulate Subscription Tier" override when set, so gated
-        // flows can be demoed without a real subscription — same override the address-bar picker
-        // already respects.
-        if let simulated = UserDefaults.standard.duckAISimulatedTier {
-            return simulated.userTier
-        }
         do {
             guard let subscription = try await subscriptionManager.getSubscription(),
                   subscription.isActive else { return .free }

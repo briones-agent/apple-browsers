@@ -1,5 +1,5 @@
 {
-  "originHash" : "b77b6aaa80a2fe19e6a1007c284f8b8d2a1cab9b84d99f2057dd3f317ace7d97",
+  "originHash" : "1868ae29edce3f62c76882c72aacd83787bd4528ad4e478d50afc18c00eb3166",
   "pins" : [
     {
       "identity" : "apple-toolbox",
@@ -34,7 +34,7 @@
       "location" : "https://github.com/duckduckgo/content-scope-scripts.git",
       "state" : {
         "branch" : "pr-releases/moon0326/o-j/ui-update-for-model-and-reasoning-selector",
-        "revision" : "a9d11560f7a333f7f07a460c04db6f8ad332e2eb"
+        "revision" : "9867cca700206195ed48c14f9191a0cd33410118"
       }
     },
     {
@@ -141,8 +141,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle.git",
       "state" : {
-        "revision" : "5581748cef2bae787496fe6d61139aebe0a451f6",
-        "version" : "2.8.1"
+        "revision" : "b6496a74a087257ef5e6da1c5b29a447a60f5bd7",
+        "version" : "2.9.4"
       }
     },
     {
