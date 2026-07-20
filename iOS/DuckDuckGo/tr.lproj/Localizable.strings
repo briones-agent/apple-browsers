@@ -1426,10 +1426,10 @@
 "cookie-popup-protection.opt-in.confirm" = "Onayla";
 
 /* Body of the opt-in dialog when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.body" = "Mümkün olan en gizli çerez seçeneklerini belirlemeyi ve bunları sizin için kapatmayı hedefleyeceğiz. Devre dışı bırakma seçeneği yoksa, sizin için bu çerezleri otomatik olarak kabul edeceğiz.";
+"cookie-popup-protection.opt-in.disabled.body" = "Mümkün olduğunca çok sayıda çerezi reddetmeyi hedefleyeceğiz. Reddetme seçeneği yoksa, sizi bir tıklama zahmetinden kurtarmak için bu çerezleri sizin yerinize kabul edeceğiz.";
 
 /* Primary (recommended) option when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.primary-option" = "Çerezleri benim için yönet veya kabul et";
+"cookie-popup-protection.opt-in.disabled.primary-option" = "Mümkün olduğunda reddet veya benim adıma kabul et";
 
 /* Secondary option when cookie pop-up protection is off */
 "cookie-popup-protection.opt-in.disabled.secondary-option" = "Bunları kendim yönetmeye devam edeceğim";
@@ -1441,10 +1441,10 @@
 "cookie-popup-protection.opt-in.enabled.body" = "Sizi bir tıklama zahmetinden kurtarıp bu çerezleri sizin yerinize kabul edebiliriz.";
 
 /* Primary (recommended) option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.primary-option" = "Devre dışı bırakılamayan çerezleri benim için kabul et";
+"cookie-popup-protection.opt-in.enabled.primary-option" = "Reddedilemeyen çerezleri kabul et";
 
 /* Secondary option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.secondary-option" = "Bunları kendim yönetmeye devam edeceğim";
+"cookie-popup-protection.opt-in.enabled.secondary-option" = "Bunları kendim kabul etmeye devam edeceğim";
 
 /* Title of the opt-in dialog when cookie pop-up protection is already enabled */
 "cookie-popup-protection.opt-in.enabled.title" = "Çıkış yapmana izin vermeyen çerez açılır pencerelerinden bıktın mı?";
@@ -3037,7 +3037,7 @@
 "network.protection.vpn.data-volume" = "Veri Hacmi";
 
 /* Footer text for the Exclude CGNAT setting item. */
-"network.protection.vpn.exclude.cgnat.setting.footer" = "VPN'i kapatmanız önerilir, böylece tüm trafiğiniz VPN üzerinden geçer. Wi-Fi araması, mesajlaşma veya sesli mesaj gibi özelliklerle ilgili sorun yaşıyorsanız bu özelliği açmayı deneyin.";
+"network.protection.vpn.exclude.cgnat.setting.footer" = "Wi-Fi araması ve sesli mesaj gibi operatör hizmetleri için VPN'i atlayın.";
 
 /* Title for the Exclude CGNAT setting item. */
 "network.protection.vpn.exclude.cgnat.setting.title" = "Operatör Hizmetlerini Hariç Tut";
@@ -3115,10 +3115,10 @@
 "network.protection.vpn.shortcuts.section.header" = "Kısayollar";
 
 /* Footer text for the Strict Routing setting item. The 'Learn more' text is a Markdown link. */
-"network.protection.vpn.strict.routing.setting.footer" = "Güvenmediğiniz ağlarda (örneğin otellerde, barlarda vb. halka açık Wi-Fi ağlarında) kullanılması önerilir. CarPlay, AirDrop gibi özelliklerle veya diğer cihazlara bağlanmada sorun yaşıyorsanız, kapatmayı deneyin. [Daha fazla bilgi](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack)";
+"network.protection.vpn.strict.routing.setting.footer" = "Uygulamaların VPN'i atlamasını engelleyin. AirDrop veya iPhone Yansıtma gibi Wi-Fi özellikleriyle ilgili sorun yaşıyorsanız, kapatmak yardımcı olabilir. Halka açık Wi-Fi gibi güvenmediğiniz ağlarda şiddetle önerilir. [Daha fazla bilgi](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack).";
 
 /* Title for the Strict Routing setting item. */
-"network.protection.vpn.strict.routing.setting.title" = "Katı Yönlendirme";
+"network.protection.vpn.strict.routing.setting.title" = "Katı Yönlendirmeyi Zorunlu Kıl (Önerilen)";
 
 /* Confirm button for the new address bar picker */
 "new.address.bar.picker.confirm" = "Onayla";
@@ -4054,7 +4054,19 @@
 "settings.cookie.pop-up-protection.protection" = "Çerez Açılır Pencere Engelleyici";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo, sizin için mevcut en gizli ayarları seçmeyi ve bu açılır pencereleri gizlemeyi deneyecektir.\n[Daha Fazla Bilgi](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo, gizliliği en üst düzeye çıkarmak, çerezleri en aza indirmek ve bu açılır pencereleri kapatmak için çerez tercihlerinizi otomatik olarak yönetebilir.\n[Daha Fazla Bilgi](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+
+/* Explanation below the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.explanation" = "Sizin için mümkün olan en gizli çerez seçeneklerini belirlemeyi hedefleyecek ve ardından bu açılır pencereleri kapatacağız.";
+
+/* Title for the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.title" = "Çerez Açılır Pencerelerini Otomatik Yönet";
+
+/* Explanation below the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.explanation" = "Ayrıca DuckDuckGo'nun, devre dışı bırakma seçeneği sunmayan açılır pencereleri kapatmak için sizin adınıza çerezleri kabul etmesine izin verin. Böylece bir tıklamadan tasarruf edebilirsiniz.";
+
+/* Title for the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.title" = "Devre Dışı Bırakma Seçeneği Olmayan Açılır Pencereler";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Çerez Açılır Pencerelerini Yönetin";
@@ -5420,5 +5432,28 @@
 /* Button to delete all chats in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.chats.button" = "Sohbetleri sil";
 
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+/* Top-level attachment menu option to attach the current page content to an AI chat message */
+"aichat.attachment.option.ask.about.page" = "Sayfa Hakkında Soru Sor";
+
+/* Status view message shown while the VPN is on but Strict routing is off */
+"network.protection.status.header.message.strict.routing.off" = "Katı Yönlendirme kapalıyken bazı trafikler VPN'i atlayabilir. Halka açık ağlar için Katı Yönlendirme önerilir.";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.off" = "Katı yönlendirme: Kapalı";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.on" = "Katı yönlendirme: Açık";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.tooltip.off" = "Halka açık ağlar için Katı Yönlendirme önerilir.";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.tooltip.on" = "Katı Yönlendirme açıkken bazı uygulamalar çalışmayabilir.";
+
+/* Title of the Troubleshooting section in the VPN status screen. */
+"network.protection.status.view.troubleshooting.section.title" = "Sorun Giderme";
+
+/* The body of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.body" = "Kapalıyken bazı trafikler VPN'i atlayabilir. Halka açık ağlar için Katı Yönlendirme önerilir.";
+/* The title of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.title" = "Katı Yönlendirme KAPALI";

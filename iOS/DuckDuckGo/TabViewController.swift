@@ -594,11 +594,17 @@ class TabViewController: UIViewController {
     let autoplaySettings: AutoplaySettings
     let duckAiNativeStorageHandler: DuckAiNativeStorageHandling?
     let duckAiFireModeStorageHandler: DuckAiNativeStorageHandling?
+
+    /// Main-frame response (URL + MIME) for the page-context gate; keyed by URL to avoid stale-MIME leaks.
+    private var lastMainFramePageContextResponse: (url: URL, mimeType: String?)?
+
     lazy var aiChatContextualSheetCoordinator: AIChatContextualSheetCoordinator = {
         let pageContextHandler = AIChatPageContextHandler(
             webViewProvider: { [weak self] in self?.webView },
             userScriptProvider: { [weak self] in self?.userScripts?.pageContextUserScript },
-            faviconProvider: { [weak self] url in self?.getFaviconBase64(for: url) }
+            faviconProvider: { [weak self] url in self?.getFaviconBase64(for: url) },
+            attachabilityPolicyProvider: { [weak self] in self?.currentPageContextAttachabilityPolicy() },
+            mimeTypeProvider: { [weak self] url in self?.lastMainFramePageContextMIMEType(for: url) }
         )
         let coordinator = AIChatContextualSheetCoordinator(
             voiceSearchHelper: voiceSearchHelper,
@@ -1860,6 +1866,7 @@ class TabViewController: UIViewController {
     }
     
     func onCopyAction(forUrl url: URL) {
+        let url = url.urlForCopyLinkAction
         let copyText: String
         if url.isDuckDuckGo {
             let cleanURL = url.removingInternalSearchParameters()
@@ -2022,9 +2029,27 @@ extension TabViewController: WKNavigationDelegate {
         }
     }
 
+    /// `nil` when the `aiPageContextBlocklist` config is absent/malformed (kill-switch, fail-open).
+    private func currentPageContextAttachabilityPolicy() -> PageContextAttachabilityPolicy? {
+        let settings = privacyConfigurationManager.privacyConfig.settings(for: .pageContext)
+        guard let blocklist = PageContextBlocklistSettings(blocklist: settings["aiPageContextBlocklist"]) else {
+            return nil
+        }
+        return PageContextAttachabilityPolicy(settings: blocklist)
+    }
+
+    /// `nil` unless the last observed main-frame response was for this URL.
+    private func lastMainFramePageContextMIMEType(for url: URL) -> String? {
+        lastMainFramePageContextResponse.flatMap { $0.url == url ? $0.mimeType : nil }
+    }
+
     private func handleNavigationResponse(_ navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
         let httpResponse = navigationResponse.response as? HTTPURLResponse
         let mimeType = MIMEType(from: navigationResponse.response.mimeType, fileExtension: navigationResponse.response.url?.pathExtension)
+        // Capture main-frame MIME for the page-context attachability gate.
+        if navigationResponse.isForMainFrame, let responseURL = navigationResponse.response.url {
+            lastMainFramePageContextResponse = (responseURL, navigationResponse.response.mimeType)
+        }
         let urlSchemeType = navigationResponse.response.url.map { SchemeHandler.schemeType(for: $0) } ?? .unknown
         let urlNavigationalScheme = navigationResponse.response.url?.scheme.map { URL.NavigationalScheme(rawValue: $0) }
 
@@ -2193,24 +2218,25 @@ extension TabViewController: WKNavigationDelegate {
 
     func preparePreview(completion: @escaping (UIImage?) -> Void) {
         DispatchQueue.main.async { [weak self] in
-            guard let webView = self?.webView,
-                  webView.bounds.height > 0 && webView.bounds.width > 0 else { completion(nil); return }
-            
-            let size = CGSize(width: webView.frame.size.width,
-                              height: webView.frame.size.height - webView.scrollView.contentInset.top - webView.scrollView.contentInset.bottom)
+            completion(self?.preparePreviewSync(afterScreenUpdates: true))
+        }
+    }
 
-            guard size.width > 0, size.height > 0 else { completion(nil); return }
+    // Synchronous capture, used when we must grab the preview before the view is torn down.
+    func preparePreviewSync(afterScreenUpdates: Bool = false) -> UIImage? {
+        guard let webView, webView.bounds.height > 0, webView.bounds.width > 0 else { return nil }
 
-            let renderer = UIGraphicsImageRenderer(size: size)
-            let image = renderer.image { context in
-                context.cgContext.translateBy(x: 0, y: -webView.scrollView.contentInset.top)
-                webView.drawHierarchy(in: webView.bounds, afterScreenUpdates: true)
-                if let jsAlertView = self?.jsAlertView {
-                    jsAlertView.drawHierarchy(in: jsAlertView.bounds, afterScreenUpdates: false)
-                }
+        let size = CGSize(width: webView.frame.size.width,
+                          height: webView.frame.size.height - webView.scrollView.contentInset.top - webView.scrollView.contentInset.bottom)
+        guard size.width > 0, size.height > 0 else { return nil }
+
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            context.cgContext.translateBy(x: 0, y: -webView.scrollView.contentInset.top)
+            webView.drawHierarchy(in: webView.bounds, afterScreenUpdates: afterScreenUpdates)
+            if let jsAlertView {
+                jsAlertView.drawHierarchy(in: jsAlertView.bounds, afterScreenUpdates: false)
             }
-
-            completion(image)
         }
     }
 
@@ -2741,14 +2767,18 @@ extension TabViewController: WKNavigationDelegate {
             }
         }
 
+        // Compose the synchronous main-frame request mutations (referrer trimming -> GPC -> search-token
+        // signals) in one pass and reload at most once.
+        var modifiedRequest = navigationAction.request
+        var didModifyRequest = false
+
         if navigationAction.isTargetingMainFrame(),
            !(navigationAction.request.url?.isCustomURLScheme() ?? false),
            navigationAction.navigationType != .backForward,
-           let newRequest = referrerTrimming.trimReferrer(forNavigation: navigationAction,
-                                                          originUrl: webView.url ?? navigationAction.sourceFrame.webView?.url) {
-            wrappedHandler(.cancel)
-            load(urlRequest: newRequest)
-            return
+           let trimmed = referrerTrimming.trimReferrer(forNavigation: navigationAction,
+                                                       originUrl: webView.url ?? navigationAction.sourceFrame.webView?.url) {
+            modifiedRequest = trimmed
+            didModifyRequest = true
         }
 
         if navigationAction.isTargetingMainFrame(),
@@ -2756,9 +2786,30 @@ extension TabViewController: WKNavigationDelegate {
            !navigationAction.shouldDownload,
            !(navigationAction.request.url?.isCustomURLScheme() ?? false),
            navigationAction.navigationType != .backForward,
-           let request = requestForDoNotSell(basedOn: navigationAction.request) {
+           let gpcRequest = requestForDoNotSell(basedOn: modifiedRequest) {
+            modifiedRequest = gpcRequest
+            didModifyRequest = true
+        }
+
+        // Attach Search Token experiment signals (dindexexp param + token header) to SERP navigations.
+        // Enrolled devices only, skipping back/forward so we don't wipe forward history.
+        if navigationAction.isTargetingMainFrame(),
+           navigationAction.navigationType != .backForward,
+           let url = navigationAction.request.url,
+           SerpSearchTokenInterceptor.isSerpURL(url),
+           let cohort = featureFlagger.assignedCohort(for: FeatureFlag.searchTokenExperiment) as? FeatureFlag.SearchTokenExperimentCohort {
+            let token = cohort == .treatment ? delegate?.searchToken(for: self) : nil
+            if let signalled = SerpSearchTokenInterceptor.signalledRequest(for: modifiedRequest,
+                                                                           cohort: cohort,
+                                                                           token: token) {
+                modifiedRequest = signalled
+                didModifyRequest = true
+            }
+        }
+
+        if didModifyRequest {
             wrappedHandler(.cancel)
-            load(urlRequest: request)
+            load(urlRequest: modifiedRequest)
             return
         }
 
@@ -3166,8 +3217,7 @@ extension TabViewController {
             let persistICS = FilePreviewHelper.shouldPersistInDownloads(
                 mimeType: MIMEType(from: navigationResponse.response.mimeType),
                 url: navigationResponse.response.url,
-                filename: navigationResponse.response.suggestedFilename,
-                featureFlagger: featureFlagger
+                filename: navigationResponse.response.suggestedFilename
             )
             do {
                 if let download = try downloadManager.makeDownload(navigationResponse: navigationResponse,
@@ -3378,8 +3428,7 @@ extension TabViewController {
               !download.temporary,
               !FilePreviewHelper.handlesDownloadNatively(mimeType: download.mimeType,
                                                          url: download.url,
-                                                         filename: download.filename,
-                                                         featureFlagger: featureFlagger)
+                                                         filename: download.filename)
         else { return }
 
         let attributedMessage = DownloadActionMessageViewHelper.makeDownloadStartedMessage(for: download)
@@ -3414,8 +3463,7 @@ extension TabViewController {
         DispatchQueue.main.async {
             let handledNatively = FilePreviewHelper.handlesDownloadNatively(mimeType: download.mimeType,
                                                                             url: download.location,
-                                                                            filename: download.filename,
-                                                                            featureFlagger: self.featureFlagger)
+                                                                            filename: download.filename)
             if !download.temporary && !handledNatively {
                 let attributedMessage = DownloadActionMessageViewHelper.makeDownloadFinishedMessage(for: download)
                 let addressBarBottom = self.appSettings.currentAddressBarPosition.isBottom
@@ -3435,12 +3483,11 @@ extension TabViewController {
     private func previewDownloadedFileIfNecessary(_ download: Download) {
         let canAutoPreview = FilePreviewHelper.canAutoPreview(mimeType: download.mimeType,
                                                               url: download.location,
-                                                              filename: download.filename,
-                                                              featureFlagger: featureFlagger)
+                                                              filename: download.filename)
         guard let delegate = self.delegate,
               delegate.tabCheckIfItsBeingCurrentlyPresented(self),
               canAutoPreview,
-              let fileHandler = FilePreviewHelper.fileHandlerForDownload(download, viewController: self, featureFlagger: featureFlagger)
+              let fileHandler = FilePreviewHelper.fileHandlerForDownload(download, viewController: self)
         else { return }
 
         if mostRecentAutoPreviewDownloadID == download.id {

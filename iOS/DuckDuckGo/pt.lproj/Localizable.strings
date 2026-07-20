@@ -1426,10 +1426,10 @@
 "cookie-popup-protection.opt-in.confirm" = "Confirmar";
 
 /* Body of the opt-in dialog when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.body" = "Vamos tentar selecionar as opções de cookies mais privadas disponíveis e fechá-las por ti. Se não tiverem opções de exclusão, vamos poupar-te um clique e aceitar estes cookies por ti.";
+"cookie-popup-protection.opt-in.disabled.body" = "Vamos tentar rejeitar o máximo de cookies possível. Se não houver opção de rejeição, vamos poupar-te um clique e aceitar estes cookies por ti.";
 
 /* Primary (recommended) option when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.primary-option" = "Gerir ou aceitar cookies por mim";
+"cookie-popup-protection.opt-in.disabled.primary-option" = "Rejeitar quando possível ou aceitar por mim";
 
 /* Secondary option when cookie pop-up protection is off */
 "cookie-popup-protection.opt-in.disabled.secondary-option" = "Prefiro continuar eu a geri-los";
@@ -1441,10 +1441,10 @@
 "cookie-popup-protection.opt-in.enabled.body" = "Podemos poupar-te um clique e aceitar estes cookies por ti.";
 
 /* Primary (recommended) option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.primary-option" = "Aceitar cookies sem opção de exclusão por mim";
+"cookie-popup-protection.opt-in.enabled.primary-option" = "Aceitar cookies que não podem ser rejeitados";
 
 /* Secondary option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.secondary-option" = "Prefiro continuar eu a geri-los";
+"cookie-popup-protection.opt-in.enabled.secondary-option" = "Prefiro continuar eu a aceitá-los";
 
 /* Title of the opt-in dialog when cookie pop-up protection is already enabled */
 "cookie-popup-protection.opt-in.enabled.title" = "Cansado de pop-ups de cookies sem opção de exclusão?";
@@ -3037,7 +3037,7 @@
 "network.protection.vpn.data-volume" = "Volume de Dados";
 
 /* Footer text for the Exclude CGNAT setting item. */
-"network.protection.vpn.exclude.cgnat.setting.footer" = "Recomendamos desativá-la para que todo o teu tráfego passe pela VPN. Se tiveres problemas com funcionalidades como chamadas por Wi-Fi, mensagens ou correio de voz, experimenta ativá-la.";
+"network.protection.vpn.exclude.cgnat.setting.footer" = "Contornar a VPN para serviços de operador, tais como chamadas Wi-Fi e correio de voz.";
 
 /* Title for the Exclude CGNAT setting item. */
 "network.protection.vpn.exclude.cgnat.setting.title" = "Excluir serviços de operadoras";
@@ -3115,10 +3115,10 @@
 "network.protection.vpn.shortcuts.section.header" = "Atalhos";
 
 /* Footer text for the Strict Routing setting item. The 'Learn more' text is a Markdown link. */
-"network.protection.vpn.strict.routing.setting.footer" = "Recomendado em redes em que não confias, por ex. Wi-Fi público em hotéis, bares, etc. Se tiveres problemas com funcionalidades (como CarPlay, AirDrop, etc.) ou com a ligação a outros dispositivos, experimenta desligá-lo. [Sabe mais](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack)";
+"network.protection.vpn.strict.routing.setting.footer" = "Impedir que as aplicações ignorem a VPN. Se tiveres problemas com funcionalidades de Wi-Fi (como AirDrop ou iPhone Mirroring), desativá-la pode ajudar. Fortemente recomendado em redes em que não confias, como Wi-Fi público. [Sabe mais](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack).";
 
 /* Title for the Strict Routing setting item. */
-"network.protection.vpn.strict.routing.setting.title" = "Encaminhamento estrito";
+"network.protection.vpn.strict.routing.setting.title" = "Forçar encaminhamento estrito (recomendado)";
 
 /* Confirm button for the new address bar picker */
 "new.address.bar.picker.confirm" = "Confirmar";
@@ -4054,7 +4054,19 @@
 "settings.cookie.pop-up-protection.protection" = "Proteção contra pop-ups de cookies";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "O DuckDuckGo vai tentar selecionar as definições mais privadas disponíveis e ocultar pop-ups.\n[Sabe Mais](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "O DuckDuckGo pode gerir automaticamente as tuas preferências de cookies para maximizar a privacidade, minimizar os cookies e fechar estes pop-ups.\n[Sabe mais](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+
+/* Explanation below the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.explanation" = "Vamos tentar selecionar apenas as opções de cookies mais privadas disponíveis por ti e, em seguida, fechar estes pop-ups.";
+
+/* Title for the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.title" = "Gerir automaticamente pop-ups de cookies";
+
+/* Explanation below the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.explanation" = "Permite também que o DuckDuckGo te poupe um clique, aceitando cookies em teu nome para fechar pop-ups sem opção de exclusão.";
+
+/* Title for the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.title" = "Pop-ups sem opção de exclusão";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Gerir pop-ups de cookies";
@@ -5420,5 +5432,28 @@
 /* Button to delete all chats in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.chats.button" = "Eliminar conversas";
 
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+/* Top-level attachment menu option to attach the current page content to an AI chat message */
+"aichat.attachment.option.ask.about.page" = "Perguntar sobre a página";
+
+/* Status view message shown while the VPN is on but Strict routing is off */
+"network.protection.status.header.message.strict.routing.off" = "Algum tráfego pode contornar a VPN enquanto o encaminhamento estrito estiver desativado. O encaminhamento estrito é recomendado para redes públicas.";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.off" = "Encaminhamento estrito: desativado";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.on" = "Encaminhamento estrito: ativado";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.tooltip.off" = "O encaminhamento estrito é recomendado para redes públicas.";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.tooltip.on" = "Algumas aplicações podem não funcionar enquanto o encaminhamento estrito estiver ativado.";
+
+/* Title of the Troubleshooting section in the VPN status screen. */
+"network.protection.status.view.troubleshooting.section.title" = "Resolução de problemas";
+
+/* The body of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.body" = "Algum tráfego pode contornar a VPN enquanto estiver desativada. O encaminhamento estrito é recomendado para redes públicas.";
+/* The title of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.title" = "O encaminhamento estrito está desativado";

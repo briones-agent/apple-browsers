@@ -1112,7 +1112,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 title: UserText.aiChatImageGenButtonLabel,
                 subtitle: UserText.aiChatImageGenToolSubtitle
             )
-            createImageItem.image = DesignSystemImages.Glyphs.Size16.image
+            createImageItem.image = DesignSystemImages.Glyphs.Size16.images
             createImageItem.target = self
             createImageItem.action = #selector(toolsMenuCreateImageClicked)
             if omnibarController.isImageGenerationMode {
@@ -1137,8 +1137,11 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         }
 
         if isCustomizeResponsesItemVisible {
+            if menu.numberOfItems > 0 {
+                menu.addItem(.separator())
+            }
             let store = CustomizeResponsesStore(storageHandler: duckAiNativeStorageHandler)
-            let state = store.currentState(clarifiesLabel: UserText.aiChatCustomizeResponsesClarifies)
+            let state = store.currentState()
             let subtitle = (state.hasCustomization ? state.subLabel : nil) ?? UserText.aiChatCustomizeResponsesToolSubtitle
             let rowView = CustomizeResponsesMenuRowView(
                 title: UserText.aiChatCustomizeResponsesButtonLabel,
@@ -1148,7 +1151,10 @@ final class AIChatOmnibarContainerViewController: NSViewController {
                 isActive: state.isActive,
                 isEnabled: !omnibarController.isImageGenerationMode,
                 onOpen: { [weak self] in self?.presentCustomizeResponsesModal() },
-                onToggle: { active in store.setActive(active) }
+                onToggle: { active in
+                    store.setActive(active)
+                    NotificationCenter.default.post(name: .aiChatCustomizeResponsesDidChange, object: nil)
+                }
             )
             let customizeItem = NSMenuItem()
             customizeItem.view = rowView
@@ -1195,7 +1201,11 @@ final class AIChatOmnibarContainerViewController: NSViewController {
             return
         }
         let modal = CustomizeResponsesModalController(burnerMode: burnerMode)
-        modal.onClose = { [weak self] in self?.customizeResponsesModal = nil }
+        modal.onClose = { [weak self] in
+            self?.customizeResponsesModal = nil
+            // Fires on every dismissal path (FE close, backdrop, Esc) so open NTPs re-push their config.
+            NotificationCenter.default.post(name: .aiChatCustomizeResponsesDidChange, object: nil)
+        }
         customizeResponsesModal = modal
         modal.present(over: parentWindow)
     }
@@ -1741,64 +1751,28 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        // Accessible models first (no header), then a "Subscriber exclusive" section listing every
-        // gated model (dimmed, with a PLUS/PRO badge) — unlike AIChatModelSectionBuilder.buildSections
-        // (used by the NTP web dropdown), gated models are never hidden here, so a Plus user still
-        // sees Pro-only models. When the subscription-upsell feature flag is on, the section also
-        // gets a "Try for free"/"Upgrade" badge that opens the confirmation dialog; when it's off,
-        // the gated rows are plain dimmed, non-interactive rows with no CTA — same as before this
-        // feature shipped, so disabling the flag can't reintroduce the "select a model you don't
-        // have access to" bug even though it removes the upsell path.
-        let (accessible, gated) = AIChatModelSectionBuilder.buildGatedSections(models: omnibarController.models)
-        let accessibleModels = Self.pocOrderedAccessibleModels(accessible, userTier: omnibarController.userTier)
-
-        for model in accessibleModels {
-            menu.addItem(modelRow(
-                for: model,
-                trailingText: Self.pocTrailingLabel(for: model),
-                isSelected: model.id == selectedModelId,
-                isDimmed: false,
-                isInteractive: true,
-                in: menu
-            ))
-        }
-
-        if !gated.isEmpty {
-            menu.addItem(.separator())
-            if omnibarController.isSubscriptionUpsellEnabled {
-                // A free user's gated section mixes Plus and Pro models — "Subscriber exclusive" fits.
-                // A Plus user is already a subscriber, and everything left gated is Pro-only, so call
-                // that out specifically instead of reusing the generic "Subscriber" label.
-                let isFreeUser = omnibarController.userTier == .free
-                let headerTitle = isFreeUser ? UserText.aiChatModelPickerSubscriberExclusive : UserText.aiChatModelPickerProExclusive
-                // Unlike the header title (which only cares whether the user is a subscriber at
-                // all), the badge also depends on StoreKit free-trial eligibility — a free user who
-                // already used their trial sees "Upgrade" here too, same as a Plus subscriber.
-                let badgeText = omnibarController.shouldOfferFreeTrial ? UserText.aiChatModelPickerTryForFree : UserText.aiChatModelPickerUpgrade
+        // The controller decides what the menu shows; this only maps each item to an NSMenuItem.
+        for item in omnibarController.modelPickerItems(selectedModelId: selectedModelId) {
+            switch item {
+            case .model(let model, let badge, let isSelected):
+                menu.addItem(modelRow(for: model, trailingText: badge, isSelected: isSelected,
+                                      isDimmed: false, isInteractive: true, in: menu))
+            case .separator:
+                menu.addItem(.separator())
+            case .gatedHeader(let title, let badge, let isMuted, let representativeModel):
                 let headerItem = NSMenuItem.createSubscriberExclusiveHeader(
-                    title: headerTitle,
-                    badgeText: badgeText,
-                    isBadgeMuted: omnibarController.isBadgeMuted,
+                    title: title,
+                    badgeText: badge,
+                    isBadgeMuted: isMuted,
                     action: #selector(gatedModelSelected(_:)),
                     target: self,
                     menu: menu
                 )
-                // The header's badge isn't tied to one model, but routing needs a required tier: the
-                // first gated model is representative (for a free user any gated model routes to the
-                // same purchase flow; for a plus user every remaining gated model requires pro).
-                headerItem.representedObject = gated.first?.model
+                headerItem.representedObject = representativeModel
                 menu.addItem(headerItem)
-                omnibarController.recordBadgeImpression()
-            }
-            for gatedModel in gated {
-                menu.addItem(modelRow(
-                    for: gatedModel.model,
-                    trailingText: Self.pocTrailingLabel(for: gatedModel.model),
-                    isSelected: false,
-                    isDimmed: true,
-                    isInteractive: false,
-                    in: menu
-                ))
+            case .gatedModel(let model, let badge):
+                menu.addItem(modelRow(for: model, trailingText: badge, isSelected: false,
+                                      isDimmed: true, isInteractive: false, in: menu))
             }
         }
 
@@ -1807,7 +1781,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     }
 
     private func modelRow(for model: AIChatModel, trailingText: String?, isSelected: Bool, isDimmed: Bool, isInteractive: Bool, in menu: NSMenu) -> NSMenuItem {
-        let title = Self.splitModelTitle(model.name)
+        let title = model.titleComponents
         let item = NSMenuItem.createModelRow(
             icon: model.menuIcon,
             boldTitle: title.bold,
@@ -1823,68 +1797,6 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         )
         item.representedObject = model
         return item
-    }
-
-    /// Splits a model name into a bold family part and a regular remainder (e.g. "GPT-5.4 mini"
-    /// → bold "GPT-5.4", regular "mini"). Best-effort first-token split for the PoC.
-    private static func splitModelTitle(_ name: String) -> (bold: String, regular: String) {
-        guard let spaceIndex = name.firstIndex(of: " ") else { return (name, "") }
-        return (String(name[..<spaceIndex]), String(name[name.index(after: spaceIndex)...]))
-    }
-
-    /// PoC-only "correct ordering" per https://app.asana.com/1/137249556945/task/1216388092784294 —
-    /// duck.ai web computes this client-side too (a hand-maintained `modelPickerLayoutByTier` per
-    /// the linked task's comments): per-tier "recommended" models come first, everything else keeps
-    /// the API's relative order. No descriptive subtitles for now — those need real backend/copy
-    /// support, not this PR's per-position guesses. Delete this whole function (and its matcher
-    /// table) once the backend ships proper ordering — nothing else in this file depends on it.
-    /// Follow-up to replace this PoC scaffolding with the final approach:
-    /// https://app.asana.com/1/137249556945/project/1211654189969294/task/1216559729471554
-    private static func pocOrderedAccessibleModels(_ models: [AIChatModel], userTier: AIChatUserTier) -> [AIChatModel] {
-        var remaining = models
-        var recommended: [AIChatModel] = []
-        for matches in pocRecommendedModelMatchers(for: userTier) {
-            guard let index = remaining.firstIndex(where: { matches($0.name.lowercased()) }) else { continue }
-            recommended.append(remaining.remove(at: index))
-        }
-        return recommended + remaining
-    }
-
-    /// Per-tier "recommended" model matchers, in display order. Matches by lowercased name
-    /// substring (family/variant, not exact model id) since the mockups show the same family
-    /// recur across version bumps (e.g. Claude Opus 4.7 → 4.8) — mirrors the existing PoC
-    /// heuristics' approach, not tied to a stable backend id.
-    private static func pocRecommendedModelMatchers(for userTier: AIChatUserTier) -> [(String) -> Bool] {
-        let isFullGPT: (String) -> Bool = { $0.contains("gpt") && !$0.contains("mini") && !$0.contains("nano") }
-        switch userTier {
-        case .free:
-            return [
-                { $0.contains("nano") },
-                { $0.contains("mini") },
-                { $0.contains("claude") && $0.contains("haiku") }
-            ]
-        case .plus, .internal:
-            return [
-                isFullGPT,
-                { $0.contains("claude") && $0.contains("sonnet") }
-            ]
-        case .pro:
-            return [
-                isFullGPT,
-                { $0.contains("claude") && $0.contains("opus") }
-            ]
-        }
-    }
-
-    /// Trailing grey PLUS/PRO label for a model row, accessible or gated alike, whenever the model's
-    /// own minimum tier is above free (matches the web client, which badges e.g. a Plus user's
-    /// already-accessible Plus-tier models too). `nil` for free-tier models.
-    private static func pocTrailingLabel(for model: AIChatModel) -> String? {
-        switch model.lowestPublicAccessTier {
-        case .plus: return UserText.aiChatModelPickerTierBadgePlus
-        case .pro: return UserText.aiChatModelPickerTierBadgePro
-        case .free, .none: return nil
-        }
     }
 
     @objc private func gatedModelSelected(_ sender: NSMenuItem) {
@@ -1919,79 +1831,38 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         menu.autoenablesItems = false
         menu.minimumWidth = Self.reasoningPickerMinimumWidth
 
-        // Falls back to the first (always-accessible) effort when nothing is resolved yet — e.g.
-        // the very first time the picker is opened, before fetchModels() has returned and
-        // displayedReasoningEffort is still nil. Without this, no row shows a checkmark even
-        // though the chip itself already displays the same fallback (updateReasoningPickerVisibility
-        // applies it too) — the menu and the chip must agree on what's "current".
-        let currentEffort = omnibarController.displayedReasoningEffort ?? omnibarController.pickerReasoningEfforts.first
-        var didShowUpsellBadge = false
-        for effort in omnibarController.pickerReasoningEfforts {
-            let requiredTier = omnibarController.requiredTier(for: effort)
-            menu.addItem(reasoningEffortRow(for: effort, requiredTier: requiredTier, isSelected: effort == currentEffort, in: menu))
-            if requiredTier != nil && omnibarController.isSubscriptionUpsellEnabled {
-                didShowUpsellBadge = true
-            }
-        }
-        // One impression per menu-open, matching the model picker's header — not one per gated row.
-        if didShowUpsellBadge {
-            omnibarController.recordBadgeImpression()
+        // The controller decides what the menu shows; this only maps each item to an NSMenuItem.
+        for item in omnibarController.reasoningPickerItems() {
+            menu.addItem(reasoningEffortRow(for: item, in: menu))
         }
 
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: -5), in: reasoningPickerButton)
     }
 
-    /// Every reasoning-effort row — accessible or gated — goes through this one custom view (the
-    /// same `ModelMenuRowView` the model picker uses), rather than mixing native `NSMenuItem`s for
-    /// accessible efforts with a custom view only for the gated one. That split briefly existed
-    /// and didn't hold up: the two rendering paths don't agree closely enough on left margins or
-    /// hover-highlight color to sit believably in the same menu (a gated row rendered visibly
-    /// shifted right and off-color next to its native siblings).
-    ///
-    /// With the subscription-upsell feature flag on, a gated effort renders like any other row —
-    /// full color, highlights on hover, tappable anywhere — because tapping it does do something:
-    /// `reasoningEffortSelected` already routes a gated selection to the upsell dialog via
-    /// `handleReasoningEffortSelection`. The badge additionally gets its own tap target
-    /// (`ModelMenuRowView.onTapBadge`) purely so it's independently tappable within the row, not
-    /// because the row itself is disabled. With the flag off, the badge disappears in favor of a
-    /// plain PLUS/PRO label matching the model picker's own gated rows — no badge, no dialog, and
-    /// the row goes back to being genuinely inert, same as before the upsell UI shipped.
-    private func reasoningEffortRow(for effort: AIChatReasoningEffort, requiredTier: AIChatModelPublicAccessTier?, isSelected: Bool, in menu: NSMenu) -> NSMenuItem {
-        let isGated = requiredTier != nil
-        let showsUpsellBadge = isGated && omnibarController.isSubscriptionUpsellEnabled
-        let badgeText = showsUpsellBadge
-            ? (omnibarController.shouldOfferFreeTrial ? UserText.aiChatModelPickerTryForFree : UserText.aiChatModelPickerUpgrade)
-            : nil
-        let item = NSMenuItem.createModelRow(
-            icon: effort.icon,
-            boldTitle: effort.title,
+    /// Maps a resolved item to a row via `ModelMenuRowView` (shared with the model picker so gated
+    /// rows stay aligned with their siblings). A gated row is interactive only when it shows a badge.
+    private func reasoningEffortRow(for item: AIChatReasoningPickerItem, in menu: NSMenu) -> NSMenuItem {
+        let hasUpsellBadge = item.upsellBadge != nil
+        let menuItem = NSMenuItem.createModelRow(
+            icon: item.effort.icon,
+            boldTitle: item.effort.title,
             regularTitle: "",
-            subtitle: effort.subtitle,
+            subtitle: item.effort.subtitle,
             subtitleFontSize: 11,
-            trailingText: showsUpsellBadge ? nil : Self.tierBadgeText(for: requiredTier),
-            trailingBadgeText: badgeText,
-            isBadgeMuted: omnibarController.isBadgeMuted,
+            trailingText: item.trailingText,
+            trailingBadgeText: item.upsellBadge,
+            isBadgeMuted: item.isBadgeMuted,
             emphasizesTitle: false,
-            isSelected: isSelected && !isGated,
-            isDimmed: isGated && !showsUpsellBadge,
-            isInteractive: !isGated || showsUpsellBadge,
+            isSelected: item.isSelected,
+            isDimmed: item.isGated && !hasUpsellBadge,
+            isInteractive: !item.isGated || hasUpsellBadge,
             action: #selector(reasoningEffortSelected(_:)),
-            badgeAction: showsUpsellBadge ? #selector(reasoningEffortBadgeSelected(_:)) : nil,
+            badgeAction: hasUpsellBadge ? #selector(reasoningEffortBadgeSelected(_:)) : nil,
             target: self,
             menu: menu
         )
-        item.representedObject = effort
-        return item
-    }
-
-    /// Plain PLUS/PRO trailing label for a gated reasoning effort, matching the model picker's own
-    /// gated rows. `nil` when the effort isn't gated at all.
-    private static func tierBadgeText(for requiredTier: AIChatModelPublicAccessTier?) -> String? {
-        switch requiredTier {
-        case .plus: return UserText.aiChatModelPickerTierBadgePlus
-        case .pro: return UserText.aiChatModelPickerTierBadgePro
-        case .free, .none: return nil
-        }
+        menuItem.representedObject = item.effort
+        return menuItem
     }
 
     @objc private func reasoningEffortBadgeSelected(_ sender: NSMenuItem) {
@@ -2013,12 +1884,9 @@ final class AIChatOmnibarContainerViewController: NSViewController {
         }
     }
 
-    /// Explains the subscription upsell for a gated model or reasoning effort via
-    /// `AIChatSubscriptionUpsellDialog` — a custom SwiftUI `ModalView` sheet, not an `NSAlert`.
-    /// `NSAlert` has no public API for centering its icon/title, and hacking its private view
-    /// hierarchy to force that layout proved unreliable; a plain SwiftUI `VStack` gives the same
-    /// centered look with no guessing. Both the model picker and the reasoning-effort picker route
-    /// a gated tap here rather than navigating directly (per design review).
+    /// Shows the upsell confirmation before routing to the subscription flow — both pickers route a
+    /// gated tap here rather than navigating directly (per design review). A SwiftUI `ModalView`
+    /// rather than `NSAlert`, which can't center its icon/title.
     private func presentSubscriptionUpsellDialog(requiredTier: AIChatModelPublicAccessTier, origin: SubscriptionFunnelOrigin) {
         var dialog = AIChatSubscriptionUpsellDialog()
         switch omnibarController.userTier {
@@ -2290,27 +2158,5 @@ private final class AttachTabsSubmenuObserver: NSObject, NSMenuDelegate {
     /// user actually picked or removed something during this session.
     func markDidMutate() {
         didMutateDuringSession = true
-    }
-}
-
-// MARK: - Customize Responses state (native storage bridge)
-
-final class CustomizeResponsesStore {
-
-    private let storageHandler: DuckAiNativeStorageHandling?
-
-    init(storageHandler: DuckAiNativeStorageHandling?) {
-        self.storageHandler = storageHandler
-    }
-
-    func currentState(clarifiesLabel: String) -> CustomizeResponsesState {
-        guard let storageHandler else { return .none }
-        let customization = (try? storageHandler.getEntry(key: CustomizeResponsesStorageKey.customization)) ?? nil
-        let active = (try? storageHandler.getEntry(key: CustomizeResponsesStorageKey.active)) ?? nil
-        return CustomizeResponsesState.make(customizationValue: customization, activeValue: active, clarifiesLabel: clarifiesLabel)
-    }
-
-    func setActive(_ active: Bool) {
-        try? storageHandler?.putEntry(key: CustomizeResponsesStorageKey.active, value: active ? "true" : "false")
     }
 }

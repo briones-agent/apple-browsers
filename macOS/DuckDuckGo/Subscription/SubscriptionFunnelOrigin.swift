@@ -88,10 +88,7 @@ enum SubscriptionFunnelOrigin: String {
     /// https://app.asana.com/1/137249556945/project/1208671677432066/task/1215275657171787
     case duckAIReasoningPicker = "funnel_duckai_macos__reasoningpicker"
 
-    /// User entered the funnel by tapping a gated model or reasoning effort in the New Tab Page's
-    /// duck.ai omnibar. Unlike the address-bar origins above, native has no visibility into which
-    /// specific model/effort triggered this — the NTP web app decides purchase-vs-upgrade itself
-    /// and calls one of two param-less native messages accordingly.
+    /// User entered the funnel by tapping a gated model or reasoning effort in the New Tab Page's duck.ai omnibar.
     /// https://app.asana.com/1/137249556945/task/1216424447885172
     case newTabPageOmnibar = "funnel_newtab_macos__omnibar"
 }

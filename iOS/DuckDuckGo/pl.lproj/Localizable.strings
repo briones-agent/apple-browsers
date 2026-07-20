@@ -1426,10 +1426,10 @@
 "cookie-popup-protection.opt-in.confirm" = "Potwierdź";
 
 /* Body of the opt-in dialog when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.body" = "Postaramy się wybrać najbardziej prywatne dostępne opcje plików cookie i zamknąć je za Ciebie. Jeśli nie mają opcji rezygnacji, zaoszczędzimy Ci kliknięcia i zaakceptujemy te pliki cookie za Ciebie.";
+"cookie-popup-protection.opt-in.disabled.body" = "Postaramy się odrzucić jak najwięcej plików cookie. Jeśli nie będzie opcji odrzucenia, zaoszczędzimy Ci kliknięcia i zaakceptujemy te pliki cookie za Ciebie.";
 
 /* Primary (recommended) option when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.primary-option" = "Zarządzaj plikami cookie lub zaakceptuj je za mnie";
+"cookie-popup-protection.opt-in.disabled.primary-option" = "Odrzucaj, gdy to możliwe, lub akceptuj za mnie";
 
 /* Secondary option when cookie pop-up protection is off */
 "cookie-popup-protection.opt-in.disabled.secondary-option" = "Będę się nimi zajmować samodzielnie";
@@ -1441,10 +1441,10 @@
 "cookie-popup-protection.opt-in.enabled.body" = "Możemy zaoszczędzić Ci kliknięcia i zaakceptować te pliki cookie za Ciebie.";
 
 /* Primary (recommended) option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.primary-option" = "Akceptuj za mnie pliki cookie niewymagające rezygnacji";
+"cookie-popup-protection.opt-in.enabled.primary-option" = "Akceptuj pliki cookie, których nie można odrzucić";
 
 /* Secondary option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.secondary-option" = "Będę się nimi zajmować samodzielnie";
+"cookie-popup-protection.opt-in.enabled.secondary-option" = "Nadal będę je akceptować samodzielnie";
 
 /* Title of the opt-in dialog when cookie pop-up protection is already enabled */
 "cookie-popup-protection.opt-in.enabled.title" = "Masz dość wyskakujących okienek z plikami cookie, z których nie możesz zrezygnować?";
@@ -3037,7 +3037,7 @@
 "network.protection.vpn.data-volume" = "Ilość danych";
 
 /* Footer text for the Exclude CGNAT setting item. */
-"network.protection.vpn.exclude.cgnat.setting.footer" = "Zalecane jest wyłączenie tej opcji, aby cały ruch przechodził przez VPN. Jeśli masz problemy z funkcjami, takimi jak połączenia Wi-Fi, wiadomości lub poczta głosowa, spróbuj włączyć tę opcję.";
+"network.protection.vpn.exclude.cgnat.setting.footer" = "Omiń sieć VPN w przypadku usług operatora, takich jak połączenia Wi-Fi i poczta głosowa.";
 
 /* Title for the Exclude CGNAT setting item. */
 "network.protection.vpn.exclude.cgnat.setting.title" = "Wyklucz usługi operatorów";
@@ -3115,10 +3115,10 @@
 "network.protection.vpn.shortcuts.section.header" = "Skróty";
 
 /* Footer text for the Strict Routing setting item. The 'Learn more' text is a Markdown link. */
-"network.protection.vpn.strict.routing.setting.footer" = "Polecane w sieciach, którym nie ufasz, np. publiczne Wi-Fi w hotelach, barach itd. Jeśli masz problemy z funkcjami (takimi jak CarPlay, AirDrop itp.) lub łączeniem się z innymi urządzeniami, spróbuj je wyłączyć. [Dowiedz się więcej](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack)";
+"network.protection.vpn.strict.routing.setting.footer" = "Blokuj aplikacjom możliwość pomijania VPN. Jeśli masz problemy z funkcjami Wi-Fi (takimi jak AirDrop lub iPhone Mirroring), wyłączenie tej opcji może pomóc. Zdecydowanie zalecane w sieciach, którym nie ufasz, takich jak publiczne Wi-Fi. [Dowiedz się więcej](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack).";
 
 /* Title for the Strict Routing setting item. */
-"network.protection.vpn.strict.routing.setting.title" = "Ścisły routing";
+"network.protection.vpn.strict.routing.setting.title" = "Wymuś ścisły routing (zalecane)";
 
 /* Confirm button for the new address bar picker */
 "new.address.bar.picker.confirm" = "Potwierdź";
@@ -4054,7 +4054,19 @@
 "settings.cookie.pop-up-protection.protection" = "Ochrona przed wyskakującymi okienkami dotyczącymi plików cookie";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo spróbuje wybrać najbardziej prywatne dostępne ustawienia i ukryć te wyskakujące okienka.\n[Więcej informacji](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo może automatycznie zarządzać preferencjami dotyczącymi plików cookie, aby zmaksymalizować prywatność, zminimalizować liczbę plików cookie i zamknąć te wyskakujące okienka.\n[Więcej informacji](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+
+/* Explanation below the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.explanation" = "Postaramy się wybrać dla Ciebie tylko najbardziej prywatne dostępne opcje plików cookie, a następnie zamknąć te wyskakujące okienka.";
+
+/* Title for the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.title" = "Automatycznie zarządzaj okienkami z prośbą o zgodę";
+
+/* Explanation below the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.explanation" = "Pozwól też DuckDuckGo zaoszczędzić ci kliknięcie, akceptując w Twoim imieniu pliki cookie, aby zamknąć wyskakujące okienka, z których nie możesz zrezygnować.";
+
+/* Title for the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.title" = "Wyskakujące okienka bez możliwości rezygnacji";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Zarządzaj okienkami z prośbą o zgodę";
@@ -5420,5 +5432,28 @@
 /* Button to delete all chats in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.chats.button" = "Usuń czaty";
 
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+/* Top-level attachment menu option to attach the current page content to an AI chat message */
+"aichat.attachment.option.ask.about.page" = "Zapytaj o stronę";
+
+/* Status view message shown while the VPN is on but Strict routing is off */
+"network.protection.status.header.message.strict.routing.off" = "Część ruchu może ominąć sieć VPN, gdy ścisły routing jest wyłączony. Ścisły routing jest zalecany w przypadku sieci publicznych.";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.off" = "Ścisły routing: Wyłączony";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.on" = "Ścisły routing: Włączony";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.tooltip.off" = "Ścisły routing jest zalecany w przypadku sieci publicznych.";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.tooltip.on" = "Niektóre aplikacje mogą nie działać, gdy włączony jest ścisły routing.";
+
+/* Title of the Troubleshooting section in the VPN status screen. */
+"network.protection.status.view.troubleshooting.section.title" = "Rozwiązywanie problemów";
+
+/* The body of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.body" = "Niektóre dane mogą pomijać VPN, gdy jest on wyłączony. Ścisły routing jest zalecany w przypadku sieci publicznych.";
+/* The title of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.title" = "Ścisły routing jest WYŁĄCZONY";

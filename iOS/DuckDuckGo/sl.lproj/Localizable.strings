@@ -1426,10 +1426,10 @@
 "cookie-popup-protection.opt-in.confirm" = "Potrdi";
 
 /* Body of the opt-in dialog when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.body" = "Poskušali bomo izbrati najbolj zasebne možnosti piškotkov, ki so na voljo, in jih zapreti namesto vas. Če nimajo možnosti zavrnitve, vam bomo prihranili klik in te piškotke sprejeli namesto vas.";
+"cookie-popup-protection.opt-in.disabled.body" = "Poskušali bomo zavrniti čim več piškotkov. Če možnost zavrnitve ne bo na voljo, vam bomo prihranili klik in te piškotke sprejeli namesto vas.";
 
 /* Primary (recommended) option when cookie pop-up protection is off */
-"cookie-popup-protection.opt-in.disabled.primary-option" = "Upravljaj ali sprejmi piškotke zame";
+"cookie-popup-protection.opt-in.disabled.primary-option" = "Zavrni, ko je mogoče, ali sprejmi zame";
 
 /* Secondary option when cookie pop-up protection is off */
 "cookie-popup-protection.opt-in.disabled.secondary-option" = "Upravljanje bom še naprej urejal/-a sam/-a";
@@ -1441,10 +1441,10 @@
 "cookie-popup-protection.opt-in.enabled.body" = "Prihranimo vam lahko klik in te piškotke sprejmemo namesto vas.";
 
 /* Primary (recommended) option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.primary-option" = "Zame sprejmi piškotke brez možnosti zavrnitve";
+"cookie-popup-protection.opt-in.enabled.primary-option" = "Sprejmi piškotke, ki jih ni mogoče zavrniti";
 
 /* Secondary option when cookie pop-up protection is already enabled */
-"cookie-popup-protection.opt-in.enabled.secondary-option" = "Upravljanje bom še naprej urejal/-a sam/-a";
+"cookie-popup-protection.opt-in.enabled.secondary-option" = "Sprejemanje bom še naprej urejal/-a sam/-a";
 
 /* Title of the opt-in dialog when cookie pop-up protection is already enabled */
 "cookie-popup-protection.opt-in.enabled.title" = "Ste naveličani pojavnih oken s piškotki, ki vam ne omogočajo, da jih zavrnete?";
@@ -3037,7 +3037,7 @@
 "network.protection.vpn.data-volume" = "Podatkovni nosilec";
 
 /* Footer text for the Exclude CGNAT setting item. */
-"network.protection.vpn.exclude.cgnat.setting.footer" = "Priporočamo izklop, da ves vaš promet poteka prek VPN. Če imate težave s funkcijami, kot so klicanje prek Wi-Fi, sporočanje ali glasovna pošta, poskusite to funkcijo vklopiti.";
+"network.protection.vpn.exclude.cgnat.setting.footer" = "Obhod VPN za storitve operaterja, kot sta klicanje prek Wi-Fi in glasovna pošta.";
 
 /* Title for the Exclude CGNAT setting item. */
 "network.protection.vpn.exclude.cgnat.setting.title" = "Izključi storitve operaterja";
@@ -3115,10 +3115,10 @@
 "network.protection.vpn.shortcuts.section.header" = "Bližnjice";
 
 /* Footer text for the Strict Routing setting item. The 'Learn more' text is a Markdown link. */
-"network.protection.vpn.strict.routing.setting.footer" = "Priporočeno v omrežjih, ki jim ne zaupate, npr. javni wifi v hotelih, barih itd. Če imate težave s funkcijami (kot so CarPlay, AirDrop itd.) ali povezovanjem z drugimi napravami, poskusite to izklopiti. [Več o tem](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack)";
+"network.protection.vpn.strict.routing.setting.footer" = "Aplikacijam prepreči obhod VPN. Če imate težave s funkcijami Wi-Fi (kot sta AirDrop ali iPhone Mirroring), lahko delovanje izboljšate z izklopom te možnosti. Močno priporočeno v omrežjih, ki jim ne zaupate, na primer v javnih omrežjih Wi-Fi. [Več o tem](https://duckduckgo.com/duckduckgo-help-pages/privacy-pro/vpn/security-reports/2024-audit#resolved-tunnelvision-and-tunnelcrack).";
 
 /* Title for the Strict Routing setting item. */
-"network.protection.vpn.strict.routing.setting.title" = "Strogo usmerjanje";
+"network.protection.vpn.strict.routing.setting.title" = "Uveljavi strogo usmerjanje (priporočeno)";
 
 /* Confirm button for the new address bar picker */
 "new.address.bar.picker.confirm" = "Potrdi";
@@ -4054,7 +4054,19 @@
 "settings.cookie.pop-up-protection.protection" = "Zaščita pred pojavnimi okni piškotkov";
 
 /* Explanation in Settings how the cookie pop up protection feature works */
-"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo bo poskusil izbrati najbolj zasebne nastavitve, ki so na voljo, in skriti ta pojavna okna za vas.\n[Več o tem](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+"settings.cookie.pop.up.protection.explanation" = "DuckDuckGo lahko samodejno upravlja nastavitve piškotkov za povečanje zasebnosti, zmanjšanje števila piškotkov in zapiranje teh pojavnih oken.\n[Več o tem](ddgQuickLink://duckduckgo.com/duckduckgo-help-pages/privacy/web-tracking-protections/#cookie-pop-up-protection)";
+
+/* Explanation below the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.explanation" = "Poskušali bomo izbrati le najbolj zasebne možnosti piškotkov, ki so na voljo za vas, nato pa zapreti ta pojavna okna.";
+
+/* Title for the auto-manage cookie pop-ups toggle in settings */
+"settings.cookie.auto-manage.title" = "Samodejno upravljanje pojavnih oken za piškotke";
+
+/* Explanation below the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.explanation" = "Prav tako vam DuckDuckGo prihrani klik tako, da namesto vas sprejme piškotke za zapiranje pojavnih oken, ki vam ne omogočajo zavrnitve.";
+
+/* Title for the pop-ups without opt-outs toggle in settings */
+"settings.cookie.popups-without-opt-outs.title" = "Pojavna okna brez možnosti zavrnitve";
 
 /* Settings screen cell text for Cookie popups */
 "settings.cookie.popups" = "Upravljanje pojavnih oken za piškotke";
@@ -5420,5 +5432,28 @@
 /* Button to delete all chats in scoped fire confirmation dialog */
 "scoped.fire.confirmation.delete.chats.button" = "Izbriši klepete";
 
-/* Do not translate - stringsdict entry */
-"aiChat.history.deleteAll.confirmation.title" = "aiChat.history.deleteAll.confirmation.title";
+/* Top-level attachment menu option to attach the current page content to an AI chat message */
+"aichat.attachment.option.ask.about.page" = "Vprašajte o strani";
+
+/* Status view message shown while the VPN is on but Strict routing is off */
+"network.protection.status.header.message.strict.routing.off" = "Nekaj prometa lahko zaobide omrežje VPN, medtem ko je strogo usmerjanje izklopljeno. Strogo usmerjanje je priporočljivo za javna omrežja.";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.off" = "Strogo usmerjanje: Izklop";
+
+/* Label for the status pill shown while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.on" = "Strogo usmerjanje: Vklop";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is off */
+"network.protection.status.view.strict.routing.pill.tooltip.off" = "Strogo usmerjanje je priporočljivo za javna omrežja.";
+
+/* Tooltip shown for the status pill while the VPN's Strict routing setting is on */
+"network.protection.status.view.strict.routing.pill.tooltip.on" = "Nekatere aplikacije morda ne bodo delovale, ko je strogo usmerjanje vklopljeno.";
+
+/* Title of the Troubleshooting section in the VPN status screen. */
+"network.protection.status.view.troubleshooting.section.title" = "Odpravljanje težav";
+
+/* The body of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.body" = "Nekaj prometa lahko zaobide VPN, ko je ta možnost izklopljena. Strogo usmerjanje je priporočljivo za javna omrežja.";
+/* The title of the notification reminding the user to turn the VPN Strict routing setting back on */
+"network.protection.strict.routing.reminder.notification.title" = "Strogo usmerjanje je IZKLOPLJENO";

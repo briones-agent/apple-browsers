@@ -51,7 +51,7 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
             // Split off models the user's tier can't reach so they can still be shown, disabled,
             // with an upsell affordance — `buildSections` below would otherwise drop them entirely
             // for subscribed users (e.g. a Pro-only model for a Plus subscriber).
-            let (accessible, gated) = AIChatModelSectionBuilder.buildGatedSections(models: models)
+            let (accessible, gated) = AIChatModelSectionBuilder.groupByAccess(models: models)
 
             var result = AIChatModelSectionBuilder.buildSections(
                 models: accessible,

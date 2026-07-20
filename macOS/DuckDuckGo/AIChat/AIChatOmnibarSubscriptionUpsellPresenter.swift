@@ -25,10 +25,8 @@ import PixelKit
 /// macOS's `SubscriptionNavigationCoordinator`-based navigation instead of a settings deep link.
 @MainActor
 protocol AIChatOmnibarSubscriptionUpselling {
-    /// Routes a gated selection to the matching flow and fires the upsell-triggered pixel.
-    /// Returns `true` when a flow was presented, `false` when the user's tier already satisfies
-    /// `requiredTier` (shouldn't normally be reached — callers only invoke this once a selection
-    /// is known to be gated) or no flow applies.
+    /// Routes a gated selection to the matching purchase/upgrade flow and fires the upsell pixel.
+    /// Returns `false` when no flow applies (e.g. the tier already satisfies `requiredTier`).
     @discardableResult
     func routeGatedSelection(requiredTier: AIChatModelPublicAccessTier, userTier: AIChatUserTier, origin: SubscriptionFunnelOrigin) -> Bool
 
