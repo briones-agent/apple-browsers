@@ -198,8 +198,16 @@ public extension DesignSystemImages {
                     : .init(resource: .shieldColor16Legacy)
             }
             public static var shieldCheck: DesignSystemImage { .init(resource: .shieldCheckColor16) }
-            public static var shieldNeutral: DesignSystemImage { .init(resource: .shieldNeutralColor16) }
-            public static var shieldNeutralAlert: DesignSystemImage { .init(resource: .shieldNeutralAlertColor16) }
+            public static var shieldNeutral: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .shieldNeutralColor16)
+                    : .init(resource: .shieldNeutralColor16Legacy)
+            }
+            public static var shieldNeutralAlert: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .shieldNeutralAlertColor16)
+                    : .init(resource: .shieldNeutralAlertColor16Legacy)
+            }
             public static var shopping: DesignSystemImage { .init(resource: .shoppingColor16) }
             public static var siri: DesignSystemImage { .init(resource: .siriColor16) }
             public static var sync: DesignSystemImage {
