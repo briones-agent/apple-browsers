@@ -510,6 +510,10 @@ public enum FeatureFlag: String {
     /// NA Experiment: tailor the onboarding flow based on the user's download reason.
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216491579842691?focus=true
     case onboardingFlowByDownloadReasonExperiment
+
+    #warning("Add Asana task link for blankSnapshotCaching feature flag")
+    /// Caches the blank-snapshot overlay off the suspend path to avoid the background scene-update watchdog.
+    case blankSnapshotCaching
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -863,6 +867,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(SyncSubfeature.canShowV2ConnectCode))
         case .simplifiedSyncSetupV2:
             Config(source: .remoteReleasable(SyncSubfeature.simplifiedSyncSetupV2))
+        case .blankSnapshotCaching:
+            Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.blankSnapshotCaching))
         }
     }
 
