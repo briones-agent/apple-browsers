@@ -145,7 +145,7 @@ final class SuggestionViewController: NSViewController {
     }
 
     private func setupBurnerStyleIfNeeded() {
-        guard isBurner else { return }
+        guard isBurner, themeManager.isAppRebranded else { return }
 
         let style = BurnerAppearanceStyle()
         style.enableDarkModeOverride(in: view)

@@ -845,7 +845,7 @@ final class AddressBarViewController: NSViewController {
     }
 
     private func setupBurnerStyleIfNeeded() {
-        guard isBurner else { return }
+        guard isBurner, themeManager.isAppRebranded else { return }
 
         let style = BurnerAppearanceStyle()
 

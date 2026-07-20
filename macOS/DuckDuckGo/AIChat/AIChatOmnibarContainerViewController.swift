@@ -873,7 +873,7 @@ final class AIChatOmnibarContainerViewController: NSViewController {
     // MARK: - Burner Style
 
     private func setupBurnerStyleIfNeeded() {
-        guard isBurner else { return }
+        guard isBurner, themeManager.isAppRebranded else { return }
 
         let style = BurnerAppearanceStyle()
         style.enableDarkModeOverride(in: view)
