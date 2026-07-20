@@ -1590,6 +1590,22 @@ struct UserText {
     static let importChromeAllowKeychainIntructions = NSLocalizedString("import.chrome.allow-keychain.instructions", value: "Enter your device password and click **Allow** to complete the import. DuckDuckGo won't see your password.", comment: "Instructions shown to the user when Chrome needs to access their Keychain. Contains markdown for bold text.")
     static let importChromeAllowButtonTitle = NSLocalizedString("import.chrome.allow-keychain.allow.button.title", value: "Allow", comment: "Button title of example dialog demonstrating to the user what to click when the system needs to access their Keychain.")
 
+    // MARK: - Browser data directory access (macOS 27+)
+
+    static func importBrowserDataAccessInfoBanner(source: DataImport.Source) -> String {
+        let localized = NSLocalizedString("import.browser.data.access.info-banner", value: "You will need to accept the “Grant Access” button on the next screen to allow import from %@.", comment: "Banner on the import source picker telling the user that a folder-access prompt will appear next for the selected browser (e.g. Chrome, Firefox)")
+        return String(format: localized, source.importSourceName)
+    }
+
+    static func importBrowserDataAccessPanelMessage(source: DataImport.Source) -> String {
+        let localized = NSLocalizedString("import.browser.data.access.panel.message", value: "Select the %@ data folder to allow DuckDuckGo to import your data.", comment: "Message shown in the folder picker prompting the user to select another browser's data folder (e.g. Chrome, Firefox)")
+        return String(format: localized, source.importSourceName)
+    }
+
+    static let importBrowserDataAccessPanelPrompt = NSLocalizedString("import.browser.data.access.panel.prompt", value: "Grant Access", comment: "Confirmation button in the folder picker used to grant DuckDuckGo access to another browser's data folder")
+
+    static let importBrowserDataAccessRequiredBadge = NSLocalizedString("import.browser.data.access.required.badge", value: "Requires permission to access data", comment: "Accessibility label for the warning icon shown next to a browser that needs the user to grant data access before importing")
+
     static let importLoginsCSV = NSLocalizedString("import.logins.csv.title", value: "CSV Passwords File (for other browsers)", comment: "Title text for the CSV importer")
     static let importLoginsCSVShort = NSLocalizedString("import.logins.csv.short.title", value: "CSV Passwords", comment: "Short title text for the CSV importer")
     static let importBookmarksHTML = NSLocalizedString("import.bookmarks.html.title", value: "HTML Bookmarks File (for other browsers)", comment: "Title text for the HTML Bookmarks importer")

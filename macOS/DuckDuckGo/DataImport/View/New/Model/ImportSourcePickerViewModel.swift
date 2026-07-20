@@ -52,6 +52,9 @@ final class ImportSourcePickerViewModel: ObservableObject {
 
     let shouldShowSyncButton: Bool
 
+    /// Sources whose data directory isn't accessible yet (macOS 27+); shown with a warning badge.
+    let sourcesRequiringPermission: Set<DataImport.Source>
+
     private let onSourceSelected: (DataImport.Source) -> Void
     private let onTypeSelected: (DataImport.DataType, Bool) -> Void
     private let onSyncSelected: () -> Void
@@ -61,6 +64,7 @@ final class ImportSourcePickerViewModel: ObservableObject {
          selectedImportTypes: [DataImport.DataType],
          selectableImportTypes: [DataImport.DataType],
          shouldShowSyncButton: Bool,
+         sourcesRequiringPermission: Set<DataImport.Source> = [],
          initialPickerExpanded: Bool = false,
          onSourceSelected: @escaping (DataImport.Source) -> Void,
          onTypeSelected: @escaping (DataImport.DataType, Bool) -> Void,
@@ -70,6 +74,7 @@ final class ImportSourcePickerViewModel: ObservableObject {
         self.selectedImportTypes = selectedImportTypes
         self.selectableImportTypes = selectableImportTypes
         self.shouldShowSyncButton = shouldShowSyncButton
+        self.sourcesRequiringPermission = sourcesRequiringPermission
         self.onSourceSelected = onSourceSelected
         self.onTypeSelected = onTypeSelected
         self.onSyncSelected = onSyncSelected
@@ -90,6 +95,12 @@ final class ImportSourcePickerViewModel: ObservableObject {
 
     private func updateImportTypeItems() {
         importTypeItems = Self.makeImportTypeItems(selectableTypes: selectableImportTypes, selectedTypes: selectedImportTypes)
+    }
+
+    /// `true` when the currently-selected source's data directory isn't accessible yet (macOS 27+), so the
+    /// picker should show the "you'll be asked to grant access" banner.
+    var selectedSourceRequiresPermission: Bool {
+        sourcesRequiringPermission.contains(selectedSource)
     }
 
     var visibleOptions: [DataImport.Source] {

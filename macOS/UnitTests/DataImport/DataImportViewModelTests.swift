@@ -1175,6 +1175,76 @@ final class DataImportViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Browser data directory permission (macOS 27+)
+
+    func testInit_whenSourceHasOnlyPermissionDeniedProfile_thenSourceIsAvailableAndFlagged() {
+        // WHEN
+        model = DataImportViewModel(
+            importSource: .chrome,
+            availableImportSources: [.chrome, .firefox],
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                if browser == .chrome {
+                    return .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
+                }
+                return .init(browser: browser, profiles: [BrowserProfile.default(fileStore: self.fileStore)(browser)])
+            }
+        )
+
+        // THEN
+        XCTAssertTrue(model.availableImportSources.contains(.chrome))
+        XCTAssertTrue(model.sourcesRequiringDataDirectoryPermission.contains(.chrome))
+        XCTAssertFalse(model.sourcesRequiringDataDirectoryPermission.contains(.firefox))
+        XCTAssertEqual(model.selectedProfile?.accessState, .permissionDenied)
+    }
+
+    @MainActor
+    func testImportButtonPressed_whenAccessRequestCancelled_thenStaysOnSourcePicker() {
+        // GIVEN a source whose data directory isn't accessible, and the user cancels the folder picker
+        model = DataImportViewModel(
+            importSource: .chrome,
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
+            },
+            requestDataDirectoryAccess: { _, _ in false }
+        )
+        XCTAssertEqual(model.screen, .sourceAndDataTypesPicker)
+
+        // WHEN
+        model.importButtonPressed()
+
+        // THEN we stay on the source picker and no import starts
+        XCTAssertEqual(model.screen, .sourceAndDataTypesPicker)
+        XCTAssertNil(model.importTaskId)
+    }
+
+    @MainActor
+    func testImportButtonPressed_whenAccessGranted_thenReloadsProfilesAndProceeds() {
+        // GIVEN a source that's inaccessible until the user grants folder access
+        self.importTask = { _, _ in [:] }
+        var accessGranted = false
+        model = DataImportViewModel(
+            importSource: .chrome,
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                if accessGranted {
+                    return .init(browser: browser, profiles: [BrowserProfile.default(fileStore: self.fileStore)(browser)])
+                }
+                return .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
+            },
+            dataImporterFactory: { _, _, _, _ in ImporterMock(importTask: self.importTask) },
+            requestDataDirectoryAccess: { _, _ in accessGranted = true; return true }
+        )
+        XCTAssertTrue(model.sourcesRequiringDataDirectoryPermission.contains(.chrome))
+
+        // WHEN the user grants access via the folder picker
+        model.importButtonPressed()
+
+        // THEN profiles are re-read (now accessible) and the import proceeds
+        XCTAssertNotNil(model.importTaskId)
+    }
+
     @MainActor
     func testImportButtonPressed_showsProfilePickerWhenMultipleValidProfiles() {
         // GIVEN
@@ -2562,6 +2632,17 @@ private extension DataImport.BrowserProfile {
             let profile = Self(browser: browser, profileURL: .profile(named: "Test Profile 3"), fileStore: fileStore)
             Self.configureFileStore(fileStore, for: profile)
             return profile
+        }
+    }
+
+    /// A profile whose data directory exists but is access-restricted (macOS 27+ TCC). The mock file store has
+    /// no contents for it, so it has no importable data and must be surfaced via `.permissionDenied`.
+    static func permissionDenied(fileStore: FileStoreMock) -> (ThirdPartyBrowser) -> Self {
+        return { browser in
+            Self(browser: browser,
+                 profileURL: .profile(named: DataImport.BrowserProfileList.Constants.chromiumDefaultProfileName),
+                 fileStore: fileStore,
+                 accessState: .permissionDenied)
         }
     }
 

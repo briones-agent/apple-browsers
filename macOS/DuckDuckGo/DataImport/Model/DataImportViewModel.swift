@@ -37,6 +37,10 @@ struct DataImportViewModel {
 
     let availableImportSources: [DataImport.Source]
 
+    /// Sources whose data directory exists but can't be accessed yet (macOS 27+ TCC restriction).
+    /// These are still offered in the source picker (with a warning) so the user can be guided to grant access.
+    let sourcesRequiringDataDirectoryPermission: Set<Source>
+
     let selectableImportTypes: Set<DataType>
 
     /// Browser to import data from
@@ -55,6 +59,11 @@ struct DataImportViewModel {
 
     /// Show Open Panel to choose CSV/HTML file
     private let openPanelCallback: @MainActor ([UTType]) -> URL?
+
+    typealias DataDirectoryAccessRequester = @MainActor (Source, URL) -> Bool
+    /// Presents a folder picker for a browser's (macOS 27+ TCC-restricted) data directory. Selecting the folder
+    /// grants the app access to it (Powerbox); returns whether the directory is now readable.
+    private let requestDataDirectoryAccess: DataDirectoryAccessRequester
 
     private let syncFeatureVisibility: SyncFeatureVisibility
 
@@ -219,26 +228,36 @@ struct DataImportViewModel {
          dataImporterFactory: @escaping DataImporterFactory = dataImporter,
          requestPrimaryPasswordCallback: @escaping @MainActor (Source) -> String? = Self.requestPrimaryPasswordCallback,
          openPanelCallback: @escaping @MainActor ([UTType]) -> URL? = Self.openPanelCallback,
+         requestDataDirectoryAccess: @escaping DataDirectoryAccessRequester = Self.requestDataDirectoryAccess,
          reportSenderFactory: @escaping ReportSenderFactory = { FeedbackSender().sendDataImportReport },
          wideEvent: WideEventManaging = Application.appDelegate.wideEvent,
          onFinished: @escaping () -> Void = {},
          onCancelled: @escaping () -> Void = {}) {
-        let filteredAvailableSources = availableImportSources.filter {
+        var sourcesRequiringDataDirectoryPermission: Set<Source> = []
+        let filteredAvailableSources = availableImportSources.filter { source in
             // Filter out CSV and HTML as we're using the new combined file import option
-             if $0 == .bookmarksHTML || $0 == .csv {
+             if source == .bookmarksHTML || source == .csv {
                  return false
              }
 
-            let browser = ThirdPartyBrowser.browser(for: $0)
+            let browser = ThirdPartyBrowser.browser(for: source)
             guard browser?.isWebBrowser == true else {
                 // Don't filter out password managers or file imports
                 return true
             }
-            let profiles = browser.map(loadProfiles)
-            return profiles?.defaultProfile != nil
+            guard let profiles = browser.map(loadProfiles), profiles.defaultProfile != nil else {
+                return false
+            }
+            // macOS 27+: the browser is installed and its data directory exists but isn't accessible yet.
+            // Keep it in the list and flag it so the picker can show a warning and route to the access flow.
+            if profiles.requiresDataDirectoryPermission {
+                sourcesRequiringDataDirectoryPermission.insert(source)
+            }
+            return true
         }
 
         self.availableImportSources = filteredAvailableSources
+        self.sourcesRequiringDataDirectoryPermission = sourcesRequiringDataDirectoryPermission
         let importSource = importSource ?? preferredImportSources.first(where: { filteredAvailableSources.contains($0) }) ?? filteredAvailableSources.first ?? .csv
 
         self.importSource = importSource
@@ -278,6 +297,7 @@ struct DataImportViewModel {
 
         self.requestPrimaryPasswordCallback = requestPrimaryPasswordCallback
         self.openPanelCallback = openPanelCallback
+        self.requestDataDirectoryAccess = requestDataDirectoryAccess
         self.reportSenderFactory = reportSenderFactory
         self.wideEvent = wideEvent
         self.onFinished = onFinished
@@ -787,6 +807,25 @@ extension DataImportViewModel {
         return url
     }
 
+    /// macOS 27+: presents a folder picker pointed at the browser's data directory. Selecting the folder grants
+    /// the (non-sandboxed) app access to it via Powerbox — no System Settings trip. Returns whether the directory
+    /// is now readable (a matching subtree the user picked lifts the TCC restriction on the target path).
+    @MainActor
+    private static func requestDataDirectoryAccess(source: DataImport.Source, url: URL) -> Bool {
+        let openPanel = NSOpenPanel()
+        openPanel.directoryURL = url
+        openPanel.message = UserText.importBrowserDataAccessPanelMessage(source: source)
+        openPanel.prompt = UserText.importBrowserDataAccessPanelPrompt
+        openPanel.canChooseFiles = false
+        openPanel.canChooseDirectories = true
+        openPanel.allowsMultipleSelection = false
+        openPanel.canCreateDirectories = false
+
+        guard case .OK = openPanel.runModal() else { return false }
+
+        return (try? FileManager.default.contentsOfDirectory(atPath: url.path)) != nil
+    }
+
     var isImportSourcePickerDisabled: Bool {
         importTask != nil
     }
@@ -928,6 +967,7 @@ extension DataImportViewModel {
                      loadProfiles: loadProfiles,
                      dataImporterFactory: dataImporterFactory,
                      requestPrimaryPasswordCallback: requestPrimaryPasswordCallback,
+                     requestDataDirectoryAccess: requestDataDirectoryAccess,
                      reportSenderFactory: reportSenderFactory,
                      onFinished: onFinished,
                      onCancelled: onCancelled)
@@ -945,6 +985,28 @@ extension DataImportViewModel {
             profile.hasValidProfileData(for: dataType)
         }
         selectedDataTypes = selectedDataTypes.intersection(availableTypesForProfile)
+    }
+
+    /// Rebuilds the model so the now-readable browser profiles are re-read after the user granted access to the
+    /// data directory (macOS 27+). Selection is preserved; the caller (`importButtonPressed`) then continues the
+    /// import flow on the fresh model — showing the profile picker for multiple profiles, otherwise importing.
+    @MainActor
+    private mutating func reloadProfilesAfterGrantingAccess() {
+        self = .init(importSource: importSource,
+                     selectedDataTypes: hasUserModifiedDataTypeSelection ? selectedDataTypes : nil,
+                     hasUserModifiedDataTypeSelection: hasUserModifiedDataTypeSelection,
+                     isPickerExpanded: isPickerExpanded,
+                     isPasswordManagerAutolockEnabled: isPasswordManagerAutolockEnabled,
+                     syncFeatureVisibility: syncFeatureVisibility,
+                     loadProfiles: loadProfiles,
+                     dataImporterFactory: dataImporterFactory,
+                     requestPrimaryPasswordCallback: requestPrimaryPasswordCallback,
+                     openPanelCallback: openPanelCallback,
+                     requestDataDirectoryAccess: requestDataDirectoryAccess,
+                     reportSenderFactory: reportSenderFactory,
+                     wideEvent: wideEvent,
+                     onFinished: onFinished,
+                     onCancelled: onCancelled)
     }
 
     @MainActor
@@ -983,6 +1045,15 @@ extension DataImportViewModel {
 
     @MainActor
     mutating func importButtonPressed() {
+        // macOS 27+: the selected browser's data directory exists but isn't accessible yet. Present the folder
+        // picker; selecting the folder grants access (Powerbox) without a System Settings trip. If the user
+        // cancels, stay on the source picker; otherwise reload the now-readable profiles and continue the import.
+        if let selectedProfile, selectedProfile.requiresDataDirectoryPermission {
+            guard requestDataDirectoryAccess(importSource, selectedProfile.profileURL) else { return }
+            reloadProfilesAfterGrantingAccess()
+            // fall through: the guards below run against the freshly re-read `self`
+        }
+
         setupAndStartWideEventIfNeeded()
         guard let importer = selectedProfile.map({
             dataImporterFactory(/* importSource: */ importSource,

@@ -47,6 +47,18 @@ extension DataImport {
             return validProfiles
         }
 
+        /// Profiles whose data directory exists on disk but can't be read because the app lacks permission
+        /// (macOS 27+ TCC restriction). These have no importable data yet — the user needs to grant access first.
+        var permissionDeniedProfiles: [BrowserProfile] {
+            profiles.filter { $0.accessState == .permissionDenied }
+        }
+
+        /// `true` when the browser has at least one profile the app can't access yet, and no importable profiles.
+        /// In that case the source should still be offered so the user can be guided to grant access.
+        var requiresDataDirectoryPermission: Bool {
+            validImportableProfiles.isEmpty && !permissionDeniedProfiles.isEmpty
+        }
+
         init(browser: ThirdPartyBrowser, profiles: [BrowserProfile], validateProfileData: @escaping ProfileDataValidator = BrowserProfile.validateProfileData) {
             self.browser = browser
             self.profiles = profiles
@@ -58,7 +70,7 @@ extension DataImport {
             switch browser {
             case .brave, .chrome, .chromium, .coccoc, .edge, .opera, .operaGX, .vivaldi, .yandex:
                 preferredProfileName = Constants.chromiumDefaultProfileName
-                return validImportableProfiles.first { $0.profileName == Constants.chromiumDefaultProfileName } ?? validImportableProfiles.first ?? profiles.first
+                return validImportableProfiles.first { $0.profileName == Constants.chromiumDefaultProfileName } ?? validImportableProfiles.first ?? permissionDeniedProfiles.first ?? profiles.first
             case .firefox, .tor:
                 preferredProfileName = Constants.firefoxDefaultProfileName
             case .safari, .safariTechnologyPreview, .bitwarden, .lastPass, .onePassword7, .onePassword8:
@@ -76,7 +88,9 @@ extension DataImport {
                 return validImportableProfiles.first ?? profiles.first
             }
 
-            return validImportableProfiles.first
+            // Fall back to an access-restricted profile so the browser is still offered for import and the
+            // user can be guided to grant access, instead of the source silently disappearing (macOS 27+).
+            return validImportableProfiles.first ?? permissionDeniedProfiles.first
         }
     }
 
@@ -84,6 +98,18 @@ extension DataImport {
 
         enum Constants {
             static let chromiumSystemProfileName = "System Profile"
+        }
+
+        /// Whether the app can read the profile's data directory.
+        ///
+        /// On macOS 27+ apps with `com.apple.security.*` entitlements are denied access to other apps'
+        /// `~/Library/Application Support/*` directories (TCC). In that case the profile directory exists on
+        /// disk but reading it fails with `NSCocoaErrorDomain` code 257. Such profiles are surfaced as
+        /// `.permissionDenied` so the user can be asked to grant access (by selecting the data folder) rather
+        /// than the browser silently disappearing from the import list.
+        enum AccessState: Equatable {
+            case readable
+            case permissionDenied
         }
 
         let profileURL: URL
@@ -98,6 +124,15 @@ extension DataImport {
         let browser: ThirdPartyBrowser
         private let fileStore: FileStore
         private let fallbackProfileName: String
+
+        /// Whether the profile's data directory is readable, or exists but is access-restricted (macOS 27+ TCC).
+        let accessState: AccessState
+
+        /// `true` when the profile directory exists on disk but the app lacks permission to read it,
+        /// meaning the user must grant access in System Settings before the data can be imported.
+        var requiresDataDirectoryPermission: Bool {
+            accessState == .permissionDenied
+        }
 
         enum ProfilePreferences {
             case chromium(ChromiumPreferences)
@@ -127,10 +162,11 @@ extension DataImport {
             profilePreferences?.appVersion
         }
 
-        init(browser: ThirdPartyBrowser, profileURL: URL, fileStore: FileStore = FileManager.default) {
+        init(browser: ThirdPartyBrowser, profileURL: URL, fileStore: FileStore = FileManager.default, accessState: AccessState = .readable) {
             self.browser = browser
             self.fileStore = fileStore
             self.profileURL = profileURL
+            self.accessState = accessState
 
             self.fallbackProfileName = Self.getDefaultProfileName(at: profileURL)
 

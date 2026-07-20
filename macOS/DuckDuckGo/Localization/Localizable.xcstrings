@@ -52626,6 +52626,54 @@
         }
       }
     },
+    "import.browser.data.access.info-banner" : {
+      "comment" : "Banner on the import source picker telling the user that a folder-access prompt will appear next for the selected browser (e.g. Chrome, Firefox)",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You will need to accept the “Grant Access” button on the next screen to allow import from %@."
+          }
+        }
+      }
+    },
+    "import.browser.data.access.panel.message" : {
+      "comment" : "Message shown in the folder picker prompting the user to select another browser's data folder (e.g. Chrome, Firefox)",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Select the %@ data folder to allow DuckDuckGo to import your data."
+          }
+        }
+      }
+    },
+    "import.browser.data.access.panel.prompt" : {
+      "comment" : "Confirmation button in the folder picker used to grant DuckDuckGo access to another browser's data folder",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Grant Access"
+          }
+        }
+      }
+    },
+    "import.browser.data.access.required.badge" : {
+      "comment" : "Accessibility label for the warning icon shown next to a browser that needs the user to grant data access before importing",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Requires permission to access data"
+          }
+        }
+      }
+    },
     "import.browser.data.bookmarks" : {
       "comment" : "Opens Import Browser Data dialog",
       "extractionState" : "extracted_with_value",

@@ -19,6 +19,7 @@
 import AppKit
 import AppKitExtensions
 import BrowserServicesKit
+import FeatureFlags
 
 private struct BundleIdentifiers {
     let production: String
@@ -192,7 +193,18 @@ enum ThirdPartyBrowser: CaseIterable {
         }
     }
 
-    func browserProfiles(applicationSupportURL: URL? = nil) -> DataImport.BrowserProfileList {
+    /// Whether `browserProfiles()` should surface profile directories that exist but can't be read due to a
+    /// missing permission (macOS 27+ TCC restriction on `~/Library/Application Support/*`).
+    ///
+    /// Only meaningful on macOS 27 and above, and gated behind the `dataImportDataDirectoryAccess` feature flag
+    /// so the behaviour can be disabled remotely.
+    static var detectsInaccessibleProfilesByDefault: Bool {
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 else { return false }
+        return Application.appDelegate.featureFlagger.isFeatureOn(.dataImportDataDirectoryAccess)
+    }
+
+    func browserProfiles(applicationSupportURL: URL? = nil,
+                         detectsInaccessibleProfiles: Bool = ThirdPartyBrowser.detectsInaccessibleProfilesByDefault) -> DataImport.BrowserProfileList {
         var potentialProfileURLs: [URL] {
             let fm = FileManager()
             let profilesDirectories = self.profilesDirectories(applicationSupportURL: applicationSupportURL)
@@ -204,7 +216,7 @@ enum ThirdPartyBrowser: CaseIterable {
             } + profilesDirectories
         }
 
-        let profiles: [DataImport.BrowserProfile]
+        var profiles: [DataImport.BrowserProfile]
         switch self {
         case .safari, .safariTechnologyPreview:
             // Safari is an exception, as it may need permissions granted before being able to read the contents of the profile path. To be safe,
@@ -241,7 +253,45 @@ enum ThirdPartyBrowser: CaseIterable {
             profiles = []
         }
 
+        // macOS 27+: surface profile directories that exist on disk but can't be read due to a missing
+        // permission, so the browser is still offered for import and the user can be guided to grant access
+        // instead of the source silently disappearing from the list.
+        if detectsInaccessibleProfiles, isWebBrowser, !isSafari {
+            let inaccessibleDirectories = inaccessibleProfilesDirectories(applicationSupportURL: applicationSupportURL)
+            if !inaccessibleDirectories.isEmpty {
+                let inaccessibleDirectorySet = Set(inaccessibleDirectories)
+                // Drop any profile pointing at an inaccessible directory (e.g. the Firefox top-level profiles
+                // directory that gets added as a fallback) and replace it with an explicit permission-denied profile.
+                profiles.removeAll { inaccessibleDirectorySet.contains($0.profileURL) }
+                profiles.append(contentsOf: inaccessibleDirectories.map {
+                    DataImport.BrowserProfile(browser: self, profileURL: $0, accessState: .permissionDenied)
+                })
+            }
+        }
+
         return DataImport.BrowserProfileList(browser: self, profiles: profiles)
+    }
+
+    /// Returns the browser's profiles directories that exist on disk but can't be read because the app lacks
+    /// permission (`NSCocoaErrorDomain` code 257 / `fileReadNoPermission`). On macOS 27+ this happens when the
+    /// other browser's `~/Library/Application Support/*` directory is TCC-protected.
+    private func inaccessibleProfilesDirectories(applicationSupportURL: URL?) -> [URL] {
+        let fileManager = FileManager()
+        return profilesDirectories(applicationSupportURL: applicationSupportURL).filter { directory in
+            var isDirectory: ObjCBool = false
+            // The directory must exist on disk — a missing directory just means the browser has no data.
+            guard fileManager.fileExists(atPath: directory.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                return false
+            }
+            do {
+                _ = try fileManager.contentsOfDirectory(atPath: directory.path)
+                return false
+            } catch let error as CocoaError where error.code == .fileReadNoPermission {
+                return true
+            } catch {
+                return false
+            }
+        }
     }
 
     var isWebBrowser: Bool {
