@@ -20,6 +20,8 @@
 /// which flow to run is determined entirely by which one the web side calls.
 @MainActor
 public protocol NewTabPageOmnibarSubscriptionDialogPresenting {
-    func showSubscriptionUpsellDialog()
+    /// `async` because it re-resolves the current subscription tier before deciding whether to
+    /// offer a free trial, rather than trusting the web's (potentially stale) choice of message.
+    func showSubscriptionUpsellDialog() async
     func showSubscriptionUpgradeDialog()
 }
