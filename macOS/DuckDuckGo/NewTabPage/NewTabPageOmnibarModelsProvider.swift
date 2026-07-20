@@ -97,11 +97,13 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
     }
 
     /// The single lowest/most-inclusive tier that grants access to `model`, as the wire's flat
-    /// `accessTier` string. `AIChatModelPublicAccessTier` doesn't cover "internal" (it's deliberately
-    /// scoped to publicly-marketed tiers for upsell-flow purposes), so this checks the model's raw
-    /// tier list directly rather than reusing that type.
+    /// `accessTier` string — `nil` for a model with no tier requirement (i.e. free). Delegates the
+    /// free/plus/pro precedence to the shared `lowestPublicAccessTier`; `AIChatModelPublicAccessTier`
+    /// doesn't cover "internal" (deliberately scoped to publicly-marketed tiers), so that one case
+    /// is checked separately.
     private func accessTierString(for model: AIChatModel) -> String? {
-        ["free", "plus", "pro", "internal"].first { model.accessTier.contains($0) }
+        guard model.isAdvanced else { return nil }
+        return model.lowestPublicAccessTier?.rawValue ?? (model.accessTier.contains("internal") ? "internal" : nil)
     }
 
     private func reasoningEfforts(for model: AIChatModel, userTier: AIChatUserTier) -> [NewTabPageDataModel.AIModelReasoningEffort] {

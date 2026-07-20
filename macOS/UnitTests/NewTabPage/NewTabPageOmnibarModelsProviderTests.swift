@@ -64,6 +64,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         XCTAssertTrue(item?.isEnabled == true)
         XCTAssertTrue(item?.supportsImageUpload == true)
         XCTAssertEqual(item?.supportedTools, ["WebSearch", "NewsSearch"])
+        XCTAssertNil(item?.accessTier)
     }
 
     func testWhenFreeUserThenPremiumModelsAreDisabled() async {
