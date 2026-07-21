@@ -72,6 +72,11 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
     var buttonsStack: UIStackView { tabsBarView.buttonsStack }
     var buttonsBackground: UIView { tabsBarView.buttonsBackground }
 
+    private var addTabButtonLeadingConstraint: NSLayoutConstraint?
+
+    // Opaque backdrop so tabs scrolling under the sticky button don't show through it.
+    private let addTabButtonBackground = UIView()
+
     lazy var fireButton: UIButton = {
         createButton(image: DesignSystemImages.Glyphs.Size24.fireSolid)
     }()
@@ -170,10 +175,26 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
         buttonsStack.spacing = Constants.stackSpacing
         buttonsStack.alignment = .center
 
-        buttonsStack.addArrangedSubview(addTabButton)
         buttonsStack.addArrangedSubview(aiChatChip)
         buttonsStack.addArrangedSubview(fireButton)
         buttonsStack.addArrangedSubview(tabSwitcherButton)
+
+        // Not in buttonsStack: its position is computed per tab count, see updateAddTabButtonPosition().
+        addTabButtonBackground.translatesAutoresizingMaskIntoConstraints = false
+        addTabButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(addTabButtonBackground)
+        view.addSubview(addTabButton)
+        let leadingConstraint = addTabButton.leadingAnchor.constraint(equalTo: collectionView.leadingAnchor)
+        addTabButtonLeadingConstraint = leadingConstraint
+        NSLayoutConstraint.activate([
+            leadingConstraint,
+            addTabButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+
+            addTabButtonBackground.leadingAnchor.constraint(equalTo: addTabButton.leadingAnchor),
+            addTabButtonBackground.trailingAnchor.constraint(equalTo: addTabButton.trailingAnchor),
+            addTabButtonBackground.topAnchor.constraint(equalTo: view.topAnchor),
+            addTabButtonBackground.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
 
         addTabButton.addTarget(self, action: #selector(onNewTabPressed), for: .touchUpInside)
         aiChatChip.textButton.addTarget(self, action: #selector(onAIChatPressed), for: .touchUpInside)
@@ -309,6 +330,7 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
 
         recomputeItemSize()
         reloadData()
+        updateAddTabButtonPosition()
         fireUsageDailyPixels()
 
         if scrollToSelected {
@@ -329,7 +351,12 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
             guard let currentIndex = self.currentIndex else { return }
             let indexPath = IndexPath(row: currentIndex, section: 0)
             guard let attributes = self.collectionView.layoutAttributesForItem(at: indexPath) else { return }
-            let visibleRect = CGRect(origin: self.collectionView.contentOffset, size: self.collectionView.bounds.size)
+            // Excludes the sticky button's reserved contentInset, else a tab under it reads as "visible".
+            let visibleSize = CGSize(
+                width: self.collectionView.bounds.width - self.collectionView.contentInset.right,
+                height: self.collectionView.bounds.height
+            )
+            let visibleRect = CGRect(origin: self.collectionView.contentOffset, size: visibleSize)
             let isPartiallyClipped = visibleRect.intersects(attributes.frame) && !visibleRect.contains(attributes.frame)
             guard isPartiallyClipped else { return }
             self.collectionView.scrollToItem(at: indexPath, at: [], animated: true)
@@ -350,6 +377,32 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
         if let flowLayout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
             flowLayout.itemSize = CGSize(width: itemWidth, height: view.frame.size.height)
         }
+    }
+
+    /// Leading offset (from the collection view's leading edge) for the add-tab button: right after
+    /// the last tab while tabs haven't filled the strip, flush against the trailing edge once they have.
+    static func addTabButtonLeadingOffset(contentWidth: CGFloat, availableWidth: CGFloat, buttonWidth: CGFloat) -> CGFloat {
+        guard availableWidth > 0 else { return 0 }
+        return min(contentWidth, max(0, availableWidth - buttonWidth))
+    }
+
+    private func updateAddTabButtonPosition() {
+        let availableWidth = collectionView.frame.size.width
+        guard availableWidth > 0 else { return }
+
+        // reloadData()/itemSize changes mark layout dirty but don't recompute contentSize synchronously;
+        // without this, contentWidth below is stale by one tab open/close.
+        collectionView.layoutIfNeeded()
+
+        let contentWidth = collectionView.contentSize.width
+        addTabButtonLeadingConstraint?.constant = Self.addTabButtonLeadingOffset(
+            contentWidth: contentWidth,
+            availableWidth: availableWidth,
+            buttonWidth: Constants.buttonWidth
+        )
+
+        let isOverflowing = contentWidth > availableWidth - Constants.buttonWidth
+        collectionView.contentInset.right = isOverflowing ? Constants.buttonWidth : 0
     }
 
     /// Half the strip, but in landscape also capped at a third of the full-screen strip so a resize
@@ -401,6 +454,7 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
     func backgroundTabAdded() {
         recomputeItemSize()
         reloadData()
+        updateAddTabButtonPosition()
         tabSwitcherButton.animateUpdate {
             self.tabSwitcherButton.tabCount = self.tabsCount
         }
@@ -573,6 +627,8 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        // Catches layout passes (e.g. the first one) that land before refresh()/backgroundTabAdded().
+        updateAddTabButtonPosition()
         NotificationCenter.default.post(name: TabsBarViewController.viewDidLayoutNotification, object: self)
     }
 }
@@ -675,6 +731,7 @@ extension TabsBarViewController {
         view.tintColor = theme.barTintColor
         collectionView.backgroundColor = theme.tabsBarBackgroundColor
         buttonsBackground.backgroundColor = theme.tabsBarBackgroundColor
+        addTabButtonBackground.backgroundColor = theme.tabsBarBackgroundColor
         
         collectionView.reloadData()
     }

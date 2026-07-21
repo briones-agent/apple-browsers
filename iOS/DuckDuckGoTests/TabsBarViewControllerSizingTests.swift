@@ -55,6 +55,37 @@ final class TabsBarViewControllerSizingTests: XCTestCase {
         XCTAssertEqual(itemWidth(900, 0, maxWidth: 300), 0, accuracy: accuracy)
     }
 
+    private let buttonWidth = TabsBarViewController.Constants.buttonWidth
+
+    private func addTabButtonLeadingOffset(_ contentWidth: CGFloat, _ availableWidth: CGFloat) -> CGFloat {
+        TabsBarViewController.addTabButtonLeadingOffset(contentWidth: contentWidth, availableWidth: availableWidth, buttonWidth: buttonWidth)
+    }
+
+    func testAddTabButtonSitsRightAfterLastTabWhenTabsDoNotFillStrip() {
+        XCTAssertEqual(addTabButtonLeadingOffset(200, 900), 200, accuracy: accuracy)
+    }
+
+    func testAddTabButtonAtExactBoundaryIsFlushWithTrailingEdge() {
+        // Content fills exactly up to where the button would sit flush anyway.
+        XCTAssertEqual(addTabButtonLeadingOffset(900 - buttonWidth, 900), 900 - buttonWidth, accuracy: accuracy)
+    }
+
+    func testAddTabButtonIsFlushWithTrailingEdgeWhenTabsOverflowStrip() {
+        XCTAssertEqual(addTabButtonLeadingOffset(1500, 900), 900 - buttonWidth, accuracy: accuracy)
+    }
+
+    func testAddTabButtonOffsetIsZeroWithNoTabs() {
+        XCTAssertEqual(addTabButtonLeadingOffset(0, 900), 0, accuracy: accuracy)
+    }
+
+    func testAddTabButtonOffsetIsNeverNegativeWhenAvailableWidthBelowButtonWidth() {
+        XCTAssertEqual(addTabButtonLeadingOffset(0, 20), 0, accuracy: accuracy)
+    }
+
+    func testAddTabButtonOffsetIsZeroWhenAvailableWidthIsZero() {
+        XCTAssertEqual(addTabButtonLeadingOffset(200, 0), 0, accuracy: accuracy)
+    }
+
     @MainActor
     func testCreateBuildsProgrammaticHierarchy() {
         let controller = TabsBarViewController.create()
@@ -67,10 +98,13 @@ final class TabsBarViewControllerSizingTests: XCTestCase {
         XCTAssertIdentical(controller.collectionView.delegate, controller)
         XCTAssertIdentical(controller.collectionView.dataSource, controller)
         XCTAssertEqual(controller.buttonsStack.spacing, TabsBarViewController.Constants.stackSpacing)
-        XCTAssertEqual(controller.buttonsStack.arrangedSubviews.count, 4)
-        XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[0], controller.addTabButton)
-        XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[1], controller.aiChatChip)
-        XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[2], controller.fireButton)
+        XCTAssertEqual(controller.buttonsStack.arrangedSubviews.count, 3)
+        XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[0], controller.aiChatChip)
+        XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[1], controller.fireButton)
+        // addTabButton is positioned manually outside buttonsStack so it can sit inline after the
+        // last tab and slide to a sticky trailing position once tabs fill the strip.
+        XCTAssertFalse(controller.buttonsStack.arrangedSubviews.contains(controller.addTabButton))
+        XCTAssertIdentical(controller.addTabButton.superview, controller.view)
     }
 
     @MainActor
