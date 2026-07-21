@@ -3157,6 +3157,8 @@
 		B5CCC06E2F649BAF003EB0A2 /* TabBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06C2F649BAF003EB0A2 /* TabBackgroundView.swift */; };
 		B5CCC0702F649BB9003EB0A2 /* TabBackgroundShapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */; };
 		B5CCC0712F649BB9003EB0A2 /* TabBackgroundShapeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */; };
+		B5CF6949300AE5B2003B8D95 /* BurnerAppearanceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CF6948300AE5B2003B8D95 /* BurnerAppearanceStyle.swift */; };
+		B5CF694A300AE5B2003B8D95 /* BurnerAppearanceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CF6948300AE5B2003B8D95 /* BurnerAppearanceStyle.swift */; };
 		B5D20880300076B100B5671D /* vpn-animation.json in Resources */ = {isa = PBXBuildFile; fileRef = B5D2087F300076B100B5671D /* vpn-animation.json */; };
 		B5D20881300076B100B5671D /* vpn-animation.json in Resources */ = {isa = PBXBuildFile; fileRef = B5D2087F300076B100B5671D /* vpn-animation.json */; };
 		B5D20882300076B100B5671D /* vpn-animation.json in Resources */ = {isa = PBXBuildFile; fileRef = B5D2087F300076B100B5671D /* vpn-animation.json */; };
@@ -6323,6 +6325,7 @@
 		B5CBB60A2EC4F80A006C3F54 /* TabTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabTitleView.swift; sourceTree = "<group>"; };
 		B5CCC06C2F649BAF003EB0A2 /* TabBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBackgroundView.swift; sourceTree = "<group>"; };
 		B5CCC06F2F649BB9003EB0A2 /* TabBackgroundShapeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBackgroundShapeView.swift; sourceTree = "<group>"; };
+		B5CF6948300AE5B2003B8D95 /* BurnerAppearanceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerAppearanceStyle.swift; sourceTree = "<group>"; };
 		B5D2087F300076B100B5671D /* vpn-animation.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "vpn-animation.json"; sourceTree = "<group>"; };
 		B5D62C7F2F55F5B000947DFD /* StartupMetricsExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupMetricsExporter.swift; sourceTree = "<group>"; };
 		B5DE8DA82EBE292F005C5EF4 /* SpinnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerView.swift; sourceTree = "<group>"; };
@@ -12500,6 +12503,7 @@
 				BBD798AC2DF213AF00575051 /* AddressBarPermissionButtonsIconsProviding.swift */,
 				BB7BAAC12DDBB089004A5A58 /* AddressBarStyleProviding.swift */,
 				BB960BD22DD788FD002C46DD /* BookmarksIconsProviding.swift */,
+				B5CF6948300AE5B2003B8D95 /* BurnerAppearanceStyle.swift */,
 				BB32C59C2DCD416E00775E80 /* ColorsProviding.swift */,
 				BBDAA9192DAD4E5C00555E1E /* CurrentVPNNavigationBarIconProvider.swift */,
 				BBDAA91F2DAD6F4B00555E1E /* FireButtonIconStyleProviding.swift */,
@@ -15082,6 +15086,7 @@
 				3706FA94293F65D500E42796 /* TabShadowConfig.swift in Sources */,
 				3706FA97293F65D500E42796 /* WindowDraggingView.swift in Sources */,
 				BB7B5F992C4ED73800BA4AF8 /* BookmarksSearchAndSortMetrics.swift in Sources */,
+				B5CF694A300AE5B2003B8D95 /* BurnerAppearanceStyle.swift in Sources */,
 				1D01A3D52B88CF7700FE8150 /* AccessibilityPreferences.swift in Sources */,
 				BB9BA2262D10C08F009229F3 /* TabBarRemoteMessage.swift in Sources */,
 				3706FA98293F65D500E42796 /* SecureVaultSorting.swift in Sources */,
@@ -18200,6 +18205,7 @@
 				37EE55F62D5F197300D53C7C /* HomeButtonMenuFactory.swift in Sources */,
 				37EE55F72D5F197300D53C7C /* MenuItemWithNotificationDot.swift in Sources */,
 				1DD6A7B52D804ADA006AE043 /* PinnedTabsDiscoveryPopUpViewController.swift in Sources */,
+				B5CF6949300AE5B2003B8D95 /* BurnerAppearanceStyle.swift in Sources */,
 				37EE55F82D5F197300D53C7C /* MoreOptionsMenu.swift in Sources */,
 				37EE55F92D5F197300D53C7C /* MoreOptionsMenuButton.swift in Sources */,
 				37EE55FA2D5F197300D53C7C /* NavigationBarPopovers.swift in Sources */,
