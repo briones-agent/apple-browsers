@@ -41,6 +41,14 @@ struct DataImportViewModel {
     /// These are still offered in the source picker (with a warning) so the user can be guided to grant access.
     let sourcesRequiringDataDirectoryPermission: Set<Source>
 
+    /// Debug override (Debug ▸ Data Import ▸ Force macOS 27 Permissions Fix): forces the data-directory access
+    /// flow for every browser regardless of the actual permissions, so it can be exercised for testing.
+    private let forcesDataDirectoryPermission: Bool
+
+    /// Guards against re-presenting the folder picker after access has already been requested this session
+    /// (e.g. when returning to `importButtonPressed` from the profile picker).
+    private var didRequestDataDirectoryAccess = false
+
     let selectableImportTypes: Set<DataType>
 
     /// Browser to import data from
@@ -229,6 +237,7 @@ struct DataImportViewModel {
          requestPrimaryPasswordCallback: @escaping @MainActor (Source) -> String? = Self.requestPrimaryPasswordCallback,
          openPanelCallback: @escaping @MainActor ([UTType]) -> URL? = Self.openPanelCallback,
          requestDataDirectoryAccess: @escaping DataDirectoryAccessRequester = Self.requestDataDirectoryAccess,
+         forcesDataDirectoryPermission: Bool = DataImportDebugSettings().forcesMacOS27PermissionsFix,
          reportSenderFactory: @escaping ReportSenderFactory = { FeedbackSender().sendDataImportReport },
          wideEvent: WideEventManaging = Application.appDelegate.wideEvent,
          onFinished: @escaping () -> Void = {},
@@ -250,7 +259,10 @@ struct DataImportViewModel {
             }
             // macOS 27+: the browser is installed and its data directory exists but isn't accessible yet.
             // Keep it in the list and flag it so the picker can show a warning and route to the access flow.
-            if profiles.requiresDataDirectoryPermission {
+            // The debug override forces the flow for every automated-import browser (not Safari, which uses
+            // manual file import) regardless of the real permissions.
+            let forced = forcesDataDirectoryPermission && browser?.isSafari == false
+            if profiles.requiresDataDirectoryPermission || forced {
                 sourcesRequiringDataDirectoryPermission.insert(source)
             }
             return true
@@ -298,6 +310,7 @@ struct DataImportViewModel {
         self.requestPrimaryPasswordCallback = requestPrimaryPasswordCallback
         self.openPanelCallback = openPanelCallback
         self.requestDataDirectoryAccess = requestDataDirectoryAccess
+        self.forcesDataDirectoryPermission = forcesDataDirectoryPermission
         self.reportSenderFactory = reportSenderFactory
         self.wideEvent = wideEvent
         self.onFinished = onFinished
@@ -968,6 +981,7 @@ extension DataImportViewModel {
                      dataImporterFactory: dataImporterFactory,
                      requestPrimaryPasswordCallback: requestPrimaryPasswordCallback,
                      requestDataDirectoryAccess: requestDataDirectoryAccess,
+                     forcesDataDirectoryPermission: forcesDataDirectoryPermission,
                      reportSenderFactory: reportSenderFactory,
                      onFinished: onFinished,
                      onCancelled: onCancelled)
@@ -1003,6 +1017,7 @@ extension DataImportViewModel {
                      requestPrimaryPasswordCallback: requestPrimaryPasswordCallback,
                      openPanelCallback: openPanelCallback,
                      requestDataDirectoryAccess: requestDataDirectoryAccess,
+                     forcesDataDirectoryPermission: forcesDataDirectoryPermission,
                      reportSenderFactory: reportSenderFactory,
                      wideEvent: wideEvent,
                      onFinished: onFinished,
@@ -1045,13 +1060,19 @@ extension DataImportViewModel {
 
     @MainActor
     mutating func importButtonPressed() {
-        // macOS 27+: the selected browser's data directory exists but isn't accessible yet. Present the folder
-        // picker; selecting the folder grants access (Powerbox) without a System Settings trip. If the user
-        // cancels, stay on the source picker; otherwise reload the now-readable profiles and continue the import.
-        if let selectedProfile, selectedProfile.requiresDataDirectoryPermission {
+        // macOS 27+ (or the debug force override): the selected browser needs a folder-access grant before
+        // import. Present the folder picker — selecting the folder grants access (Powerbox), no System Settings
+        // trip. If the user cancels, stay on the source picker. On the real permission-denied path we then reload
+        // the now-readable profiles; when forced for testing the profiles were always accessible, so we continue.
+        if !didRequestDataDirectoryAccess,
+           sourcesRequiringDataDirectoryPermission.contains(importSource),
+           let selectedProfile {
             guard requestDataDirectoryAccess(importSource, selectedProfile.profileURL) else { return }
-            reloadProfilesAfterGrantingAccess()
-            // fall through: the guards below run against the freshly re-read `self`
+            didRequestDataDirectoryAccess = true
+            if selectedProfile.requiresDataDirectoryPermission {
+                reloadProfilesAfterGrantingAccess()
+            }
+            // fall through: the guards below run against `self`
         }
 
         setupAndStartWideEventIfNeeded()

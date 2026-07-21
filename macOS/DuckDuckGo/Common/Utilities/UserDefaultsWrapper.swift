@@ -249,6 +249,9 @@ extension UserDefaults {
 
         // First Quit Tracking
         case hasQuitAppBefore = "com.duckduckgo.app.has.quit.before"
+
+        // Data Import Debug
+        case dataImportForceMacOS27PermissionsFix = "com.duckduckgo.debug.data-import.force-macos27-permissions-fix"
     }
 
     enum RemovedKeys: String, CaseIterable {

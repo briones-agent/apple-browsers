@@ -1188,7 +1188,8 @@ final class DataImportViewModelTests: XCTestCase {
                     return .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
                 }
                 return .init(browser: browser, profiles: [BrowserProfile.default(fileStore: self.fileStore)(browser)])
-            }
+            },
+            forcesDataDirectoryPermission: false
         )
 
         // THEN
@@ -1207,7 +1208,8 @@ final class DataImportViewModelTests: XCTestCase {
             loadProfiles: { browser in
                 .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
             },
-            requestDataDirectoryAccess: { _, _ in false }
+            requestDataDirectoryAccess: { _, _ in false },
+            forcesDataDirectoryPermission: false
         )
         XCTAssertEqual(model.screen, .sourceAndDataTypesPicker)
 
@@ -1234,7 +1236,8 @@ final class DataImportViewModelTests: XCTestCase {
                 return .init(browser: browser, profiles: [BrowserProfile.permissionDenied(fileStore: self.fileStore)(browser)])
             },
             dataImporterFactory: { _, _, _, _ in ImporterMock(importTask: self.importTask) },
-            requestDataDirectoryAccess: { _, _ in accessGranted = true; return true }
+            requestDataDirectoryAccess: { _, _ in accessGranted = true; return true },
+            forcesDataDirectoryPermission: false
         )
         XCTAssertTrue(model.sourcesRequiringDataDirectoryPermission.contains(.chrome))
 
@@ -1243,6 +1246,48 @@ final class DataImportViewModelTests: XCTestCase {
 
         // THEN profiles are re-read (now accessible) and the import proceeds
         XCTAssertNotNil(model.importTaskId)
+    }
+
+    @MainActor
+    func testForceMacOS27PermissionsFix_forcesTheAccessFlowForReadableBrowsers() {
+        // GIVEN the debug override is on and the browser's data is actually readable
+        self.importTask = { _, _ in [:] }
+        var panelPresented = false
+        model = DataImportViewModel(
+            importSource: .chrome,
+            availableImportSources: [.chrome],
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                .init(browser: browser, profiles: [BrowserProfile.default(fileStore: self.fileStore)(browser)])
+            },
+            dataImporterFactory: { _, _, _, _ in ImporterMock(importTask: self.importTask) },
+            requestDataDirectoryAccess: { _, _ in panelPresented = true; return true },
+            forcesDataDirectoryPermission: true
+        )
+
+        // THEN the browser is flagged even though its profile is readable
+        XCTAssertTrue(model.sourcesRequiringDataDirectoryPermission.contains(.chrome))
+        XCTAssertEqual(model.selectedProfile?.accessState, .readable)
+
+        // WHEN importing, the folder picker is presented, then the import proceeds with the real profile
+        model.importButtonPressed()
+        XCTAssertTrue(panelPresented)
+        XCTAssertNotNil(model.importTaskId)
+    }
+
+    @MainActor
+    func testForceMacOS27PermissionsFix_whenDisabled_readableBrowserIsNotFlagged() {
+        model = DataImportViewModel(
+            importSource: .chrome,
+            availableImportSources: [.chrome],
+            syncFeatureVisibility: .hide,
+            loadProfiles: { browser in
+                .init(browser: browser, profiles: [BrowserProfile.default(fileStore: self.fileStore)(browser)])
+            },
+            forcesDataDirectoryPermission: false
+        )
+
+        XCTAssertFalse(model.sourcesRequiringDataDirectoryPermission.contains(.chrome))
     }
 
     @MainActor
