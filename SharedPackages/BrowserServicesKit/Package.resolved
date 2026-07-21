@@ -1,5 +1,5 @@
 {
-  "originHash" : "43a28d82db594ced48121109323bc889e05c24cd1647647b829b08eddd0a1fc8",
+  "originHash" : "23739d3de361196ce9fedd787fefdad02765747f399648deacd08c18282372ef",
   "pins" : [
     {
       "identity" : "content-scope-scripts",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/duckduckgo/content-scope-scripts.git",
       "state" : {
         "branch" : "pr-releases/moon0326/o-j/ui-update-for-model-and-reasoning-selector",
-        "revision" : "9867cca700206195ed48c14f9191a0cd33410118"
+        "revision" : "4ba726773e9ed839fc3f6b895cc0a0180e6dc2f3"
       }
     },
     {
