@@ -8556,10 +8556,10 @@
 				81E935251F047CE4825824A5 /* OnboardingView+AddressBarPositionContent.swift */,
 				EDB06E4C5FAE7E6BC7CDC6CC /* OnboardingView+AppIconPickerContent.swift */,
 				AF81E0C6EDC46254CF28AFCB /* OnboardingView+SearchExperienceContent.swift */,
+				9F4D2B1F2FFC000100A1B2C3 /* OnboardingView+DuckAIQuerySearchContent.swift */,
 				9F104B932F4EA26600FD6139 /* ScrollableOnboardingBackground.swift */,
 				8453AA8F2F7D32950062888E /* DuckAIQueryMode.swift */,
 				C1A1B9CC2F6BC7A400B12345 /* OnboardingRestorePromptHandler.swift */,
-				9F4D2B1F2FFC000100A1B2C3 /* OnboardingView+DuckAIQuerySearchContent.swift */,
 			);
 			path = LinearOnboarding;
 			sourceTree = "<group>";
