@@ -272,6 +272,8 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
     private var isAwaitingTopOmnibarKeyboardPresentation = false
     private var topOmnibarKeyboardPresentationFallback: DispatchWorkItem?
     private var invalidAttachmentRecoveryTasks: [UUID: Task<Void, Never>] = [:]
+    /// A limit/rejection banner not tied to a specific attachment (image-over-limit, paste rejection). Held so an async attachment/model re-sync can't clear it — `syncAttachmentValidationError` falls back to this.
+    private var transientAttachmentValidationMessage: String?
     private var isContentOverlaySuppressed = false
     private var pendingGatedModelId: String?
     private var pendingGatedReasoningSelection: (modelId: String, mode: AIChatReasoningMode)?
@@ -1772,12 +1774,14 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         invalidAttachmentRecoveryTasks[id]?.cancel()
         invalidAttachmentRecoveryTasks[id] = nil
         viewController.removeAttachment(id: id)
+        transientAttachmentValidationMessage = nil
         persistDraftToStore()
         syncAttachmentValidationErrorForCurrentMode()
         updateAttachButtonPresentation()
     }
 
     func clearAttachments() {
+        transientAttachmentValidationMessage = nil
         guard !viewController.currentAttachments.isEmpty else {
             viewController.clearAttachmentValidationError()
             updateAttachButtonPresentation()
@@ -2310,6 +2314,12 @@ private extension UnifiedToggleInputCoordinator {
         viewController.showAttachmentValidationError(message)
     }
 
+    /// Shows a limit/rejection banner that survives async re-syncs, unlike an attachment-derived one which `syncAttachmentValidationError` recomputes from `currentAttachments`.
+    func presentTransientAttachmentValidationError(_ message: String) {
+        transientAttachmentValidationMessage = message
+        viewController.showAttachmentValidationError(message)
+    }
+
     func attachmentSubmissionValidationMessage(for text: String, mode: TextEntryMode) -> String? {
         guard mode == .aiChat else { return nil }
 
@@ -2325,7 +2335,7 @@ private extension UnifiedToggleInputCoordinator {
     }
 
     func syncAttachmentValidationError() {
-        if let validationMessage = viewController.currentAttachments.compactMap(\.validationMessage).first {
+        if let validationMessage = viewController.currentAttachments.compactMap(\.validationMessage).first ?? transientAttachmentValidationMessage {
             viewController.showAttachmentValidationError(validationMessage)
         } else {
             viewController.clearAttachmentValidationError()
@@ -2334,6 +2344,7 @@ private extension UnifiedToggleInputCoordinator {
 
     func syncAttachmentValidationErrorForCurrentMode() {
         guard inputMode == .aiChat else {
+            transientAttachmentValidationMessage = nil
             viewController.clearAttachmentValidationError()
             return
         }
@@ -2343,6 +2354,7 @@ private extension UnifiedToggleInputCoordinator {
 
     func clearAttachmentValidationErrorIfPossible() {
         guard viewController.currentAttachments.contains(where: \.isInvalid) == false else { return }
+        transientAttachmentValidationMessage = nil
         viewController.clearAttachmentValidationError()
     }
 
@@ -2713,11 +2725,11 @@ extension UnifiedToggleInputCoordinator: UnifiedToggleInputPasteDelegate {
             pixel: .unifiedToggleInputFileValidationFailed,
             withAdditionalParameters: ["reason": pixelReason, "surface": pixelSurface.rawValue, "source": "paste"]
         )
-        presentAttachmentValidationError(message)
+        presentTransientAttachmentValidationError(message)
     }
 
     func presentPasteError(_ message: String) {
-        presentAttachmentValidationError(message)
+        presentTransientAttachmentValidationError(message)
     }
 }
 
