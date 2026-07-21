@@ -17,10 +17,40 @@
 //
 
 import Foundation
+import PrivacyConfig
+import FeatureFlags
 
 enum DuckAIChromeButtonType {
     case duckAI
     case sidebar
+}
+
+/// PoC layout for the Duck.ai chrome control, resolved from local feature-flag overrides.
+///
+/// All variants are sub-modes of the `aiChatChromeSidebar` master flag: they only take effect while that
+/// flag is enabled. Intended to be toggled one at a time via Debug → Feature Flag Overrides; if more than
+/// one is on, precedence is A > B1 > B2.
+enum DuckAIChromeLayout {
+    /// Default: the "Duck.ai" title and sidebar toggle joined into one pill in the tab bar.
+    case combined
+    /// Approach A: title and sidebar toggle rendered as two separate buttons in the tab bar.
+    case splitTabBar
+    /// Approach B1: sidebar toggle relocated to the far right of the navigation bar (icon-only, with separator).
+    case sidebarNavBarRight
+    /// Approach B2: sidebar toggle relocated to the far left of the navigation bar's right-side group ("Ask" label).
+    case sidebarNavBarLeft
+
+    static func resolve(_ featureFlagger: FeatureFlagger) -> DuckAIChromeLayout {
+        if featureFlagger.isFeatureOn(.aiChatChromeSplitButtons) { return .splitTabBar }
+        if featureFlagger.isFeatureOn(.aiChatChromeSidebarNavBarRight) { return .sidebarNavBarRight }
+        if featureFlagger.isFeatureOn(.aiChatChromeSidebarNavBarLeft) { return .sidebarNavBarLeft }
+        return .combined
+    }
+
+    /// The sidebar toggle lives in the navigation bar (rather than the tab bar) for these layouts.
+    var relocatesSidebarToNavBar: Bool {
+        self == .sidebarNavBarRight || self == .sidebarNavBarLeft
+    }
 }
 
 protocol DuckAIChromeButtonsVisibilityManaging {

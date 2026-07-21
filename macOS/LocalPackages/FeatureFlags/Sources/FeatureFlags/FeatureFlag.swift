@@ -383,6 +383,18 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213610208091978?focus=true
     case aiChatChromeSidebar
 
+    /// PoC (Approach A): render the tab-bar Duck.ai control as two separate buttons instead of one joined pill.
+    /// https://app.asana.com/1/137249556945/project/72649045549333/task/1215467266512735
+    case aiChatChromeSplitButtons
+
+    /// PoC (Approach B1): relocate the sidebar toggle to the far right of the navigation bar (icon-only, with separator).
+    /// https://app.asana.com/1/137249556945/project/72649045549333/task/1215467266512735
+    case aiChatChromeSidebarNavBarRight
+
+    /// PoC (Approach B2): relocate the sidebar toggle to the far left of the navigation bar's right-side group ("Ask" label).
+    /// https://app.asana.com/1/137249556945/project/72649045549333/task/1215467266512735
+    case aiChatChromeSidebarNavBarLeft
+
     /// Enable Look Up (three-finger click) while keeping link preview disabled
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213489080183740
     case webViewLookUpAction
@@ -725,6 +737,12 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.sidebarSuggestedPrompts), category: .duckAI)
         case .aiChatChromeSidebar:
             Config(defaultValue: .enabled, source: .remoteReleasable(AIChatSubfeature.sidebar), category: .duckAI)
+        case .aiChatChromeSplitButtons:
+            Config(source: .disabled, category: .duckAI)
+        case .aiChatChromeSidebarNavBarRight:
+            Config(source: .disabled, category: .duckAI)
+        case .aiChatChromeSidebarNavBarLeft:
+            Config(source: .disabled, category: .duckAI)
         case .webViewLookUpAction:
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.webViewLookUpAction))
         case .promoQueue:
