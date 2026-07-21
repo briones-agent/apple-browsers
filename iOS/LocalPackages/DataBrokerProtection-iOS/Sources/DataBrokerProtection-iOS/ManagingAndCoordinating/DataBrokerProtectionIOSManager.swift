@@ -156,51 +156,10 @@ public class DBPIOSInterface {
 
 extension BGTask: DBPIOSInterface.BGTaskHandling {}
 
-final class DBPVaultResources {
-    let database: DataBrokerProtectionRepository
-    var queueManager: JobQueueManaging
-    let jobDependencies: BrokerProfileJobDependencyProviding
-    let emailConfirmationDataService: EmailConfirmationDataServiceProvider
-    private let brokerUpdaterProvider: () -> BrokerJSONServiceProvider?
-
-    private let engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository
-
-    lazy var brokerUpdater = brokerUpdaterProvider()
-    lazy var engagementPixels = DataBrokerProtectionEngagementPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler,
-        repository: engagementPixelsRepository
-    )
-    lazy var eventPixels = DataBrokerProtectionEventPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler
-    )
-    lazy var statsPixels = DataBrokerProtectionStatsPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler
-    )
-
-    init(database: DataBrokerProtectionRepository,
-         queueManager: JobQueueManaging,
-         jobDependencies: BrokerProfileJobDependencyProviding,
-         emailConfirmationDataService: EmailConfirmationDataServiceProvider,
-         brokerUpdaterProvider: @escaping () -> BrokerJSONServiceProvider?,
-         engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository) {
-        self.database = database
-        self.queueManager = queueManager
-        self.jobDependencies = jobDependencies
-        self.emailConfirmationDataService = emailConfirmationDataService
-        self.brokerUpdaterProvider = brokerUpdaterProvider
-        self.engagementPixelsRepository = engagementPixelsRepository
-    }
-}
-
 public final class DataBrokerProtectionIOSManager {
 
     /// The entry point requesting Secure Vault-backed resources. Every caller either starts
     /// initialization or joins one already in progress.
-    /// The reason is for
-    /// call-site readability only.
     private enum VaultInitReason {
         case launch
         case appActive
