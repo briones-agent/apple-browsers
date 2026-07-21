@@ -86,8 +86,16 @@ public extension DesignSystemImages {
             public static var calendarToday: DesignSystemImage { .init(resource: .calendarTodayColor16) }
             public static var calendarWeek: DesignSystemImage { .init(resource: .calendarWeekColor16) }
             public static var calendarYesterday: DesignSystemImage { .init(resource: .calendarYesterdayColor16) }
-            public static var chat: DesignSystemImage { .init(resource: .chatColor16) }
-            public static var chatPinned: DesignSystemImage { .init(resource: .chatPinned16) }
+            public static var chat: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .chatColor16)
+                    : .init(resource: .chatColor16Legacy)
+            }
+            public static var chatPinned: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .chatPinnedColor16)
+                    : .init(resource: .chatPinned16Legacy)
+            }
             public static var cookie: DesignSystemImage {
                 AppRebrand.isAppRebranded()
                     ? .init(resource: .cookieColor16)
