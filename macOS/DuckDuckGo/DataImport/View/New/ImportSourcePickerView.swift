@@ -182,7 +182,7 @@ struct ImportSourcePickerView: View {
     /// prompt ("Grant Access") will appear on the next step.
     private var accessWarningBanner: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(nsImage: DesignSystemImages.Color.Size16.infoFeedback)
+            Image(nsImage: DesignSystemImages.Glyphs.Size16.infoRecolorable)
                 .resizable()
                 .frame(width: 16, height: 16)
             Text(UserText.importBrowserDataAccessInfoBanner(source: viewModel.selectedSource))
@@ -281,7 +281,7 @@ private struct RadioCard: View {
                 .overlay(alignment: .bottomTrailing) {
                     if requiresPermission {
                         // Info badge indicating the browser's data needs an access grant before import (macOS 27+).
-                        Image(nsImage: DesignSystemImages.Color.Size16.infoFeedback)
+                        Image(nsImage: DesignSystemImages.Glyphs.Size16.infoRecolorable)
                             .resizable()
                             .frame(width: 16, height: 16)
                             .offset(x: 4, y: 4)
