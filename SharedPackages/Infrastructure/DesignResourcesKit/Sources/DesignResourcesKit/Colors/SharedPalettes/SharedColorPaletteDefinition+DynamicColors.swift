@@ -316,11 +316,11 @@ extension SharedColorPaletteDefinition {
         case .aiToggleBorder:
             return DynamicColor(staticColorHex: 0x000000, opacity: 0.09)
         case .aiToggleBackground:
-            return DynamicColor(lightHex: 0xFFFFFF, lightOpacity: 0.24, darkHex: 0x000000, darkOpacity: 0.24)
+            return DynamicColor(lightHex: 0xDDDDDD, lightOpacity: 0.24, darkHex: 0x000000, darkOpacity: 0.24)
         case .aiToggleSelectionBackground:
-            return DynamicColor(staticColorHex: 0xDDE0EE, opacity: 0.32)
+            return DynamicColor(lightHex: 0xFFFFFF, lightOpacity: 0.24, darkHex: 0xFFFFFF, darkOpacity: 0.18)
         case .aiToggleSelectionBorder:
-            return dynamicColor(for: .shadowPrimary)
+            return DynamicColor(lightHex: 0x000000, lightOpacity: 0.09, darkHex: 0x000000, darkOpacity: 0.60)
 
         case .fireModeAccent:
             return DynamicColor(lightColor: RebrandingColor.Mandarin.mandarin50, darkColor: RebrandingColor.Mandarin.mandarin40)
