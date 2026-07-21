@@ -515,9 +515,13 @@ public final class DataBrokerProtectionIOSManager {
 
             vaultInitDebugState.reason = reason.rawValue
             let task = Task {
+                let startDate = Date.now
                 do {
                     let resources = try await loadVaultResources()
+                    let durationInMs = Date.now.timeIntervalSince(startDate) * 1000.0
                     publishVaultResources(resources)
+                    iOSPixelsHandler.fire(.deferredSecureVaultInitSucceeded(reason: reason.rawValue,
+                                                                            durationInMs: durationInMs))
                     return resources
                 } catch {
                     clearVaultResourcesInitAttempt()
