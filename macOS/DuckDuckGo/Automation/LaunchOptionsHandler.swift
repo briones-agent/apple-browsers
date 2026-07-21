@@ -25,7 +25,16 @@ public final class LaunchOptionsHandler {
     public static let isOnboardingCompleted = "isOnboardingCompleted"
     private static let automationPortKey = "automationPort"
     private static let isInternalUserKey = "isInternalUser"
+    private static let webViewProxyKey = "webViewProxy"
+    private static let acceptInsecureCertsKey = "acceptInsecureCerts"
     private let userDefaults: UserDefaults
+
+    /// Launch options that alter network behavior are only honored on Debug and Review builds,
+    /// mirroring the gating used for the automation server. They are ignored on production builds.
+    private var isDebugOrReviewBuild: Bool {
+        let buildType = StandardApplicationBuildType()
+        return buildType.isDebugBuild || buildType.isReviewBuild
+    }
 
     public init(
         userDefaults: UserDefaults = .standard
@@ -44,6 +53,25 @@ public final class LaunchOptionsHandler {
         let port = userDefaults.integer(forKey: Self.automationPortKey)
         guard UInt16(exactly: port) != nil, port > 0 else { return nil }
         return port
+    }
+
+    /// SOCKS5 proxy endpoint ("host:port") to route all web content through.
+    /// Used to replay recorded network fixtures for performance testing, so DuckDuckGo and
+    /// Chrome are measured against identical responses.
+    /// Only honored on Debug/Review builds; returns nil otherwise.
+    public var webViewProxy: String? {
+        guard isDebugOrReviewBuild else { return nil }
+        guard let value = userDefaults.string(forKey: Self.webViewProxyKey), !value.isEmpty else { return nil }
+        return value
+    }
+
+    /// When true, the browser accepts otherwise-untrusted server certificates.
+    /// This mirrors Chrome's certificate-bypass launch flags and lets WKWebView connect to a
+    /// replay proxy serving a self-signed certificate during performance testing.
+    /// Only honored on Debug/Review builds; returns false otherwise.
+    public var acceptsInsecureCertificates: Bool {
+        guard isDebugOrReviewBuild else { return false }
+        return userDefaults.bool(forKey: Self.acceptInsecureCertsKey)
     }
 
     /// Returns true if the app is running in UI testing mode

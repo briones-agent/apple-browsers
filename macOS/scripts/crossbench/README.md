@@ -14,6 +14,8 @@ checkout of this directory; `git pull` updates the harness.
 | `commission-macos.sh` | One-time, human/sudo setup of a fresh box (CLT, Homebrew). |
 | `provision-macos.sh` | Per-job, passwordless provisioning (brew formulae, Chrome, wpr build, poetry deps) + pins crossbench to a known revision + self-heals the crossbench extras & patch below. |
 | `test-chrome.sh` | Runs the Chrome LCP suite over the top-sites list against recorded network (WPR) and summarises per-site LCP. |
+| `test-ddg.sh` | Runs the same LCP suite for the DuckDuckGo macOS (WebKit) browser: drives it via its AutomationServer through a SOCKS5 proxy (tsproxy) in front of WPR, and summarises per-site LCP. |
+| `ddg-automation.py` | Minimal client for the DDG AutomationServer (navigate / execute / buffered-LCP probe) that `test-ddg.sh` drives. |
 | `crossbench-extras/` | Fork-only crossbench files the LCP run needs but a plain clone doesn't ship. Mirrors crossbench-relative paths so provisioning copies them in place. |
 | `patches/cpu_freq-attributeerror.patch` | Reference patch for the `crossbench/plt/macos.py` cpu_freq fix (applied idempotently by provision). |
 
@@ -107,5 +109,27 @@ runs unchanged against the runner's existing data locations.
   Python 3. WPR therefore replays at loopback speed — deterministic, but faster
   than the Windows US-broadband-shaped runs. Don't compare absolute values.
 - ClickHouse upload is stubbed (`upload_results`) — out of scope for now.
-- DDG (WebKit/WKWebView) LCP uses a different mechanism and will get its own
-  `test-ddg.sh`; shared helpers should move to a `common.sh` when it lands.
+
+## How DDG is measured (`test-ddg.sh`)
+
+DDG is WebKit/WKWebView: no Perfetto trace, and no `--host-resolver-rules`
+equivalent to point it at WPR. So `test-ddg.sh` differs from the Chrome path:
+
+- **Routing.** A standalone `tsproxy` runs as a SOCKS5 proxy that redirects
+  every destination to loopback WPR and remaps `443`→WPR-https / `80`→WPR-http.
+  The browser is pointed at it with two **Debug/Review-gated** launch options
+  (`LaunchOptionsHandler`): `webViewProxy=host:port` and `acceptInsecureCerts=true`
+  (WPR serves a self-signed cert). Neither option does anything on production
+  builds. This is *not* crossbench's DEPS-pinned tsproxy (Python-2-only) — it's a
+  current copy fetched from catapult, run under the system `python3`.
+- **Driving.** The browser is driven directly through its AutomationServer
+  (Debug/Review HTTP server on `[::1]:PORT`) via `ddg-automation.py` — not
+  crossbench. LCP is read with a buffered `PerformanceObserver` (WebKit only
+  reports LCP to a live observer).
+- **Validity guards.** Each rep starts cold (the app's container cache is cleared
+  and the app relaunched), and a rep is dropped unless the proxy actually saw
+  traffic — so a silent live-network fallback can't masquerade as a result.
+- **No shaping**, same as Chrome — compare DDG-vs-Chrome on the same runner, not
+  DDG-vs-Windows.
+- Shared with Chrome (data, not code): the wpr binary, WPR archives, `WPR_BASE_URL`,
+  and the site list. A `common.sh` extraction is the intended next cleanup.

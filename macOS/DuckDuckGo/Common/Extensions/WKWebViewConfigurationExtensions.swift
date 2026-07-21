@@ -20,6 +20,7 @@ import BrowserServicesKit
 import Combine
 import Common
 import FoundationExtensions
+import Network
 import WebKit
 import UserScript
 
@@ -41,6 +42,8 @@ extension WKWebViewConfiguration {
             // set shared object if not set yet
             Self.sharedVisitedLinkStore = self.visitedLinkStore
         }
+
+        applyWebViewProxyIfNeeded()
 
         allowsAirPlayForMediaPlayback = true
         preferences.isElementFullscreenEnabled = true
@@ -72,6 +75,24 @@ extension WKWebViewConfiguration {
 
         self.userContentController = userContentController
         self.processPool.geolocationProvider = GeolocationProvider(processPool: self.processPool)
+    }
+
+    /// Routes all web content through a SOCKS5 proxy when the `webViewProxy` launch option is set
+    /// (Debug/Review builds only). Used to replay recorded network fixtures for performance testing.
+    @MainActor
+    private func applyWebViewProxyIfNeeded() {
+        guard #available(macOS 14.0, *), let endpointString = LaunchOptionsHandler().webViewProxy else { return }
+
+        let components = endpointString.split(separator: ":")
+        guard components.count == 2,
+              let portValue = UInt16(components[1]), portValue > 0,
+              let port = NWEndpoint.Port(rawValue: portValue) else {
+            assertionFailure("Invalid webViewProxy endpoint: \(endpointString). Expected host:port.")
+            return
+        }
+
+        let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(String(components[0])), port: port)
+        self.websiteDataStore.proxyConfigurations = [ProxyConfiguration(socksv5Proxy: endpoint)]
     }
 
 }

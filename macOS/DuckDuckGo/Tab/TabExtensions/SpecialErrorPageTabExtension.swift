@@ -43,6 +43,11 @@ final class SpecialErrorPageTabExtension {
     private let detector: MaliciousSiteDetecting
     private let tld = TLD()
 
+    /// When true, every server-trust challenge is accepted without user interaction.
+    /// Set only via the `acceptInsecureCerts` launch option on Debug/Review builds, so WKWebView
+    /// can connect to a replay proxy serving a self-signed certificate during performance testing.
+    private let acceptAllServerCertificates: Bool
+
     @MainActor private weak var webView: ErrorPageTabExtensionNavigationDelegate?
     @MainActor private weak var specialErrorPageUserScript: SpecialErrorPageUserScript?
     private let closeTab: () -> Void
@@ -59,12 +64,14 @@ final class SpecialErrorPageTabExtension {
          closeTab: @escaping () -> Void,
          urlCredentialCreator: URLCredentialCreating = URLCredentialCreator(),
          featureFlagger: FeatureFlagger = NSApp.delegateTyped.featureFlagger,
-         maliciousSiteDetector: some MaliciousSiteDetecting) {
+         maliciousSiteDetector: some MaliciousSiteDetecting,
+         acceptAllServerCertificates: Bool = false) {
 
         self.featureFlagger = featureFlagger
         self.urlCredentialCreator = urlCredentialCreator
         self.detector = maliciousSiteDetector
         self.closeTab = closeTab
+        self.acceptAllServerCertificates = acceptAllServerCertificates
 
         webViewPublisher.sink { [weak self] webView in
             MainActor.assumeMainThread {
@@ -197,6 +204,14 @@ extension SpecialErrorPageTabExtension: NavigationResponder {
     @MainActor
     func didReceive(_ challenge: URLAuthenticationChallenge, for navigation: Navigation?) async -> AuthChallengeDisposition? {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust else { return nil }
+
+        // Performance-testing bypass: accept any server certificate without a user prompt so the
+        // browser can talk to a local replay proxy. Gated to Debug/Review builds via the launch option.
+        if acceptAllServerCertificates {
+            guard let credential = urlCredentialCreator.urlCredentialFrom(trust: challenge.protectionSpace.serverTrust) else { return nil }
+            return .credential(credential)
+        }
+
         guard shouldBypassSSLError else { return nil }
         guard navigation?.url == webView?.url else { return nil }
         guard let credential = urlCredentialCreator.urlCredentialFrom(trust: challenge.protectionSpace.serverTrust) else { return nil }

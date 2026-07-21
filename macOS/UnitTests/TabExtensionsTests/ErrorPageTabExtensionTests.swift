@@ -376,6 +376,59 @@ final class ErrorPageTabExtensionTests: XCTestCase {
         XCTAssertNil(disposition)
     }
 
+    @MainActor
+    private func makeAcceptAllCertificatesExtension() -> SpecialErrorPageTabExtension {
+        SpecialErrorPageTabExtension(webViewPublisher: mockWebViewPublisher,
+                                     scriptsPublisher: scriptPublisher,
+                                     closeTab: self.closeTab,
+                                     urlCredentialCreator: credentialCreator,
+                                     featureFlagger: MockFeatureFlagger(),
+                                     maliciousSiteDetector: detector,
+                                     acceptAllServerCertificates: true)
+    }
+
+    @MainActor
+    func testWhenAcceptAllServerCertificatesEnabled_ThenServerTrustChallengeReturnsCredentialWithoutUserBypass() async {
+        // GIVEN
+        let bypassingExtension = makeAcceptAllCertificatesExtension()
+        let protectionSpace = URLProtectionSpace(host: "", port: 4, protocol: nil, realm: nil, authenticationMethod: NSURLAuthenticationMethodServerTrust)
+
+        // WHEN — no visitSiteAction() and no navigation, so the normal user-bypass path would return nil
+        let disposition = await bypassingExtension.didReceive(URLAuthenticationChallenge(protectionSpace: protectionSpace, proposedCredential: nil, previousFailureCount: 0, failureResponse: nil, error: nil, sender: ChallangeSender()), for: nil)
+
+        // THEN
+        if case .credential(let credential) = disposition {
+            XCTAssertNotNil(credential)
+        } else {
+            XCTFail("Expected credential")
+        }
+    }
+
+    @MainActor
+    func testWhenAcceptAllServerCertificatesEnabled_ThenNonServerTrustChallengeReturnsNil() async {
+        // GIVEN
+        let bypassingExtension = makeAcceptAllCertificatesExtension()
+        let protectionSpace = URLProtectionSpace(host: "", port: 4, protocol: nil, realm: nil, authenticationMethod: NSURLAuthenticationMethodClientCertificate)
+
+        // WHEN
+        let disposition = await bypassingExtension.didReceive(URLAuthenticationChallenge(protectionSpace: protectionSpace, proposedCredential: nil, previousFailureCount: 0, failureResponse: nil, error: nil, sender: ChallangeSender()), for: nil)
+
+        // THEN
+        XCTAssertNil(disposition)
+    }
+
+    @MainActor
+    func testWhenAcceptAllServerCertificatesDisabled_AndNoUserBypass_ThenServerTrustChallengeReturnsNil() async {
+        // GIVEN — default extension (acceptAllServerCertificates: false) from setUp
+        let protectionSpace = URLProtectionSpace(host: "", port: 4, protocol: nil, realm: nil, authenticationMethod: NSURLAuthenticationMethodServerTrust)
+
+        // WHEN — no visitSiteAction() called
+        let disposition = await errorPageExtention.didReceive(URLAuthenticationChallenge(protectionSpace: protectionSpace, proposedCredential: nil, previousFailureCount: 0, failureResponse: nil, error: nil, sender: ChallangeSender()), for: nil)
+
+        // THEN
+        XCTAssertNil(disposition)
+    }
+
     @MainActor func testWhenPhishingDetected_ThenPhishingErrorPageIsShown() async {
         // GIVEN
         let mockWebView = MockWKWebView(url: URL(string: phishingURLString)!)
