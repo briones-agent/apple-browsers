@@ -19,6 +19,22 @@
 import AppKit
 import SwiftUI
 import SyncUI_macOS
+import DesignResourcesKit
+
+/// Hosts the sync `ManagementDialog` and injects the reactive design-system palette.
+///
+/// The dialog is presented in a standalone `NSHostingView` (not under the Preferences SwiftUI
+/// tree), so it must inject `\.designSystemPalette` itself. Observing `ThemeManager` here means the
+/// dialog's colors refresh when the theme/palette changes, matching `PreferencesRootView`.
+private struct ThemedManagementDialog: View {
+    @ObservedObject var themeManager: ThemeManager
+    let model: ManagementDialogModel
+
+    var body: some View {
+        ManagementDialog(model: model)
+            .environment(\.designSystemPalette, themeManager.designColorPalette)
+    }
+}
 
 final class SyncManagementDialogViewController: NSViewController {
 
@@ -48,7 +64,7 @@ final class SyncManagementDialogViewController: NSViewController {
             view = NSView()
             return
         }
-        let syncManagementDialog = ManagementDialog(model: managementDialogModel)
+        let syncManagementDialog = ThemedManagementDialog(themeManager: Application.appDelegate.themeManager, model: managementDialogModel)
         view = NSHostingView(rootView: syncManagementDialog)
     }
 }
@@ -72,7 +88,7 @@ final class LegacySyncManagementDialogViewController: NSViewController {
             view = NSView()
             return
         }
-        let syncManagementDialog = ManagementDialog(model: managementDialogModel)
+        let syncManagementDialog = ThemedManagementDialog(themeManager: Application.appDelegate.themeManager, model: managementDialogModel)
         view = NSHostingView(rootView: syncManagementDialog)
     }
 
