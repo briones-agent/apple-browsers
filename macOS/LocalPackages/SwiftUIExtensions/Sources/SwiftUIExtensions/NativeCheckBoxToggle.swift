@@ -38,8 +38,18 @@ public struct NativeCheckboxToggle: NSViewRepresentable {
 
     public func updateNSView(_ nsView: NSButton, context: Context) {
         nsView.state = isOn ? .on : .off
-        nsView.title = label
-        nsView.contentTintColor = DesignSystemRebrand.isAppRebranded() ? NSColor(designSystemColor: .accentPrimary) : nil
+        nsView.contentTintColor = nil
+
+        guard DesignSystemRebrand.isAppRebranded() else {
+            nsView.title = label
+            return
+        }
+
+        let textColor: NSColor = context.environment.isEnabled ? .controlTextColor : .disabledControlTextColor
+        let textFont = nsView.font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)
+
+        nsView.attributedTitle = NSAttributedString(string: label, attributes: [ .foregroundColor: textColor, .font: textFont])
+        nsView.contentTintColor = NSColor(designSystemColor: .accentPrimary)
     }
 
     public func makeCoordinator() -> Coordinator {
