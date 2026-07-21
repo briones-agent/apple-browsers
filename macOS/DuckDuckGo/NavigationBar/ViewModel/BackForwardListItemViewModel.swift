@@ -82,7 +82,7 @@ final class BackForwardListItemViewModel {
         case .bookmarks:
             return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.bookmarksNew : .bookmarksFolder
         case .history:
-            return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFavicon
+            return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFaviconLegacy
         case let url where url?.isDuckPlayer == true:
             return .duckPlayer
         default:
