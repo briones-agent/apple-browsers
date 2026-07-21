@@ -1,6 +1,6 @@
 {
     "m_ios_dbp_secure-vault_deferred-init-succeeded": {
-        "description": "Fired once when deferred Secure Vault initialization completes successfully, recording which app lifecycle entry point triggered it and how long it took.",
+        "description": "Fired once when deferred secure vault initialization completes successfully.",
         "owners": ["quanganhdo"],
         "triggers": ["other"],
         "suffixes": [],
@@ -9,13 +9,13 @@
             "pixelSource",
             {
                 "key": "reason",
-                "description": "The app lifecycle entry point that triggered deferred Secure Vault initialization",
+                "description": "The app lifecycle entry point that triggered deferred secure vault initialization",
                 "type": "string",
                 "enum": ["launch", "appActive", "dashboard", "backgroundTask"]
             },
             {
                 "key": "duration_in_ms",
-                "description": "Wall-clock duration of deferred Secure Vault initialization in milliseconds",
+                "description": "Duration of deferred secure vault initialization in milliseconds",
                 "type": "integer"
             }
         ]
