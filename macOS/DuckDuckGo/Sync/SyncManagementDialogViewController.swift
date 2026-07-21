@@ -49,8 +49,7 @@ final class SyncManagementDialogViewController: NSViewController {
             view = NSView()
             return
         }
-        let syncManagementDialog = ManagementDialog(model: managementDialogModel)
-            .environment(\.designSystemPalette, Application.appDelegate.themeManager.designColorPalette)
+        let syncManagementDialog = ThemedManagementDialog(themeManager: Application.appDelegate.themeManager, model: managementDialogModel)
         view = NSHostingView(rootView: syncManagementDialog)
     }
 }
@@ -74,9 +73,18 @@ final class LegacySyncManagementDialogViewController: NSViewController {
             view = NSView()
             return
         }
-        let syncManagementDialog = ManagementDialog(model: managementDialogModel)
-            .environment(\.designSystemPalette, Application.appDelegate.themeManager.designColorPalette)
+        let syncManagementDialog = ThemedManagementDialog(themeManager: Application.appDelegate.themeManager, model: managementDialogModel)
         view = NSHostingView(rootView: syncManagementDialog)
     }
 
+}
+
+private struct ThemedManagementDialog: View {
+    @ObservedObject var themeManager: ThemeManager
+    let model: ManagementDialogModel
+
+    var body: some View {
+        ManagementDialog(model: model)
+            .environment(\.designSystemPalette, themeManager.designColorPalette)
+    }
 }
