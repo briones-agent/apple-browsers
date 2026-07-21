@@ -78,7 +78,7 @@ final class BackForwardListItemViewModel {
         case .newtab:
             return .homeFavicon
         case .settings:
-            return .settingsMulticolor16
+            return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.settings : .settingsMulticolor16Legacy
         case .bookmarks:
             return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.bookmarksNew : .bookmarksFolder
         case .history:

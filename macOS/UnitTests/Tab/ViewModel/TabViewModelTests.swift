@@ -357,7 +357,7 @@ final class TabViewModelTests: XCTestCase {
             if pane == .otherPlatforms /* this is a link */ {
                 XCTAssertNil(tabViewModel.favicon)
             } else {
-                XCTAssertImagesEqual(tabViewModel.favicon, .settingsMulticolor16, "Failed for \(pane)")
+                XCTAssertImagesEqual(tabViewModel.favicon, .settingsMulticolor16Legacy, "Failed for \(pane)")
             }
         }
     }
