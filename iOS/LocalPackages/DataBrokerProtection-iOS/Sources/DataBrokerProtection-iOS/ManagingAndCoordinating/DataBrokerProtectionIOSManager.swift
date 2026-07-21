@@ -157,45 +157,6 @@ public class DBPIOSInterface {
 
 extension BGTask: DBPIOSInterface.BGTaskHandling {}
 
-final class DBPVaultResources {
-    let database: DataBrokerProtectionRepository
-    var queueManager: JobQueueManaging
-    let jobDependencies: BrokerProfileJobDependencyProviding
-    let emailConfirmationDataService: EmailConfirmationDataServiceProvider
-    private let brokerUpdaterProvider: () -> BrokerJSONServiceProvider?
-
-    private let engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository
-
-    lazy var brokerUpdater = brokerUpdaterProvider()
-    lazy var engagementPixels = DataBrokerProtectionEngagementPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler,
-        repository: engagementPixelsRepository
-    )
-    lazy var eventPixels = DataBrokerProtectionEventPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler
-    )
-    lazy var statsPixels = DataBrokerProtectionStatsPixels(
-        database: jobDependencies.database,
-        handler: jobDependencies.pixelHandler
-    )
-
-    init(database: DataBrokerProtectionRepository,
-         queueManager: JobQueueManaging,
-         jobDependencies: BrokerProfileJobDependencyProviding,
-         emailConfirmationDataService: EmailConfirmationDataServiceProvider,
-         brokerUpdaterProvider: @escaping () -> BrokerJSONServiceProvider?,
-         engagementPixelsRepository: DataBrokerProtectionEngagementPixelsRepository) {
-        self.database = database
-        self.queueManager = queueManager
-        self.jobDependencies = jobDependencies
-        self.emailConfirmationDataService = emailConfirmationDataService
-        self.brokerUpdaterProvider = brokerUpdaterProvider
-        self.engagementPixelsRepository = engagementPixelsRepository
-    }
-}
-
 public final class DataBrokerProtectionIOSManager {
 
     /// The entry point requesting Secure Vault-backed resources. Every caller either starts
@@ -528,10 +489,8 @@ public final class DataBrokerProtectionIOSManager {
                     id: Self.secureVaultSignposter.makeSignpostID(),
                     "reason: \(reason.rawValue, privacy: .public)"
                 )
-                let startDate = Date.now
                 do {
-                    let resources = try await loadVaultResources()
-                    let durationInMs = Date.now.timeIntervalSince(startDate) * 1000.0
+                    let (resources, durationInMs) = try await loadVaultResources()
                     publishVaultResources(resources)
                     Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: success")
                     iOSPixelsHandler.fire(.deferredSecureVaultInitSucceeded(reason: reason.rawValue,
@@ -557,7 +516,7 @@ public final class DataBrokerProtectionIOSManager {
         }
     }
 
-    private func loadVaultResources() async throws -> DBPVaultResources {
+    private func loadVaultResources() async throws -> (resources: DBPVaultResources, durationInMs: Double) {
         guard let provider = vaultResourcesProvider else {
             throw DataBrokerProtectionError.secureVaultNotInitialized
         }
@@ -568,8 +527,11 @@ public final class DataBrokerProtectionIOSManager {
 
         return try await withCheckedThrowingContinuation { [vaultResourcesQueue] continuation in
             vaultResourcesQueue.async {
+                let startDate = Date.now
                 do {
-                    continuation.resume(returning: try provider())
+                    let resources = try provider()
+                    let durationInMs = Date.now.timeIntervalSince(startDate) * 1000.0
+                    continuation.resume(returning: (resources, durationInMs))
                 } catch {
                     continuation.resume(throwing: error)
                 }
