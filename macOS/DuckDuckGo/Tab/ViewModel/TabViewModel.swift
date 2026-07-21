@@ -668,7 +668,7 @@ private extension NSAttributedString {
                                                                                            title: UserText.identityTheftRestorationOptionsMenuItem)
     static let duckPlayerTrustedIndicator = trustedIndicatorAttributedString(with: .duckPlayerSettings,
                                                                              title: UserText.duckPlayer)
-    static let emailProtectionTrustedIndicator = trustedIndicatorAttributedString(with: .emailProtectionIcon,
+    static let emailProtectionTrustedIndicator = trustedIndicatorAttributedString(with: DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.emailProtection : .emailProtectionIconLegacy,
                                                                                   title: UserText.emailProtectionPreferences)
     static let releaseNotesTrustedIndicator = trustedIndicatorAttributedString(with: .releaseNotesIndicator,
                                                                                title: UserText.releaseNotesTitle)

@@ -52,7 +52,7 @@ final class LegacySettingsIconProvider: SettingsIconsProviding {
     var webTrackingProtectionIcon: NSImage = .webTrackingProtectionIcon
     var threatProtectionIcon: NSImage = .radarColor16
     var cookiePopUpProtectionIcon: NSImage = .cookieProtectionIcon
-    var emailProtectionIcon: NSImage = .emailProtectionIcon
+    var emailProtectionIcon: NSImage = .emailProtectionIconLegacy
     var subscriptionIcon: NSImage = .privacyPro
     var vpnIcon: NSImage = .VPN
     var personalInformationRemovalIcon: NSImage = .personalInformationRemovalMulticolor16

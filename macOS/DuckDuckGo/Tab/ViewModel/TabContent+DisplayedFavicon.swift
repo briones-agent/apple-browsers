@@ -89,7 +89,7 @@ extension TabContent {
             } else if url.isDuckAIURL {
                 return .aiChatPreferences
             } else if url.isEmailProtection {
-                return .emailProtectionIcon
+                return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.emailProtection : .emailProtectionIconLegacy
             }
 
             // For regular URLs, return the actual favicon if available
