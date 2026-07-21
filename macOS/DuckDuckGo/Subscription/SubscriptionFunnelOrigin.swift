@@ -87,6 +87,46 @@ enum SubscriptionFunnelOrigin: String {
     /// User entered the funnel by tapping a gated reasoning effort in duck.ai's own omnibar.
     /// https://app.asana.com/1/137249556945/project/1208671677432066/task/1215275657171787
     case duckAIReasoningPicker = "funnel_duckai_macos__reasoningpicker"
+
+    // MARK: - Duck.ai Funnel Origins (frontend-reported)
+
+    /// Subscription entry points shown inside the duck.ai web frontend. The website pixel is
+    /// suppressed in-app, so the frontend reports each surface over the `reportMetric` bridge and
+    /// the native layer fires the aichat subscription-funnel impression/click pixel with this origin.
+    /// https://app.asana.com/1/137249556945/task/1216395339071571
+
+    /// The "upgrade" button shown in the duck.ai AI sidebar.
+    case duckAIAiSidebar = "funnel_duckai_macos__aisidebar"
+
+    /// The "activate subscription" banner.
+    case duckAIActivateSubscription = "funnel_duckai_macos__activatesubscription"
+
+    /// The free-plan badge.
+    case duckAIFreeLabel = "funnel_duckai_macos__freelabel"
+
+    /// The free-tier usage-limit message.
+    case duckAIFreeLimit = "funnel_duckai_macos__freelimit"
+
+    /// The image-generation limit message.
+    case duckAIImageGenerationLimit = "funnel_duckai_macos__imagegenerationlimit"
+
+    /// The plus-tier usage-limit message.
+    case duckAIPlusLimit = "funnel_duckai_macos__pluslimit"
+
+    /// The subscription promo card.
+    case duckAIPromotionCard = "funnel_duckai_macos__promotioncard"
+
+    /// The subscribe section in duck.ai settings.
+    case duckAISettings = "funnel_duckai_macos__settings"
+
+    /// The pro-upgrade disclaimer banner.
+    case duckAIDisclaimerBanner = "funnel_duckai_macos__disclaimerbanner"
+
+    /// The voice-chat usage-limit modal.
+    case duckAIVoiceChatLimit = "funnel_duckai_macos__voicechatlimit"
+
+    /// The voice-chat duration-limit modal.
+    case duckAIVoiceChatDurationLimit = "funnel_duckai_macos__voicechatdurationlimit"
 }
 
 /// Represents the origin point from which the user enters the subscription restore funnel in the macOS app.

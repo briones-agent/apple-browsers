@@ -295,6 +295,19 @@ enum AIChatPixel: PixelKitEvent {
     /// routing them to the subscription purchase/upgrade flow.
     case aiChatAddressBarSubscriptionUpsellTriggered(currentTier: String, requiredTier: String, flowType: String)
 
+    // MARK: - Duck.ai Subscription Funnel (frontend-reported)
+
+    /// Event Trigger: A Duck.ai subscription-funnel entry point (e.g. free-plan badge, promo card,
+    /// usage-limit message) is shown to the user in the web frontend. Reported natively over the
+    /// `reportMetric` bridge; `origin` identifies the entry point (`funnel_duckai_macos__<slug>`).
+    /// https://app.asana.com/1/137249556945/task/1216395339071571
+    case aiChatSubscriptionFunnelImpression(origin: String)
+
+    /// Event Trigger: The user clicks the CTA on a Duck.ai subscription-funnel entry point.
+    /// Reported natively over the `reportMetric` bridge; `origin` identifies the entry point.
+    /// https://app.asana.com/1/137249556945/task/1216395339071571
+    case aiChatSubscriptionFunnelClick(origin: String)
+
     /// Event Trigger: User opens a new voice Duck.ai chat from the native omnibar
     case aiChatNewVoiceChatOmnibarNative
 
@@ -645,6 +658,10 @@ enum AIChatPixel: PixelKitEvent {
             return "aichat_addressbar_reasoning_effort_selected"
         case .aiChatAddressBarSubscriptionUpsellTriggered:
             return "aichat_addressbar_subscription_upsell_triggered"
+        case .aiChatSubscriptionFunnelImpression:
+            return "aichat_subscription-funnel_impression"
+        case .aiChatSubscriptionFunnelClick:
+            return "aichat_subscription-funnel_click"
         case .aiChatNewVoiceChatOmnibarNative:
             return "aichat_new_voice_chat_omnibar_native"
         case .aiChatAddressBarImageGenerationActivated:
@@ -860,6 +877,9 @@ enum AIChatPixel: PixelKitEvent {
             return nil
         case .aiChatAddressBarSubscriptionUpsellTriggered(let currentTier, let requiredTier, let flowType):
             return ["current_tier": currentTier, "required_tier": requiredTier, "flow_type": flowType]
+        case .aiChatSubscriptionFunnelImpression(let origin),
+                .aiChatSubscriptionFunnelClick(let origin):
+            return ["origin": origin]
         case .aiChatIsEnabled(let isEnabled):
             return ["is_enabled": isEnabled ? "1" : "0"]
         case .aiFeaturesState(let duckAI, let searchAssist, let hideAIImages, let noAI):
@@ -1005,6 +1025,8 @@ enum AIChatPixel: PixelKitEvent {
                 .aiChatAddressBarModelSelected,
                 .aiChatAddressBarReasoningEffortSelected,
                 .aiChatAddressBarSubscriptionUpsellTriggered,
+                .aiChatSubscriptionFunnelImpression,
+                .aiChatSubscriptionFunnelClick,
                 .aiChatNtpSubmitWithImage,
                 .aiChatNtpModelSelected,
                 .aiChatNtpReasoningEffortSelected,
