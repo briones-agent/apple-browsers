@@ -3681,6 +3681,18 @@
         }
       }
     },
+    "aichat.chrome.ask-button" : {
+      "comment" : "Title for the relocated Duck.ai sidebar toggle button in the navigation bar",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ask"
+          }
+        }
+      }
+    },
     "aichat.chrome.hide-duckai-button" : {
       "comment" : "Context menu item to hide the Duck.ai title button in the tab bar",
       "extractionState" : "extracted_with_value",

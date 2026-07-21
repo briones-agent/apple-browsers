@@ -43,6 +43,12 @@ final class NavigationBarViewController: NSViewController {
         static let downloadsButtonAutoHidingInterval: TimeInterval = 5 * 60
         static let maxDragDistanceToExpandHoveredFolder: CGFloat = 4
         static let dragOverFolderExpandDelay: TimeInterval = 0.3
+        // PoC: relocated Duck.ai sidebar toggle (Approaches B1/B2)
+        static let duckAISidebarOpenImageName = NSImage.Name("Sidebar-Open-16")
+        static let duckAISidebarCloseImageName = NSImage.Name("Sidebar-Close-16")
+        static let duckAISidebarDetachedImageName = NSImage.Name("Sidebar-Detached-16")
+        static let duckAINavBarButtonSize: CGFloat = 28
+        static let duckAINavBarSeparatorSpacing: CGFloat = 10
     }
 
 #if DEBUG
@@ -82,6 +88,14 @@ final class NavigationBarViewController: NSViewController {
 
     private var feedbackButton: MouseOverButton?
     private var feedbackButtonSpacer: NSView?
+
+    // PoC: relocated Duck.ai sidebar toggle (Approaches B1/B2)
+    private var duckAINavBarSidebarButton: MouseOverButton?
+    private var duckAINavBarSidebarLeadingView: NSView?
+    private var duckAIChromeLayoutCancellable: AnyCancellable?
+    private var duckAINavBarSidebarPresenceCancellable: AnyCancellable?
+    private var duckAINavBarChatFloatingCancellable: AnyCancellable?
+    private var duckAINavBarMenuConfigCancellable: AnyCancellable?
     private var feedbackTipController: QuickFeedbackTipController?
     private var internalUserCancellable: AnyCancellable?
     private var fireWindowBackgroundView: NSImageView?
@@ -476,6 +490,7 @@ final class NavigationBarViewController: NSViewController {
         setupOverflowMenu()
         setupNetworkProtectionButton()
         setupQuickFeedbackButton()
+        subscribeToDuckAINavBarSidebarButton()
 
         subscribeToThemeChanges()
         listenToPasswordManagerNotifications()
@@ -1221,6 +1236,7 @@ final class NavigationBarViewController: NSViewController {
             self?.subscribeToNavigationActionFlags()
             self?.subscribeToCredentialsToSave()
             self?.subscribeToTabContent()
+            self?.updateDuckAINavBarSidebarButtonState()
         }
     }
 
@@ -2124,6 +2140,183 @@ extension NavigationBarViewController: NSMenuDelegate {
 
     @objc private func toggleFeedbackPanelPinning(_ sender: NSMenuItem) {
         pinningManager.togglePinning(for: .feedback)
+    }
+
+    // MARK: - Duck.ai relocated sidebar toggle (PoC: Approaches B1/B2)
+
+    /// Adds/removes the relocated Duck.ai sidebar toggle and keeps its state in sync with the AI chat
+    /// coordinator. The button only exists while a nav-bar PoC variant is enabled; toggling the override in
+    /// Debug → Feature Flag Overrides adds or removes it live.
+    private func subscribeToDuckAINavBarSidebarButton() {
+        duckAIChromeLayoutCancellable = featureFlagger.updatesPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updateDuckAINavBarSidebarButton() }
+
+        duckAINavBarMenuConfigCancellable = aiChatMenuConfig.valuesChangedPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updateDuckAINavBarSidebarButton() }
+
+        duckAINavBarSidebarPresenceCancellable = aiChatCoordinator.sidebarPresenceDidChangePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updateDuckAINavBarSidebarButtonState() }
+
+        duckAINavBarChatFloatingCancellable = aiChatCoordinator.chatFloatingStateDidChangePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updateDuckAINavBarSidebarButtonState() }
+
+        updateDuckAINavBarSidebarButton()
+    }
+
+    private func updateDuckAINavBarSidebarButton() {
+        removeDuckAINavBarSidebarButton()
+
+        let layout = DuckAIChromeLayout.resolve(featureFlagger)
+        guard !isInPopUpWindow,
+              featureFlagger.isFeatureOn(.aiChatChromeSidebar),
+              layout.relocatesSidebarToNavBar,
+              aiChatMenuConfig.shouldDisplayAnyAIChatFeature else { return }
+
+        buildDuckAINavBarSidebarButton(for: layout)
+        updateDuckAINavBarSidebarButtonState()
+    }
+
+    private func buildDuckAINavBarSidebarButton(for layout: DuckAIChromeLayout) {
+        let colorsProvider = theme.colorsProvider
+
+        let button = MouseOverButton(frame: .zero)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isBordered = false
+        button.setButtonType(.momentaryPushIn)
+        button.imageScaling = .scaleProportionallyDown
+        button.target = self
+        button.action = #selector(duckAINavBarSidebarButtonAction(_:))
+        button.contentTintColor = colorsProvider.iconsColor
+        button.normalTintColor = colorsProvider.iconsColor
+        button.mouseOverTintColor = colorsProvider.iconsColor
+        button.mouseDownTintColor = colorsProvider.iconsColor
+        button.mouseOverColor = colorsProvider.buttonMouseOverColor
+        button.mouseDownColor = colorsProvider.buttonMouseDownColor
+        button.setCornerRadius(theme.toolbarButtonsCornerRadius)
+        button.setAccessibilityIdentifier("NavigationBarViewController.duckAINavBarSidebarButton")
+
+        switch layout {
+        case .sidebarNavBarLeft:
+            // Approach B2: labeled "Ask" pill (Duck.ai sparkle + text), leftmost in the right-side menu group.
+            // A thin leading space widens the icon↔label gap slightly while imageHugsTitle keeps it controlled.
+            button.image = DesignSystemImages.Glyphs.Size16.aiChat
+            button.imagePosition = .imageLeading
+            button.imageHugsTitle = true
+            button.attributedTitle = NSAttributedString(string: "\u{2009}" + UserText.aiChatChromeAskButton, attributes: [
+                .foregroundColor: colorsProvider.textPrimaryColor,
+                .font: NSFont.systemFont(ofSize: 13)
+            ])
+            button.horizontalPadding = 10
+            button.heightAnchor.constraint(equalToConstant: Constants.duckAINavBarButtonSize).isActive = true
+
+            // Sit close to the other menu buttons — no extra spacer, just the standard stack spacing.
+            menuButtons.insertArrangedSubview(button, at: 0)
+            duckAINavBarSidebarLeadingView = nil
+
+        case .sidebarNavBarRight:
+            // Approach B1: icon-only, far right, with a separator on its left (breathing room on both sides).
+            button.imagePosition = .imageOnly
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: Constants.duckAINavBarButtonSize),
+                button.heightAnchor.constraint(equalToConstant: Constants.duckAINavBarButtonSize)
+            ])
+
+            let viewBeforeSeparator = menuButtons.arrangedSubviews.last
+            let separator = makeDuckAINavBarSeparator()
+            menuButtons.addArrangedSubview(separator)
+            menuButtons.addArrangedSubview(button)
+            if let viewBeforeSeparator {
+                menuButtons.setCustomSpacing(Constants.duckAINavBarSeparatorSpacing, after: viewBeforeSeparator)
+            }
+            menuButtons.setCustomSpacing(Constants.duckAINavBarSeparatorSpacing, after: separator)
+            duckAINavBarSidebarLeadingView = separator
+
+        case .combined, .splitTabBar:
+            return
+        }
+
+        duckAINavBarSidebarButton = button
+    }
+
+    private func makeDuckAINavBarSeparator() -> NSView {
+        let separator = ColorView(frame: .zero)
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        separator.backgroundColor = theme.colorsProvider.separatorColor
+        NSLayoutConstraint.activate([
+            separator.widthAnchor.constraint(equalToConstant: 1),
+            separator.heightAnchor.constraint(equalToConstant: 16)
+        ])
+        return separator
+    }
+
+    private func removeDuckAINavBarSidebarButton() {
+        duckAINavBarSidebarButton?.removeFromSuperview()
+        duckAINavBarSidebarButton = nil
+        duckAINavBarSidebarLeadingView?.removeFromSuperview()
+        duckAINavBarSidebarLeadingView = nil
+    }
+
+    private func updateDuckAINavBarSidebarButtonState() {
+        guard let button = duckAINavBarSidebarButton else { return }
+        let layout = DuckAIChromeLayout.resolve(featureFlagger)
+
+        let tabID = tabCollectionViewModel.selectedTabViewModel?.tab.uuid
+        let isFloating = tabID.map { aiChatCoordinator.isChatFloating(for: $0) } ?? false
+        let isSidebarOpen = tabID.map { aiChatCoordinator.isSidebarOpen(for: $0) } ?? false
+
+        let tooltip: String
+        if isFloating {
+            tooltip = UserText.aiChatShowButton
+        } else if isSidebarOpen {
+            tooltip = UserText.aiChatCloseSidebarButton
+        } else {
+            tooltip = UserText.aiChatOpenSidebarButton
+        }
+        button.toolTip = tooltip
+        button.state = (isFloating || isSidebarOpen) ? .on : .off
+
+        switch layout {
+        case .sidebarNavBarRight:
+            // B1: icon reflects the current sidebar state.
+            let imageName: NSImage.Name = isFloating ? Constants.duckAISidebarDetachedImageName
+                : isSidebarOpen ? Constants.duckAISidebarCloseImageName
+                : Constants.duckAISidebarOpenImageName
+            button.image = NSImage(named: imageName)
+            button.setAccessibilityTitle(tooltip)
+        case .sidebarNavBarLeft:
+            // B2: static "Ask" affordance; hide it entirely while the sidebar is docked open.
+            button.setAccessibilityTitle(UserText.aiChatChromeAskButton)
+            let hide = isSidebarOpen
+            button.isHidden = hide
+            duckAINavBarSidebarLeadingView?.isHidden = hide
+        default:
+            break
+        }
+    }
+
+    @objc private func duckAINavBarSidebarButtonAction(_ sender: NSButton) {
+        guard let tab = tabCollectionViewModel.selectedTabViewModel?.tab else { return }
+        let tabID = tab.uuid
+
+        if aiChatCoordinator.isChatFloating(for: tabID) {
+            aiChatCoordinator.focusFloatingWindow(for: tabID)
+        } else {
+            let isSidebarOpen = aiChatCoordinator.isSidebarOpen(for: tabID)
+            // Provisional PoC telemetry: reuses the existing address-bar source.
+            let pixel: AIChatPixel = isSidebarOpen ?
+                .aiChatSidebarClosed(source: .addressBarButton) :
+                .aiChatSidebarOpened(source: .addressBarButton,
+                                     shouldAutomaticallySendPageContext: aiChatMenuConfig.shouldAutomaticallySendPageContextTelemetryValue,
+                                     minutesSinceSidebarHidden: aiChatCoordinator.sidebarHiddenAt(for: tabID)?.minutesSinceNow())
+            PixelKit.fire(pixel, frequency: .dailyAndStandard)
+            aiChatCoordinator.toggleSidebar()
+        }
+
+        updateDuckAINavBarSidebarButtonState()
     }
 
     private func setupNetworkProtectionButton() {

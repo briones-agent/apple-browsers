@@ -44,6 +44,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         static let duckAISidebarCloseImageName = NSImage.Name("Sidebar-Close-16")
         static let duckAISidebarDetachedImageName = NSImage.Name("Sidebar-Detached-16")
         static let duckAIControlSpacingBeforeFireButton: CGFloat = 5
+        static let duckAIChromeSplitSpacing: CGFloat = 6
     }
 
     private let standardTabHeight: CGFloat
@@ -84,6 +85,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
     private var pinnedTabsCollectionCancellable: AnyCancellable?
     private var fireButtonMouseOverCancellable: AnyCancellable?
     private var aiChatChromeSidebarFeatureFlagCancellable: AnyCancellable?
+    private var duckAIChromeLayoutCancellable: AnyCancellable?
     private var aiChatSidebarPresenceCancellable: AnyCancellable?
     private var aiChatFloatingStateCancellable: AnyCancellable?
     private var aiChatMenuConfigCancellable: AnyCancellable?
@@ -188,6 +190,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
     private var duckAIChromeTitleButton: MouseOverButton?
     private var duckAIChromeSidebarButton: MouseOverButton?
     private var duckAIChromeDivider: ColorView?
+    private var duckAIChromeContentStack: NSStackView?
 
     private var isFireWindow: Bool {
         tabCollectionViewModel.isBurner
@@ -195,6 +198,11 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
 
     private var isChromeSidebarFeatureEnabled: Bool {
         featureFlagger.isFeatureOn(.aiChatChromeSidebar)
+    }
+
+    /// PoC placement variant for the Duck.ai chrome control (default `.combined`).
+    private var duckAIChromeLayout: DuckAIChromeLayout {
+        DuckAIChromeLayout.resolve(featureFlagger)
     }
 
     var footerCurrentWidthDimension: CGFloat {
@@ -314,6 +322,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         setupConstraints()
         setupFireButton()
         subscribeToChromeSidebarFeatureFlag()
+        subscribeToDuckAIChromeLayoutChanges()
         subscribeToDuckAIChromeButtonsVisibilityChanges()
         setupPinnedTabsView()
         subscribeToTabModeChanges()
@@ -573,6 +582,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         duckAIChromeTitleButton = titleButton
         duckAIChromeSidebarButton = sidebarButton
         duckAIChromeDivider = divider
+        duckAIChromeContentStack = contentStack
 
         aiChatButtonHoverCancellable = Publishers.Merge4(
             titleButton.publisher(for: \.isMouseOver),
@@ -610,23 +620,41 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         enableDuckAIChromeContextMenuOnTabBar()
         container.menu = duckAIChromeContextMenu
 
+        let layout = duckAIChromeLayout
+        let allCorners: CACornerMask = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+
         let duckAIHidden = duckAIChromeButtonsVisibilityManager.isHidden(.duckAI)
-        let sidebarHidden = duckAIChromeButtonsVisibilityManager.isHidden(.sidebar)
+        // For B1/B2 the sidebar toggle is relocated to the navigation bar, so it never renders in the tab
+        // bar regardless of the per-segment user preference.
+        let sidebarHidden = duckAIChromeButtonsVisibilityManager.isHidden(.sidebar) || layout.relocatesSidebarToNavBar
+        let isSplit = (layout == .splitTabBar)
 
         titleButton.isHidden = duckAIHidden
         sidebarButton.isHidden = sidebarHidden
-        divider.isHidden = duckAIHidden || sidebarHidden
+        divider.isHidden = duckAIHidden || sidebarHidden || isSplit
         container.isHidden = duckAIHidden && sidebarHidden
 
-        if !duckAIHidden && !sidebarHidden {
+        // Split mode renders the two segments as independent pills (gap between them, each with its own
+        // rounded background); every other layout keeps them flush inside the shared container.
+        duckAIChromeContentStack?.spacing = isSplit ? Constants.duckAIChromeSplitSpacing : 0
+
+        if isSplit {
+            container.backgroundColor = .clear
+            titleButton.layer?.maskedCorners = allCorners
+            sidebarButton.layer?.maskedCorners = allCorners
+            titleButton.backgroundColor = isFireWindow ? .clear : theme.colorsProvider.buttonMouseOverColor
+            // sidebarButton resting/active background is set in updateDuckAIChromeSegmentedControlState().
+        } else if !duckAIHidden && !sidebarHidden {
             titleButton.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
             sidebarButton.layer?.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            titleButton.backgroundColor = .clear
             container.backgroundColor = isFireWindow ? .clear : theme.colorsProvider.buttonMouseOverColor
         } else if !duckAIHidden {
-            titleButton.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            titleButton.layer?.maskedCorners = allCorners
+            titleButton.backgroundColor = .clear
             container.backgroundColor = isFireWindow ? .clear : theme.colorsProvider.buttonMouseOverColor
         } else if !sidebarHidden {
-            sidebarButton.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            sidebarButton.layer?.maskedCorners = allCorners
             container.backgroundColor = .clear
         }
 
@@ -758,6 +786,7 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         self.duckAIChromeTitleButton = nil
         self.duckAIChromeSidebarButton = nil
         self.duckAIChromeDivider = nil
+        self.duckAIChromeContentStack = nil
         self.aiChatButtonHoverCancellable = nil
         self.duckAIChromeDividerInsetConstraint = nil
         self.duckAIChromeDividerFullConstraint = nil
@@ -795,6 +824,23 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
             .sink { [weak self] isEnabled in
                 self?.applyChromeSidebarFeatureFlagState(isEnabled: isEnabled)
             }
+    }
+
+    /// Re-applies the Duck.ai chrome layout whenever any feature-flag override changes so that flipping a
+    /// PoC variant in Debug → Feature Flag Overrides updates the control live, without relaunching.
+    private func subscribeToDuckAIChromeLayoutChanges() {
+        duckAIChromeLayoutCancellable = featureFlagger.updatesPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.applyDuckAIChromeLayoutIfNeeded()
+            }
+    }
+
+    private func applyDuckAIChromeLayoutIfNeeded() {
+        guard duckAIChromeControlContainer != nil else { return }
+        updateDuckAIChromeSegmentedControlAppearance()
+        applyDuckAIChromeButtonVisibility()
+        updateDuckAIChromeSegmentedControlState()
     }
 
     private func applyChromeSidebarFeatureFlagState(isEnabled: Bool) {
@@ -912,7 +958,9 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         }
         duckAIChromeTitleButton.isEnabled = true
         duckAIChromeSidebarButton.image = duckAISidebarIcon(for: presentationMode)
-        duckAIChromeSidebarButton.backgroundColor = presentationMode != .hidden ? theme.colorsProvider.buttonMouseDownColor : .clear
+        // In split mode the sidebar toggle is its own pill, so it keeps a resting background when closed.
+        let sidebarRestingColor: NSColor = (duckAIChromeLayout == .splitTabBar && !isFireWindow) ? theme.colorsProvider.buttonMouseOverColor : .clear
+        duckAIChromeSidebarButton.backgroundColor = presentationMode != .hidden ? theme.colorsProvider.buttonMouseDownColor : sidebarRestingColor
         duckAIChromeSidebarButton.isEnabled = canToggleSidebar
         duckAIChromeSidebarButton.toolTip = tooltip
         duckAIChromeSidebarButton.setAccessibilityTitle(tooltip)
