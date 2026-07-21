@@ -57,7 +57,7 @@ extension TabContent {
             return .homeFavicon
 
         case .settings:
-            return .settingsMulticolor16
+            return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.settings : .settingsMulticolor16
 
         case .bookmarks:
             return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.bookmarksNew : .bookmarksFolder
