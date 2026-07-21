@@ -528,10 +528,14 @@ public final class DataBrokerProtectionIOSManager {
                     id: Self.secureVaultSignposter.makeSignpostID(),
                     "reason: \(reason.rawValue, privacy: .public)"
                 )
+                let startDate = Date.now
                 do {
                     let resources = try await loadVaultResources()
+                    let durationInMs = Date.now.timeIntervalSince(startDate) * 1000.0
                     publishVaultResources(resources)
                     Self.secureVaultSignposter.endInterval("PIR Secure Vault Initialization", signpostState, "outcome: success")
+                    iOSPixelsHandler.fire(.deferredSecureVaultInitSucceeded(reason: reason.rawValue,
+                                                                            durationInMs: durationInMs))
                     return resources
                 } catch {
                     clearVaultResourcesInitAttempt()

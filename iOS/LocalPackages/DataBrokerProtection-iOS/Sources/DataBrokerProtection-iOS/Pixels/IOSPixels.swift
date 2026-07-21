@@ -30,6 +30,13 @@ public enum IOSPixels {
     case backgroundTaskExpired(duration: Double)
     case backgroundTaskEndedHavingCompletedAllJobs(duration: Double)
     case backgroundTaskSchedulingFailed(error: Error?)
+
+    // Deferred Secure Vault initialization
+    case deferredSecureVaultInitSucceeded(reason: String, durationInMs: Double)
+
+    enum Consts {
+        static let reason = "reason"
+    }
 }
 
 extension IOSPixels: PixelKitEvent {
@@ -39,6 +46,7 @@ extension IOSPixels: PixelKitEvent {
         case .backgroundTaskExpired: return "m_ios_dbp_background-task_expired"
         case .backgroundTaskEndedHavingCompletedAllJobs: return "m_ios_dbp_background-task_ended-having-completed-all-jobs"
         case .backgroundTaskSchedulingFailed: return "m_ios_dbp_background-task_scheduling-failed"
+        case .deferredSecureVaultInitSucceeded: return "m_ios_dbp_secure-vault_deferred-init-succeeded"
         }
     }
 
@@ -54,6 +62,11 @@ extension IOSPixels: PixelKitEvent {
         case .backgroundTaskExpired(let duration),
                 .backgroundTaskEndedHavingCompletedAllJobs(let duration):
             return [DataBrokerProtectionSharedPixels.Consts.durationInMs: String(duration)]
+        case .deferredSecureVaultInitSucceeded(let reason, let durationInMs):
+            return [
+                Consts.reason: reason,
+                DataBrokerProtectionSharedPixels.Consts.durationInMs: String(Int(durationInMs))
+            ]
         }
     }
 
@@ -62,7 +75,8 @@ extension IOSPixels: PixelKitEvent {
         case .backgroundTaskStarted,
                 .backgroundTaskExpired,
                 .backgroundTaskEndedHavingCompletedAllJobs,
-                .backgroundTaskSchedulingFailed:
+                .backgroundTaskSchedulingFailed,
+                .deferredSecureVaultInitSucceeded:
             return [.pixelSource]
         }
     }
@@ -79,7 +93,8 @@ public class IOSPixelsHandler: EventMapping<IOSPixels> {
             switch event {
             case .backgroundTaskStarted,
                     .backgroundTaskExpired,
-                    .backgroundTaskEndedHavingCompletedAllJobs:
+                    .backgroundTaskEndedHavingCompletedAllJobs,
+                    .deferredSecureVaultInitSucceeded:
                 pixelKit.fire(event)
             case .backgroundTaskSchedulingFailed(let error):
                 pixelKit.fire(DebugEvent(event, error: error))

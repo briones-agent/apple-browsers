@@ -1,4 +1,11 @@
 {
+    "m_ios_dbp_secure-vault_deferred-init-succeeded": {
+        "description": "Fired once when deferred Secure Vault initialization completes successfully, recording which app lifecycle entry point triggered it and how long it took.",
+        "owners": ["quanganhdo", "THISISDINOSAUR"],
+        "triggers": ["other"],
+        "suffixes": [],
+        "parameters": ["appVersion", "pixelSource", "dbpVaultInitReason", "dbpVaultInitDurationInMs"]
+    },
     "m_ios_dbp_optout_stage_start": {
         "description": "Fired at the start stage of an opt-out attempt.",
         "owners": ["quanganhdo", "THISISDINOSAUR"],
