@@ -221,6 +221,7 @@ public struct PixelValues {
     static let test = "1"
 }
 
+/// Deprecated. Use PixelKit for new pixels.
 public class Pixel {
 
     private struct Constants {
