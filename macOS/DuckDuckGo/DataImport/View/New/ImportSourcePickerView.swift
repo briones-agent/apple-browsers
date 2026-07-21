@@ -278,20 +278,25 @@ private struct RadioCard: View {
             icon
                 .resizable()
                 .frame(width: 32, height: 32)
+                // Punch a transparent hole in the logo so the card shows through as a 2pt gap around the badge.
+                // Using a real cutout (rather than a reconstructed colour) keeps the gap matching the card in any
+                // hover/appearance state instead of standing out.
+                .overlay(alignment: .bottomTrailing) {
+                    if requiresPermission {
+                        Circle()
+                            .frame(width: 20, height: 20)
+                            .offset(x: 6, y: 6)
+                            .blendMode(.destinationOut)
+                    }
+                }
+                .compositingGroup()
                 .overlay(alignment: .bottomTrailing) {
                     if requiresPermission {
                         // Info badge indicating the browser's data needs an access grant before import (macOS 27+).
-                        // A 2pt ring in the card colour masks a gap around the badge to separate it from the logo.
                         Image(nsImage: DesignSystemImages.Glyphs.Size16.infoRecolorable)
                             .resizable()
                             .frame(width: 16, height: 16)
-                            .padding(2)
-                            .background(
-                                Circle()
-                                    .fill(Color(designSystemColor: .surfaceTertiary))
-                                    .overlay(Circle().fill(Color(designSystemColor: isHovering ? .controlsFillSecondary : .controlsFillPrimary)))
-                            )
-                            .offset(x: 6, y: 6)
+                            .offset(x: 4, y: 4)
                     }
                 }
                 .padding(.trailing, 10)
