@@ -61,7 +61,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         XCTAssertEqual(item?.id, "gpt-4o-mini")
         XCTAssertEqual(item?.name, "GPT-4o mini")
         XCTAssertEqual(item?.shortName, "4o-mini")
-        XCTAssertTrue(item?.isEnabled == true)
+        XCTAssertTrue(item?.isAvailable == true)
         XCTAssertTrue(item?.supportsImageUpload == true)
         XCTAssertEqual(item?.supportedTools, ["WebSearch", "NewsSearch"])
         XCTAssertNil(item?.accessTier)
@@ -79,8 +79,8 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         let freeItem = allItems.first(where: { $0.id == "free-model" })
         let premiumItem = allItems.first(where: { $0.id == "premium-model" })
 
-        XCTAssertTrue(freeItem?.isEnabled == true)
-        XCTAssertTrue(premiumItem?.isEnabled == false)
+        XCTAssertTrue(freeItem?.isAvailable == true)
+        XCTAssertTrue(premiumItem?.isAvailable == false)
     }
 
     func testWhenSubscribedUserThenAllAccessibleModelsAreEnabled() async {
@@ -93,7 +93,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         let sections = await provider.fetchAIModelSections()
         let allItems = sections.flatMap(\.items)
 
-        XCTAssertTrue(allItems.allSatisfy(\.isEnabled))
+        XCTAssertTrue(allItems.allSatisfy(\.isAvailable))
     }
 
     /// A Pro-only model must still show (disabled, with an upsell) to a Plus subscriber, not be dropped.
@@ -111,7 +111,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
 
         XCTAssertTrue(allItems.contains(where: { $0.id == "plus-model" }))
         XCTAssertTrue(allItems.contains(where: { $0.id == "free-model" }))
-        XCTAssertEqual(proOnlyItem?.isEnabled, false)
+        XCTAssertEqual(proOnlyItem?.isAvailable, false)
         XCTAssertEqual(proOnlyItem?.accessTier, "pro")
         XCTAssertEqual(proOnlyItem?.upsell, "upgrade")
     }
@@ -311,7 +311,7 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         let sections = await provider.fetchAIModelSections()
         let premiumItem = sections.flatMap(\.items).first(where: { $0.id == "premium-model" })
 
-        XCTAssertTrue(premiumItem?.isEnabled == false)
+        XCTAssertTrue(premiumItem?.isAvailable == false)
     }
 
     // MARK: - Concurrency

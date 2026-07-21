@@ -157,7 +157,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         if let selectedModelId = config.selectedModelId {
             let item = matchedItem(forModelId: selectedModelId)
             // Reject a model we know is gated; an unmatched id (sections not fetched yet) passes through.
-            if item?.isEnabled != false {
+            if item?.isAvailable != false {
                 // Only refresh the cached short name when the id changes, so echoing back the same
                 // id doesn't null out a valid cache before `lastFetchedSections` is populated.
                 let didChangeModelId = configProvider.selectedModelId != selectedModelId
@@ -182,7 +182,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             return
         }
         let item = matchedItem(forModelId: configProvider.selectedModelId)
-        guard item?.isEnabled != false,
+        guard item?.isAvailable != false,
               item?.reasoningEfforts.filter(\.isAvailable).map(\.id).contains(incoming) == true
         else { return }
         configProvider.selectedReasoningEffort = incoming
@@ -236,7 +236,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
                         id: item.id,
                         name: item.name,
                         shortName: item.shortName,
-                        isEnabled: item.isEnabled,
+                        isAvailable: item.isAvailable,
                         supportsImageUpload: item.supportsImageUpload,
                         supportedTools: item.supportedTools,
                         accessTier: item.accessTier,
@@ -304,7 +304,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
     @MainActor
     private func modelIdForSubmission(action: NewTabPageDataModel.SubmitChatAction) -> String? {
         guard let modelId = action.modelId else { return nil }
-        return matchedItem(forModelId: modelId)?.isEnabled == false ? nil : modelId
+        return matchedItem(forModelId: modelId)?.isAvailable == false ? nil : modelId
     }
 
     @MainActor
@@ -328,7 +328,7 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         guard let incoming = action.reasoningEffort else { return nil }
         let modelId = action.modelId ?? configProvider.selectedModelId
         let item = matchedItem(forModelId: modelId)
-        guard item?.isEnabled != false else { return nil }
+        guard item?.isAvailable != false else { return nil }
         let available = item?.reasoningEfforts.filter(\.isAvailable).map(\.id) ?? []
         return available.contains(incoming) ? incoming : nil
     }
@@ -358,13 +358,15 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
 
     @MainActor
     private func showSubscriptionUpsell(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        await subscriptionDialogPresenter?.showSubscriptionUpsellDialog()
+        let action: NewTabPageDataModel.ShowSubscriptionUpsellAction? = DecodableHelper.decode(from: params)
+        await subscriptionDialogPresenter?.showSubscriptionUpsellDialog(source: action?.source ?? .model)
         return nil
     }
 
     @MainActor
     private func showSubscriptionUpgrade(params: Any, original: WKScriptMessage) async throws -> Encodable? {
-        subscriptionDialogPresenter?.showSubscriptionUpgradeDialog()
+        let action: NewTabPageDataModel.ShowSubscriptionUpgradeAction? = DecodableHelper.decode(from: params)
+        subscriptionDialogPresenter?.showSubscriptionUpgradeDialog(source: action?.source ?? .model)
         return nil
     }
 

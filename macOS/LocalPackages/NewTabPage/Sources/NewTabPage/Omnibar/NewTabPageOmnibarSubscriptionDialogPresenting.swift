@@ -16,12 +16,12 @@
 //  limitations under the License.
 //
 
-/// Presents native subscription dialogs on behalf of the NTP omnibar. Both methods are param-less —
-/// which flow to run is determined entirely by which one the web side calls.
+/// Presents native subscription dialogs on behalf of the NTP omnibar. Which flow to run is
+/// determined by which method is called; `source` only carries which picker triggered it, for telemetry.
 @MainActor
 public protocol NewTabPageOmnibarSubscriptionDialogPresenting {
     /// `async` because it re-resolves the current subscription tier before deciding whether to
     /// offer a free trial, rather than trusting the web's (potentially stale) choice of message.
-    func showSubscriptionUpsellDialog() async
-    func showSubscriptionUpgradeDialog()
+    func showSubscriptionUpsellDialog(source: NewTabPageDataModel.OmnibarSubscriptionUpsellSource) async
+    func showSubscriptionUpgradeDialog(source: NewTabPageDataModel.OmnibarSubscriptionUpsellSource)
 }

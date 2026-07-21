@@ -63,9 +63,13 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
             }
 
             if !gated.isEmpty {
+                // Mirrors the address bar: a free user's gated section mixes Plus+Pro models
+                // ("Subscriber Exclusive"), while a Plus user's is Pro-only ("Pro Exclusive").
+                let header = userTier == .free ? UserText.aiChatModelPickerSubscriberExclusive
+                                                : UserText.aiChatModelPickerProExclusive
                 result.append(
                     NewTabPageDataModel.AIModelSection(
-                        header: UserText.aiChatModelPickerAdvancedSectionHeader,
+                        header: header,
                         items: gated.map { mapToItem($0.model, requiredTier: $0.requiredTier, userTier: userTier) }
                     )
                 )
@@ -84,7 +88,7 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
             id: model.id,
             name: model.name,
             shortName: model.shortName,
-            isEnabled: model.entityHasAccess,
+            isAvailable: model.entityHasAccess,
             supportsImageUpload: model.supportsImageUpload,
             supportedTools: model.supportedTools.map(\.rawValue),
             accessTier: accessTierString(for: model),

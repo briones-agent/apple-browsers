@@ -52,7 +52,7 @@ public extension NewTabPageDataModel {
         public let id: String
         public let name: String
         public let shortName: String
-        public let isEnabled: Bool
+        public let isAvailable: Bool
         public let supportsImageUpload: Bool
         public let supportedTools: [String]
         /// `nil` for a model with no tier requirement; set on every item, not just gated ones.
@@ -63,15 +63,15 @@ public extension NewTabPageDataModel {
         /// when the model accepts no files; the web uses this to drive the file picker's `accept`
         /// and to clear attached files whose MIME isn't supported when the user switches models.
         public let supportedFileTypes: [String]
-        /// For a gated (`isEnabled == false`) model, which upsell flow it leads to: `"subscribe"` or
+        /// For a gated (`isAvailable == false`) model, which upsell flow it leads to: `"subscribe"` or
         /// `"upgrade"`. `nil` for enabled models.
         public let upsell: String?
 
-        public init(id: String, name: String, shortName: String, isEnabled: Bool, supportsImageUpload: Bool, supportedTools: [String] = [], accessTier: String? = nil, reasoningEfforts: [AIModelReasoningEffort] = [], supportedFileTypes: [String] = [], upsell: String? = nil) {
+        public init(id: String, name: String, shortName: String, isAvailable: Bool, supportsImageUpload: Bool, supportedTools: [String] = [], accessTier: String? = nil, reasoningEfforts: [AIModelReasoningEffort] = [], supportedFileTypes: [String] = [], upsell: String? = nil) {
             self.id = id
             self.name = name
             self.shortName = shortName
-            self.isEnabled = isEnabled
+            self.isAvailable = isAvailable
             self.supportsImageUpload = supportsImageUpload
             self.supportedTools = supportedTools
             self.accessTier = accessTier
@@ -459,6 +459,21 @@ public extension NewTabPageDataModel {
 
     struct SetCustomizeResponsesActiveAction: Codable, Equatable {
         let active: Bool
+    }
+
+    // MARK: - omnibar_showSubscriptionUpsell / omnibar_showSubscriptionUpgrade
+
+    public enum OmnibarSubscriptionUpsellSource: String, Codable, Equatable {
+        case model
+        case reasoning
+    }
+
+    struct ShowSubscriptionUpsellAction: Codable, Equatable {
+        let source: OmnibarSubscriptionUpsellSource
+    }
+
+    struct ShowSubscriptionUpgradeAction: Codable, Equatable {
+        let source: OmnibarSubscriptionUpsellSource
     }
 
     /// Customize Responses row state resolved for a specific window (sub-label + toggle).

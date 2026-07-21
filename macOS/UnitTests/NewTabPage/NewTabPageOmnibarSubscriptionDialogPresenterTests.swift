@@ -19,6 +19,7 @@
 import Testing
 import Foundation
 import AIChat
+import NewTabPage
 @testable import DuckDuckGo_Privacy_Browser
 import Subscription
 import SubscriptionTestingUtilities
@@ -46,7 +47,7 @@ struct NewTabPageOmnibarSubscriptionDialogPresenterTests {
     @Test("Upsell dialog offers a free trial when the user is free-tier and still eligible")
     func upsellDialogOffersFreeTrialWhenEligible() async throws {
         let (presenter, _, _) = createPresenter(isEligibleForFreeTrial: true)
-        let dialog = presenter.makeUpsellDialog(userTier: .free)
+        let dialog = presenter.makeUpsellDialog(userTier: .free, source: .model)
 
         #expect(dialog.primaryButtonText == UserText.aiChatSubscriptionUpsellDialogTryForFreeButton)
     }
@@ -54,7 +55,7 @@ struct NewTabPageOmnibarSubscriptionDialogPresenterTests {
     @Test("Upsell dialog reads Upgrade once the user isn't free-trial eligible, and routes to the purchase flow")
     func upsellDialogRoutesToPurchase() async throws {
         let (presenter, mockTabShower, _) = createPresenter(isEligibleForFreeTrial: false)
-        let dialog = presenter.makeUpsellDialog(userTier: .free)
+        let dialog = presenter.makeUpsellDialog(userTier: .free, source: .model)
 
         #expect(dialog.primaryButtonText == UserText.aiChatSubscriptionUpsellDialogUpgradeButton)
 
@@ -71,7 +72,7 @@ struct NewTabPageOmnibarSubscriptionDialogPresenterTests {
     @Test("Upsell dialog reads Upgrade for a non-free tier even when StoreKit reports free-trial eligibility")
     func upsellDialogIgnoresFreeTrialEligibilityForNonFreeTier() async throws {
         let (presenter, _, _) = createPresenter(isEligibleForFreeTrial: true)
-        let dialog = presenter.makeUpsellDialog(userTier: .plus)
+        let dialog = presenter.makeUpsellDialog(userTier: .plus, source: .model)
 
         #expect(dialog.primaryButtonText == UserText.aiChatSubscriptionUpsellDialogUpgradeButton)
     }
@@ -79,7 +80,7 @@ struct NewTabPageOmnibarSubscriptionDialogPresenterTests {
     @Test("Upsell dialog's 'I Have a Subscription' button routes to activation")
     func upsellDialogHaveSubscriptionRoutesToActivation() async throws {
         let (presenter, mockTabShower, _) = createPresenter()
-        let dialog = presenter.makeUpsellDialog(userTier: .free)
+        let dialog = presenter.makeUpsellDialog(userTier: .free, source: .model)
 
         dialog.onHaveSubscription?()
 
@@ -96,7 +97,7 @@ struct NewTabPageOmnibarSubscriptionDialogPresenterTests {
     @Test("Upgrade dialog uses the Pro title/message, hides the Have-Subscription button, and routes to the plans flow")
     func upgradeDialogRoutesToPlans() async throws {
         let (presenter, mockTabShower, _) = createPresenter()
-        let dialog = presenter.makeUpgradeDialog()
+        let dialog = presenter.makeUpgradeDialog(source: .model)
 
         #expect(dialog.title == UserText.aiChatSubscriptionUpsellDialogProTitle)
         #expect(dialog.message == UserText.aiChatSubscriptionUpsellDialogProMessage)
@@ -116,7 +117,7 @@ struct NewTabPageOmnibarSubscriptionDialogPresenterTests {
     @Test("Upgrade dialog's 'I Have a Subscription' button routes to activation")
     func upgradeDialogHaveSubscriptionRoutesToActivation() async throws {
         let (presenter, mockTabShower, _) = createPresenter()
-        let dialog = presenter.makeUpgradeDialog()
+        let dialog = presenter.makeUpgradeDialog(source: .model)
 
         dialog.onHaveSubscription?()
 

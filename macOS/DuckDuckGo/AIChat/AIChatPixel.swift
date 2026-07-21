@@ -331,7 +331,7 @@ enum AIChatPixel: PixelKitEvent {
 
     /// Event Trigger: User taps a gated model or reasoning effort in the New Tab Page omnibar,
     /// routing them to the subscription purchase/upgrade flow.
-    case aiChatNtpSubscriptionUpsellTriggered(flowType: String)
+    case aiChatNtpSubscriptionUpsellTriggered(flowType: String, source: String)
 
     /// Event Trigger: User taps "View all chats" from the New Tab Page omnibar
     case aiChatNtpViewAllChatsClicked
@@ -866,8 +866,8 @@ enum AIChatPixel: PixelKitEvent {
             return nil
         case .aiChatAddressBarSubscriptionUpsellTriggered(let currentTier, let requiredTier, let flowType):
             return ["current_tier": currentTier, "required_tier": requiredTier, "flow_type": flowType]
-        case .aiChatNtpSubscriptionUpsellTriggered(let flowType):
-            return ["flow_type": flowType]
+        case .aiChatNtpSubscriptionUpsellTriggered(let flowType, let source):
+            return ["flow_type": flowType, "source": source]
         case .aiChatIsEnabled(let isEnabled):
             return ["is_enabled": isEnabled ? "1" : "0"]
         case .aiFeaturesState(let duckAI, let searchAssist, let hideAIImages, let noAI):

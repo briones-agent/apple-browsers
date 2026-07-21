@@ -43,6 +43,12 @@
                 "type": "string",
                 "description": "Which subscription flow the user was routed to",
                 "enum": ["purchase", "upgrade"]
+            },
+            {
+                "key": "source",
+                "type": "string",
+                "description": "Which omnibar picker triggered the upsell",
+                "enum": ["model", "reasoning"]
             }
         ]
     },

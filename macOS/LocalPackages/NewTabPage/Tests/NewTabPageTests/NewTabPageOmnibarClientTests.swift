@@ -109,8 +109,8 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
     func testWhenSetConfigWithSelectedModelIdThenShortNameIsCachedFromModelsProvider() async throws {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
-                NewTabPageDataModel.AIModelItem(id: "gpt-4o-mini", name: "GPT-4o mini", shortName: "G4m", isEnabled: true, supportsImageUpload: false, supportedTools: []),
-                NewTabPageDataModel.AIModelItem(id: "maverick", name: "Maverick", shortName: "Maverick", isEnabled: true, supportsImageUpload: false, supportedTools: [])
+                NewTabPageDataModel.AIModelItem(id: "gpt-4o-mini", name: "GPT-4o mini", shortName: "G4m", isAvailable: true, supportsImageUpload: false, supportedTools: []),
+                NewTabPageDataModel.AIModelItem(id: "maverick", name: "Maverick", shortName: "Maverick", isAvailable: true, supportsImageUpload: false, supportedTools: [])
             ])
         ]
         let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableCustomizeResponses: nil, customizeSubLabel: nil, hasCustomization: nil, customizationActive: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "maverick", aiModelSections: nil, selectedReasoningEffort: nil, enableAttachTabs: nil, attachmentLimits: nil)
@@ -126,7 +126,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         configProvider.selectedModelShortName = "StaleName"
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
-                NewTabPageDataModel.AIModelItem(id: "gpt-4o-mini", name: "GPT-4o mini", shortName: "G4m", isEnabled: true, supportsImageUpload: false, supportedTools: [])
+                NewTabPageDataModel.AIModelItem(id: "gpt-4o-mini", name: "GPT-4o mini", shortName: "G4m", isAvailable: true, supportsImageUpload: false, supportedTools: [])
             ])
         ]
         let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableCustomizeResponses: nil, customizeSubLabel: nil, hasCustomization: nil, customizationActive: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "brand-new-model", aiModelSections: nil, selectedReasoningEffort: nil, enableAttachTabs: nil, attachmentLimits: nil)
@@ -161,7 +161,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["none", "low", "medium"]))
             ])
         ]
@@ -177,7 +177,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  supportedTools: ["WebSearch"],
                                                  reasoningEfforts: availableEfforts(["none", "low", "medium"]))
             ])
@@ -196,7 +196,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "model", name: "Model", shortName: "M",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["none", "low"]),
                                                  supportedFileTypes: ["application/pdf"])
             ])
@@ -214,7 +214,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["none", "low", "medium"]))
             ])
         ]
@@ -243,7 +243,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["none", "low", "medium"]))
             ])
         ]
@@ -262,7 +262,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "limited-model", name: "Limited", shortName: "L",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["low"]))
             ])
         ]
@@ -283,7 +283,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: [
                                                     NewTabPageDataModel.AIModelReasoningEffort(id: "none", name: "Fast", isAvailable: true),
                                                     NewTabPageDataModel.AIModelReasoningEffort(id: "medium", name: "Extended Reasoning", isAvailable: false, upsell: "upgrade")
@@ -305,9 +305,9 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "free-model", name: "Free", shortName: "Free",
-                                                 isEnabled: true, supportsImageUpload: false),
+                                                 isAvailable: true, supportsImageUpload: false),
                 NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
-                                                 isEnabled: false, supportsImageUpload: false, upsell: "upgrade")
+                                                 isAvailable: false, supportsImageUpload: false, upsell: "upgrade")
             ])
         ]
         let newConfig = NewTabPageDataModel.OmnibarConfig(mode: .ai, enableAi: true, showAiSetting: nil, showCustomizePopover: nil, enableRecentAiChats: nil, showViewAllAiChats: nil, enableAiChatTools: nil, enableImageGeneration: nil, enableWebSearch: nil, enableCustomizeResponses: nil, customizeSubLabel: nil, hasCustomization: nil, customizationActive: nil, enableVoiceChatAccess: nil, enableAskAiSuggestion: nil, selectedModelId: "gated-model", aiModelSections: nil, selectedReasoningEffort: nil, enableAttachTabs: nil, attachmentLimits: nil)
@@ -327,7 +327,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
-                                                 isEnabled: false, supportsImageUpload: false,
+                                                 isAvailable: false, supportsImageUpload: false,
                                                  reasoningEfforts: [
                                                     NewTabPageDataModel.AIModelReasoningEffort(id: "high", name: "Extended Reasoning", isAvailable: true)
                                                  ], upsell: "upgrade")
@@ -347,7 +347,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["low"]))
             ])
         ]
@@ -366,7 +366,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["low", "medium"]))
             ])
         ]
@@ -390,7 +390,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "limited-model", name: "Limited", shortName: "L",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["low"]))
             ])
         ]
@@ -415,7 +415,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: [
                                                     NewTabPageDataModel.AIModelReasoningEffort(id: "low", name: "Reasoning", isAvailable: true),
                                                     NewTabPageDataModel.AIModelReasoningEffort(id: "medium", name: "Extended Reasoning", isAvailable: false, upsell: "upgrade")
@@ -442,7 +442,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
-                                                 isEnabled: false, supportsImageUpload: false, upsell: "upgrade")
+                                                 isAvailable: false, supportsImageUpload: false, upsell: "upgrade")
             ])
         ]
         let expectation = expectation(description: "submitChatCalled")
@@ -466,7 +466,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "gated-model", name: "Gated", shortName: "Gated",
-                                                 isEnabled: false, supportsImageUpload: false,
+                                                 isAvailable: false, supportsImageUpload: false,
                                                  reasoningEfforts: [
                                                     NewTabPageDataModel.AIModelReasoningEffort(id: "high", name: "Extended Reasoning", isAvailable: true)
                                                  ], upsell: "upgrade")
@@ -495,7 +495,7 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
         modelsProvider.lastFetchedSections = [
             NewTabPageDataModel.AIModelSection(header: nil, items: [
                 NewTabPageDataModel.AIModelItem(id: "reasoning-model", name: "Reasoning", shortName: "R",
-                                                 isEnabled: true, supportsImageUpload: false,
+                                                 isAvailable: true, supportsImageUpload: false,
                                                  reasoningEfforts: availableEfforts(["low"]))
             ])
         ]
@@ -826,18 +826,32 @@ final class NewTabPageOmnibarClientTests: XCTestCase {
 
     @MainActor
     func testShowSubscriptionUpsellPresentsUpsellDialog() async throws {
-        try await messageHelper.handleMessageExpectingNilResponse(named: .showSubscriptionUpsell)
+        let action = NewTabPageDataModel.ShowSubscriptionUpsellAction(source: .reasoning)
+        try await messageHelper.handleMessageExpectingNilResponse(named: .showSubscriptionUpsell, parameters: action)
 
         XCTAssertEqual(subscriptionDialogPresenter.upsellDialogShownCount, 1)
         XCTAssertEqual(subscriptionDialogPresenter.upgradeDialogShownCount, 0)
+        XCTAssertEqual(subscriptionDialogPresenter.lastUpsellSource, .reasoning)
     }
 
     @MainActor
     func testShowSubscriptionUpgradePresentsUpgradeDialog() async throws {
-        try await messageHelper.handleMessageExpectingNilResponse(named: .showSubscriptionUpgrade)
+        let action = NewTabPageDataModel.ShowSubscriptionUpgradeAction(source: .model)
+        try await messageHelper.handleMessageExpectingNilResponse(named: .showSubscriptionUpgrade, parameters: action)
 
         XCTAssertEqual(subscriptionDialogPresenter.upgradeDialogShownCount, 1)
         XCTAssertEqual(subscriptionDialogPresenter.upsellDialogShownCount, 0)
+        XCTAssertEqual(subscriptionDialogPresenter.lastUpgradeSource, .model)
+    }
+
+    /// `source` should default gracefully rather than dropping the whole dialog-show action —
+    /// the dialog itself doesn't depend on it, only the telemetry does.
+    @MainActor
+    func testShowSubscriptionUpsellWithMissingSourceDefaultsToModel() async throws {
+        try await messageHelper.handleMessageExpectingNilResponse(named: .showSubscriptionUpsell)
+
+        XCTAssertEqual(subscriptionDialogPresenter.upsellDialogShownCount, 1)
+        XCTAssertEqual(subscriptionDialogPresenter.lastUpsellSource, .model)
     }
 
     // MARK: - Helpers
@@ -861,13 +875,17 @@ private final class StubNewTabPageOmnibarModelsProvider: NewTabPageOmnibarModels
 private final class MockNewTabPageOmnibarSubscriptionDialogPresenter: NewTabPageOmnibarSubscriptionDialogPresenting {
     var upsellDialogShownCount = 0
     var upgradeDialogShownCount = 0
+    var lastUpsellSource: NewTabPageDataModel.OmnibarSubscriptionUpsellSource?
+    var lastUpgradeSource: NewTabPageDataModel.OmnibarSubscriptionUpsellSource?
 
-    func showSubscriptionUpsellDialog() {
+    func showSubscriptionUpsellDialog(source: NewTabPageDataModel.OmnibarSubscriptionUpsellSource) {
         upsellDialogShownCount += 1
+        lastUpsellSource = source
     }
 
-    func showSubscriptionUpgradeDialog() {
+    func showSubscriptionUpgradeDialog(source: NewTabPageDataModel.OmnibarSubscriptionUpsellSource) {
         upgradeDialogShownCount += 1
+        lastUpgradeSource = source
     }
 }
 
