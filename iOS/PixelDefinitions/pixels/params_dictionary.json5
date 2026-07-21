@@ -284,22 +284,6 @@
         "type": "string",
         "description": "Version of the broker JSON file reported via wide pixels"
     },
-    "dbpVaultInitReason": {
-        "key": "reason",
-        "type": "string",
-        "description": "The app lifecycle entry point that triggered deferred Secure Vault initialization",
-        "enum": [
-            "launch",
-            "appActive",
-            "dashboard",
-            "backgroundTask"
-        ]
-    },
-    "dbpVaultInitDurationInMs": {
-        "key": "duration_in_ms",
-        "type": "integer",
-        "description": "Wall-clock duration of deferred Secure Vault initialization in milliseconds"
-    },
     "vpnSubscriptionActive": {
         "key": "vpnSubscriptionActive",
         "type": "string",

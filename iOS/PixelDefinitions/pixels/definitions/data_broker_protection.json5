@@ -4,7 +4,21 @@
         "owners": ["quanganhdo"],
         "triggers": ["other"],
         "suffixes": [],
-        "parameters": ["appVersion", "pixelSource", "dbpVaultInitReason", "dbpVaultInitDurationInMs"]
+        "parameters": [
+            "appVersion",
+            "pixelSource",
+            {
+                "key": "reason",
+                "description": "The app lifecycle entry point that triggered deferred Secure Vault initialization",
+                "type": "string",
+                "enum": ["launch", "appActive", "dashboard", "backgroundTask"]
+            },
+            {
+                "key": "duration_in_ms",
+                "description": "Wall-clock duration of deferred Secure Vault initialization in milliseconds",
+                "type": "integer"
+            }
+        ]
     },
     "m_ios_dbp_optout_stage_start": {
         "description": "Fired at the start stage of an opt-out attempt.",
