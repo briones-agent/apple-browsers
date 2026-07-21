@@ -69,7 +69,7 @@ extension TabContent {
             return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFaviconLegacy
 
         case .subscription:
-            return .privacyPro
+            return DesignSystemRebrand.isAppRebranded() ?  DesignSystemImages.Color.Size16.subscription : .privacyProLegacy
 
         case .identityTheftRestoration:
             return .identityTheftRestorationMulticolor16

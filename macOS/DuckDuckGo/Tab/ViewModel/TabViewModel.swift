@@ -662,7 +662,7 @@ private extension NSAttributedString {
                                                                           title: UserText.mainMenuHistory)
     static let dbpTrustedIndicator = trustedIndicatorAttributedString(with: .personalInformationRemovalMulticolor16,
                                                                       title: UserText.tabDataBrokerProtectionTitle)
-    static let subscriptionTrustedIndicator = trustedIndicatorAttributedString(with: .privacyPro,
+    static let subscriptionTrustedIndicator = trustedIndicatorAttributedString(with: DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.subscription : .privacyProLegacy,
                                                                                title: UserText.subscriptionName)
     static let identityTheftRestorationTrustedIndicator = trustedIndicatorAttributedString(with: .identityTheftRestorationMulticolor16,
                                                                                            title: UserText.identityTheftRestorationOptionsMenuItem)
