@@ -373,7 +373,7 @@ final class TabViewModelTests: XCTestCase {
     func testDisplayedFaviconForHistory() {
         let tabViewModel = TabViewModel.forTabWithURL(URL.history)
 
-        XCTAssertImagesEqual(tabViewModel.favicon, .historyFavicon)
+        XCTAssertImagesEqual(tabViewModel.favicon, .historyFaviconLegacy)
     }
 
     @MainActor

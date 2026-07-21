@@ -66,7 +66,7 @@ extension TabContent {
             return .onboardingDax
 
         case .history:
-            return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFavicon
+            return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFaviconLegacy
 
         case .subscription:
             return .privacyPro
@@ -83,7 +83,7 @@ extension TabContent {
         case .url(let url, _, _):
             // Handle special URL types
             if url.isHistory {
-                return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFavicon
+                return DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.history : .historyFaviconLegacy
             } else if url.isDuckPlayer {
                 return .duckPlayerSettings
             } else if url.isDuckAIURL {
