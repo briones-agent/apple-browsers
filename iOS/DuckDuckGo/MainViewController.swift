@@ -320,7 +320,7 @@ class MainViewController: UIViewController {
                               themeManager: themeManager)
     }()
 
-    private lazy var aiChatViewControllerManager: AIChatViewControllerManager = {
+    lazy var aiChatViewControllerManager: AIChatViewControllerManager = {
         let manager = AIChatViewControllerManager(privacyConfigurationManager: privacyConfigurationManager,
                                                   contentBlockingAssetsPublisher: contentBlockingAssetsPublisher,
                                                   experimentalAIChatManager: .init(featureFlagger: featureFlagger),
