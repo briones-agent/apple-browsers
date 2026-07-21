@@ -6057,6 +6057,42 @@ extension MainViewController: TabDelegate {
         openAIChatHistory(source: source)
     }
 
+    func tabDidRequestAIChatFeedback(tab: TabViewController) {
+        let optionsView = DuckAIFeedbackOptionsView(
+            onSelect: { [weak self, weak tab] sentiment in
+                let positive: Bool
+                switch sentiment {
+                case .positive: positive = true
+                case .critical: positive = false
+                }
+                self?.dismiss(animated: true) {
+                    tab?.openAIChatFeedback(positive: positive)
+                }
+            }
+        )
+        let hostingController = UIHostingController(rootView: optionsView)
+        hostingController.title = UserText.aiChatFeedbackOptionsTitle
+        hostingController.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: DesignSystemImages.Glyphs.Size24.close,
+            primaryAction: UIAction { [weak self] _ in self?.dismiss(animated: true) }
+        )
+        let navigationController = UINavigationController(rootViewController: hostingController)
+        navigationController.navigationBar.tintColor = UIColor(designSystemColor: .textPrimary)
+        if let sheet = navigationController.sheetPresentationController {
+            if #available(iOS 16.0, *) {
+                sheet.detents = [.custom(identifier: .init("duckAIFeedbackOptions")) { _ in 230 }]
+            } else {
+                sheet.detents = [.medium()]
+            }
+            sheet.prefersGrabberVisible = true
+            // Match the browsing menu sheet: rounded on pre-iOS 26, system floating style on iOS 26.
+            if #unavailable(iOS 26) {
+                sheet.preferredCornerRadius = 24
+            }
+        }
+        present(navigationController, animated: true)
+    }
+
     func openAIChatHistory(source: AIChatHistorySource = .browserMenu) {
         // The native chat history sheet is an iPhone-only experience; entrypoints are hidden on iPad,
         // and this guard ensures the sheet can never be presented there.

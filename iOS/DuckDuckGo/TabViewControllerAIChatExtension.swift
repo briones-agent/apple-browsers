@@ -130,6 +130,24 @@ extension TabViewController: AITabController {
         delegate?.tab(self, didRequestNewTabForUrl: url, openedByPage: false, inheritingAttribution: nil)
     }
 
+    /// Opens the Duck.ai feedback flow for the given sentiment. On a Duck.ai tab this pushes
+    /// via the bridge (no reload); elsewhere it opens Duck.ai in a new tab via the URL param.
+    func openAIChatFeedback(positive: Bool) {
+        let value = positive ? AIChatURLParameters.feedbackPositiveValue : AIChatURLParameters.feedbackNegativeValue
+        if isAITab {
+            aiChatContentHandler.submitOpenFeedbackAction(sentiment: value)
+        } else {
+            let url = AIChatURLParameters.feedbackURL(from: aiChatSettings.aiChatURL, value: value)
+            delegate?.tab(self, didRequestNewTabForUrl: url, openedByPage: false, inheritingAttribution: nil)
+        }
+    }
+
+    /// Pushes the chat-protection action via the bridge. Callers use this only when this tab is a
+    /// Duck.ai tab; otherwise they open the URL directly.
+    func submitOpenChatProtectionAction() {
+        aiChatContentHandler.submitOpenChatProtectionAction()
+    }
+
     /// Reloads the full mode AI Chat tab if this is an AI tab.
     func reloadFullModeAIChatIfNeeded() {
         if isAITab {
