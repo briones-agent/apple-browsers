@@ -515,10 +515,8 @@ public final class DataBrokerProtectionIOSManager {
 
             vaultInitDebugState.reason = reason.rawValue
             let task = Task {
-                let startDate = Date.now
                 do {
-                    let resources = try await loadVaultResources()
-                    let durationInMs = Date.now.timeIntervalSince(startDate) * 1000.0
+                    let (resources, durationInMs) = try await loadVaultResources()
                     publishVaultResources(resources)
                     iOSPixelsHandler.fire(.deferredSecureVaultInitSucceeded(reason: reason.rawValue,
                                                                             durationInMs: durationInMs))
@@ -542,15 +540,18 @@ public final class DataBrokerProtectionIOSManager {
         }
     }
 
-    private func loadVaultResources() async throws -> DBPVaultResources {
+    private func loadVaultResources() async throws -> (resources: DBPVaultResources, durationInMs: Double) {
         guard let provider = vaultResourcesProvider else {
             throw DataBrokerProtectionError.secureVaultNotInitialized
         }
 
         return try await withCheckedThrowingContinuation { [vaultResourcesQueue] continuation in
             vaultResourcesQueue.async {
+                let startDate = Date.now
                 do {
-                    continuation.resume(returning: try provider())
+                    let resources = try provider()
+                    let durationInMs = Date.now.timeIntervalSince(startDate) * 1000.0
+                    continuation.resume(returning: (resources, durationInMs))
                 } catch {
                     continuation.resume(throwing: error)
                 }
