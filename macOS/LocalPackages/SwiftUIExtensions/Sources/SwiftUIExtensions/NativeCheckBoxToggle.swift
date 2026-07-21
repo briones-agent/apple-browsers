@@ -45,11 +45,12 @@ public struct NativeCheckboxToggle: NSViewRepresentable {
             return
         }
 
-        let textColor: NSColor = context.environment.isEnabled ? .controlTextColor : .disabledControlTextColor
+        let isEnabled = context.environment.isEnabled
+        let textColor: NSColor = isEnabled ? .controlTextColor : .disabledControlTextColor
         let textFont = nsView.font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)
 
         nsView.attributedTitle = NSAttributedString(string: label, attributes: [ .foregroundColor: textColor, .font: textFont])
-        nsView.contentTintColor = NSColor(designSystemColor: .accentPrimary)
+        nsView.contentTintColor = isEnabled ? NSColor(designSystemColor: .accentPrimary) : nil
     }
 
     public func makeCoordinator() -> Coordinator {
