@@ -281,10 +281,17 @@ private struct RadioCard: View {
                 .overlay(alignment: .bottomTrailing) {
                     if requiresPermission {
                         // Info badge indicating the browser's data needs an access grant before import (macOS 27+).
+                        // A 2pt ring in the card colour masks a gap around the badge to separate it from the logo.
                         Image(nsImage: DesignSystemImages.Glyphs.Size16.infoRecolorable)
                             .resizable()
                             .frame(width: 16, height: 16)
-                            .offset(x: 4, y: 4)
+                            .padding(2)
+                            .background(
+                                Circle()
+                                    .fill(Color(designSystemColor: .surfaceTertiary))
+                                    .overlay(Circle().fill(Color(designSystemColor: isHovering ? .controlsFillSecondary : .controlsFillPrimary)))
+                            )
+                            .offset(x: 6, y: 6)
                     }
                 }
                 .padding(.trailing, 10)
