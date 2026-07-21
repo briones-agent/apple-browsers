@@ -52,12 +52,6 @@ public protocol OnboardingSearchPersonalizing: AnyObject {
 
 /// The first `.privateAIChat` setup step to select an AI model.
 public protocol OnboardingAIChatModelPersonalizing: AnyObject {
-    /// The AI models available to the user.
-    var availableAIChatModels: [OnboardingAIModel] { get }
-    /// The currently selected model, resolved from the store and falling back to the on-screen
-    /// default when the stored value isn't one of ``availableAIChatModels``.
-    var selectedAIChatModel: OnboardingAIModel { get }
-
     /// Persists `model` as the user's selected AI chat model.
     func setAIChatModel(_ model: OnboardingAIModel)
 }
