@@ -672,7 +672,7 @@ private extension NSAttributedString {
                                                                                   title: UserText.emailProtectionPreferences)
     static let releaseNotesTrustedIndicator = trustedIndicatorAttributedString(with: .releaseNotesIndicator,
                                                                                title: UserText.releaseNotesTitle)
-    static let aiChatTrustedIndicator = trustedIndicatorAttributedString(with: .aiChatPreferences,
+    static let aiChatTrustedIndicator = trustedIndicatorAttributedString(with: DesignSystemRebrand.isAppRebranded() ? DesignSystemImages.Color.Size16.aiChat : .aiChatPreferencesLegacy,
                                                                          title: UserText.aiChatAddressBarTrustedIndicator)
 
 }

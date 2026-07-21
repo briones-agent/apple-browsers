@@ -65,7 +65,7 @@ final class LegacySettingsIconProvider: SettingsIconsProviding {
     var dataClearingIcon: NSImage = .fireSettings
     var duckPlayerIcon: NSImage = .duckPlayerSettings
     var youTubeAdBlockingIcon: NSImage = .duckPlayerSettings
-    var duckAIIcon: NSImage = .aiChatPreferences
+    var duckAIIcon: NSImage = .aiChatPreferencesLegacy
     var paidAIChatIcon: NSImage = .duckAiPaidColor16
     var aboutIcon: NSImage = .about
     var otherPlatformsIcon: NSImage = .otherPlatformsPreferences
