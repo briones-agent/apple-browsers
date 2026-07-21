@@ -149,7 +149,11 @@ public extension DesignSystemImages {
                     ? .init(resource: .imageAIBlocked16)
                     : .init(resource: .imageAIBlocked16Legacy)
             }
-            public static var history: DesignSystemImage { .init(resource: .historyColor16) }
+            public static var history: DesignSystemImage {
+                AppRebrand.isAppRebranded()
+                    ? .init(resource: .historyColor16)
+                    : .init(resource: .historyColor16Legacy)
+            }
             public static var home: DesignSystemImage { .init(resource: .homeColor16) }
             public static var hourglass: DesignSystemImage { .init(resource: .hourglassColor16) }
             public static var identityBlockedPIR: DesignSystemImage {
