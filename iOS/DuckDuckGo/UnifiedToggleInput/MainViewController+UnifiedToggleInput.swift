@@ -410,10 +410,6 @@ extension MainViewController {
         let hasExistingChat = resolvedURL?.duckAIChatID != nil
         let isSidebarOpen = resolvedURL?.isDuckAISidebarOpen == true
         let isSettingsOpen = resolvedURL?.isDuckAISettingsOpen == true
-        // Deep-link surfaces (feedback form, chat-protection page) open their own UI; auto-expanding
-        // the input would pop the keyboard over them. Read from a per-tab flag captured at load time
-        // rather than the URL: the FE strips the query param on load, and at this point navigation may
-        // not have committed yet, so the URL is unreliable.
         let shouldExpandAfterRefresh = !hasExistingChat && !inputs.coordinatorHasSubmittedPrompt && !isVoiceMode && !isSidebarOpen && !isSettingsOpen && !inputs.tabRequestsDeepLinkSurface
         return .refreshAITab(.showCollapsed(expandAfterRefresh: shouldExpandAfterRefresh))
     }
@@ -718,8 +714,6 @@ private extension MainViewController {
             coordinator.aiChatInputBoxVisibility = .hidden
         }
         tab.isVoiceModeRequested = false
-        // One-shot: consumed on the first AI-tab refresh so later AI→AI navigations don't keep
-        // suppressing auto-expand after the deep-link surface has been shown.
         tab.isDuckAIDeepLinkSurfaceRequested = false
         // Before the early-return so AI→AI tab transitions (`preserveCurrentPresentation`) also
         // override the `UIView`-default-visible borders on a freshly-bound tab.

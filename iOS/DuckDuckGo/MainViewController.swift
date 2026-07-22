@@ -2318,7 +2318,6 @@ class MainViewController: UIViewController {
     }
 
     func loadUrl(_ url: URL, fromExternalLink: Bool = false) {
-        currentTab?.isDuckAIDeepLinkSurfaceRequested = url.isDuckAIFeedbackOpen || url.isDuckAIChatProtectionOpen
         prepareTabForRequest {
             self.currentTab?.load(url: url)
             if fromExternalLink {
@@ -4355,6 +4354,7 @@ extension MainViewController: BrowserChromeDelegate {
             }
             loadUrlInNewTab(url, inheritedAttribution: nil, fromExternalLink: fromExternalLink)
         case .loadInPlace:
+            currentTab?.isDuckAIDeepLinkSurfaceRequested = url.isDuckAIFeedbackOpen || url.isDuckAIChatProtectionOpen
             loadUrl(url, fromExternalLink: fromExternalLink)
         }
     }
