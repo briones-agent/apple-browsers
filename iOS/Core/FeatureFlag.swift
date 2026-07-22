@@ -511,8 +511,7 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216491579842691?focus=true
     case onboardingFlowByDownloadReasonExperiment
 
-    #warning("Add Asana task link for blankSnapshotCaching feature flag")
-    /// Caches the blank-snapshot overlay off the suspend path to avoid the background scene-update watchdog.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216782867888622?focus=true
     case blankSnapshotCaching
 
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216629730083154?focus=true
