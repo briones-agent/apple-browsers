@@ -16,6 +16,7 @@
 //  limitations under the License.
 //
 
+import AIChat
 import Cocoa
 import Combine
 import Common
@@ -384,6 +385,11 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         let isContextEvent = event.isContextClick || event.type == .rightMouseDown
 
         guard clickInContainer, isContextEvent else { return false }
+        // Approach D: right-click shows the same menu as Approach C.
+        if duckAIChromeLayout == .singleSidebarButton {
+            NSMenu.popUpContextMenu(makeDuckAIMenuButtonMenu(), with: event, for: container)
+            return true
+        }
         NSMenu.popUpContextMenu(duckAIChromeContextMenu, with: event, for: container)
         return true
     }
@@ -1036,61 +1042,57 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         menu.popUp(positioning: nil, at: location, in: sender)
     }
 
-    private func makeDuckAIMenuButtonMenu() -> NSMenu {
-        let menu = NSMenu()
-        addDuckAIMenuButtonItems(to: menu)
-        return menu
-    }
-
     /// Shared by Approach C (left-click popup) and Approach D (right-click menu).
-    private func addDuckAIMenuButtonItems(to menu: NSMenu) {
-        let newChat = NSMenuItem(title: UserText.aiChatMenuNewChat, action: #selector(duckAIMenuNewChatAction), keyEquivalent: "")
-        newChat.target = self
-        newChat.image = DesignSystemImages.Glyphs.Size16.add
-        menu.addItem(newChat)
-
-        let recentChats = NSMenuItem(title: UserText.aiChatMenuRecentChats, action: #selector(duckAIMenuRecentChatsAction), keyEquivalent: "")
-        recentChats.target = self
-        recentChats.image = DesignSystemImages.Glyphs.Size16.aiChatHistory
-        menu.addItem(recentChats)
-
-        menu.addItem(.separator())
-
-        let askAboutPage = NSMenuItem(title: UserText.aiChatMenuAskAboutPage, action: #selector(duckAIMenuAskAboutPageAction), keyEquivalent: "")
-        askAboutPage.target = self
-        askAboutPage.image = DesignSystemImages.Glyphs.Size16.aiChat
-        menu.addItem(askAboutPage)
+    private func makeDuckAIMenuButtonMenu() -> NSMenu {
+        let actions = DuckAIChromeMenuButtonMenu.Actions(
+            openNewChat: { [weak self] in self?.duckAIMenuNewChatAction() },
+            openSidebar: { [weak self] in self?.openDuckAISidebarFromMenu(attachPage: false) },
+            askAboutPage: { [weak self] in self?.openDuckAISidebarFromMenu(attachPage: true) },
+            openChat: { [weak self] suggestion in self?.duckAIMenuOpenChat(suggestion) },
+            viewAllChats: { [weak self] in self?.duckAIMenuViewAllChatsAction() }
+        )
+        return DuckAIChromeMenuButtonMenu(suggestionsReader: NSApp.delegateTyped.aiChatSuggestionsReader, actions: actions)
     }
 
-    @objc private func duckAIMenuNewChatAction() {
+    private func duckAIMenuNewChatAction() {
         PixelKit.fire(AIChatPixel.aiChatTabbarButtonClicked, frequency: .dailyAndStandard)
         (parent as? MainViewController)?.openNewDuckAIChatTab()
     }
 
-    @objc private func duckAIMenuRecentChatsAction() {
-        // PoC: opens Duck.ai (recent chats live on the Duck.ai surface); there is no dedicated recent-chats route yet.
-        NSApp.delegateTyped.aiChatTabOpener.openNewAIChat(in: .newTab(selected: true))
-    }
-
-    @objc private func duckAIMenuAskAboutPageAction() {
+    /// "Open Sidebar" reveals the sidebar; "Ask About Page" additionally force-attaches the current page.
+    private func openDuckAISidebarFromMenu(attachPage: Bool) {
         guard let tab = tabCollectionViewModel.selectedTabViewModel?.tab else { return }
         let tabID = tab.uuid
 
         if aiChatCoordinator?.isChatFloating(for: tabID) == true {
             aiChatCoordinator?.focusFloatingWindow(for: tabID)
-        } else if aiChatCoordinator?.isSidebarOpen(for: tabID) == false {
-            PixelKit.fire(
-                AIChatPixel.aiChatSidebarOpened(
-                    source: .tabbarButton,
-                    shouldAutomaticallySendPageContext: aiChatMenuConfig.shouldAutomaticallySendPageContextTelemetryValue,
-                    minutesSinceSidebarHidden: aiChatCoordinator?.sidebarHiddenAt(for: tabID)?.minutesSinceNow()
-                ),
-                frequency: .dailyAndStandard
-            )
-            aiChatCoordinator?.toggleSidebar()
+        } else {
+            if aiChatCoordinator?.isSidebarOpen(for: tabID) == false {
+                PixelKit.fire(
+                    AIChatPixel.aiChatSidebarOpened(
+                        source: .tabbarButton,
+                        shouldAutomaticallySendPageContext: aiChatMenuConfig.shouldAutomaticallySendPageContextTelemetryValue,
+                        minutesSinceSidebarHidden: aiChatCoordinator?.sidebarHiddenAt(for: tabID)?.minutesSinceNow()
+                    ),
+                    frequency: .dailyAndStandard
+                )
+            }
+            aiChatCoordinator?.revealChat()
+        }
+
+        if attachPage {
+            tab.pageContext?.requestPageContextAttachment()
         }
 
         updateDuckAIChromeSegmentedControlState()
+    }
+
+    private func duckAIMenuOpenChat(_ suggestion: AIChatSuggestion) {
+        NSApp.delegateTyped.aiChatTabOpener.openAIChatTab(with: .existingChat(chatId: suggestion.chatId), behavior: .currentTab)
+    }
+
+    private func duckAIMenuViewAllChatsAction() {
+        NSApp.delegateTyped.aiChatTabOpener.openNewAIChat(in: .newTab(selected: true))
     }
 
     @objc private func duckAIChromeSidebarButtonAction(_ sender: NSButton) {
@@ -2767,12 +2769,6 @@ extension TabBarViewController: NSMenuDelegate {
             return
         }
 
-        // Approach D: single sidebar button — right-click shows the same menu as Approach C.
-        if duckAIChromeLayout == .singleSidebarButton {
-            addDuckAIMenuButtonItems(to: menu)
-            return
-        }
-
         let duckAIHidden = duckAIChromeButtonsVisibilityManager.isHidden(.duckAI)
         let sidebarHidden = duckAIChromeButtonsVisibilityManager.isHidden(.sidebar)
 
@@ -2819,4 +2815,131 @@ final class TabBarViewItemPasteboardWriter: NSObject, NSPasteboardWriting {
         [String: Any]()
     }
 
+}
+
+// MARK: - DuckAIChromeMenuButtonMenu (PoC: Approach C / D)
+
+/// The Duck.ai single-button menu shown for Approach C (left-click) and Approach D (right-click):
+/// New chat / Open Sidebar / Ask About Page, then a live "Recent chats" list, then "View all chats".
+@MainActor
+final class DuckAIChromeMenuButtonMenu: NSMenu {
+
+    struct Actions {
+        let openNewChat: () -> Void
+        let openSidebar: () -> Void
+        let askAboutPage: () -> Void
+        let openChat: (AIChatSuggestion) -> Void
+        let viewAllChats: () -> Void
+    }
+
+    private enum Constants {
+        static let maxChatItems = 3
+    }
+
+    private let suggestionsReader: AIChatSuggestionsReading
+    private let actions: Actions
+    private var chatItems: [NSMenuItem] = []
+    private var fetchTask: Task<Void, Never>?
+
+    private lazy var newChatItem: NSMenuItem = {
+        let item = NSMenuItem(title: UserText.aiChatMenuNewChat, action: #selector(newChatTapped), keyEquivalent: "")
+        item.target = self
+        item.image = DesignSystemImages.Glyphs.Size16.compose
+        return item
+    }()
+
+    private lazy var openSidebarItem: NSMenuItem = {
+        let item = NSMenuItem(title: UserText.aiChatMenuOpenSidebar, action: #selector(openSidebarTapped), keyEquivalent: "")
+        item.target = self
+        item.image = DesignSystemImages.Glyphs.Size16.sidebar
+        return item
+    }()
+
+    private lazy var askAboutPageItem: NSMenuItem = {
+        let item = NSMenuItem(title: UserText.aiChatMenuAskAboutPage, action: #selector(askAboutPageTapped), keyEquivalent: "")
+        item.target = self
+        item.image = DesignSystemImages.Glyphs.Size16.aiChat
+        return item
+    }()
+
+    private lazy var recentChatsLabel: NSMenuItem = {
+        let item = NSMenuItem(title: UserText.aiChatMenuRecentChats)
+        item.isEnabled = false
+        return item
+    }()
+
+    private lazy var viewAllChatsItem: NSMenuItem = {
+        let item = NSMenuItem(title: UserText.aiChatChromeViewAllChats, action: #selector(viewAllChatsTapped), keyEquivalent: "")
+        item.target = self
+        item.image = DesignSystemImages.Glyphs.Size16.aiChatHistory
+        return item
+    }()
+
+    init(suggestionsReader: AIChatSuggestionsReading, actions: Actions) {
+        self.suggestionsReader = suggestionsReader
+        self.actions = actions
+        super.init(title: "Duck.ai")
+        buildMenu()
+        refreshRecentChats()
+    }
+
+    required init(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func buildMenu() {
+        addItem(newChatItem)
+        addItem(openSidebarItem)
+        addItem(askAboutPageItem)
+        addItem(.separator())
+        addItem(recentChatsLabel)
+        // Live chat items are inserted after recentChatsLabel by insertChatItems(_:).
+        addItem(.separator())
+        addItem(viewAllChatsItem)
+    }
+
+    override func update() {
+        super.update()
+        refreshRecentChats()
+    }
+
+    private func refreshRecentChats() {
+        fetchTask?.cancel()
+        fetchTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let (pinned, recent) = await self.suggestionsReader.fetchSuggestions(query: nil, maxChats: Constants.maxChatItems)
+            guard !Task.isCancelled else { return }
+            let sorted = (pinned + recent).sorted { ($0.timestamp ?? .distantPast) > ($1.timestamp ?? .distantPast) }
+            self.clearChatItems()
+            self.insertChatItems(Array(sorted.prefix(Constants.maxChatItems)))
+        }
+    }
+
+    private func clearChatItems() {
+        chatItems.forEach { removeItem($0) }
+        chatItems.removeAll()
+    }
+
+    private func insertChatItems(_ chats: [AIChatSuggestion]) {
+        let labelIndex = index(of: recentChatsLabel)
+        guard labelIndex != -1 else { return }
+        for (offset, chat) in chats.enumerated() {
+            let item = NSMenuItem(title: chat.title, action: #selector(chatItemTapped(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = chat
+            item.image = DesignSystemImages.Color.Size16.chat
+            insertItem(item, at: labelIndex + 1 + offset)
+            chatItems.append(item)
+        }
+    }
+
+    @objc private func newChatTapped() { actions.openNewChat() }
+    @objc private func openSidebarTapped() { actions.openSidebar() }
+    @objc private func askAboutPageTapped() { actions.askAboutPage() }
+    @objc private func viewAllChatsTapped() { actions.viewAllChats() }
+
+    @objc private func chatItemTapped(_ sender: NSMenuItem) {
+        guard let chat = sender.representedObject as? AIChatSuggestion else { return }
+        actions.openChat(chat)
+    }
 }

@@ -620,6 +620,8 @@ struct UserText {
     static let aiChatMenuNewImageChat = NSLocalizedString("duckai.menu.new-image-chat", value: "New Image Chat", comment: "Duck.ai main menu item to start a new image chat")
     static let aiChatMenuRecentChats = NSLocalizedString("duckai.menu.recent-chats", value: "Recent Chats", comment: "Duck.ai main menu section label for recent chat history")
     static let aiChatMenuAskAboutPage = NSLocalizedString("duckai.menu.ask-about-page", value: "Ask About Page", comment: "Duck.ai menu item to open the sidebar and ask about the current page")
+    static let aiChatMenuOpenSidebar = NSLocalizedString("duckai.menu.open-sidebar", value: "Open Sidebar", comment: "Duck.ai menu item to open the sidebar")
+    static let aiChatChromeViewAllChats = NSLocalizedString("duckai.chrome.view-all-chats", value: "View all chats", comment: "Duck.ai menu item that opens Duck.ai to view all chats")
     static let aiChatMenuViewAllChats = NSLocalizedString("duckai.menu.view-all-chats", value: "View All Chats...", comment: "Duck.ai menu item shown when there are more chats than displayed, opens Duck.ai to view all chats")
     static let aiChatMenuDeleteAllChats = NSLocalizedString("duckai.menu.delete-all-chats", value: "Delete All Chats...", comment: "Duck.ai main menu item to delete all chat history")
     static let aiChatMenuDeleteAllChatsDialogTitle = NSLocalizedString("duckai.menu.delete-all-chats.dialog-title", value: "Delete Chats", comment: "Title of the custom delete dialog when there are 2 or fewer chats to delete")

@@ -33044,6 +33044,18 @@
         }
       }
     },
+    "duckai.chrome.view-all-chats" : {
+      "comment" : "Duck.ai menu item that opens Duck.ai to view all chats",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "View all chats"
+          }
+        }
+      }
+    },
     "duckai.description" : {
       "comment" : "Description of Duck.ai feature in settings",
       "extractionState" : "extracted_with_value",
@@ -34431,6 +34443,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Открыть Duck.ai"
+          }
+        }
+      }
+    },
+    "duckai.menu.open-sidebar" : {
+      "comment" : "Duck.ai menu item to open the sidebar",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open Sidebar"
           }
         }
       }
