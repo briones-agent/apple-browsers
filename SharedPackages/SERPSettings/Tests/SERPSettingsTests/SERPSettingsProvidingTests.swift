@@ -173,15 +173,32 @@ final class SERPSettingsProvidingTests: XCTestCase {
         let snapshot = provider.currentNativeSettingsSnapshot()
         XCTAssertEqual(snapshot[SERPSettingsConstants.searchAssistKey], "2")
         XCTAssertEqual(snapshot[SERPSettingsConstants.hideAIGeneratedImagesKey], "-1")
+        // Safe Search default (moderate) is omitted — represented as key-absence.
+        XCTAssertNil(snapshot[SERPSettingsConstants.safeSearch])
     }
 
     func testSnapshot_reflectsStoredValues() {
         provider.searchAssistFrequency = .often
         provider.hideAIGeneratedImages = true
+        provider.safeSearch = .strict
 
         let snapshot = provider.currentNativeSettingsSnapshot()
         XCTAssertEqual(snapshot[SERPSettingsConstants.searchAssistKey], "3")
         XCTAssertEqual(snapshot[SERPSettingsConstants.hideAIGeneratedImagesKey], "1")
+        XCTAssertEqual(snapshot[SERPSettingsConstants.safeSearch], "1")
+    }
+
+    func testSnapshot_includesSafeSearch_onlyWhenNotDefault() {
+        provider.safeSearch = .off
+        XCTAssertEqual(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch], "-2")
+
+        provider.safeSearch = .strict
+        XCTAssertEqual(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch], "1")
+
+        // Moderate is the default: it's stored as key-absence and omitted from the snapshot too,
+        // so the SERP reconciles the missing key back to moderate.
+        provider.safeSearch = .moderate
+        XCTAssertNil(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch])
     }
 
     // MARK: - Change notification

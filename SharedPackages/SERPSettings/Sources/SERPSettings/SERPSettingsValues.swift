@@ -74,14 +74,17 @@ public enum SafeSearch {
     // Bundled default used when the key is absent from native storage.
     public static let defaultValue: SafeSearch = .moderate
 
+    /// The value stored / synced for this setting. The default (`moderate`) has no value: it's
+    /// represented as key-absence, mirroring the SERP which omits defaults and treats a missing key
+    /// as the default. Only `strict`/`off` carry an explicit value.
     var storageValue: String? {
         switch self {
-        case .strict: 
-            return "1"
+        case .strict:
+            return Self.strictRawValue
         case .moderate:
             return nil
-        case .off: 
-            return "-2"
+        case .off:
+            return Self.offRawValue
         }
     }
 

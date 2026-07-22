@@ -218,10 +218,16 @@ public extension SERPSettingsProviding {
     /// Used for the native → SERP push: the SERP reconciles against this full snapshot, so every
     /// key is present (including those left at their default).
     func currentNativeSettingsSnapshot() -> [String: String] {
-        return [
+        var snapshot = [
             SERPSettingsConstants.searchAssistKey: searchAssistFrequency.rawValue,
             SERPSettingsConstants.hideAIGeneratedImagesKey: HideAIGeneratedImages.rawValue(forHidden: hideAIGeneratedImages)
         ]
+        // Safe Search omits its default (moderate): it's represented as key-absence, and the SERP
+        // reconciles a missing `kp` back to the default. Only strict/off carry an explicit value.
+        if let safeSearchValue = safeSearch.storageValue {
+            snapshot[SERPSettingsConstants.safeSearch] = safeSearchValue
+        }
+        return snapshot
     }
 
     /// Search Assist (`kbe`) frequency, backed by native storage.
