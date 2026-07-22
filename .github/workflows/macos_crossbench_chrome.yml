@@ -1,0 +1,73 @@
+name: macOS - crossbench Chrome LCP (live network)
+
+# Manual-only test harness: stands up crossbench on a GitHub-hosted macOS runner,
+# measures Chrome navigation -> Largest Contentful Paint against the LIVE network,
+# and uploads the per-rep results as a downloadable artifact.
+#
+# workflow_dispatch ONLY on purpose: no pull_request/push/schedule trigger, so
+# fork PRs can't run it and it never fires unattended. Results are live-network
+# noisy — this validates the pipeline, it is not a trustworthy cross-browser
+# comparison (that needs WPR + a dedicated runner, later).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sites:
+        description: "Comma-separated sites (blank = full 22-site list)"
+        required: false
+        default: "apple.com,wikipedia.org,youtube.com"
+      reps:
+        description: "Repetitions per site"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: macOS/scripts/crossbench
+
+jobs:
+  chrome-lcp:
+    name: Chrome LCP (live network)
+    # Standard hosted macOS runner (arm64) — free on public repos. If the org
+    # restricts standard runners, switch to macos-15-large / macos-26-xlarge
+    # (those bill).
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Provision crossbench (python, poetry, Chrome, checkout)
+        run: ./provision-macos.sh
+
+      - name: Run Chrome LCP suite
+        # Inputs passed via env, not interpolated into the script, to avoid shell injection.
+        env:
+          SITES: ${{ inputs.sites }}
+          REPS: ${{ inputs.reps }}
+        run: |
+          args=(--reps "$REPS")
+          if [ -n "$SITES" ]; then
+            args+=(--sites "$SITES")
+          fi
+          ./test-chrome.sh "${args[@]}"
+
+      - name: Upload results TSV
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: chrome-lcp-results
+          # Path is workspace-relative (not affected by defaults.working-directory).
+          path: macOS/scripts/crossbench/crossbench-results/*.tsv
+          if-no-files-found: warn
+          retention-days: 7
