@@ -652,9 +652,6 @@ private extension NSAttributedString {
         }
     }
 
-    /// Single-part trusted indicator: favicon + title only, without the leading `DuckDuckGo ›` breadcrumb.
-    /// Used for standalone Duck.ai, which keeps the privacy shield and shows its own logo + "Duck.ai" instead
-    /// of the full first-party breadcrumb. Matches the Windows overlay address bar behaviour.
     private static func singlePartTrustedIndicatorAttributedString(with icon: NSImage, title: String) -> NSAttributedString {
         NSAttributedString {
             // favicon
