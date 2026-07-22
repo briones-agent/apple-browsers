@@ -70223,7 +70223,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "YouTube Ad Block On"
+            "value" : "Ad Blocking On"
           }
         },
         "es" : {
@@ -90621,7 +90621,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Blocks invasive trackers before they load, effectively eliminating ads that rely on tracking"
+            "value" : "Blocks invasive trackers before they load, effectively eliminating ads that rely on tracking."
           }
         },
         "es" : {
@@ -95721,7 +95721,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Send an anonymous breakage report to DuckDuckGo. Help make Ad Blocking better for everyone!"
+            "value" : "Send an anonymous report to DuckDuckGo and help make ad blocking better for everyone!"
           }
         },
         "es" : {
@@ -96201,7 +96201,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Ad Blocking has been affected by recent changes to YouTube. We're working to fix these issues and appreciate your understanding"
+            "value" : "Ad Blocking has been affected by recent changes to YouTube. We're working to fix these issues and appreciate your understanding."
           }
         },
         "es" : {
