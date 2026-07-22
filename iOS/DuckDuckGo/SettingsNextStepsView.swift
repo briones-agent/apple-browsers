@@ -26,8 +26,6 @@ struct SettingsNextStepsView: View {
 
     @EnvironmentObject var viewModel: SettingsViewModel
 
-    @State private var isShowingHideConfirmation = false
-
     var body: some View {
         if viewModel.shouldShowNextStepsSection {
             Section(header: header) {
@@ -76,28 +74,20 @@ struct SettingsNextStepsView: View {
     }
 
     // Shows a "Hide" affordance next to the section title once the app has been installed long
-    // enough (see `SettingsViewModel.shouldShowNextStepsHideButton`). An image glyph is used rather
-    // than a text button to avoid the section-header uppercasing applied to `Text`.
+    // enough (see `SettingsViewModel.shouldShowNextStepsHideButton`). `.textCase(nil)` keeps the
+    // button's title as "Hide" rather than the uppercasing grouped-list section headers apply to `Text`.
     private var header: some View {
         HStack {
             Text(UserText.nextSteps)
             Spacer()
             if viewModel.shouldShowNextStepsHideButton {
                 Button {
-                    isShowingHideConfirmation = true
+                    viewModel.hideNextStepsSection()
                 } label: {
-                    Image(uiImage: DesignSystemImages.Glyphs.Size24.eyeClosed)
+                    Text(UserText.nextStepsHide)
                 }
-                .accessibilityLabel(UserText.nextStepsHide)
+                .textCase(nil)
             }
-        }
-        .alert(UserText.nextStepsHideConfirmationTitle, isPresented: $isShowingHideConfirmation) {
-            Button(UserText.actionCancel, role: .cancel) {}
-            Button(UserText.nextStepsHide, role: .destructive) {
-                viewModel.hideNextStepsSection()
-            }
-        } message: {
-            Text(UserText.nextStepsHideConfirmationMessage)
         }
     }
 
