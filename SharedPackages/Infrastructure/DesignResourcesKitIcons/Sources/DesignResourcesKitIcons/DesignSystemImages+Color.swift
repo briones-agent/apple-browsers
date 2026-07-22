@@ -127,6 +127,8 @@ public extension DesignSystemImages {
                     ? .init(resource: .fireColor16)
                     : .init(resource: .fireColor16Legacy)
             }
+            /// Duck.ai duck-with-sparkle color glyph (`DuckDuckGo-Ai-Color-16`), independent of rebrand state.
+            public static var duckDuckGoAi: DesignSystemImage { .init(resource: .duckDuckGoAiColor16) }
             public static var folder: DesignSystemImage { .init(resource: .folderColor16) }
             public static var folderWin: DesignSystemImage { .init(resource: .folderWinColor16) }
             public static var globe: DesignSystemImage { .init(resource: .globeColor16) }

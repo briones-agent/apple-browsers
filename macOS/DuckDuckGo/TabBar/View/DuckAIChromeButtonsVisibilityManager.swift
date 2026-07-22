@@ -39,11 +39,17 @@ enum DuckAIChromeLayout {
     case sidebarNavBarRight
     /// Approach B2: sidebar toggle relocated to the far left of the navigation bar's right-side group ("Ask" label).
     case sidebarNavBarLeft
+    /// Approach C: a single Duck.ai button that opens a menu (New Chat / Recent Chats / Ask About Page).
+    case menuButton
+    /// Approach D: a single Duck.ai button that toggles the sidebar on click; "open in new tab" moves to the right-click menu.
+    case singleSidebarButton
 
     static func resolve(_ featureFlagger: FeatureFlagger) -> DuckAIChromeLayout {
         if featureFlagger.isFeatureOn(.aiChatChromeSplitButtons) { return .splitTabBar }
         if featureFlagger.isFeatureOn(.aiChatChromeSidebarNavBarRight) { return .sidebarNavBarRight }
         if featureFlagger.isFeatureOn(.aiChatChromeSidebarNavBarLeft) { return .sidebarNavBarLeft }
+        if featureFlagger.isFeatureOn(.aiChatChromeMenuButton) { return .menuButton }
+        if featureFlagger.isFeatureOn(.aiChatChromeSingleSidebarButton) { return .singleSidebarButton }
         return .combined
     }
 

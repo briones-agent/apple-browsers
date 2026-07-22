@@ -33884,6 +33884,18 @@
         }
       }
     },
+    "duckai.menu.ask-about-page" : {
+      "comment" : "Duck.ai menu item to open the sidebar and ask about the current page",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ask About Page"
+          }
+        }
+      }
+    },
     "duckai.menu.delete-all-chats" : {
       "comment" : "Duck.ai main menu item to delete all chat history",
       "extractionState" : "extracted_with_value",

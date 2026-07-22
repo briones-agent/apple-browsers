@@ -2235,7 +2235,7 @@ extension NavigationBarViewController: NSMenuDelegate {
             menuButtons.setCustomSpacing(Constants.duckAINavBarSeparatorSpacing, after: separator)
             duckAINavBarSidebarLeadingView = separator
 
-        case .combined, .splitTabBar:
+        case .combined, .splitTabBar, .menuButton, .singleSidebarButton:
             return
         }
 

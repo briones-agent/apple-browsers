@@ -19,6 +19,7 @@
 import Cocoa
 import Combine
 import Common
+import DesignResourcesKitIcons
 import FoundationExtensions
 import Lottie
 import os.log
@@ -623,16 +624,44 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         let layout = duckAIChromeLayout
         let allCorners: CACornerMask = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
 
+        // Approaches C and D collapse the control into a single branded Duck.ai button (icon + label).
+        let showsBrandedIcon = (layout == .menuButton || layout == .singleSidebarButton)
         let duckAIHidden = duckAIChromeButtonsVisibilityManager.isHidden(.duckAI)
-        // For B1/B2 the sidebar toggle is relocated to the navigation bar, so it never renders in the tab
-        // bar regardless of the per-segment user preference.
-        let sidebarHidden = duckAIChromeButtonsVisibilityManager.isHidden(.sidebar) || layout.relocatesSidebarToNavBar
+        // For B1/B2 the sidebar toggle is relocated to the navigation bar, and for C/D it folds into the
+        // single button, so it never renders as a separate tab-bar segment regardless of the preference.
+        let sidebarHidden = duckAIChromeButtonsVisibilityManager.isHidden(.sidebar) || layout.relocatesSidebarToNavBar || showsBrandedIcon
         let isSplit = (layout == .splitTabBar)
 
         titleButton.isHidden = duckAIHidden
         sidebarButton.isHidden = sidebarHidden
         divider.isHidden = duckAIHidden || sidebarHidden || isSplit
         container.isHidden = duckAIHidden && sidebarHidden
+
+        if showsBrandedIcon {
+            titleButton.image = DesignSystemImages.Color.Size16.duckDuckGoAi
+            titleButton.imagePosition = .imageLeading
+            titleButton.imageHugsTitle = true
+            // Leading space widens the icon↔label gap a touch (imageHugsTitle otherwise sits them flush).
+            titleButton.attributedTitle = NSAttributedString(string: " " + UserText.aiChatTitle, attributes: [
+                .foregroundColor: theme.colorsProvider.textPrimaryColor,
+                .font: NSFont.systemFont(ofSize: 13)
+            ])
+        } else {
+            titleButton.image = nil
+            titleButton.imagePosition = .noImage
+        }
+        // Tooltip/accessibility reflect the button's primary action: menu (C), sidebar (D), or new tab.
+        switch layout {
+        case .singleSidebarButton:
+            titleButton.toolTip = UserText.aiChatOpenSidebarButton
+            titleButton.setAccessibilityTitle(UserText.aiChatOpenSidebarButton)
+        case .menuButton:
+            titleButton.toolTip = UserText.aiChatTitle
+            titleButton.setAccessibilityTitle(UserText.aiChatTitle)
+        default:
+            titleButton.toolTip = UserText.aiChatOpenNewTabButton
+            titleButton.setAccessibilityTitle(UserText.aiChatOpenNewTabButton)
+        }
 
         // Split mode renders the two segments as independent pills (gap between them, each with its own
         // rounded background); every other layout keeps them flush inside the shared container.
@@ -965,10 +994,31 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         duckAIChromeSidebarButton.toolTip = tooltip
         duckAIChromeSidebarButton.setAccessibilityTitle(tooltip)
         duckAIChromeSidebarButton.state = presentationMode != .hidden ? .on : .off
+
+        // Approach D: the single Duck.ai button is the sidebar control — reflect its open state and tooltip.
+        if duckAIChromeLayout == .singleSidebarButton {
+            duckAIChromeTitleButton.toolTip = tooltip
+            duckAIChromeTitleButton.setAccessibilityTitle(tooltip)
+            duckAIChromeControlContainer?.backgroundColor = presentationMode != .hidden
+                ? theme.colorsProvider.buttonMouseDownColor
+                : (isFireWindow ? .clear : theme.colorsProvider.buttonMouseOverColor)
+        }
+
         updateDuckAIChromeDividerState()
     }
 
     @objc private func duckAITitlebarButtonAction(_ sender: NSButton) {
+        // Approach C: the single button opens a menu instead of directly starting a new chat.
+        if duckAIChromeLayout == .menuButton {
+            presentDuckAIMenuButtonMenu(from: sender)
+            return
+        }
+        // Approach D: the single button toggles the Duck.ai sidebar; new-tab moves to the right-click menu.
+        if duckAIChromeLayout == .singleSidebarButton {
+            duckAIChromeSidebarButtonAction(sender)
+            return
+        }
+
         if let mainViewController = parent as? MainViewController {
             PixelKit.fire(AIChatPixel.aiChatTabbarButtonClicked, frequency: .dailyAndStandard)
             mainViewController.openNewDuckAIChatTab()
@@ -976,6 +1026,71 @@ final class TabBarViewController: NSViewController, TabBarRemoteMessagePresentin
         }
 
         Logger.general.error("TabBarViewController: Failed to find MainViewController to open Duck.ai")
+    }
+
+    // MARK: - Duck.ai menu button (PoC: Approach C)
+
+    private func presentDuckAIMenuButtonMenu(from sender: NSButton) {
+        let menu = makeDuckAIMenuButtonMenu()
+        let location = NSPoint(x: 0, y: sender.bounds.height + 4)
+        menu.popUp(positioning: nil, at: location, in: sender)
+    }
+
+    private func makeDuckAIMenuButtonMenu() -> NSMenu {
+        let menu = NSMenu()
+        addDuckAIMenuButtonItems(to: menu)
+        return menu
+    }
+
+    /// Shared by Approach C (left-click popup) and Approach D (right-click menu).
+    private func addDuckAIMenuButtonItems(to menu: NSMenu) {
+        let newChat = NSMenuItem(title: UserText.aiChatMenuNewChat, action: #selector(duckAIMenuNewChatAction), keyEquivalent: "")
+        newChat.target = self
+        newChat.image = DesignSystemImages.Glyphs.Size16.add
+        menu.addItem(newChat)
+
+        let recentChats = NSMenuItem(title: UserText.aiChatMenuRecentChats, action: #selector(duckAIMenuRecentChatsAction), keyEquivalent: "")
+        recentChats.target = self
+        recentChats.image = DesignSystemImages.Glyphs.Size16.aiChatHistory
+        menu.addItem(recentChats)
+
+        menu.addItem(.separator())
+
+        let askAboutPage = NSMenuItem(title: UserText.aiChatMenuAskAboutPage, action: #selector(duckAIMenuAskAboutPageAction), keyEquivalent: "")
+        askAboutPage.target = self
+        askAboutPage.image = DesignSystemImages.Glyphs.Size16.aiChat
+        menu.addItem(askAboutPage)
+    }
+
+    @objc private func duckAIMenuNewChatAction() {
+        PixelKit.fire(AIChatPixel.aiChatTabbarButtonClicked, frequency: .dailyAndStandard)
+        (parent as? MainViewController)?.openNewDuckAIChatTab()
+    }
+
+    @objc private func duckAIMenuRecentChatsAction() {
+        // PoC: opens Duck.ai (recent chats live on the Duck.ai surface); there is no dedicated recent-chats route yet.
+        NSApp.delegateTyped.aiChatTabOpener.openNewAIChat(in: .newTab(selected: true))
+    }
+
+    @objc private func duckAIMenuAskAboutPageAction() {
+        guard let tab = tabCollectionViewModel.selectedTabViewModel?.tab else { return }
+        let tabID = tab.uuid
+
+        if aiChatCoordinator?.isChatFloating(for: tabID) == true {
+            aiChatCoordinator?.focusFloatingWindow(for: tabID)
+        } else if aiChatCoordinator?.isSidebarOpen(for: tabID) == false {
+            PixelKit.fire(
+                AIChatPixel.aiChatSidebarOpened(
+                    source: .tabbarButton,
+                    shouldAutomaticallySendPageContext: aiChatMenuConfig.shouldAutomaticallySendPageContextTelemetryValue,
+                    minutesSinceSidebarHidden: aiChatCoordinator?.sidebarHiddenAt(for: tabID)?.minutesSinceNow()
+                ),
+                frequency: .dailyAndStandard
+            )
+            aiChatCoordinator?.toggleSidebar()
+        }
+
+        updateDuckAIChromeSegmentedControlState()
     }
 
     @objc private func duckAIChromeSidebarButtonAction(_ sender: NSButton) {
@@ -2649,6 +2764,12 @@ extension TabBarViewController: NSMenuDelegate {
         menu.removeAllItems()
 
         guard isChromeSidebarFeatureEnabled, aiChatMenuConfig.shouldDisplayAnyAIChatFeature else {
+            return
+        }
+
+        // Approach D: single sidebar button — right-click shows the same menu as Approach C.
+        if duckAIChromeLayout == .singleSidebarButton {
+            addDuckAIMenuButtonItems(to: menu)
             return
         }
 

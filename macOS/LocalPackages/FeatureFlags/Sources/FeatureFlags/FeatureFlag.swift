@@ -395,6 +395,14 @@ public enum FeatureFlag: String, CaseIterable {
     /// https://app.asana.com/1/137249556945/project/72649045549333/task/1215467266512735
     case aiChatChromeSidebarNavBarLeft
 
+    /// PoC (Approach C): unify the Duck.ai control into a single button that opens a menu (New Chat / Recent Chats / Ask About Page).
+    /// https://app.asana.com/1/137249556945/project/72649045549333/task/1215467266512735
+    case aiChatChromeMenuButton
+
+    /// PoC (Approach D): a single Duck.ai button that opens the sidebar on click; "open in new tab" moves to the right-click menu.
+    /// https://app.asana.com/1/137249556945/project/72649045549333/task/1215467266512735
+    case aiChatChromeSingleSidebarButton
+
     /// Enable Look Up (three-finger click) while keeping link preview disabled
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213489080183740
     case webViewLookUpAction
@@ -742,6 +750,10 @@ extension FeatureFlag: FeatureFlagDescribing {
         case .aiChatChromeSidebarNavBarRight:
             Config(source: .disabled, category: .duckAI)
         case .aiChatChromeSidebarNavBarLeft:
+            Config(source: .disabled, category: .duckAI)
+        case .aiChatChromeMenuButton:
+            Config(source: .disabled, category: .duckAI)
+        case .aiChatChromeSingleSidebarButton:
             Config(source: .disabled, category: .duckAI)
         case .webViewLookUpAction:
             Config(defaultValue: .enabled, source: .remoteReleasable(MacOSBrowserConfigSubfeature.webViewLookUpAction))
