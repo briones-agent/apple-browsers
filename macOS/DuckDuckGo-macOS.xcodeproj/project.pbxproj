@@ -3110,6 +3110,8 @@
 		B55C8F752E81A8730024B421 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55C8F732E81A8730024B421 /* ThemeManager.swift */; };
 		B55D8E5E2EE77688009083D9 /* BundleExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55D8E5D2EE77688009083D9 /* BundleExtension.swift */; };
 		B55D8E5F2EE77688009083D9 /* BundleExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55D8E5D2EE77688009083D9 /* BundleExtension.swift */; };
+		B55F24D03010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */ = {isa = PBXBuildFile; fileRef = B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */; };
+		B55F24D13010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */ = {isa = PBXBuildFile; fileRef = B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */; };
 		B56776752ED778C600303198 /* FaviconImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56776742ED778C600303198 /* FaviconImageView.swift */; };
 		B56776762ED778C600303198 /* FaviconImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56776742ED778C600303198 /* FaviconImageView.swift */; };
 		B568715E2EC528950075A270 /* CABasicAnimationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B568715D2EC528950075A270 /* CABasicAnimationExtension.swift */; };
@@ -3144,10 +3146,6 @@
 		B5BD99652EE8DA2E00E7DD99 /* ThemedTextFieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5BD99632EE8DA2E00E7DD99 /* ThemedTextFieldStyle.swift */; };
 		B5C2886B2EC6206100A572F2 /* CASpringAnimationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C2886A2EC6206100A572F2 /* CASpringAnimationExtension.swift */; };
 		B5C2886C2EC6206100A572F2 /* CASpringAnimationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C2886A2EC6206100A572F2 /* CASpringAnimationExtension.swift */; };
-		B5C76577300EA19600024BD9 /* Shield-Outline-24-Dark.json in Resources */ = {isa = PBXBuildFile; fileRef = B5C76575300EA19600024BD9 /* Shield-Outline-24-Dark.json */; };
-		B5C76578300EA19600024BD9 /* Shield-Outline-24-Light.json in Resources */ = {isa = PBXBuildFile; fileRef = B5C76576300EA19600024BD9 /* Shield-Outline-24-Light.json */; };
-		B5C76579300EA19600024BD9 /* Shield-Outline-24-Dark.json in Resources */ = {isa = PBXBuildFile; fileRef = B5C76575300EA19600024BD9 /* Shield-Outline-24-Dark.json */; };
-		B5C7657A300EA19600024BD9 /* Shield-Outline-24-Light.json in Resources */ = {isa = PBXBuildFile; fileRef = B5C76576300EA19600024BD9 /* Shield-Outline-24-Light.json */; };
 		B5C980EB2F228B5900655B21 /* MemoryAllocationStatsExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C980EA2F228B5900655B21 /* MemoryAllocationStatsExporter.swift */; };
 		B5C980EC2F228B5900655B21 /* MemoryAllocationStatsExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C980EA2F228B5900655B21 /* MemoryAllocationStatsExporter.swift */; };
 		B5C980F72F228EE300655B21 /* MemoryAllocationStatsMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C980F62F228EE300655B21 /* MemoryAllocationStatsMetric.swift */; };
@@ -6302,6 +6300,7 @@
 		B55832282F4DF679008135C9 /* StartupMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupMetrics.swift; sourceTree = "<group>"; };
 		B55C8F732E81A8730024B421 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		B55D8E5D2EE77688009083D9 /* BundleExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleExtension.swift; sourceTree = "<group>"; };
+		B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Shield-Off-Gray.json"; sourceTree = "<group>"; };
 		B56776742ED778C600303198 /* FaviconImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconImageView.swift; sourceTree = "<group>"; };
 		B568715D2EC528950075A270 /* CABasicAnimationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CABasicAnimationExtension.swift; sourceTree = "<group>"; };
 		B56871602EC528CF0075A270 /* CATransitionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CATransitionExtension.swift; sourceTree = "<group>"; };
@@ -6322,8 +6321,6 @@
 		B5AE99522E84A5D900F45912 /* ThemeName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeName.swift; sourceTree = "<group>"; };
 		B5BD99632EE8DA2E00E7DD99 /* ThemedTextFieldStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextFieldStyle.swift; sourceTree = "<group>"; };
 		B5C2886A2EC6206100A572F2 /* CASpringAnimationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CASpringAnimationExtension.swift; sourceTree = "<group>"; };
-		B5C76575300EA19600024BD9 /* Shield-Outline-24-Dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Shield-Outline-24-Dark.json"; sourceTree = "<group>"; };
-		B5C76576300EA19600024BD9 /* Shield-Outline-24-Light.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Shield-Outline-24-Light.json"; sourceTree = "<group>"; };
 		B5C980EA2F228B5900655B21 /* MemoryAllocationStatsExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryAllocationStatsExporter.swift; sourceTree = "<group>"; };
 		B5C980F62F228EE300655B21 /* MemoryAllocationStatsMetric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryAllocationStatsMetric.swift; sourceTree = "<group>"; };
 		B5C980F92F229EB800655B21 /* XCUIApplication+AllocationStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCUIApplication+AllocationStats.swift"; sourceTree = "<group>"; };
@@ -10092,8 +10089,7 @@
 				B599B5EC2FFE9DF700B5E877 /* Flame-24.json */,
 				B5EA14A92FFFDB8000FC2512 /* Shield-Color-24.json */,
 				B599B5E42FFE95A900B5E877 /* Shield-Color-24-Hover.json */,
-				B5C76575300EA19600024BD9 /* Shield-Outline-24-Dark.json */,
-				B5C76576300EA19600024BD9 /* Shield-Outline-24-Light.json */,
+				B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -14278,8 +14274,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				BBDAA91E2DAD6DAD00555E1E /* fire-button-mouse-over-legacy.json in Resources */,
-				B5C76577300EA19600024BD9 /* Shield-Outline-24-Dark.json in Resources */,
-				B5C76578300EA19600024BD9 /* Shield-Outline-24-Light.json in Resources */,
 				561D66672B95C45A008ACC5C /* Suggestion.storyboard in Resources */,
 				CD2AB5C82C8223040019EB49 /* phishingHashPrefixes.json in Resources */,
 				BBBD29952E2EB70A005E7664 /* pictogramDaxHeart.json in Resources */,
@@ -14316,6 +14310,7 @@
 				37EE560C2D5F197300D53C7C /* shield-dot-mouse-over.json in Resources */,
 				D6229C312ED0E213001DAE71 /* shield.new.json in Resources */,
 				37EE560D2D5F197300D53C7C /* shield-mouse-over.json in Resources */,
+				B55F24D03010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */,
 				37EE560E2D5F197300D53C7C /* trackers-1.json in Resources */,
 				37EE560F2D5F197300D53C7C /* trackers-2.json in Resources */,
 				37EE56102D5F197300D53C7C /* trackers-3.json in Resources */,
@@ -14523,8 +14518,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				BBDAA91D2DAD6DAD00555E1E /* fire-button-mouse-over-legacy.json in Resources */,
-				B5C76579300EA19600024BD9 /* Shield-Outline-24-Dark.json in Resources */,
-				B5C7657A300EA19600024BD9 /* Shield-Outline-24-Light.json in Resources */,
 				561D66662B95C45A008ACC5C /* Suggestion.storyboard in Resources */,
 				CD2AB5C72C8223030019EB49 /* phishingHashPrefixes.json in Resources */,
 				BBBD29942E2EB70A005E7664 /* pictogramDaxHeart.json in Resources */,
@@ -14561,6 +14554,7 @@
 				37EE55E22D5F197300D53C7C /* shield-dot.json in Resources */,
 				37EE55E32D5F197300D53C7C /* shield-dot-mouse-over.json in Resources */,
 				D6229C302ED0E213001DAE71 /* shield.new.json in Resources */,
+				B55F24D13010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */,
 				37EE55E42D5F197300D53C7C /* shield-mouse-over.json in Resources */,
 				37EE55E52D5F197300D53C7C /* trackers-1.json in Resources */,
 				37EE55E62D5F197300D53C7C /* trackers-2.json in Resources */,
