@@ -835,6 +835,7 @@ private extension MainViewController {
     func refreshAIChatTabChatHeaderSubscriptionState() {
         Task { @MainActor [weak self] in
             let isActive = (try? await AppDependencyProvider.shared.subscriptionManager.isFeatureEnabled(.paidAIChat)) ?? false
+            self?.isPaidAIChatEnabledForSwipe = isActive
             self?.aiChatTabChatHeaderView?.configure(isSubscriptionActive: isActive)
         }
     }

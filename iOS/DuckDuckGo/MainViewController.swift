@@ -371,6 +371,7 @@ class MainViewController: UIViewController {
     lazy var minimalChromeSettings: MinimalChromeSettingsProviding = MinimalChromeSettings()
     var unifiedToggleInputCoordinator: UnifiedToggleInputCoordinator?
     var unifiedInputStateStore: UnifiedInputStateStore?
+    var isPaidAIChatEnabledForSwipe = false
     var unifiedToggleInputCancellables = Set<AnyCancellable>()
     var unifiedToggleInputFloatingReturnKeyKeyboardBottomConstraint: NSLayoutConstraint?
     var unifiedToggleInputFloatingReturnKeyInputTopConstraint: NSLayoutConstraint?
@@ -888,7 +889,16 @@ class MainViewController: UIViewController {
                                                     tabPreviewsSource: previewsSource,
                                                     appSettings: appSettings,
                                                     omnibarDependencies: omnibarDependencies,
-                                                    floatingUIManager: floatingUIManager) { [weak self] tab in
+                                                    floatingUIManager: floatingUIManager,
+                                                    liveTabControllerProvider: { [weak self] tab in
+                                                        self?.tabManager.controller(for: tab, createIfNeeded: true)
+                                                    },
+                                                    inputStateProvider: { [weak self] tab in
+                                                        self?.unifiedInputStateStore?.state(for: tab.uid) ?? TabInputState()
+                                                    },
+                                                    isPaidAIChatEnabledProvider: { [weak self] in
+                                                        self?.isPaidAIChatEnabledForSwipe ?? false
+                                                    }) { [weak self] tab in
 
             guard tab !== self?.tabManager.currentTabsModel.currentTab else {
                 return
@@ -903,11 +913,22 @@ class MainViewController: UIViewController {
             self?.currentTab?.aiChatContextualSheetCoordinator.dismissSheet()
             self?.newTab()
         } onSwipeStarted: { [weak self] in
-            self?.performCancel()
-            self?.hideKeyboard()
+            self?.performCancel(animated: false)
+            self?.hideKeyboard(animated: false)
             self?.updatePreviewForCurrentTab()
         }
 
+        swipeTabsCoordinator?.auxiliarySwipeViews = [
+            viewCoordinator.unifiedToggleInputContainer,
+            viewCoordinator.aiChatTabChatHeaderContainer,
+        ]
+        swipeTabsCoordinator?.liveSwipeChromeViews = [
+            viewCoordinator.unifiedToggleInputContainer,
+            viewCoordinator.aiChatTabChatHeaderContainer,
+            viewCoordinator.unifiedInputContentContainer,
+            viewCoordinator.navigationBarCollectionView,
+            viewCoordinator.toolbar,
+        ]
         installTabSwipeOverlay()
     }
 
@@ -4099,8 +4120,8 @@ extension MainViewController: BrowserChromeDelegate {
         updateUnifiedInputContentVisibility(for: coordinator)
     }
 
-    private func hideKeyboard() {
-        dismissOmniBar()
+    private func hideKeyboard(animated: Bool = true) {
+        dismissOmniBar(animated: animated)
         _ = findInPageView?.resignFirstResponder()
     }
 
@@ -6059,7 +6080,17 @@ extension MainViewController: TabDelegate {
 
     func capturePreviewForTab(_ tab: TabViewController) {
         // Capture source tab preview now; otherwise its thumbnail stays stale once we switch to the new tab.
-        guard tab.link != nil, let image = tab.preparePreviewSync() else { return }
+        guard tab.link != nil else { return }
+
+        if floatingUIManager.isFloatingUIEnabled {
+            tab.preparePreview { [weak self, weak tab] image in
+                guard let self, let tab, let image else { return }
+                previewsSource.update(preview: image, forTab: tab.tabModel)
+            }
+            return
+        }
+
+        guard let image = tab.preparePreviewSync() else { return }
         previewsSource.update(preview: image, forTab: tab.tabModel)
     }
 
