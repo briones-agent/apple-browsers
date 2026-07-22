@@ -92,7 +92,10 @@ final class OverlayWindowManager: OverlayWindowManaging {
     }
 
     func prepareBlankSnapshotWindow() {
-        guard isCachingEnabled else { return }
+        guard isCachingEnabled else {
+            preparedOverlayWindow = nil
+            return
+        }
         guard overlayWindow == nil, preparedOverlayWindow == nil else { return }
         // Setting rootViewController triggers the heavy viewDidLoad now, off the suspend path.
         preparedOverlayWindow = makeOverlayWindow(with: makeBlankSnapshotViewController())
@@ -101,7 +104,12 @@ final class OverlayWindowManager: OverlayWindowManaging {
     func displayBlankSnapshotWindow(for reason: BlankSnapshotOverlayReason) {
         activeReasons.insert(reason)
         guard overlayWindow == nil else { return }
-        let windowToReveal = preparedOverlayWindow ?? makeOverlayWindow(with: makeBlankSnapshotViewController())
+        let windowToReveal: UIWindow
+        if isCachingEnabled, let preparedOverlayWindow {
+            windowToReveal = preparedOverlayWindow
+        } else {
+            windowToReveal = makeOverlayWindow(with: makeBlankSnapshotViewController())
+        }
         preparedOverlayWindow = nil
         reveal(overlayWindow: windowToReveal)
     }
