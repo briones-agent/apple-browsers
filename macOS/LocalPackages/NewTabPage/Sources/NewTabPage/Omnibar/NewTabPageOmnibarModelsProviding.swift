@@ -22,9 +22,15 @@ public protocol NewTabPageOmnibarModelsProviding {
     /// Attachment limits resolved for the user's tier from the most recent duck.ai models fetch.
     /// `nil` until a fetch succeeds, or when the backend omits them.
     var attachmentLimits: NewTabPageDataModel.AttachmentLimits? { get }
+    /// Whether a free-tier user is currently eligible for a free trial, as of the most recent
+    /// fetch. `false` for subscribed tiers and before the first fetch — the web uses this to pick
+    /// "Try for Free" vs "Upgrade" copy independently of `AIModelItem.upsell`, which only encodes
+    /// which flow to route to, not eligibility.
+    var isEligibleForFreeTrial: Bool { get }
     func fetchAIModelSections() async -> [NewTabPageDataModel.AIModelSection]
 }
 
 public extension NewTabPageOmnibarModelsProviding {
     var attachmentLimits: NewTabPageDataModel.AttachmentLimits? { nil }
+    var isEligibleForFreeTrial: Bool { false }
 }

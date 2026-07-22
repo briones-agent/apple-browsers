@@ -28,6 +28,7 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
 
     private(set) var lastFetchedSections: [NewTabPageDataModel.AIModelSection]?
     private(set) var attachmentLimits: NewTabPageDataModel.AttachmentLimits?
+    private(set) var isEligibleForFreeTrial = false
     private let modelsService: AIChatModelsProviding
     private let subscriptionManager: any SubscriptionManager
 
@@ -44,6 +45,7 @@ final class NewTabPageOmnibarModelsProvider: NewTabPageOmnibarModelsProviding {
             let response = try await modelsService.fetchModels()
             let userTier = await resolveUserTier()
             attachmentLimits = mapAttachmentLimits(response.attachmentLimits?.limits(for: userTier))
+            isEligibleForFreeTrial = userTier == .free && subscriptionManager.isUserEligibleForFreeTrial()
             let models = response.models.map { AIChatModel(remoteModel: $0, userTier: userTier) }
             let hasActiveSubscription = userTier != .free
 

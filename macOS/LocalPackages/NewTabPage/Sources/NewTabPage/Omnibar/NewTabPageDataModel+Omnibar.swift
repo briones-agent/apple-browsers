@@ -175,6 +175,11 @@ public extension NewTabPageDataModel {
         /// Backend-provided attachment limits, already tier-resolved. `nil` on older native builds
         /// or when the backend omits them, in which case the web falls back to its built-in defaults.
         let attachmentLimits: AttachmentLimits?
+        /// Whether a free-tier user is currently eligible for a free trial. Independent of
+        /// `AIModelItem.upsell`/`AIModelReasoningEffort.upsell` (which only encode which flow to
+        /// route to) — the web uses this to pick "Try for Free" vs "Upgrade" copy on gated rows.
+        /// `nil`/false means don't promise a trial.
+        let isEligibleForFreeTrial: Bool?
     }
 
     // MARK: - omnibar_getSuggestions

@@ -140,7 +140,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             aiModelSections: sectionsForWeb(aiModelSections),
             selectedReasoningEffort: configProvider.selectedReasoningEffort,
             enableAttachTabs: configProvider.isAttachTabsEnabled,
-            attachmentLimits: modelsProvider?.attachmentLimits
+            attachmentLimits: modelsProvider?.attachmentLimits,
+            isEligibleForFreeTrial: modelsProvider?.isEligibleForFreeTrial
         )
     }
 
@@ -217,7 +218,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             aiModelSections: sectionsForWeb(modelsProvider?.lastFetchedSections),
             selectedReasoningEffort: configProvider.selectedReasoningEffort,
             enableAttachTabs: configProvider.isAttachTabsEnabled,
-            attachmentLimits: modelsProvider?.attachmentLimits
+            attachmentLimits: modelsProvider?.attachmentLimits,
+            isEligibleForFreeTrial: modelsProvider?.isEligibleForFreeTrial
         )
         pushMessage(named: MessageName.onConfigUpdate.rawValue, params: config)
     }

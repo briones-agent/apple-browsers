@@ -314,6 +314,38 @@ final class NewTabPageOmnibarModelsProviderTests: XCTestCase {
         XCTAssertTrue(premiumItem?.isAvailable == false)
     }
 
+    // MARK: - Free Trial Eligibility
+
+    func testWhenFreeUserEligibleForFreeTrialThenProviderReflectsIt() async {
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+        mockModelsService.modelsToReturn = [makeRemoteModel(id: "free-model", accessTier: ["free"])]
+
+        _ = await provider.fetchAIModelSections()
+
+        XCTAssertTrue(provider.isEligibleForFreeTrial)
+    }
+
+    func testWhenFreeUserNotEligibleForFreeTrialThenProviderReflectsIt() async {
+        mockSubscriptionManager.isEligibleForFreeTrialResult = false
+        mockModelsService.modelsToReturn = [makeRemoteModel(id: "free-model", accessTier: ["free"])]
+
+        _ = await provider.fetchAIModelSections()
+
+        XCTAssertFalse(provider.isEligibleForFreeTrial)
+    }
+
+    /// StoreKit trial eligibility is independent of subscription tier — an existing subscriber can
+    /// still read as eligible. The tier check has to win, or a subscriber would see "Try for Free".
+    func testWhenSubscribedUserThenNotEligibleForFreeTrialRegardlessOfStoreKit() async {
+        mockSubscriptionManager.resultSubscription = .success(makeSubscription(tier: .plus))
+        mockSubscriptionManager.isEligibleForFreeTrialResult = true
+        mockModelsService.modelsToReturn = [makeRemoteModel(id: "plus-model", accessTier: ["plus"])]
+
+        _ = await provider.fetchAIModelSections()
+
+        XCTAssertFalse(provider.isEligibleForFreeTrial)
+    }
+
     // MARK: - Concurrency
 
     /// Overlapping callers (`NewTabPageOmnibarClient.getConfig` and `refreshModelsAndNotify`) must
