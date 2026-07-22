@@ -83,7 +83,7 @@ final class PasswordManagementViewController: NSViewController {
             if DeviceAuthenticator.deviceSupportsBiometrics {
                 lockScreenIconImageView.image = themeManager.isAppRebranded ? .lockTouchID128 : .loginsLockTouchIDLegacy
             } else {
-                lockScreenIconImageView.image = .loginsLockPassword
+                lockScreenIconImageView.image = themeManager.isAppRebranded ? .lockLocked128 : .loginsLockPasswordLegacy
             }
         }
     }

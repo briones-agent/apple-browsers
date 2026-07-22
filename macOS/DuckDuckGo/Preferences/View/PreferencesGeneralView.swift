@@ -384,8 +384,6 @@ struct CustomHomePageSheet: View {
             }
             .padding(EdgeInsets(top: 10, leading: 15, bottom: 10, trailing: 15))
 
-            Divider()
-
             HStack(alignment: .center) {
                 Spacer()
                 Button(UserText.cancel) {
