@@ -56,34 +56,50 @@ final class TabsBarViewControllerSizingTests: XCTestCase {
     }
 
     private let buttonWidth = TabsBarViewController.Constants.buttonWidth
+    private let gap = TabsBarViewController.Constants.addTabButtonGap
 
     private func addTabButtonLeadingOffset(_ contentWidth: CGFloat, _ availableWidth: CGFloat) -> CGFloat {
-        TabsBarViewController.addTabButtonLeadingOffset(contentWidth: contentWidth, availableWidth: availableWidth, buttonWidth: buttonWidth)
+        TabsBarViewController.addTabButtonLeadingOffset(contentWidth: contentWidth, availableWidth: availableWidth, buttonWidth: buttonWidth, gap: gap)
     }
 
-    func testAddTabButtonSitsRightAfterLastTabWhenTabsDoNotFillStrip() {
-        XCTAssertEqual(addTabButtonLeadingOffset(200, 900), 200, accuracy: accuracy)
+    func testAddTabButtonSitsGapAfterLastTabWhenTabsDoNotFillStrip() {
+        XCTAssertEqual(addTabButtonLeadingOffset(200, 900), 200 + gap, accuracy: accuracy)
     }
 
     func testAddTabButtonAtExactBoundaryIsFlushWithTrailingEdge() {
-        // Content fills exactly up to where the button would sit flush anyway.
-        XCTAssertEqual(addTabButtonLeadingOffset(900 - buttonWidth, 900), 900 - buttonWidth, accuracy: accuracy)
+        // Content + gap fills exactly up to where the button would sit flush anyway.
+        XCTAssertEqual(addTabButtonLeadingOffset(900 - buttonWidth - gap, 900), 900 - buttonWidth, accuracy: accuracy)
     }
 
     func testAddTabButtonIsFlushWithTrailingEdgeWhenTabsOverflowStrip() {
         XCTAssertEqual(addTabButtonLeadingOffset(1500, 900), 900 - buttonWidth, accuracy: accuracy)
     }
 
-    func testAddTabButtonOffsetIsZeroWithNoTabs() {
-        XCTAssertEqual(addTabButtonLeadingOffset(0, 900), 0, accuracy: accuracy)
+    func testAddTabButtonOffsetIsJustTheGapWithNoTabs() {
+        XCTAssertEqual(addTabButtonLeadingOffset(0, 900), gap, accuracy: accuracy)
     }
 
-    func testAddTabButtonOffsetIsNeverNegativeWhenAvailableWidthBelowButtonWidth() {
-        XCTAssertEqual(addTabButtonLeadingOffset(0, 20), 0, accuracy: accuracy)
+    func testAddTabButtonOffsetInDegenerateStripNarrowerThanButton() {
+        // Unrealistic on real devices, but not overflowing (0 <= 20), so still contentWidth + gap.
+        XCTAssertEqual(addTabButtonLeadingOffset(0, 20), gap, accuracy: accuracy)
     }
 
     func testAddTabButtonOffsetIsZeroWhenAvailableWidthIsZero() {
         XCTAssertEqual(addTabButtonLeadingOffset(200, 0), 0, accuracy: accuracy)
+    }
+
+    func testAddTabButtonNeverSitsUnderLastTabWhenCappedTabsAreCloseToAvailableWidth() {
+        // Regression: capped tabs close to availableWidth (891/900) used to cap the button at 856, under the last tab's own content.
+        XCTAssertEqual(addTabButtonLeadingOffset(891, 900), 891 + gap, accuracy: accuracy)
+    }
+
+    func testTabStripNotOverflowingWhenCappedTabsStillFitDespiteBeingCloseToAvailableWidth() {
+        // Regression: this used to be wrongly treated as overflowing, reserving scroll space that cropped the first tab off-screen.
+        XCTAssertFalse(TabsBarViewController.isTabStripOverflowing(contentWidth: 891, availableWidth: 900))
+    }
+
+    func testTabStripOverflowingWhenContentExceedsAvailableWidth() {
+        XCTAssertTrue(TabsBarViewController.isTabStripOverflowing(contentWidth: 901, availableWidth: 900))
     }
 
     @MainActor
@@ -101,8 +117,7 @@ final class TabsBarViewControllerSizingTests: XCTestCase {
         XCTAssertEqual(controller.buttonsStack.arrangedSubviews.count, 3)
         XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[0], controller.aiChatChip)
         XCTAssertIdentical(controller.buttonsStack.arrangedSubviews[1], controller.fireButton)
-        // addTabButton is positioned manually outside buttonsStack so it can sit inline after the
-        // last tab and slide to a sticky trailing position once tabs fill the strip.
+        // addTabButton is positioned manually outside buttonsStack, see updateAddTabButtonPosition().
         XCTAssertFalse(controller.buttonsStack.arrangedSubviews.contains(controller.addTabButton))
         XCTAssertIdentical(controller.addTabButton.superview, controller.view)
     }

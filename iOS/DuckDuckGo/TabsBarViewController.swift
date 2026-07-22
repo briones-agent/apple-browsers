@@ -54,6 +54,7 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
         static let buttonWidth: CGFloat = 44
         static let buttonHeight: CGFloat = 40
         static let stackSpacing: CGFloat = 12
+        static let addTabButtonGap: CGFloat = 6
         static let minItemWidth: CGFloat = 120
         static let maxItemWidthFraction: CGFloat = 0.33
         static let narrowMaxItemWidthFraction: CGFloat = 0.5
@@ -350,28 +351,34 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
         DispatchQueue.main.async {
             guard let currentIndex = self.currentIndex else { return }
             let indexPath = IndexPath(row: currentIndex, section: 0)
-            guard let attributes = self.collectionView.layoutAttributesForItem(at: indexPath) else { return }
-            // Excludes the sticky button's reserved contentInset, else a tab under it reads as "visible".
-            let visibleSize = CGSize(
-                width: self.collectionView.bounds.width - self.collectionView.contentInset.right,
-                height: self.collectionView.bounds.height
-            )
-            let visibleRect = CGRect(origin: self.collectionView.contentOffset, size: visibleSize)
-            let isPartiallyClipped = visibleRect.intersects(attributes.frame) && !visibleRect.contains(attributes.frame)
-            guard isPartiallyClipped else { return }
+            guard self.isPartiallyClipped(at: indexPath) else { return }
             self.collectionView.scrollToItem(at: indexPath, at: [], animated: true)
         }
     }
 
+    /// Excludes the sticky button's reserved contentInset, else a tab under it reads as "visible".
+    private func isPartiallyClipped(at indexPath: IndexPath) -> Bool {
+        guard let attributes = collectionView.layoutAttributesForItem(at: indexPath) else { return false }
+        let visibleSize = CGSize(
+            width: collectionView.bounds.width - collectionView.contentInset.right,
+            height: collectionView.bounds.height
+        )
+        let visibleRect = CGRect(origin: collectionView.contentOffset, size: visibleSize)
+        return visibleRect.intersects(attributes.frame) && !visibleRect.contains(attributes.frame)
+    }
+
     private func recomputeItemSize() {
-        let availableWidth = collectionView.frame.size.width
+        let stripWidth = collectionView.frame.size.width
         guard tabsCount > 0 else { return }
+
+        // Reserves the button's footprint so equal-division tab sizing never fills 100% of stripWidth.
+        let availableWidth = max(0, stripWidth - Constants.buttonWidth - Constants.addTabButtonGap)
 
         let itemWidth = Self.itemWidth(
             availableWidth: availableWidth,
             visibleItems: tabsCount,
             minWidth: Constants.minItemWidth,
-            maxWidth: maxItemWidth(forStripWidth: availableWidth)
+            maxWidth: maxItemWidth(forStripWidth: stripWidth)
         )
 
         if let flowLayout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
@@ -379,30 +386,38 @@ class TabsBarViewController: UIViewController, UIGestureRecognizerDelegate {
         }
     }
 
-    /// Leading offset (from the collection view's leading edge) for the add-tab button: right after
-    /// the last tab while tabs haven't filled the strip, flush against the trailing edge once they have.
-    static func addTabButtonLeadingOffset(contentWidth: CGFloat, availableWidth: CGFloat, buttonWidth: CGFloat) -> CGFloat {
+    /// Caps flush at the trailing edge only once genuinely overflowing — earlier would hide the last tab's own close button.
+    static func addTabButtonLeadingOffset(contentWidth: CGFloat, availableWidth: CGFloat, buttonWidth: CGFloat, gap: CGFloat) -> CGFloat {
         guard availableWidth > 0 else { return 0 }
-        return min(contentWidth, max(0, availableWidth - buttonWidth))
+        guard isTabStripOverflowing(contentWidth: contentWidth, availableWidth: availableWidth) else {
+            return contentWidth + gap
+        }
+        return max(0, availableWidth - buttonWidth)
+    }
+
+    /// contentWidth close to availableWidth is normal (see maxItemWidth) and isn't the same as overflowing.
+    static func isTabStripOverflowing(contentWidth: CGFloat, availableWidth: CGFloat) -> Bool {
+        contentWidth > availableWidth
     }
 
     private func updateAddTabButtonPosition() {
         let availableWidth = collectionView.frame.size.width
         guard availableWidth > 0 else { return }
 
-        // reloadData()/itemSize changes mark layout dirty but don't recompute contentSize synchronously;
-        // without this, contentWidth below is stale by one tab open/close.
+        // Forces layout now — reloadData()/itemSize changes don't recompute contentSize synchronously.
         collectionView.layoutIfNeeded()
 
         let contentWidth = collectionView.contentSize.width
+        let gap = Constants.addTabButtonGap
         addTabButtonLeadingConstraint?.constant = Self.addTabButtonLeadingOffset(
             contentWidth: contentWidth,
             availableWidth: availableWidth,
-            buttonWidth: Constants.buttonWidth
+            buttonWidth: Constants.buttonWidth,
+            gap: gap
         )
 
-        let isOverflowing = contentWidth > availableWidth - Constants.buttonWidth
-        collectionView.contentInset.right = isOverflowing ? Constants.buttonWidth : 0
+        let isOverflowing = Self.isTabStripOverflowing(contentWidth: contentWidth, availableWidth: availableWidth)
+        collectionView.contentInset.right = isOverflowing ? Constants.buttonWidth + gap : 0
     }
 
     /// Half the strip, but in landscape also capped at a third of the full-screen strip so a resize
@@ -714,6 +729,12 @@ extension TabsBarViewController: UICollectionViewDataSource {
             guard let self = self, let model = model,
                 let tabIndex = self.tabsModel?.indexOf(tab: model)
                 else { return }
+            let indexPath = IndexPath(row: tabIndex, section: 0)
+            // Reveal a not-fully-visible tab instead of closing it, guards against accidental taps.
+            guard !self.isPartiallyClipped(at: indexPath) else {
+                self.collectionView.scrollToItem(at: indexPath, at: [], animated: true)
+                return
+            }
             let tabState = tabIndex == self.currentIndex ? "active" : "inactive"
             DailyPixel.fireDailyAndCount(pixel: .tabBarTabClosed, withAdditionalParameters: [PixelParameters.tabState: tabState])
             self.delegate?.tabsBar(self, didRemoveTabAtIndex: tabIndex)
