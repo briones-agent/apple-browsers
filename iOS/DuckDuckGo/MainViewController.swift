@@ -4365,6 +4365,11 @@ extension MainViewController: BrowserChromeDelegate {
         lastChromeVisibilityPercent
     }
 
+    func restoreCurrentBarsVisibilityAfterLayoutRefresh() {
+        applyBarsVisibilityState(lastChromeVisibilityPercent, postChromeVisibilityNotification: false)
+        view.layoutIfNeeded()
+    }
+
     // 1.0 - full size, 0.0 - hidden
     func updateToolbarConstant(_ ratio: CGFloat) {
         var bottomHeight = toolbarHeight
