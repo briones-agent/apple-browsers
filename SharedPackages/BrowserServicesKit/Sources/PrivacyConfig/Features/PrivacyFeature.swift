@@ -520,6 +520,9 @@ public enum AIChatSubfeature: String, Equatable, PrivacySubfeature {
     /// Enables attaching content from multiple open tabs to the New Tab Page omnibar Duck.ai chat.
     case ntpAttachMoreTabs
 
+    /// Enables deleting recent AI chats from the New Tab Page omnibar
+    case ntpSuggestionsDeletion
+
     /// Enables page context feature on iPad
     case iPadPageContext
 
@@ -628,6 +631,9 @@ public enum HtmlNewTabPageSubfeature: String, Equatable, PrivacySubfeature {
 
     /// Global switch to disable advanced card ordering for the Next Steps List widget
     case nextStepsListAdvancedCardOrdering
+
+    /// Enables deleting history-based search suggestions from the New Tab Page omnibar
+    case searchSuggestionsDeletion
 }
 
 public enum NetworkProtectionSubfeature: String, Equatable, PrivacySubfeature {
