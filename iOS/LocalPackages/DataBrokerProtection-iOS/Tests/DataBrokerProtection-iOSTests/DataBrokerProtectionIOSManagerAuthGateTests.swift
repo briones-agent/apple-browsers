@@ -296,7 +296,7 @@ final class DataBrokerProtectionIOSManagerAuthGateTests: XCTestCase {
         XCTAssertGreaterThan(plan.optOutCount, 0)
     }
 
-    func testDashboardDidOpen_freemiumFlagOff_startsAllOperations() async {
+    func testDashboardDidOpen_freemiumFlagOff_doesNotStartOperations() async {
         let featureFlagger = MockDBPFeatureFlagger(isForegroundRunningOnAppActiveFeatureOn: false,
                                                     isFreemiumPIREnabled: false)
         let (sut, dependencies) = DBPContinuedProcessingTestUtils.makeTestIOSManager(featureFlagger: featureFlagger)
@@ -311,8 +311,7 @@ final class DataBrokerProtectionIOSManagerAuthGateTests: XCTestCase {
 
         sut.dashboardDidOpen()
 
-        // With flag off, should NOT route to scan-only even though currentRunIsFreeScan is true
-        XCTAssertTrue(dependencies.queueManager.didCallStartScheduledAllOperationsIfPermitted)
+        XCTAssertFalse(dependencies.queueManager.didCallStartScheduledAllOperationsIfPermitted)
         XCTAssertFalse(dependencies.queueManager.didCallStartScheduledScanOperationsIfPermitted)
     }
 

@@ -391,6 +391,12 @@ struct Launching: LaunchingHandling {
 
         // Clean up wide event data at launch
         launchTaskManager.register(task: WideEventLaunchCleanupTask(wideEventService: wideEventService))
+        launchTaskManager.register(task: BlockLaunchTask(name: "Initialize PIR Secure Vault") { taskContext in
+            Task {
+                await dbpService.prepareSecureVaultResourcesAtLaunch()
+                taskContext.finish()
+            }
+        })
 
         // MARK: - Final Configuration
         // Complete the configuration process and set up the main window
