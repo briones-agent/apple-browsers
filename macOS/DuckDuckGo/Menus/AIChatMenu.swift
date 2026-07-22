@@ -175,16 +175,16 @@ final class AIChatMenu: NSMenu {
     private func insertChatItems(_ chats: [AIChatSuggestion], hasMore: Bool) {
         let labelIndex = index(of: recentChatsLabel)
         guard labelIndex != -1 else { return }
+
         for (offset, chat) in chats.enumerated() {
             let item = NSMenuItem(title: chat.title, action: #selector(chatItemTapped(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = chat
-            item.image = chat.isPinned
-            ? (origin == .moreOptionsMenu ? DesignSystemImages.Color.Size16.chatPinned : DesignSystemImages.Color.Size12.chatPinned)
-                : (origin == .moreOptionsMenu ? DesignSystemImages.Color.Size16.chat : DesignSystemImages.Color.Size12.chat)
+            item.image = chat.isPinned ? DesignSystemImages.Glyphs.Size12.pin : DesignSystemImages.Glyphs.Size12.chat
             insertItem(item, at: labelIndex + 1 + offset)
             chatItems.append(item)
         }
+    
         if hasMore {
             let separator = NSMenuItem.separator()
             let viewAllItem = NSMenuItem(title: UserText.aiChatMenuViewAllChats, action: #selector(viewAllChatsTapped), keyEquivalent: "")
