@@ -118,6 +118,24 @@ final class MainViewControllerRefreshActionTests: XCTestCase {
         )
     }
 
+    /// Deep-linking to a Duck.ai surface (feedback form / chat-protection page) must not auto-expand
+    /// the input: the FE opens its own UI and an expanded UTI would pop the keyboard over it. The
+    /// signal is the per-tab flag, not the URL — the FE strips the query param on load and the URL
+    /// often hasn't committed yet at decision time.
+    func test_aiTab_deepLinkSurfaceRequested_showsCollapsedWithoutExpand() {
+        let inputs = makeInputs(
+            tabIsAITab: true,
+            tabURL: URL(string: "https://duckduckgo.com/?q=hello&ia=chat&duckai=2"),
+            tabRequestsDeepLinkSurface: true,
+            coordinatorIsAITabState: false,
+            coordinatorHasSubmittedPrompt: false
+        )
+        XCTAssertEqual(
+            MainViewController.decideRefreshAction(for: inputs),
+            .refreshAITab(.showCollapsed(expandAfterRefresh: false))
+        )
+    }
+
     // MARK: - Helpers
 
     private func makeInputs(
@@ -125,6 +143,7 @@ final class MainViewControllerRefreshActionTests: XCTestCase {
         tabURL: URL? = URL(string: "https://example.com/"),
         tabLinkURL: URL? = URL(string: "https://example.com/"),
         tabIsVoiceModeRequested: Bool = false,
+        tabRequestsDeepLinkSurface: Bool = false,
         coordinatorIsAITabState: Bool = false,
         coordinatorIsActive: Bool = false,
         coordinatorIsOmnibarSession: Bool = false,
@@ -137,6 +156,7 @@ final class MainViewControllerRefreshActionTests: XCTestCase {
             tabURL: tabURL,
             tabLinkURL: tabLinkURL,
             tabIsVoiceModeRequested: tabIsVoiceModeRequested,
+            tabRequestsDeepLinkSurface: tabRequestsDeepLinkSurface,
             coordinatorIsAITabState: coordinatorIsAITabState,
             coordinatorIsActive: coordinatorIsActive,
             coordinatorIsOmnibarSession: coordinatorIsOmnibarSession,

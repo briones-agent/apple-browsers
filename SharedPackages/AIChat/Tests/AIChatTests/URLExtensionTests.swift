@@ -295,6 +295,32 @@ final class URLExtensionTests: XCTestCase {
         XCTAssertFalse(url.isDuckAIVoiceMode)
     }
 
+    // MARK: - Deep-link Surface Tests (Feedback / Chat Protection)
+
+    func testIsDuckAIFeedbackOpenWithKnownValues() {
+        XCTAssertTrue(URL(string: "https://duck.ai/?feedback=positive")!.isDuckAIFeedbackOpen)
+        XCTAssertTrue(URL(string: "https://duck.ai/?feedback=negative")!.isDuckAIFeedbackOpen)
+    }
+
+    /// Must work against custom/test Duck.ai hosts, not just the exact `duck.ai` host — the helper
+    /// intentionally doesn't guard on `isDuckAIURL` (which is exact-host only).
+    func testIsDuckAIFeedbackOpenWorksOnSubdomainHost() {
+        XCTAssertTrue(URL(string: "https://alice.duck.ai/?feedback=positive")!.isDuckAIFeedbackOpen)
+    }
+
+    /// An unknown value opens nothing on the FE, so it must not be treated as a feedback deep link.
+    func testIsDuckAIFeedbackOpenRejectsUnknownValue() {
+        XCTAssertFalse(URL(string: "https://duck.ai/?feedback=bogus")!.isDuckAIFeedbackOpen)
+        XCTAssertFalse(URL(string: "https://duck.ai/")!.isDuckAIFeedbackOpen)
+    }
+
+    func testIsDuckAIChatProtectionOpen() {
+        XCTAssertTrue(URL(string: "https://duck.ai/?chatProtection=open")!.isDuckAIChatProtectionOpen)
+        XCTAssertTrue(URL(string: "https://alice.duck.ai/?chatProtection=open")!.isDuckAIChatProtectionOpen)
+        XCTAssertFalse(URL(string: "https://duck.ai/?chatProtection=closed")!.isDuckAIChatProtectionOpen)
+        XCTAssertFalse(URL(string: "https://duck.ai/")!.isDuckAIChatProtectionOpen)
+    }
+
     // MARK: - Chat ID Tests
 
     func testDuckAIChatIDWithValidChatID() {

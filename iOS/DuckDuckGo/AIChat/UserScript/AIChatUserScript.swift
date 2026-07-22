@@ -65,7 +65,7 @@ final class AIChatUserScript: NSObject, Subfeature {
         }
 
         struct FeedbackActionParams: Encodable {
-            let sentiment: String
+            let feedbackType: String
         }
 
         var methodName: String {
@@ -104,7 +104,7 @@ final class AIChatUserScript: NSObject, Subfeature {
             case .changeModelAction(let modelId):
                 return ChangeModelActionParams(modelId: modelId)
             case .openFeedbackAction(let sentiment):
-                return FeedbackActionParams(sentiment: sentiment)
+                return FeedbackActionParams(feedbackType: sentiment)
             default:
                 return nil
             }

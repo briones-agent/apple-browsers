@@ -2318,6 +2318,7 @@ class MainViewController: UIViewController {
     }
 
     func loadUrl(_ url: URL, fromExternalLink: Bool = false) {
+        currentTab?.isDuckAIDeepLinkSurfaceRequested = url.isDuckAIFeedbackOpen || url.isDuckAIChatProtectionOpen
         prepareTabForRequest {
             self.currentTab?.load(url: url)
             if fromExternalLink {
@@ -2398,6 +2399,7 @@ class MainViewController: UIViewController {
         let tab = tabManager.add(url: url, inheritedAttribution: inheritedAttribution)
         tab.inferredOpenerContext = .external
         tab.isVoiceModeRequested = voiceMode
+        tab.isDuckAIDeepLinkSurfaceRequested = url?.isDuckAIFeedbackOpen == true || url?.isDuckAIChatProtectionOpen == true
 
         // Mark tab as external launch if opened from external URL or shortcut
         if fromExternalLink {

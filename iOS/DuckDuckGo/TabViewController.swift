@@ -66,6 +66,13 @@ class TabViewController: UIViewController {
     /// auto-expand even before the `?mode=voice` URL is committed to the web view.
     var isVoiceModeRequested = false
 
+    /// Set when a tab is opened to a Duck.ai deep-link surface (`?feedback=…` / `?chatProtection=open`)
+    /// so that `refreshUnifiedToggleInput` suppresses input auto-expand — those surfaces manage their
+    /// own UI and shouldn't pop the keyboard. Captured at load time because the FE strips the query
+    /// param on load, so the URL can't be relied on once navigation has committed. One-shot: consumed
+    /// by the first AI-tab refresh.
+    var isDuckAIDeepLinkSurfaceRequested = false
+
     lazy var borderView = StyledTopBottomBorderView()
 
     var privacyDashboardAnchor: UIView!

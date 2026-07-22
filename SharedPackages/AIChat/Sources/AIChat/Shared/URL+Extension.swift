@@ -109,6 +109,26 @@ extension URL {
         } == true
     }
 
+    /// Returns `true` if the URL requests the Duck AI feedback form to be open on load
+    /// (`?feedback=positive` / `?feedback=negative`). Matches on the param name and known values
+    /// rather than guarding on `isDuckAIURL` so it also works against custom/test Duck.ai hosts
+    /// (e.g. `*.duck.ai`); an unknown value (e.g. `?feedback=bogus`) opens nothing, so it's excluded.
+    public var isDuckAIFeedbackOpen: Bool {
+        queryItems?.contains {
+            $0.name == AIChatURLParameters.feedbackName
+            && ($0.value == AIChatURLParameters.feedbackPositiveValue || $0.value == AIChatURLParameters.feedbackNegativeValue)
+        } == true
+    }
+
+    /// Returns `true` if the URL requests the Duck AI chat-protection page to be open on load
+    /// (`?chatProtection=open`). Matches on the param name/value rather than guarding on `isDuckAIURL`
+    /// so it also works against custom/test Duck.ai hosts (e.g. `*.duck.ai`).
+    public var isDuckAIChatProtectionOpen: Bool {
+        queryItems?.contains {
+            $0.name == AIChatURLParameters.chatProtectionName && $0.value == AIChatURLParameters.chatProtectionOpenValue
+        } == true
+    }
+
     /// Returns the chat ID from the URL if present, or nil if not a Duck AI URL with a chat ID.
     public var duckAIChatID: String? {
         guard isDuckAIURL,

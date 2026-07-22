@@ -62,6 +62,9 @@ struct DuckAIFeedbackOptionsView: View {
 
                 Spacer()
             }
+            // Make the whole row tappable, not just the icon/label; the trailing Spacer is
+            // otherwise transparent to hit-testing.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
