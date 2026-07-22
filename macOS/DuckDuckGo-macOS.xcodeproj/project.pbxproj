@@ -3094,6 +3094,8 @@
 		B520EBE32EC4D66A00D286E4 /* LoadingIndicatorPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B520EBE02EC4D66A00D286E4 /* LoadingIndicatorPolicy.swift */; };
 		B52B61802E94331B008888E3 /* ThemeUpdateListening.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52B617F2E94331B008888E3 /* ThemeUpdateListening.swift */; };
 		B52B61812E94331B008888E3 /* ThemeUpdateListening.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52B617F2E94331B008888E3 /* ThemeUpdateListening.swift */; };
+		B531B7F930112DB60087A2DE /* Shield-Off-Gray.json in Resources */ = {isa = PBXBuildFile; fileRef = B531B7F830112DB60087A2DE /* Shield-Off-Gray.json */; };
+		B531B7FA30112DB60087A2DE /* Shield-Off-Gray.json in Resources */ = {isa = PBXBuildFile; fileRef = B531B7F830112DB60087A2DE /* Shield-Off-Gray.json */; };
 		B53D46B22E9D9710000D59F7 /* ThemeUpdateListeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53D46B02E9D9710000D59F7 /* ThemeUpdateListeningTests.swift */; };
 		B53D46B42E9D9710000D59F7 /* ThemeUpdateListeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53D46B02E9D9710000D59F7 /* ThemeUpdateListeningTests.swift */; };
 		B53F4E922EA917AB0043B5EF /* LetterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53F4E912EA917AB0043B5EF /* LetterView.swift */; };
@@ -3110,8 +3112,6 @@
 		B55C8F752E81A8730024B421 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55C8F732E81A8730024B421 /* ThemeManager.swift */; };
 		B55D8E5E2EE77688009083D9 /* BundleExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55D8E5D2EE77688009083D9 /* BundleExtension.swift */; };
 		B55D8E5F2EE77688009083D9 /* BundleExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55D8E5D2EE77688009083D9 /* BundleExtension.swift */; };
-		B55F24D03010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */ = {isa = PBXBuildFile; fileRef = B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */; };
-		B55F24D13010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */ = {isa = PBXBuildFile; fileRef = B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */; };
 		B56776752ED778C600303198 /* FaviconImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56776742ED778C600303198 /* FaviconImageView.swift */; };
 		B56776762ED778C600303198 /* FaviconImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56776742ED778C600303198 /* FaviconImageView.swift */; };
 		B568715E2EC528950075A270 /* CABasicAnimationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = B568715D2EC528950075A270 /* CABasicAnimationExtension.swift */; };
@@ -6292,6 +6292,7 @@
 		B51A90D92F044C3E00FB9C0C /* ScriptStyleProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptStyleProviderTests.swift; sourceTree = "<group>"; };
 		B520EBE02EC4D66A00D286E4 /* LoadingIndicatorPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingIndicatorPolicy.swift; sourceTree = "<group>"; };
 		B52B617F2E94331B008888E3 /* ThemeUpdateListening.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeUpdateListening.swift; sourceTree = "<group>"; };
+		B531B7F830112DB60087A2DE /* Shield-Off-Gray.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Shield-Off-Gray.json"; sourceTree = "<group>"; };
 		B53D46B02E9D9710000D59F7 /* ThemeUpdateListeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeUpdateListeningTests.swift; sourceTree = "<group>"; };
 		B53F4E912EA917AB0043B5EF /* LetterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterView.swift; sourceTree = "<group>"; };
 		B541A3532E858041004AEAAD /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
@@ -6300,7 +6301,6 @@
 		B55832282F4DF679008135C9 /* StartupMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupMetrics.swift; sourceTree = "<group>"; };
 		B55C8F732E81A8730024B421 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		B55D8E5D2EE77688009083D9 /* BundleExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleExtension.swift; sourceTree = "<group>"; };
-		B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Shield-Off-Gray.json"; sourceTree = "<group>"; };
 		B56776742ED778C600303198 /* FaviconImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconImageView.swift; sourceTree = "<group>"; };
 		B568715D2EC528950075A270 /* CABasicAnimationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CABasicAnimationExtension.swift; sourceTree = "<group>"; };
 		B56871602EC528CF0075A270 /* CATransitionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CATransitionExtension.swift; sourceTree = "<group>"; };
@@ -10089,7 +10089,7 @@
 				B599B5EC2FFE9DF700B5E877 /* Flame-24.json */,
 				B5EA14A92FFFDB8000FC2512 /* Shield-Color-24.json */,
 				B599B5E42FFE95A900B5E877 /* Shield-Color-24-Hover.json */,
-				B55F24CF3010F7B200F2F1C6 /* Shield-Off-Gray.json */,
+				B531B7F830112DB60087A2DE /* Shield-Off-Gray.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -14310,7 +14310,6 @@
 				37EE560C2D5F197300D53C7C /* shield-dot-mouse-over.json in Resources */,
 				D6229C312ED0E213001DAE71 /* shield.new.json in Resources */,
 				37EE560D2D5F197300D53C7C /* shield-mouse-over.json in Resources */,
-				B55F24D03010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */,
 				37EE560E2D5F197300D53C7C /* trackers-1.json in Resources */,
 				37EE560F2D5F197300D53C7C /* trackers-2.json in Resources */,
 				37EE56102D5F197300D53C7C /* trackers-3.json in Resources */,
@@ -14338,6 +14337,7 @@
 				BD384ACB2BBC821B00EF3735 /* vpn-dark-mode.json in Resources */,
 				BB0DA4DE2DB1806000AB9C29 /* dark-shield-new.json in Resources */,
 				BB0DA4DF2DB1806000AB9C29 /* dark-shield-dot-new.json in Resources */,
+				B531B7FA30112DB60087A2DE /* Shield-Off-Gray.json in Resources */,
 				3706FCEA293F65D500E42796 /* PasswordManager.storyboard in Resources */,
 				7B0A6DFB2D47CCDF00FDFDC2 /* ExcludedApps.storyboard in Resources */,
 				BD384ACC2BBC821B00EF3735 /* vpn-light-mode.json in Resources */,
@@ -14554,7 +14554,6 @@
 				37EE55E22D5F197300D53C7C /* shield-dot.json in Resources */,
 				37EE55E32D5F197300D53C7C /* shield-dot-mouse-over.json in Resources */,
 				D6229C302ED0E213001DAE71 /* shield.new.json in Resources */,
-				B55F24D13010F7B200F2F1C6 /* Shield-Off-Gray.json in Resources */,
 				37EE55E42D5F197300D53C7C /* shield-mouse-over.json in Resources */,
 				37EE55E52D5F197300D53C7C /* trackers-1.json in Resources */,
 				37EE55E62D5F197300D53C7C /* trackers-2.json in Resources */,
@@ -14582,6 +14581,7 @@
 				BB0DA4E02DB1806000AB9C29 /* dark-shield-new.json in Resources */,
 				BB0DA4E12DB1806000AB9C29 /* dark-shield-dot-new.json in Resources */,
 				85625994269C8F9600EE44BC /* PasswordManager.storyboard in Resources */,
+				B531B7F930112DB60087A2DE /* Shield-Off-Gray.json in Resources */,
 				7B0A6DFD2D47CCDF00FDFDC2 /* ExcludedApps.storyboard in Resources */,
 				BD384ACA2BBC821A00EF3735 /* vpn-light-mode.json in Resources */,
 				4B677433255DBEB800025BD8 /* httpsMobileV2Bloom.bin in Resources */,
