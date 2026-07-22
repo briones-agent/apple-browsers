@@ -40,6 +40,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
         case getTabContent = "omnibar_getTabContent"
         case showSubscriptionUpsell = "omnibar_showSubscriptionUpsell"
         case showSubscriptionUpgrade = "omnibar_showSubscriptionUpgrade"
+        case confirmDeleteAiChat = "omnibar_confirmDeleteAiChat"
+        case removeSuggestion = "omnibar_removeSuggestion"
     }
 
     private let configProvider: NewTabPageOmnibarConfigProviding
@@ -77,6 +79,8 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             configProvider.isVoiceChatAccessEnabledPublisher.map { _ in () }.eraseToAnyPublisher(),
             configProvider.showAskAiSuggestionPublisher.map { _ in () }.eraseToAnyPublisher(),
             configProvider.isAttachTabsEnabledPublisher.map { _ in () }.eraseToAnyPublisher(),
+            configProvider.isAIChatDeletionEnabledPublisher.map { _ in () }.eraseToAnyPublisher(),
+            configProvider.isSearchSuggestionDeletionEnabledPublisher.map { _ in () }.eraseToAnyPublisher(),
             configProvider.customizeResponsesStatePublisher.map { _ in () }.eraseToAnyPublisher()
         )
         .sink { [weak self] _ in
@@ -112,7 +116,9 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             MessageName.getOpenTabs.rawValue: { [weak self] in try await self?.getOpenTabs(params: $0, original: $1) },
             MessageName.getTabContent.rawValue: { [weak self] in try await self?.getTabContent(params: $0, original: $1) },
             MessageName.showSubscriptionUpsell.rawValue: { [weak self] in try await self?.showSubscriptionUpsell(params: $0, original: $1) },
-            MessageName.showSubscriptionUpgrade.rawValue: { [weak self] in try await self?.showSubscriptionUpgrade(params: $0, original: $1) }
+            MessageName.showSubscriptionUpgrade.rawValue: { [weak self] in try await self?.showSubscriptionUpgrade(params: $0, original: $1) },
+            MessageName.confirmDeleteAiChat.rawValue: { [weak self] in try await self?.confirmDeleteAiChat(params: $0, original: $1) },
+            MessageName.removeSuggestion.rawValue: { [weak self] in try await self?.removeSuggestion(params: $0, original: $1) }
         ])
     }
 
@@ -141,7 +147,9 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             selectedReasoningEffort: configProvider.selectedReasoningEffort,
             enableAttachTabs: configProvider.isAttachTabsEnabled,
             attachmentLimits: modelsProvider?.attachmentLimits,
-            isEligibleForFreeTrial: modelsProvider?.isEligibleForFreeTrial
+            isEligibleForFreeTrial: modelsProvider?.isEligibleForFreeTrial,
+            enableAiChatDeletion: configProvider.isAIChatDeletionEnabled,
+            enableSearchSuggestionDeletion: configProvider.isSearchSuggestionDeletionEnabled
         )
     }
 
@@ -219,7 +227,9 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
             selectedReasoningEffort: configProvider.selectedReasoningEffort,
             enableAttachTabs: configProvider.isAttachTabsEnabled,
             attachmentLimits: modelsProvider?.attachmentLimits,
-            isEligibleForFreeTrial: modelsProvider?.isEligibleForFreeTrial
+            isEligibleForFreeTrial: modelsProvider?.isEligibleForFreeTrial,
+            enableAiChatDeletion: configProvider.isAIChatDeletionEnabled,
+            enableSearchSuggestionDeletion: configProvider.isSearchSuggestionDeletionEnabled
         )
         pushMessage(named: MessageName.onConfigUpdate.rawValue, params: config)
     }
@@ -369,6 +379,26 @@ public final class NewTabPageOmnibarClient: NewTabPageUserScriptClient {
     private func showSubscriptionUpgrade(params: Any, original: WKScriptMessage) async throws -> Encodable? {
         let action: NewTabPageDataModel.ShowSubscriptionUpgradeAction? = DecodableHelper.decode(from: params)
         subscriptionDialogPresenter?.showSubscriptionUpgradeDialog(source: action?.source ?? .model)
+        return nil
+    }
+
+    @MainActor
+    private func confirmDeleteAiChat(params: Any, original: WKScriptMessage) async throws -> Encodable? {
+        guard configProvider.isAIChatDeletionEnabled,
+              let action: NewTabPageDataModel.ConfirmDeleteAiChatAction = DecodableHelper.decode(from: params) else {
+            return NewTabPageDataModel.ConfirmDeleteAiChatResponse(action: .none)
+        }
+        let confirmed = await actionHandler.confirmDeleteAiChat(chatId: action.chatId, title: action.title, sourceWindow: original.webView?.window)
+        return NewTabPageDataModel.ConfirmDeleteAiChatResponse(action: confirmed ? .delete : .none)
+    }
+
+    @MainActor
+    private func removeSuggestion(params: Any, original: WKScriptMessage) async throws -> Encodable? {
+        guard configProvider.isSearchSuggestionDeletionEnabled,
+              let action: NewTabPageDataModel.RemoveSuggestionAction = DecodableHelper.decode(from: params) else {
+            return nil
+        }
+        actionHandler.removeSuggestion(action.url)
         return nil
     }
 

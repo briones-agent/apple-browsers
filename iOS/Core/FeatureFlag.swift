@@ -130,6 +130,9 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1212843034975366
     case dbpOptOutRetryError96Hours
 
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216731632905182
+    case dbpDeferredSecureVaultInit
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1211866711635701
     case crashReportOptInStatusResetting
 
@@ -377,6 +380,10 @@ public enum FeatureFlag: String {
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1213037858764805
     case crashCollectionLimitCallStackTreeDepth
 
+    /// Enables sending MetricKit launch-time telemetry pixels.
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216663565461118?focus=true
+    case launchTimeMetrics
+
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1214974217398704?focus=true
     case appRebranding
 
@@ -506,6 +513,9 @@ public enum FeatureFlag: String {
     /// NA Experiment: tailor the onboarding flow based on the user's download reason.
     /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216491579842691?focus=true
     case onboardingFlowByDownloadReasonExperiment
+
+    /// https://app.asana.com/1/137249556945/project/1211834678943996/task/1216629730083154?focus=true
+    case systemFindInPage
 }
 
 extension FeatureFlag: FeatureFlagDescribing {
@@ -623,6 +633,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(DBPSubfeature.webViewUserAgent), supportsLocalOverriding: true)
         case .dbpOptOutRetryError96Hours:
             Config(source: .remoteReleasable(DBPSubfeature.optOutRetryError96Hours))
+        case .dbpDeferredSecureVaultInit:
+            Config(source: .remoteReleasable(DBPSubfeature.deferredSecureVaultInit), supportsLocalOverriding: true)
         case .crashReportOptInStatusResetting:
             Config(defaultValue: .internalOnly, source: .remoteReleasable(iOSBrowserConfigSubfeature.crashReportOptInStatusResetting), supportsLocalOverriding: false)
         case .syncSeamlessAccountSwitching:
@@ -785,6 +797,9 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(iOSBrowserConfigSubfeature.genericBackgroundTask))
         case .crashCollectionLimitCallStackTreeDepth:
             Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.crashCollectionLimitCallStackTreeDepth), supportsLocalOverriding: false)
+        case .launchTimeMetrics:
+            Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.launchTimeMetrics), supportsLocalOverriding: true)
+
         case .appRebranding:
             Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.appRebranding), supportsLocalOverriding: true)
         case .webExtensions:
@@ -857,6 +872,8 @@ extension FeatureFlag: FeatureFlagDescribing {
             Config(source: .remoteReleasable(SyncSubfeature.canShowV2ConnectCode))
         case .simplifiedSyncSetupV2:
             Config(source: .remoteReleasable(SyncSubfeature.simplifiedSyncSetupV2))
+        case .systemFindInPage:
+            Config(defaultValue: .enabled, source: .remoteReleasable(iOSBrowserConfigSubfeature.systemFindInPage))
         }
     }
 
