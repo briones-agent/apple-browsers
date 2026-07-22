@@ -180,16 +180,16 @@ final class AIChatMenu: NSMenu {
             let item = NSMenuItem(title: chat.title, action: #selector(chatItemTapped(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = chat
-            item.image = chat.isPinned ? DesignSystemImages.Glyphs.Size12.pin : DesignSystemImages.Glyphs.Size12.chat
+            item.image = chat.isPinned ? DesignSystemImages.Color.Size12.chatPinned : DesignSystemImages.Color.Size12.chat
             insertItem(item, at: labelIndex + 1 + offset)
             chatItems.append(item)
         }
-    
+
         if hasMore {
             let separator = NSMenuItem.separator()
             let viewAllItem = NSMenuItem(title: UserText.aiChatMenuViewAllChats, action: #selector(viewAllChatsTapped), keyEquivalent: "")
             viewAllItem.target = self
-            viewAllItem.image = origin == .moreOptionsMenu ? DesignSystemImages.Glyphs.Size16.aiChatHistory : DesignSystemImages.Glyphs.Size12.aiChatHistory
+            viewAllItem.image = DesignSystemImages.Glyphs.Size12.aiChatHistory
             let insertIndex = labelIndex + 1 + chats.count
             insertItem(separator, at: insertIndex)
             insertItem(viewAllItem, at: insertIndex + 1)
