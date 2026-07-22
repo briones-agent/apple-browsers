@@ -12,10 +12,14 @@ checkout of this directory; `git pull` updates the harness.
 | Path | Purpose |
 |------|---------|
 | `commission-macos.sh` | One-time, human/sudo setup of a fresh box (CLT, Homebrew). |
+| `commission-safari.sh` | One-time, human/GUI setup for the Safari path: trusts the WPR ECDSA root in the System keychain + enables safaridriver. Run once from the VM's GUI Terminal. |
 | `provision-macos.sh` | Per-job, passwordless provisioning (brew formulae, Chrome, wpr build, poetry deps) + pins crossbench to a known revision + self-heals the crossbench extras & patch below. |
 | `test-chrome.sh` | Runs the Chrome LCP suite over the top-sites list against recorded network (WPR) and summarises per-site LCP. |
 | `test-ddg.sh` | Runs the same LCP suite for the DuckDuckGo macOS (WebKit) browser: drives it via its AutomationServer through a SOCKS5 proxy (tsproxy) in front of WPR, and summarises per-site LCP. |
+| `test-safari.sh` | Runs the same LCP suite for **Safari** (WebKit): points Safari at WPR via a per-app proxy (its own `com.apple.Safari` prefs domain) in front of `httpproxy.py`, drives it via safaridriver (W3C WebDriver), summarises per-site LCP. Needs no per-run sudo. |
 | `ddg-automation.py` | Minimal client for the DDG AutomationServer (navigate / execute / buffered-LCP probe) that `test-ddg.sh` drives. |
+| `safari-automation.py` | Minimal stdlib W3C WebDriver client (new-session / navigate / async buffered-LCP probe) that `test-safari.sh` drives against safaridriver. |
+| `httpproxy.py` | Tiny local HTTP forward proxy (CONNECT → WPR-https, absolute-form GET → WPR-http) that `test-safari.sh` points Safari at, replacing the SOCKS `tsproxy` for the Safari path. |
 | `crossbench-extras/` | Fork-only crossbench files the LCP run needs but a plain clone doesn't ship. Mirrors crossbench-relative paths so provisioning copies them in place. |
 | `patches/cpu_freq-attributeerror.patch` | Reference patch for the `crossbench/plt/macos.py` cpu_freq fix (applied idempotently by provision). |
 
@@ -75,7 +79,9 @@ the LCP run silently returns no rows / `-1`:
 
 1. **commission** (once, by a human, needs sudo): installs Xcode Command Line
    Tools and Homebrew. Run `./commission-macos.sh`. This is the only step that
-   prompts for a password.
+   prompts for a password. For the **Safari** path, also run `./commission-safari.sh`
+   once from the VM's GUI Terminal (trusts the WPR ECDSA cert + enables safaridriver;
+   GUI-only, can't be done over SSH).
 2. **provision** (every job, no password): `CROSSBENCH_DIR=... ./provision-macos.sh`
    installs python@3.11 + poetry, Google Chrome, screenresolution, the Go
    toolchain, builds the pinned `wpr` binary, pins the crossbench checkout to
@@ -133,3 +139,37 @@ equivalent to point it at WPR. So `test-ddg.sh` differs from the Chrome path:
   DDG-vs-Windows.
 - Shared with Chrome (data, not code): the wpr binary, WPR archives, `WPR_BASE_URL`,
   and the site list. A `common.sh` extraction is the intended next cleanup.
+
+## How Safari is measured (`test-safari.sh`)
+
+Safari is also WebKit, but unlike DDG it's Apple's app — we can't set a per-instance
+proxy or cert knob from our code, and safaridriver ignores the WebDriver `proxy`
+capability. But Safari reads a proxy from its **own prefs domain**, which is per-app
+and needs no root:
+
+- **Routing.** The script writes `WebKit2HTTPProxy` / `WebKit2HTTPSProxy` on
+  `com.apple.Safari` (via `defaults write`) pointing Safari at a tiny local HTTP
+  forward proxy, `httpproxy.py` (CONNECT → WPR-https, absolute-form GET → WPR-http).
+  Only Safari is affected — no machine-wide proxy. An `EXIT` trap always removes the
+  two defaults on exit (including error / Ctrl-C).
+- **Why not the system SOCKS proxy.** A machine-wide `networksetup` SOCKS proxy
+  (what an earlier version used) needs root AND — proven on this VM — drops the
+  inbound SSH connection on the first proxied navigation, making unattended
+  SSH-driven runs impossible. The per-app proxy leaves SSH and the rest of the box
+  untouched.
+- **Cert / TLS.** WPR serves the **ECDSA (P-256) root only**, with
+  `--no-archive-certificates` (fresh leaves minted at replay time). Its bundled RSA
+  root is **1024-bit**, which Apple's TLS rejects outright ("illegal parameter"
+  handshake failure). The ECDSA root must be trusted **once** in the System keychain
+  — a GUI-only step (headless SSH trust is impossible on macOS 26), done by
+  `commission-safari.sh`.
+- **Driving.** Safari is driven via **safaridriver** (`safaridriver -p PORT`, W3C
+  WebDriver) by `safari-automation.py`. LCP is read with the same buffered
+  `PerformanceObserver`, delivered through WebDriver's async-script channel.
+- **No per-run sudo.** The only privileged setup — trust the ECDSA cert, `safaridriver
+  --enable`, and tick Safari > Develop > **Allow Remote Automation** — is one-time,
+  via `commission-safari.sh`. The test itself needs no sudo, so it runs unattended
+  over plain SSH.
+- **Validity guard.** Like DDG, a rep is dropped unless the proxy actually saw
+  traffic, so a live-network fallback can't masquerade as a result.
+- **No shaping**; compare Safari-vs-DDG-vs-Chrome on the same runner.
