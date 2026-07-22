@@ -56,6 +56,7 @@ final class AIChatContextualUTIHost: UnifiedToggleInputDelegate {
         initialAttachmentDeliveryState: PageContextAttachmentDeliveryState = .delivered,
         hasActiveChat: @escaping () -> Bool,
         isAutoAttachEnabled: @escaping () -> Bool,
+        isCurrentPageAttachable: @escaping () -> Bool = { true },
         isFireTab: Bool,
         lastUsedModelProvider: DuckAiLastUsedModelProviding? = nil,
         voiceShortcutFeature: DuckAIVoiceShortcutFeatureProviding = DuckAIVoiceShortcutFeature(),
@@ -90,6 +91,7 @@ final class AIChatContextualUTIHost: UnifiedToggleInputDelegate {
         coordinator.onPageContextAttachRequested = { [weak chipViewModel] in
             chipViewModel?.tapToAttach()
         }
+        coordinator.isPageContextAttachable = isCurrentPageAttachable
         coordinator.hasPendingPageContextProvider = { [weak chipViewModel] in
             chipViewModel?.pendingAttachedContextData != nil
         }
@@ -109,6 +111,11 @@ final class AIChatContextualUTIHost: UnifiedToggleInputDelegate {
                 self?.applyCurrentRenderState()
             }
             .store(in: &cancellables)
+    }
+
+    /// Re-evaluates the attach button/menu for the current page (e.g. page-context attachability after navigation).
+    func refreshPageContextAttachability() {
+        coordinator.updateImageButtonVisibility()
     }
 
     func setAttachedContext(_ context: AIChatPageContext, deliveryState: PageContextAttachmentDeliveryState = .pendingSubmit) {
