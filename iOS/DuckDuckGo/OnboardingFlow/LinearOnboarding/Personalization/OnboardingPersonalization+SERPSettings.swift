@@ -64,4 +64,3 @@ extension SERPSettingsProvider: OnboardingSERPPersonalizationStore {
     }
 
 }
-
