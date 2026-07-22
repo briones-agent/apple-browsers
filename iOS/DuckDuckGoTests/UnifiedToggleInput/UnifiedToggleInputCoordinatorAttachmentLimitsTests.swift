@@ -590,6 +590,21 @@ final class UnifiedToggleInputCoordinatorAttachmentLimitsTests: XCTestCase {
         XCTAssertNil(sut.viewController.attachmentValidationMessage)
     }
 
+    func testTransientLimitBannerDoesNotLeakToAnotherTab() {
+        let prefs = StubAIChatPreferences()
+        prefs.selectedModelId = "image-model"
+        let sut = makeCoordinator(preferences: prefs)
+        sut.modelStore.models = [makeModel(id: "image-model", supportsImageUpload: true, supportedFileTypes: [])]
+        sut.activateFromOmnibar(inputMode: .aiChat)
+
+        sut.presentPasteError(UserText.aiChatAttachmentImageTurnLimit(maxImagesPerTurn: 3))
+        XCTAssertNotNil(sut.viewController.attachmentValidationMessage)
+
+        // Loading another tab's state (an aiChat tab with no invalid attachment) must not re-show the previous tab's paste banner.
+        sut.applyState(TabInputState(toggleMode: .aiChat))
+        XCTAssertNil(sut.viewController.attachmentValidationMessage)
+    }
+
     func testAttachmentErrorBannerDisplaysAllAttachmentErrorCopy() {
         let sut = makeCoordinator()
         let messages = [

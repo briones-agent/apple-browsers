@@ -691,6 +691,8 @@ final class UnifiedToggleInputCoordinator: NSObject, AIChatInputBoxHandling {
         for attachment in state.attachments {
             viewController.addAttachment(attachment)
         }
+        // A transient paste banner belongs to the live paste on the previous tab; drop it so it can't re-show on the tab being loaded.
+        transientAttachmentValidationMessage = nil
         syncAttachmentValidationErrorForCurrentMode()
 
         // Always sync the live model store from per-tab state — including nil values —
