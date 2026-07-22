@@ -118,10 +118,6 @@ final class MainViewControllerRefreshActionTests: XCTestCase {
         )
     }
 
-    /// Deep-linking to a Duck.ai surface (feedback form / chat-protection page) must not auto-expand
-    /// the input: the FE opens its own UI and an expanded UTI would pop the keyboard over it. The
-    /// signal is the per-tab flag, not the URL — the FE strips the query param on load and the URL
-    /// often hasn't committed yet at decision time.
     func test_aiTab_deepLinkSurfaceRequested_showsCollapsedWithoutExpand() {
         let inputs = makeInputs(
             tabIsAITab: true,
