@@ -255,7 +255,9 @@ extension WindowControllersManager: AIChatTabManaging {
 
     func insertAIChatTab(with url: URL, payload: AIChat.AIChatPayload) {
         guard let tabCollectionViewModel = lastKeyMainWindowController?.mainViewController.tabCollectionViewModel else { return }
-        let newAIChatTab = Tab(content: .url(url, source: .ui), burnerMode: tabCollectionViewModel.burnerMode)
+        // Resolve via `contentFromURL` so a Duck.ai URL becomes `.aiChat` content and the address bar renders
+        // the Duck.ai trusted indicator rather than the bare `duck.ai` host.
+        let newAIChatTab = Tab(content: .contentFromURL(url, source: .ui), burnerMode: tabCollectionViewModel.burnerMode)
         newAIChatTab.aiChat?.setAIChatNativeHandoffData(payload: payload)
         tabCollectionViewModel.insertOrAppend(tab: newAIChatTab, selected: true)
 
@@ -263,14 +265,18 @@ extension WindowControllersManager: AIChatTabManaging {
 
     func insertAIChatTab(with url: URL, restorationData: AIChat.AIChatRestorationData) {
         guard let tabCollectionViewModel = lastKeyMainWindowController?.mainViewController.tabCollectionViewModel else { return }
-        let newAIChatTab = Tab(content: .url(url, source: .ui), burnerMode: tabCollectionViewModel.burnerMode)
+        // Resolve via `contentFromURL` so a Duck.ai URL becomes `.aiChat` content and the address bar renders
+        // the Duck.ai trusted indicator rather than the bare `duck.ai` host.
+        let newAIChatTab = Tab(content: .contentFromURL(url, source: .ui), burnerMode: tabCollectionViewModel.burnerMode)
         newAIChatTab.aiChat?.setAIChatRestorationData(restorationData)
         tabCollectionViewModel.insertOrAppend(tab: newAIChatTab, selected: true)
     }
 
     func insertAIChatTabRequestingOpenSettings(with url: URL) {
         guard let tabCollectionViewModel = lastKeyMainWindowController?.mainViewController.tabCollectionViewModel else { return }
-        let newAIChatTab = Tab(content: .url(url, source: .ui), burnerMode: tabCollectionViewModel.burnerMode)
+        // Resolve via `contentFromURL` so a Duck.ai URL becomes `.aiChat` content — otherwise the tab stays
+        // `.url` and the address bar renders the bare `duck.ai` host instead of the Duck.ai trusted indicator.
+        let newAIChatTab = Tab(content: .contentFromURL(url, source: .ui), burnerMode: tabCollectionViewModel.burnerMode)
         newAIChatTab.aiChat?.requestOpenSettings()
         tabCollectionViewModel.insertOrAppend(tab: newAIChatTab, selected: true)
     }
