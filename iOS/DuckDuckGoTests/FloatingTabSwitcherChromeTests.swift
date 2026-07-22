@@ -100,6 +100,7 @@ final class FloatingTabSwitcherChromeTests: XCTestCase {
 
     func testWhenEditingThenBottomBarHasDoneCloseTabsAndMenu() {
         let chrome = makeInstalledChrome()
+        chrome.actions.onMultiSelectMenuRequested = { UIMenu(children: []) }
 
         chrome.update(state: .editingRegularSize(selectedCount: 2, totalCount: 4),
                       tabsStyle: .grid,
