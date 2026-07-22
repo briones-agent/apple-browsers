@@ -160,7 +160,7 @@ public final class DataBrokerProtectionIOSManager {
 
     /// The entry point requesting Secure Vault-backed resources. Every caller either starts
     /// initialization or joins one already in progress.
-    private enum VaultInitReason {
+    private enum VaultInitReason: String {
         case launch
         case appActive
         case dashboard
@@ -174,6 +174,10 @@ public final class DataBrokerProtectionIOSManager {
             case .launch, .appActive, .backgroundTask: return true
             }
         }
+    }
+
+    private struct VaultInitDebugState {
+        var reason: String?
     }
 
     private struct Constants {
@@ -193,6 +197,7 @@ public final class DataBrokerProtectionIOSManager {
     private let vaultResourcesLock = NSLock()
     private var cachedVaultResources: DBPVaultResources?
     private var ongoingVaultResourcesInitTask: Task<DBPVaultResources, Error>?
+    private var vaultInitDebugState = VaultInitDebugState()
     private let vaultResourcesProvider: (() throws -> DBPVaultResources)?
     private let authenticationManager: DataBrokerProtectionAuthenticationManaging
     private let userNotificationService: DataBrokerProtectionUserNotificationService
@@ -463,9 +468,11 @@ public final class DataBrokerProtectionIOSManager {
             }
 
             if reason.skipsWhenNoProfile, profileStateManager.profileState == .noProfile {
+                vaultInitDebugState.reason = reason.rawValue
                 return .skipped
             }
 
+            vaultInitDebugState.reason = reason.rawValue
             let task = Task {
                 do {
                     let resources = try await loadVaultResources()
@@ -918,6 +925,14 @@ extension DataBrokerProtectionIOSManager: DBPIOSInterface.DebugCommandsDelegate 
 // MARK: - Debug HTTP server read access
 
 extension DataBrokerProtectionIOSManager: DataBrokerProtectionDebugReadProviding {
+
+    public var iOSRuntimeStatus: DBPDebugIOSRuntimeStatus? {
+        vaultResourcesLock.withLock {
+            DBPDebugIOSRuntimeStatus(profileState: profileStateManager.profileState.rawValue,
+                                     vault: DBPDebugIOSRuntimeStatus.VaultStatus(initialized: cachedVaultResources != nil,
+                                                                                 lastInitReason: vaultInitDebugState.reason))
+        }
+    }
 
     public var agentVersion: String {
         let version = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "unknown"
