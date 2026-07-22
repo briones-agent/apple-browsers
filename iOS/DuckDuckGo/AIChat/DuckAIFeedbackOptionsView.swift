@@ -69,9 +69,6 @@ struct DuckAIFeedbackOptionsView: View {
         .buttonStyle(.plain)
     }
 
-    // TODO: swap to `DesignSystemImages.Glyphs.Size16.thumbsUp` / `.thumbsDown` once the 16px
-    // monochrome `thumbsDown` glyph is added to the design system. SF Symbols are used as a
-    // matching placeholder pair in the meantime.
-    private static let positiveIcon = UIImage(systemName: "hand.thumbsup")
-    private static let criticalIcon = UIImage(systemName: "hand.thumbsdown")
+    private static let positiveIcon = DesignSystemImages.Glyphs.Size24.thumbsUp
+    private static let criticalIcon = DesignSystemImages.Glyphs.Size24.thumbsDown
 }
