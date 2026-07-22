@@ -75,6 +75,11 @@ public enum SingleUseColor {
 
 #elseif os(macOS)
 
+    case aiToggleBorder
+    case aiToggleBackground
+    case aiToggleSelectionBackground
+    case aiToggleSelectionBorder
+
     case fireButtonGradientStart
     case fireButtonGradientEnd
     case fireButtonPressedGradientStart
@@ -124,6 +129,7 @@ public extension SingleUseColor {
         case decorationSecondary
 
         case alertGreen
+        case calendarStripYellow
     }
 
 }
