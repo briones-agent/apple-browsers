@@ -171,10 +171,10 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             defer { optionsViewModel.isBusy = false }
             do {
                 guard await self.performDeferredPreservedAccountCleanupIfNeeded() else {
+                    if useSimplifiedLayoutV2 {
+                        optionsViewModel.connectingSheetPhase = .syncAnotherDevice(isConnecting: false)
+                    }
                     return
-                }
-                if useSimplifiedLayoutV2 {
-                    optionsViewModel.connectingSheetPhase = .connecting
                 }
                 try await self.syncService.createAccount(deviceName: self.deviceName, deviceType: self.deviceType)
                 let additionalParameters = self.source.map { ["source": $0] } ?? [:]
@@ -188,7 +188,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 await self.refreshDevicesAfterSimplifiedSyncEnable()
 
                 if useSimplifiedLayoutV2 {
-                    optionsViewModel.showSyncWithAnotherDeviceInConnectingSheet()
+                    optionsViewModel.showDeviceConnectedInConnectingSheet(recoveryCode: self.recoveryCode)
                 } else {
                     let didShowPrompt = optionsViewModel.checkAndShowSyncWithAnotherDevicePrompt()
                     if didShowPrompt {
@@ -199,7 +199,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
                 }
             } catch {
                 if useSimplifiedLayoutV2 {
-                    optionsViewModel.connectingSheetPhase = nil
+                    optionsViewModel.connectingSheetPhase = .syncAnotherDevice(isConnecting: false)
                 }
                 self.firePixelIfNeededFor(event: .syncSignupError, error: error)
                 ActionMessageView.present(message: UserText.simplifiedSyncSetupFailedToast)
@@ -513,6 +513,9 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             showSyncWithAnotherDevice()
         case .simplifiedToggle:
             viewModel.beginSimplifiedSyncSetup()
+        case .simplifiedToggleV2:
+            viewModel.isBusy = false
+            viewModel.connectingSheetPhase = .syncAnotherDevice(isConnecting: false)
         }
     }
 
@@ -882,7 +885,7 @@ extension SyncSettingsViewController: SyncManagementViewModelDelegate {
             switch entryPoint {
             case .pairing:
                 return .syncPairing
-            case .simplifiedToggle:
+            case .simplifiedToggle, .simplifiedToggleV2:
                 return .syncBackup
             }
         case .recover:
