@@ -74,8 +74,10 @@ struct SettingsNextStepsView: View {
     }
 
     // Shows a "Hide" affordance next to the section title once the app has been installed long
-    // enough (see `SettingsViewModel.shouldShowNextStepsHideButton`). `.textCase(nil)` keeps the
-    // button's title as "Hide" rather than the uppercasing grouped-list section headers apply to `Text`.
+    // enough (see `SettingsViewModel.shouldShowNextStepsHideButton`). Styled per design as secondary
+    // text: `.textSecondary` colour + `.daxFootnoteRegular()`. `.buttonStyle(.plain)` stops the button
+    // tinting its label with the accent colour so the secondary colour renders, and `.textCase(nil)`
+    // keeps the title as "Hide" rather than the uppercasing grouped-list section headers apply to `Text`.
     private var header: some View {
         HStack {
             Text(UserText.nextSteps)
@@ -85,7 +87,10 @@ struct SettingsNextStepsView: View {
                     viewModel.hideNextStepsSection()
                 } label: {
                     Text(UserText.nextStepsHide)
+                        .daxFootnoteRegular()
+                        .foregroundColor(Color(designSystemColor: .textSecondary))
                 }
+                .buttonStyle(.plain)
                 .textCase(nil)
             }
         }
