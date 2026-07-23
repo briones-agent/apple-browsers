@@ -240,7 +240,7 @@ extension SimplifiedSyncSettingsViewV2 {
             model.scanQRCode()
         } label: {
             HStack(spacing: 8) {
-                Image(uiImage: DesignSystemImages.Glyphs.Size24.qr)
+                Image(uiImage: DesignSystemImages.Glyphs.Size24.qrScan)
                     .foregroundColor(Color(designSystemColor: .accentPrimary))
                 Text(UserText.simplifiedSyncWithAnotherDeviceButton)
                     .daxBodyRegular()
@@ -410,17 +410,7 @@ extension SimplifiedSyncSettingsViewV2 {
             devicesList
 
             if model.isConnectingDevicesAvailable {
-                Button {
-                    model.scanQRCode()
-                } label: {
-                    HStack {
-                        Image(uiImage: DesignSystemImages.Glyphs.Size24.add)
-                            .foregroundColor(Color(designSystemColor: .accentPrimary))
-                        Text(UserText.simplifiedSyncWithAnotherDeviceButton)
-                            .daxBodyRegular()
-                            .foregroundColor(Color(designSystemColor: .accentPrimary))
-                    }
-                }
+                syncWithAnotherDeviceButton
             }
         } header: {
             Text(UserText.simplifiedMyDevicesSectionHeader)
