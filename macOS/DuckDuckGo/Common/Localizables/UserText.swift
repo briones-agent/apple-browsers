@@ -523,6 +523,18 @@ struct UserText {
                                                                   value: "These sites will be deleted.",
                                                                   comment: "Subtitle above the list of domains in in-dialog overlay")
 
+    // MARK: - Simplified Fire dialog sites list sheet
+    /// Bold-weight portion of the sites overlay title, e.g. "Cookies & other data from 7 sites"; combined with
+    /// `fireDialogSitesOverlayTitleRegular` to read "Cookies & other data from 7 sites will be deleted:"
+    static func fireDialogSitesOverlayTitleBold(_ count: Int) -> String {
+        NotLocalizedString("fire.dialog.sites.overlay.title.bold",
+                            value: count == 1 ? "Cookies & other data from 1 site" : "Cookies & other data from \(count) sites",
+                            comment: "Bold portion of the simplified Fire dialog's sites overlay title, stating the number of sites affected.")
+    }
+    static let fireDialogSitesOverlayTitleRegular = NotLocalizedString("fire.dialog.sites.overlay.title.regular",
+                                                                        value: "will be deleted:",
+                                                                        comment: "Regular-weight portion of the simplified Fire dialog's sites overlay title, appended after fireDialogSitesOverlayTitleBold.")
+
     // MARK: - Fire dialog single-entry contextual titles
     /// Title used when reusing the Fire dialog as a single entry point (from History, menu, etc.) with full-time range
     static let deleteBrowsingDataAll = NSLocalizedString("fire.dialog.single.title.all",

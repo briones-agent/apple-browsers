@@ -395,91 +395,87 @@ struct FireDialogView: ModalView {
     // MARK: - Sites overlay
     private var sitesOverlay: some View {
         VStack(spacing: 0) {
-            // Header
-            ZStack(alignment: .center) {
-                HStack {
-                    Button(action: { isShowingSitesOverlay = false }) {
-                        Image(nsImage: DesignSystemImages.Glyphs.Size16.close)
-                            .resizable()
-                            .frame(width: 12, height: 12)
-                    }
-                    .buttonStyle(
-                        StandardButtonStyle(topPadding: 6,
-                                            bottomPadding: 6,
-                                            horizontalPadding: 6,
-                                            backgroundColor: Color(designSystemColor: .controlsFillPrimary),
-                                            backgroundPressedColor: Color(designSystemColor: .controlsFillPrimary))
-                    )
-                    .clipShape(Circle())
-                    .accessibilityLabel(UserText.close)
-                    .accessibilityIdentifier("FireDialogView.sitesOverlayCloseButton")
-                    .keyboardShortcut(.cancelAction)
-
-                    Spacer()
-                }
-
-                Text(UserText.fireDialogSitesOverlayTitle)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color(designSystemColor: .textPrimary))
-            }
-            .padding(16)
-
-            // Sites table
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(UserText.fireDialogSitesOverlaySubtitle)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(designSystemColor: .textSecondary))
-                        .frame(alignment: .leading)
-                        .padding(.bottom, 6)
-
-                    ForEach(viewModel.selectable, id: \.domain) { item in
-                        HStack(spacing: 6) {
-                            FaviconView(url: URL(string: "https://\(item.domain)"), size: 16)
-                            Text(item.domain)
-                                .font(.system(size: 13))
-                                .foregroundColor(Color(designSystemColor: .textPrimary))
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                                .help(item.domain)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(.bottom, 2)
-
-                    // Fireproof sites
-                    if !viewModel.fireproofed.isEmpty {
-                        Text(UserText.fireproofCookiesAndSiteDataExplanation)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Color(designSystemColor: .textSecondary))
-                            .frame(alignment: .leading)
-                            .padding(.top, 8)
-                            .padding(.bottom, 6)
-
-                        ForEach(viewModel.fireproofed, id: \.domain) { item in
-                            HStack(spacing: 6) {
-                                FaviconView(url: URL(string: "https://\(item.domain)"), size: 16)
-                                Text(item.domain)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(Color(designSystemColor: .textPrimary))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .help(item.domain)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.bottom, 2)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-            }
+            sitesOverlayHeader
+            sitesOverlayList
         }
         .background(
-            CustomRoundedCornersShape(tl: 8, tr: 8, bl: 0, br: 0)
+            CustomRoundedCornersShape(tl: 24, tr: 24, bl: 0, br: 0)
                 .fill(Color(designSystemColor: .surfaceSecondary))
         )
+    }
+
+    private var sitesOverlayHeader: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                (Text(UserText.fireDialogSitesOverlayTitleBold(viewModel.selectable.count)).fontWeight(.semibold)
+                 + Text(" \(UserText.fireDialogSitesOverlayTitleRegular)"))
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(designSystemColor: .textPrimary))
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("FireDialogView.sitesOverlayTitle")
+
+                Text(UserText.fireDialogCookiesSignOutWarning)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(designSystemColor: .textSecondary))
+            }
+
+            Spacer(minLength: 8)
+
+            Button(action: { isShowingSitesOverlay = false }) {
+                Image(nsImage: DesignSystemImages.Glyphs.Size16.close)
+                    .resizable()
+                    .frame(width: 12, height: 12)
+            }
+            .buttonStyle(
+                StandardButtonStyle(topPadding: 6,
+                                    bottomPadding: 6,
+                                    horizontalPadding: 6,
+                                    backgroundColor: Color(designSystemColor: .controlsFillPrimary),
+                                    backgroundPressedColor: Color(designSystemColor: .controlsFillPrimary))
+            )
+            .clipShape(Circle())
+            .accessibilityLabel(UserText.close)
+            .accessibilityIdentifier("FireDialogView.sitesOverlayCloseButton")
+            .keyboardShortcut(.cancelAction)
+        }
+        .padding(.top, 24)
+        .padding(.horizontal, Constants.horizontalPadding)
+        .padding(.bottom, 16)
+    }
+
+    private var sitesOverlayList: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(viewModel.selectable, id: \.domain) { item in
+                    HStack(spacing: 12) {
+                        FaviconView(url: URL(string: "https://\(item.domain)"), size: 16)
+                        Text(item.domain)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(designSystemColor: .textPrimary))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(item.domain)
+                    }
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(.leading, 24)
+            .padding(.trailing, 32)
+            .padding(.vertical, 4)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(designSystemColor: .surfaceSecondary))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .inset(by: 0.5)
+                        .stroke(Color(designSystemColor: .containerBorderPrimary), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 8)
+        .padding(.bottom, 16)
     }
 
     private func sectionRow(icon: NSImage, title: String, subtitle: String? = nil, detail: String? = nil, isOn: Binding<Bool>, detailAction: (() -> Void)? = nil, detailActionEnabled: Bool = true, isEnabled: Bool = true, roundedCorners: RowCornerRadius = .none, toggleId: String) -> some View {
