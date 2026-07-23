@@ -33,6 +33,9 @@ import Common
         // SwiftUI Previews run without the app group container, so skip app initialization to avoid crashing.
         guard AppVersion.runType != .xcPreviews else { return true }
 
+        // Expo brownfield: initialize React Native and float the "Expo" entry button.
+        ExpoIntegration.bootstrap()
+
         let isTesting: Bool = ProcessInfo().arguments.contains("testing")
         appStateMachine.handle(.didFinishLaunching(isTesting: isTesting))
         return true
