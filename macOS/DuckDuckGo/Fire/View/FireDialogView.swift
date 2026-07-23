@@ -164,16 +164,17 @@ struct FireDialogView: ModalView {
                 viewHeight = size.height
             }
 
-            // Sites Overlay — spans the full dialog height (incl. footer) so it fully covers the footer
+            // Sites Overlay — floats above the dimmed footer, leaving it visible (but hidden by the scrim) below
             if isShowingSitesOverlay {
                 // Scrim fades independently and stays above content
-                Color.black.opacity(0.35)
+                Color.black.opacity(0.5)
                     .zIndex(9)
 
                 VStack(spacing: 0) {
                     Spacer(minLength: 62)
 
                     sitesOverlay
+                        .padding(.bottom, Constants.footerReservedHeight)
                 }
                 .zIndex(11)
                 .transition(.move(edge: .bottom))
@@ -399,9 +400,11 @@ struct FireDialogView: ModalView {
             sitesOverlayList
         }
         .background(
-            CustomRoundedCornersShape(tl: 24, tr: 24, bl: 0, br: 0)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(designSystemColor: .surfaceSecondary))
         )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 0)
     }
 
     private var sitesOverlayHeader: some View {
