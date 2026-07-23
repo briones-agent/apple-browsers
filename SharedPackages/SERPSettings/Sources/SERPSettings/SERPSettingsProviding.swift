@@ -218,16 +218,11 @@ public extension SERPSettingsProviding {
     /// Used for the native → SERP push: the SERP reconciles against this full snapshot, so every
     /// key is present (including those left at their default).
     func currentNativeSettingsSnapshot() -> [String: String] {
-        var snapshot = [
+        return [
             SERPSettingsConstants.searchAssistKey: searchAssistFrequency.rawValue,
-            SERPSettingsConstants.hideAIGeneratedImagesKey: HideAIGeneratedImages.rawValue(forHidden: hideAIGeneratedImages)
+            SERPSettingsConstants.hideAIGeneratedImagesKey: HideAIGeneratedImages.rawValue(forHidden: hideAIGeneratedImages),
+            SERPSettingsConstants.safeSearch: safeSearch.rawValue
         ]
-        // Safe Search omits its default (moderate): it's represented as key-absence, and the SERP
-        // reconciles a missing `kp` back to the default. Only strict/off carry an explicit value.
-        if let safeSearchValue = safeSearch.storageValue {
-            snapshot[SERPSettingsConstants.safeSearch] = safeSearchValue
-        }
-        return snapshot
     }
 
     /// Search Assist (`kbe`) frequency, backed by native storage.
@@ -279,7 +274,7 @@ public extension SERPSettingsProviding {
             guard let rawValue = serpSettingValue(forKey: SERPSettingsConstants.safeSearch) else {
                 return .defaultValue
             }
-            guard let safeSearch = SafeSearch(storageValue: rawValue) else {
+            guard let safeSearch = SafeSearch(rawValue: rawValue) else {
                 // Key is present but holds a value the native enum doesn't recognize (contract mismatch).
                 eventMapper?.fire(.unrecognizedValue)
                 return .defaultValue

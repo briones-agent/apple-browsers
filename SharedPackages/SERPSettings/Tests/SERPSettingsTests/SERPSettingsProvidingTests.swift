@@ -98,6 +98,11 @@ final class SERPSettingsProvidingTests: XCTestCase {
         XCTAssertEqual(provider.safeSearch, .moderate)
     }
 
+    func testSafeSearch_recognizesModerateWireValue() {
+        provider.setSERPSetting("-1", forKey: SERPSettingsConstants.safeSearch)
+        XCTAssertEqual(provider.safeSearch, .moderate)
+    }
+
     func testSafeSearchMergeWrite_preservesSiblingKeys() {
         provider.searchAssistFrequency = .often   // kbe "3"
         provider.safeSearch = .strict             // kp "1"
@@ -173,8 +178,7 @@ final class SERPSettingsProvidingTests: XCTestCase {
         let snapshot = provider.currentNativeSettingsSnapshot()
         XCTAssertEqual(snapshot[SERPSettingsConstants.searchAssistKey], "2")
         XCTAssertEqual(snapshot[SERPSettingsConstants.hideAIGeneratedImagesKey], "-1")
-        // Safe Search default (moderate) is omitted — represented as key-absence.
-        XCTAssertNil(snapshot[SERPSettingsConstants.safeSearch])
+        XCTAssertEqual(snapshot[SERPSettingsConstants.safeSearch], "-1")
     }
 
     func testSnapshot_reflectsStoredValues() {
@@ -188,17 +192,15 @@ final class SERPSettingsProvidingTests: XCTestCase {
         XCTAssertEqual(snapshot[SERPSettingsConstants.safeSearch], "1")
     }
 
-    func testSnapshot_includesSafeSearch_onlyWhenNotDefault() {
+    func testSnapshot_includesSafeSearch_atEachValue() {
         provider.safeSearch = .off
         XCTAssertEqual(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch], "-2")
 
         provider.safeSearch = .strict
         XCTAssertEqual(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch], "1")
 
-        // Moderate is the default: it's stored as key-absence and omitted from the snapshot too,
-        // so the SERP reconciles the missing key back to moderate.
         provider.safeSearch = .moderate
-        XCTAssertNil(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch])
+        XCTAssertEqual(provider.currentNativeSettingsSnapshot()[SERPSettingsConstants.safeSearch], "-1")
     }
 
     // MARK: - Change notification

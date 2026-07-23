@@ -62,40 +62,22 @@ public enum HideAIGeneratedImages {
     }
 }
 
-/// Value encoding for the SERP "Safe Search" setting (`kp`)
-public enum SafeSearch {
-    case strict
-    case moderate
-    case off
+/// Value encoding for the SERP "Safe Search" setting (`kp`).
+///
+/// Raw values are the `kp` wire values from the SERP settings schema — strict `1`, moderate `-1`,
+/// off `-2`. `rawValue` is the effective value sent in the native → SERP snapshot; ``storageValue``
+/// is what's written to the blob (the default is omitted).
+public enum SafeSearch: String {
+    case strict = "1"
+    case moderate = "-1"
+    case off = "-2"
 
-    public static let strictRawValue = "1"
-    public static let offRawValue = "-2"
-
-    // Bundled default used when the key is absent from native storage.
+    /// Bundled default, used when the key is absent from native storage.
     public static let defaultValue: SafeSearch = .moderate
 
-    /// The value stored / synced for this setting. The default (`moderate`) has no value: it's
-    /// represented as key-absence, mirroring the SERP which omits defaults and treats a missing key
-    /// as the default. Only `strict`/`off` carry an explicit value.
+    /// The value written to native storage, or `nil` for the default (`moderate`), which is stored
+    /// as key-absence — mirroring the SERP, which omits defaults from what it syncs to native.
     var storageValue: String? {
-        switch self {
-        case .strict:
-            return Self.strictRawValue
-        case .moderate:
-            return nil
-        case .off:
-            return Self.offRawValue
-        }
-    }
-
-    init?(storageValue: String) {
-        switch storageValue {
-        case Self.strictRawValue:
-            self = .strict
-        case Self.offRawValue:
-            self = .off
-        default:
-            return nil
-        }
+        self == .defaultValue ? nil : rawValue
     }
 }
