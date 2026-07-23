@@ -535,6 +535,18 @@ struct UserText {
                                                                         value: "will be deleted:",
                                                                         comment: "Regular-weight portion of the simplified Fire dialog's sites overlay title, appended after fireDialogSitesOverlayTitleBold.")
 
+    // MARK: - Simplified Fire dialog chats list sheet
+    /// Bold-weight portion of the chats overlay title, e.g. "5 Duck.ai chats"; combined with
+    /// `fireDialogChatsOverlayTitleRegular` to read "5 Duck.ai chats will be deleted:"
+    static func fireDialogChatsOverlayTitleBold(_ count: Int) -> String {
+        NotLocalizedString("fire.dialog.chats.overlay.title.bold",
+                            value: count == 1 ? "1 Duck.ai chat" : "\(count) Duck.ai chats",
+                            comment: "Bold portion of the simplified Fire dialog's chats overlay title, stating the number of chats affected.")
+    }
+    static let fireDialogChatsOverlayTitleRegular = NotLocalizedString("fire.dialog.chats.overlay.title.regular",
+                                                                        value: "will be deleted:",
+                                                                        comment: "Regular-weight portion of the simplified Fire dialog's chats overlay title, appended after fireDialogChatsOverlayTitleBold.")
+
     // MARK: - Fire dialog single-entry contextual titles
     /// Title used when reusing the Fire dialog as a single entry point (from History, menu, etc.) with full-time range
     static let deleteBrowsingDataAll = NSLocalizedString("fire.dialog.single.title.all",

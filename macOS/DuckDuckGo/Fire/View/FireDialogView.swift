@@ -74,13 +74,28 @@ struct FireDialogView: ModalView {
         }
     }
     @State private var isAnimatingSitesOverlay: Bool = false
+    @State private var isShowingChatsOverlay: Bool = false {
+        didSet {
+            isAnimatingChatsOverlay = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                isAnimatingChatsOverlay = false
+            }
+        }
+    }
+    @State private var isAnimatingChatsOverlay: Bool = false
     @State private var isSectionsExpanded: Bool = false
+
+    private var isShowingAnyOverlay: Bool {
+        isShowingSitesOverlay || isShowingChatsOverlay
+    }
 
     init(viewModel: FireDialogViewModel,
          showSitesOverlay: Bool = false, // for Previews - @State flag to show "sites to be removed" overlay
+         showChatsOverlay: Bool = false, // for Previews - @State flag to show "chats to be removed" overlay
          onConfirm: ((FireDialogView.Response) -> Void)? = nil) {
         self.viewModel = viewModel
         self._isShowingSitesOverlay = State(initialValue: showSitesOverlay)
+        self._isShowingChatsOverlay = State(initialValue: showChatsOverlay)
         self.onConfirm = onConfirm
     }
 
@@ -90,6 +105,10 @@ struct FireDialogView: ModalView {
 
     private var isIncludeCookiesAndSiteDataEnabled: Bool {
         viewModel.cookiesSitesCountForCurrentScope > 0
+    }
+
+    private var isIncludeChatHistoryEnabled: Bool {
+        viewModel.chatsCountForCurrentScope > 0
     }
 
     private var historyDetail: String {
@@ -120,16 +139,16 @@ struct FireDialogView: ModalView {
                 VStack(spacing: 24) {
                     headerView
                         .padding(.top, 14) // presenter sheet crops the padding 🤷‍♂️
-                        .accessibilityHidden(isShowingSitesOverlay)
+                        .accessibilityHidden(isShowingAnyOverlay)
 
                     VStack(spacing: 16) {
                         if viewModel.mode.shouldShowSegmentedControl {
                             segmentedControlView
-                                .accessibilityHidden(isShowingSitesOverlay)
+                                .accessibilityHidden(isShowingAnyOverlay)
                         }
                         VStack(spacing: 0) {
                             detailsDisclosureView
-                                .accessibilityHidden(isShowingSitesOverlay)
+                                .accessibilityHidden(isShowingAnyOverlay)
                             if isSectionsExpanded {
                                 sectionsView
                             }
@@ -177,9 +196,23 @@ struct FireDialogView: ModalView {
                 .zIndex(11)
                 .transition(.move(edge: .bottom))
             }
+
+            // Chats Overlay — floats above the dimmed footer, leaving it visible (but hidden by the scrim) below
+            if isShowingChatsOverlay {
+                // Scrim fades independently and stays above content
+                Color.black.opacity(0.5)
+                    .zIndex(9)
+
+                VStack(spacing: 0) {
+                    Spacer(minLength: 167)
+                    chatsOverlay
+                }
+                .zIndex(11)
+                .transition(.move(edge: .bottom))
+            }
         }
         .animation(.easeOut(duration: NSAnimationContext.current.duration),
-                   value: isAnimatingSitesOverlay)
+                   value: isAnimatingSitesOverlay || isAnimatingChatsOverlay)
         .frame(width: Constants.viewSize.width, height: viewHeight, alignment: .top)
         .background(Color(designSystemColor: .surfaceSecondary))
         .accessibilityElement(children: .contain)
@@ -351,7 +384,7 @@ struct FireDialogView: ModalView {
                 roundedCorners: .top,
                 toggleId: "FireDialogView.historyToggle"
             )
-            .accessibilityHidden(isShowingSitesOverlay)
+            .accessibilityHidden(isShowingAnyOverlay)
             sectionDivider()
 
             // Row 2: Cookies and Site Data
@@ -370,7 +403,7 @@ struct FireDialogView: ModalView {
                 toggleId: "FireDialogView.cookiesToggle"
             )
             .disabled(!isIncludeCookiesAndSiteDataEnabled)
-            .accessibilityHidden(isShowingSitesOverlay)
+            .accessibilityHidden(isShowingAnyOverlay)
 
             if viewModel.shouldShowChatHistoryToggle {
                 sectionDivider()
@@ -381,9 +414,14 @@ struct FireDialogView: ModalView {
                     title: UserText.fireDialogChatHistoryTitle,
                     detail: chatsDetail,
                     isOn: $viewModel.includeChatHistorySetting,
+                    // don‘t make the detail label clickable when there‘s no chat history in scope
+                    detailAction: isIncludeChatHistoryEnabled ? { isShowingChatsOverlay = true } : nil,
+                    // grey-out the detail label when the toggle is Off
+                    detailActionEnabled: viewModel.includeChatHistorySetting,
+                    detailAccessibilityIdentifier: "FireDialogView.chatsDetailButton",
                     toggleId: "FireDialogView.chatsToggle"
                 )
-                .accessibilityHidden(isShowingSitesOverlay)
+                .accessibilityHidden(isShowingAnyOverlay)
             }
         }
         .padding(.top, 4)
@@ -484,7 +522,97 @@ struct FireDialogView: ModalView {
         .padding(.horizontal, 8)
     }
 
-    private func sectionRow(icon: NSImage, title: String, subtitle: String? = nil, detail: String? = nil, isOn: Binding<Bool>, detailAction: (() -> Void)? = nil, detailActionEnabled: Bool = true, isEnabled: Bool = true, roundedCorners: RowCornerRadius = .none, toggleId: String) -> some View {
+    // MARK: - Chats overlay
+    private var chatsOverlay: some View {
+        VStack(spacing: 0) {
+            chatsOverlayHeader
+            chatsOverlayList
+        }
+        .background(
+            ZStack {
+                CustomRoundedCornersShape(tl: 24, tr: 24, bl: 0, br: 0)
+                    .fill(Color(designSystemColor: .surfaceSecondary))
+                CustomRoundedCornersShape(tl: 24, tr: 24, bl: 0, br: 0)
+                    .fill(Color(designSystemColor: .containerFillSecondary))
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 0)
+    }
+
+    private var chatsOverlayHeader: some View {
+        HStack(alignment: .center, spacing: 12) {
+            (Text(UserText.fireDialogChatsOverlayTitleBold(viewModel.chats.count)).fontWeight(.semibold)
+             + Text(" \(UserText.fireDialogChatsOverlayTitleRegular)"))
+                .font(.system(size: 13))
+                .foregroundColor(Color(designSystemColor: .textPrimary))
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("FireDialogView.chatsOverlayTitle")
+
+            Spacer(minLength: 8)
+
+            Button(action: { isShowingChatsOverlay = false }) {
+                Image(nsImage: DesignSystemImages.Glyphs.Size16.close)
+                    .resizable()
+                    .frame(width: 12, height: 12)
+            }
+            .buttonStyle(
+                StandardButtonStyle(topPadding: 6,
+                                    bottomPadding: 6,
+                                    horizontalPadding: 6,
+                                    backgroundColor: Color(designSystemColor: .controlsFillPrimary),
+                                    backgroundPressedColor: Color(designSystemColor: .controlsFillPrimary))
+            )
+            .clipShape(Circle())
+            .accessibilityLabel(UserText.close)
+            .accessibilityIdentifier("FireDialogView.chatsOverlayCloseButton")
+            .keyboardShortcut(.cancelAction)
+        }
+        .padding(.top, 22)
+        .padding(.horizontal, Constants.horizontalPadding)
+        .padding(.bottom, 14)
+    }
+
+    private var chatsOverlayList: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(viewModel.chats, id: \.chatId) { chat in
+                    HStack(spacing: 12) {
+                        Image(nsImage: DesignSystemImages.Glyphs.Size16.aiChat)
+                            .resizable()
+                            .frame(width: 16, height: 16)
+                            .foregroundColor(Color(designSystemColor: .iconsSecondary))
+                        Text(chat.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(designSystemColor: .textPrimary))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .help(chat.title)
+                    }
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(.leading, 24)
+            .padding(.trailing, 32)
+            .padding(.vertical, 4)
+        }
+        .padding(.top, 11)
+        .padding(.trailing, 8)
+        .background(
+            CustomRoundedCornersShape(tl: 16, tr: 16, bl: 0, br: 0)
+                .fill(Color(designSystemColor: .surfaceSecondary))
+                .overlay(
+                    CustomRoundedCornersShape(tl: 16, tr: 16, bl: 0, br: 0)
+                        .inset(by: 0.5)
+                        .stroke(Color(designSystemColor: .containerBorderPrimary), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 8)
+    }
+
+    private func sectionRow(icon: NSImage, title: String, subtitle: String? = nil, detail: String? = nil, isOn: Binding<Bool>, detailAction: (() -> Void)? = nil, detailActionEnabled: Bool = true, detailAccessibilityIdentifier: String = "FireDialogView.cookiesDetailButton", isEnabled: Bool = true, roundedCorners: RowCornerRadius = .none, toggleId: String) -> some View {
         RowWithPressEffect(roundedCorners: roundedCorners, rowCornerRadius: style.rowCornerRadius, isEnabled: isEnabled) {
             guard isEnabled else { return }
             isOn.wrappedValue.toggle()
@@ -521,7 +649,7 @@ struct FireDialogView: ModalView {
                             text: detail,
                             action: detailAction,
                             isEnabled: detailActionEnabled,
-                            accessibilityIdentifier: "FireDialogView.cookiesDetailButton"
+                            accessibilityIdentifier: detailAccessibilityIdentifier
                         )
                     }
 
@@ -621,7 +749,7 @@ struct FireDialogView: ModalView {
                     .tint(style.knobFillColor)
                     .accessibilityLabel(tabsSubtitle)
                     .accessibilityIdentifier("FireDialogView.tabsToggle")
-                    .accessibilityHidden(isShowingSitesOverlay)
+                    .accessibilityHidden(isShowingAnyOverlay)
                     .font(.system(size: 11))
             }
 
@@ -685,7 +813,7 @@ struct FireDialogView: ModalView {
                 .accessibilityLabel(viewModel.includeTabsAndWindows ? UserText.fireDialogDeleteAndClose : UserText.delete)
                 .keyboardShortcut(.defaultAction)
                 .accessibilityIdentifier("FireDialogView.burnButton")
-                .accessibilityHidden(isShowingSitesOverlay)
+                .accessibilityHidden(isShowingAnyOverlay)
             }
         }
         .padding(.horizontal, Constants.horizontalPadding)
@@ -924,11 +1052,15 @@ private class MockAIChatHistoryCleaner: AIChatHistoryCleaning {
     var shouldDisplayCleanAIChatHistoryOptionPublisher: AnyPublisher<Bool, Never> {
         Just(shouldDisplayCleanAIChatHistoryOption).eraseToAnyPublisher()
     }
+    private let chats: [DuckAiChat]
+    init(chats: [DuckAiChat] = []) {
+        self.chats = chats
+    }
     func cleanAIChatHistory() async -> Result<Void, Error> {
         return .success(())
     }
     func allChats() -> [DuckAiChat] {
-        []
+        chats
     }
 }
 @available(macOS 14.0, *)
@@ -996,6 +1128,38 @@ private class MockAIChatHistoryCleaner: AIChatHistoryCleaning {
 
     return PreviewView(showWindowTitle: false) {
         FireDialogView(viewModel: vm, showSitesOverlay: true)
+    }
+}
+
+@available(macOS 14.0, *)
+#Preview("Chats Overlay", traits: FireDialogView.Constants.viewSize.fixedLayout) {
+    let tld = TLD()
+    let chats = [
+        DuckAiChat(chatId: "1", title: "How do I set up a React project with TypeScript?", model: "gpt-4o-mini", lastEdit: "2026-04-01T21:31:54.260Z", pinned: false),
+        DuckAiChat(chatId: "2", title: "Write a Python script to parse JSON files", model: "gpt-4o-mini", lastEdit: "2026-04-01T21:31:54.260Z", pinned: false),
+        DuckAiChat(chatId: "3", title: "Explain the difference between async and await", model: "gpt-4o-mini", lastEdit: "2026-04-01T21:31:54.260Z", pinned: false),
+        DuckAiChat(chatId: "4", title: "Help me design a REST API for a todo app", model: "gpt-4o-mini", lastEdit: "2026-04-01T21:31:54.260Z", pinned: false),
+        DuckAiChat(chatId: "5", title: "Debug my CSS flexbox layout issue that has been driving me crazy for the past three hours", model: "gpt-4o-mini", lastEdit: "2026-04-01T21:31:54.260Z", pinned: false)
+    ]
+
+    let vm = FireDialogViewModel(
+        fireViewModel: FireViewModel(tld: tld, visualizeFireAnimationDecider: NSApp.delegateTyped.visualizeFireSettingsDecider),
+        tabCollectionViewModel: TabCollectionViewModel(isPopup: false),
+        historyCoordinating: Application.appDelegate.historyCoordinator,
+        aiChatHistoryCleaner: MockAIChatHistoryCleaner(chats: chats),
+        fireproofDomains: Application.appDelegate.fireproofDomains,
+        faviconManagement: Application.appDelegate.faviconManager,
+        featureFlagger: Application.appDelegate.featureFlagger,
+        clearingOption: .allData,
+        includeChatHistory: true,
+        tld: tld,
+        windowControllersManager: Application.appDelegate.windowControllersManager,
+        dataClearingPreferences: Application.appDelegate.dataClearingPreferences,
+        pixelFiring: nil
+    )
+
+    PreviewView(showWindowTitle: false) {
+        FireDialogView(viewModel: vm, showChatsOverlay: true)
     }
 }
 #endif
