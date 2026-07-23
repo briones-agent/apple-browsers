@@ -171,10 +171,8 @@ struct FireDialogView: ModalView {
                     .zIndex(9)
 
                 VStack(spacing: 0) {
-                    Spacer(minLength: 62)
-
+                    Spacer(minLength: 167)
                     sitesOverlay
-                        .padding(.bottom, Constants.footerReservedHeight)
                 }
                 .zIndex(11)
                 .transition(.move(edge: .bottom))
@@ -400,16 +398,20 @@ struct FireDialogView: ModalView {
             sitesOverlayList
         }
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(designSystemColor: .surfaceSecondary))
+            ZStack {
+                CustomRoundedCornersShape(tl: 24, tr: 24, bl: 0, br: 0)
+                    .fill(Color(designSystemColor: .surfaceSecondary))
+                CustomRoundedCornersShape(tl: 24, tr: 24, bl: 0, br: 0)
+                    .fill(Color(designSystemColor: .containerFillSecondary))
+            }
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 0)
     }
 
     private var sitesOverlayHeader: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 (Text(UserText.fireDialogSitesOverlayTitleBold(viewModel.selectable.count)).fontWeight(.semibold)
                  + Text(" \(UserText.fireDialogSitesOverlayTitleRegular)"))
                     .font(.system(size: 13))
@@ -442,9 +444,9 @@ struct FireDialogView: ModalView {
             .accessibilityIdentifier("FireDialogView.sitesOverlayCloseButton")
             .keyboardShortcut(.cancelAction)
         }
-        .padding(.top, 24)
+        .padding(.top, 22)
         .padding(.horizontal, Constants.horizontalPadding)
-        .padding(.bottom, 16)
+        .padding(.bottom, 14)
     }
 
     private var sitesOverlayList: some View {
@@ -468,6 +470,8 @@ struct FireDialogView: ModalView {
             .padding(.trailing, 32)
             .padding(.vertical, 4)
         }
+        .padding(.top, 11)
+        .padding(.trailing, 8)
         .background(
             CustomRoundedCornersShape(tl: 16, tr: 16, bl: 0, br: 0)
                 .fill(Color(designSystemColor: .surfaceSecondary))
