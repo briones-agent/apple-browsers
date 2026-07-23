@@ -6087,7 +6087,6 @@ extension MainViewController: TabDelegate {
                 sheet.detents = [.medium()]
             }
             sheet.prefersGrabberVisible = true
-            // Match the browsing menu sheet: rounded on pre-iOS 26, system floating style on iOS 26.
             if #unavailable(iOS 26) {
                 sheet.preferredCornerRadius = 24
             }

@@ -109,7 +109,6 @@ extension URL {
         } == true
     }
 
-    /// Returns `true` if the URL requests the Duck AI feedback form to be open on load (`?feedback=positive` / `?feedback=negative`).
     public var isDuckAIFeedbackOpen: Bool {
         queryItems?.contains {
             $0.name == AIChatURLParameters.feedbackName
@@ -117,7 +116,6 @@ extension URL {
         } == true
     }
 
-    /// Returns `true` if the URL requests the Duck AI chat-protection page to be open on load (`?chatProtection=open`).
     public var isDuckAIChatProtectionOpen: Bool {
         queryItems?.contains {
             $0.name == AIChatURLParameters.chatProtectionName && $0.value == AIChatURLParameters.chatProtectionOpenValue

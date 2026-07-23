@@ -38,7 +38,6 @@ extension MainViewController: AIChatHistoryViewModelDelegate {
     func viewModelDidRequestChatProtection() {
         dismiss(animated: true) { [weak self] in
             guard let self else { return }
-            // On a Duck.ai tab, push via the bridge (no reload); elsewhere open the URL.
             if let tab = self.currentTab, tab.isAITab {
                 tab.submitOpenChatProtectionAction()
             } else {
