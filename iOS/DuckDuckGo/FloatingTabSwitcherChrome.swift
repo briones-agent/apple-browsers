@@ -22,14 +22,8 @@ import Core
 import DesignResourcesKit
 import DesignResourcesKitIcons
 
-/// The floating ("liquid glass") tab switcher chrome. Uses out-of-the-box UIKit components
-/// (a `UINavigationBar` for the top bar and a `UIToolbar` for the bottom bar) so the system
-/// renders liquid glass automatically on iOS 26+. Below iOS 26 the same layout is used with a
-/// solid bar background as a fallback.
-///
-/// Floating UI is iPhone-only and does not support the bottom address bar position, so this
-/// chrome only ever handles the `regularSize` / `editingRegularSize` interface modes and always
-/// pins the top bar to the top and the bottom bar to the bottom.
+/// The floating ("liquid glass") tab switcher chrome. It uses system bars to render liquid glass
+/// on iOS 26+ and falls back to solid bar backgrounds on earlier versions.
 @MainActor
 final class FloatingTabSwitcherChrome: TabSwitcherChrome {
 
