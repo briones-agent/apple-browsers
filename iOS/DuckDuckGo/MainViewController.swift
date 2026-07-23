@@ -419,6 +419,15 @@ class MainViewController: UIViewController {
                                   windowProvider: { settings.refreshWindow })
     }()
 
+    /// Whether the ad-blocking rollout's Duck Player default (disable) should be applied at onboarding
+    /// completion. It runs only when the rollout is active *and* the user didn't set Duck Player
+    /// themselves during onboarding — the download-reason Block Ads flow includes a Duck
+    /// Player step, and overriding it here would silently discard the user's choice.
+    private var shouldApplyAdBlockingRolloutDuckPlayerDefault: Bool {
+        adBlockingAvailability.areAdBlockingDefaultsActive
+            && onboardingManager.currentDownloadReason != .blockAds
+    }
+
     init(
         privacyConfigurationManager: PrivacyConfigurationManaging,
         bookmarksDatabase: CoreDataDatabase,
@@ -771,7 +780,7 @@ class MainViewController: UIViewController {
         // Automation bypass: a UI-test override can mark onboarding already-completed without ever
         // calling onboardingCompleted(controller:), so apply the rollout Duck Player defaults here too.
         if case .overridden(.uiTests(completed: true)) = onboardingStatus, ProcessInfo.isRunningUITests {
-            appSettings.applyAdBlockingRolloutDuckPlayerDefaultsIfNeeded(rolloutActive: adBlockingAvailability.areAdBlockingDefaultsActive)
+            appSettings.applyAdBlockingRolloutDuckPlayerDefaultsIfNeeded(rolloutActive: shouldApplyAdBlockingRolloutDuckPlayerDefault)
         }
 
         isStartupOnboardingPending = startupOnboardingDecision.shouldShowOnboarding
@@ -7127,8 +7136,7 @@ extension MainViewController: OnboardingDelegate {
         // enrol new users; enrollIfEligible function additionally excludes returning users (reinstallers).
         searchTokenExperiment.enrollIfEligible()
 
-        appSettings.applyAdBlockingRolloutDuckPlayerDefaultsIfNeeded(rolloutActive: adBlockingAvailability.areAdBlockingDefaultsActive)
-
+        appSettings.applyAdBlockingRolloutDuckPlayerDefaultsIfNeeded(rolloutActive: shouldApplyAdBlockingRolloutDuckPlayerDefault)
 
         // Now that linear onboarding has finished, run the unified-toggle-input
         // setup that was deferred at viewDidLoad.
@@ -7172,7 +7180,6 @@ extension MainViewController: OnboardingDelegate {
     }
 
 }
-
 
 extension MainViewController: OnboardingNavigationDelegate {
     func navigateFromOnboarding(to url: URL) {

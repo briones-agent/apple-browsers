@@ -724,6 +724,41 @@ struct OnboardingDownloadReasonExperimentTests {
         #expect(result == expected)
     }
 
+    // MARK: - currentDownloadReason
+
+    @Test("Download Reason is nil before a reason is chosen")
+    func currentDownloadReasonIsNilByDefault() {
+        // GIVEN
+        let sut = makeManager(cohort: .treatment)
+
+        // THEN
+        #expect(sut.currentDownloadReason == nil)
+    }
+
+    @Test("Download Reason reflects the persisted reason", arguments: OnboardingDownloadReason.allCases)
+    func currentDownloadReasonReflectsPersistedReason(_ reason: OnboardingDownloadReason) {
+        // GIVEN
+        let tutorialSettings = makeTutorialSettings()
+        tutorialSettings.onboardingDownloadReason = reason
+        let sut = makeManager(cohort: .treatment, tutorialSettings: tutorialSettings)
+
+        // THEN
+        #expect(sut.currentDownloadReason == reason)
+    }
+
+    @Test("Download Reason stores value", arguments: OnboardingDownloadReason.allCases)
+    func selectDownloadReasonUpdatesCurrentDownloadReason(_ reason: OnboardingDownloadReason) {
+        // GIVEN
+        let sut = makeManager(cohort: .treatment)
+        #expect(sut.currentDownloadReason == nil)
+
+        // WHEN
+        _ = sut.selectDownloadReason(reason)
+
+        // THEN
+        #expect(sut.currentDownloadReason == reason)
+    }
+
     // MARK: - Eligibility (new installers, iPhone)
 
     @Test("iPad users are not enrolled even in the treatment cohort")
