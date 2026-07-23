@@ -66,19 +66,23 @@ extension AIChatSettings: OnboardingAIChatPersonalizationStore {
 /// - set: writes both `selectedModelId` and `selectedModelShortName`; `nil` clears them.
 ///
 /// - See: [AI Chat: Setup step 1](https://app.asana.com/1/137249556945/task/1216445221863466?focus=true)
-extension AIChatPreferencesPersistor: @retroactive OnboardingAIModelPersonalizationStore {
+final class OnboardingAIModelAdapter: OnboardingAIModelPersonalizationStore {
+    private var persistor: AIChatPreferencesPersisting
 
-    public var selectedAIModel: OnboardingAIModel? {
-        get {
-            guard let id = selectedModelId else { return nil }
-            // Best-effort name; the manager resolves the canonical name by matching `id`
-            // against the fetched catalog, so only `id` needs to be correct here.
-            return OnboardingAIModel(id: id, name: selectedModelShortName ?? "")
-        }
-        set {
-            selectedModelId = newValue?.id
-            selectedModelShortName = newValue?.name
-        }
+    init(persistor: AIChatPreferencesPersisting) {
+        self.persistor = persistor
     }
 
+    var selectedAIModel: OnboardingAIModel? {
+        get {
+            guard let id = persistor.selectedModelId else { return nil }
+            // Best-effort name; the manager resolves the canonical name by matching `id`
+            // against the fetched catalog, so only `id` needs to be correct here.
+            return OnboardingAIModel(id: id, name: persistor.selectedModelShortName ?? "")
+        }
+        set {
+            persistor.selectedModelId = newValue?.id
+            persistor.selectedModelShortName = newValue?.name
+        }
+    }
 }

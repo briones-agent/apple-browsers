@@ -26,20 +26,20 @@ import AIChat
 import Onboarding
 @testable import DuckDuckGo
 
-@Suite("Onboarding Personalization – AI adapters")
-struct OnboardingPersonalizationAITests {
+// MARK: - AI Chat model (AI Chat: Setup step 1)
 
-    // MARK: - AI Chat model (AI Chat: Setup step 1)
+@Suite("Onboarding Personalization – AI Model Adapter")
+struct OnboardingPersonalizationAIModelTests {
+    private let persistor: AIChatPreferencesPersistor
+    private let sut: OnboardingAIModelAdapter
 
-    private func makeModelStore() -> AIChatPreferencesPersistor {
-        AIChatPreferencesPersistor(keyValueStore: InMemoryKeyValueStore())
+    init() {
+        persistor = AIChatPreferencesPersistor(keyValueStore: InMemoryKeyValueStore())
+        sut = OnboardingAIModelAdapter(persistor: persistor)
     }
 
     @Test("Selected model is nil when nothing is stored")
     func modelIsNilWhenUnset() {
-        // GIVEN
-        let sut = makeModelStore()
-
         // THEN
         #expect(sut.selectedAIModel == nil)
     }
@@ -47,24 +47,22 @@ struct OnboardingPersonalizationAITests {
     @Test("Setting a model persists both its id and short name")
     func settingModelPersistsIdAndName() {
         // GIVEN
-        let sut = makeModelStore()
         let model = OnboardingAIModel(id: "gpt-x", name: "ChatGPT")
 
         // WHEN
         sut.selectedAIModel = model
 
         // THEN
-        #expect(sut.selectedModelId == "gpt-x")
-        #expect(sut.selectedModelShortName == "ChatGPT")
+        #expect(persistor.selectedModelId == "gpt-x")
+        #expect(persistor.selectedModelShortName == "ChatGPT")
         #expect(sut.selectedAIModel == model)
     }
 
     @Test("Getting a model reflects the stored id and short name")
     func getReflectsStoredIdAndName() {
         // GIVEN
-        let sut = makeModelStore()
-        sut.selectedModelId = "claude-x"
-        sut.selectedModelShortName = "Claude"
+        persistor.selectedModelId = "claude-x"
+        persistor.selectedModelShortName = "Claude"
 
         // THEN
         #expect(sut.selectedAIModel == OnboardingAIModel(id: "claude-x", name: "Claude"))
@@ -73,8 +71,7 @@ struct OnboardingPersonalizationAITests {
     @Test("Getting a model with no stored short name yields a best-effort empty name")
     func getBestEffortNameWhenShortNameMissing() {
         // GIVEN
-        let sut = makeModelStore()
-        sut.selectedModelId = "id-only"
+        persistor.selectedModelId = "id-only"
 
         // THEN - only the id is guaranteed; the manager resolves the canonical name from the catalog.
         #expect(sut.selectedAIModel == OnboardingAIModel(id: "id-only", name: ""))
@@ -83,19 +80,22 @@ struct OnboardingPersonalizationAITests {
     @Test("Setting nil clears the stored model")
     func settingNilClearsModel() {
         // GIVEN
-        let sut = makeModelStore()
         sut.selectedAIModel = OnboardingAIModel(id: "mistral-x", name: "Mistral")
 
         // WHEN
         sut.selectedAIModel = nil
 
         // THEN
-        #expect(sut.selectedModelId == nil)
-        #expect(sut.selectedModelShortName == nil)
+        #expect(persistor.selectedModelId == nil)
+        #expect(persistor.selectedModelShortName == nil)
         #expect(sut.selectedAIModel == nil)
     }
+}
 
-    // MARK: - Duck.ai on/off (No AI: Setup step 2)
+// MARK: - Duck.ai on/off (No AI: Setup step 2)
+
+@Suite("Onboarding Personalization – AI Chat Settings Adapter")
+struct OnboardingPersonalizationAIChatTests {
 
     private func makeAIChatSettings(store: InMemoryKeyValueStore = InMemoryKeyValueStore()) -> AIChatSettings {
         AIChatSettings(
