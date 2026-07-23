@@ -469,16 +469,15 @@ struct FireDialogView: ModalView {
             .padding(.vertical, 4)
         }
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            CustomRoundedCornersShape(tl: 16, tr: 16, bl: 0, br: 0)
                 .fill(Color(designSystemColor: .surfaceSecondary))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    CustomRoundedCornersShape(tl: 16, tr: 16, bl: 0, br: 0)
                         .inset(by: 0.5)
                         .stroke(Color(designSystemColor: .containerBorderPrimary), lineWidth: 1)
                 )
         )
         .padding(.horizontal, 8)
-        .padding(.bottom, 16)
     }
 
     private func sectionRow(icon: NSImage, title: String, subtitle: String? = nil, detail: String? = nil, isOn: Binding<Bool>, detailAction: (() -> Void)? = nil, detailActionEnabled: Bool = true, isEnabled: Bool = true, roundedCorners: RowCornerRadius = .none, toggleId: String) -> some View {
